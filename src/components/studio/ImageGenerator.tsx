@@ -50,6 +50,26 @@ export function ImageGenerator({ onImageGenerated, onVideoGenerated }: ImageGene
     if (url && onImageGenerated) {
       onImageGenerated(url);
     }
+    // Reset animation panel when generating new image
+    setShowAnimationPanel(false);
+    setAnimationPrompt("");
+  };
+
+  const handleAnimate = async () => {
+    if (!generatedImageUrl || !animationPrompt.trim()) return;
+
+    const videoUrl = await generateVideo({
+      model: "openai/sora-2/image-to-video",
+      prompt: animationPrompt.trim(),
+      image: generatedImageUrl,
+      duration: animationDuration,
+      resolution: "1080p",
+      aspect_ratio: aspectRatio === "4:3" ? "16:9" : aspectRatio as "16:9" | "9:16" | "1:1",
+    });
+
+    if (videoUrl && onVideoGenerated) {
+      onVideoGenerated(videoUrl);
+    }
   };
 
   const handleDownload = () => {
@@ -59,6 +79,7 @@ export function ImageGenerator({ onImageGenerated, onVideoGenerated }: ImageGene
   };
 
   const canGenerate = prompt.trim() && (mode === "create" || uploadedImage);
+  const canAnimate = generatedImageUrl && animationPrompt.trim() && !isGeneratingVideo;
 
   return (
     <div className="space-y-6">
@@ -79,12 +100,21 @@ export function ImageGenerator({ onImageGenerated, onVideoGenerated }: ImageGene
       {/* Generated Image Preview - Show at top when available */}
       {generatedImageUrl && (
         <div className="space-y-4 p-4 rounded-lg border border-gold/30 bg-gold/5">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between flex-wrap gap-2">
             <h4 className="font-medium text-gold">Generated Image</h4>
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
               <Button variant="outline" size="sm" onClick={handleDownload}>
                 <Download className="mr-2 h-4 w-4" />
                 Download
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => setShowAnimationPanel(!showAnimationPanel)}
+                className="border-primary/50 hover:bg-primary/10"
+              >
+                <Film className="mr-2 h-4 w-4" />
+                Animate
               </Button>
               {onImageGenerated && (
                 <Button size="sm" onClick={() => onImageGenerated(generatedImageUrl)}>
@@ -101,6 +131,86 @@ export function ImageGenerator({ onImageGenerated, onVideoGenerated }: ImageGene
               className="w-full h-auto max-h-[400px] object-contain bg-black/50"
             />
           </div>
+
+          {/* Animation Panel */}
+          {showAnimationPanel && (
+            <div className="space-y-4 p-4 rounded-lg border border-primary/30 bg-primary/5">
+              <h5 className="font-medium text-sm">Animate this image</h5>
+              
+              <div className="space-y-2">
+                <Label htmlFor="animation-prompt">Describe the motion</Label>
+                <Textarea
+                  id="animation-prompt"
+                  placeholder="Camera slowly zooms in while clouds drift across the sky..."
+                  value={animationPrompt}
+                  onChange={(e) => setAnimationPrompt(e.target.value)}
+                  className="min-h-[80px] bg-background/50 border-border/50"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Duration</Label>
+                <Select 
+                  value={animationDuration.toString()} 
+                  onValueChange={(v) => setAnimationDuration(parseInt(v) as 5 | 10)}
+                >
+                  <SelectTrigger className="bg-background/50">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="5">5 seconds</SelectItem>
+                    <SelectItem value="10">10 seconds</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <Button
+                onClick={handleAnimate}
+                disabled={!canAnimate}
+                className="w-full"
+              >
+                {isGeneratingVideo ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Animating...
+                  </>
+                ) : (
+                  <>
+                    <Film className="mr-2 h-4 w-4" />
+                    Generate Animation
+                  </>
+                )}
+              </Button>
+
+              {/* Generated Video Preview */}
+              {generatedVideoUrl && (
+                <div className="space-y-2 pt-2 border-t border-border/50">
+                  <h5 className="font-medium text-sm text-primary">Animation Ready!</h5>
+                  <video
+                    src={generatedVideoUrl}
+                    controls
+                    className="w-full rounded-lg border border-border/50"
+                  />
+                  <div className="flex gap-2">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => window.open(generatedVideoUrl, "_blank")}
+                    >
+                      <Download className="mr-2 h-4 w-4" />
+                      Download Video
+                    </Button>
+                    {onVideoGenerated && (
+                      <Button size="sm" onClick={() => onVideoGenerated(generatedVideoUrl)}>
+                        <Film className="mr-2 h-4 w-4" />
+                        Set as Mind Movie
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
 
