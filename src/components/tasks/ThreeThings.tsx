@@ -5,7 +5,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { 
   Target, Plus, Trash2, Loader2, Sparkles, ChevronLeft, ChevronRight,
-  Calendar
+  Calendar, RefreshCw, X
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -327,9 +327,32 @@ export function ThreeThings() {
       {/* AI Suggestions */}
       {suggestions.length > 0 && (
         <div className="space-y-2 pt-4 border-t border-border/50">
-          <div className="flex items-center gap-2 text-sm text-gold">
-            <Sparkles className="h-4 w-4" />
-            <span className="font-medium">Director's Suggestions</span>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-sm text-gold">
+              <Sparkles className="h-4 w-4" />
+              <span className="font-medium">Director's Suggestions</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 text-muted-foreground hover:text-gold"
+                onClick={getSuggestions}
+                disabled={isSuggesting}
+                title="Get new suggestions"
+              >
+                <RefreshCw className={`h-3.5 w-3.5 ${isSuggesting ? "animate-spin" : ""}`} />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                onClick={() => setSuggestions([])}
+                title="Clear suggestions"
+              >
+                <X className="h-3.5 w-3.5" />
+              </Button>
+            </div>
           </div>
           <ScrollArea className="max-h-[200px]">
             <div className="space-y-2">
