@@ -145,10 +145,13 @@ export const DailyScorecard = ({ onClose, onSubmitSuccess }: DailyScorecardProps
       });
 
       if (error) {
-        if (error.message.includes("duplicate")) {
+        console.error("Scorecard insert error:", error);
+        if (error.message.includes("duplicate") || error.code === "23505") {
           toast.error("You've already submitted a scorecard today!");
+        } else if (error.message.includes("row-level security") || error.code === "42501") {
+          toast.error("Permission denied. Please try signing out and back in.");
         } else {
-          throw error;
+          toast.error(`Failed to submit: ${error.message}`);
         }
         return;
       }
