@@ -131,6 +131,8 @@ export type Database = {
       user_profiles: {
         Row: {
           best_streak: number | null
+          chat_summary: string | null
+          chat_summary_updated_at: string | null
           chief_aim_by_when: string | null
           chief_aim_exchange: string | null
           chief_aim_plan: string | null
@@ -150,6 +152,8 @@ export type Database = {
         }
         Insert: {
           best_streak?: number | null
+          chat_summary?: string | null
+          chat_summary_updated_at?: string | null
           chief_aim_by_when?: string | null
           chief_aim_exchange?: string | null
           chief_aim_plan?: string | null
@@ -169,6 +173,8 @@ export type Database = {
         }
         Update: {
           best_streak?: number | null
+          chat_summary?: string | null
+          chat_summary_updated_at?: string | null
           chief_aim_by_when?: string | null
           chief_aim_exchange?: string | null
           chief_aim_plan?: string | null

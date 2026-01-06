@@ -45,6 +45,8 @@ const WELCOME_MESSAGE: Message = {
   content: "Welcome, Director. I'm here to keep you in character and moving toward your Chief Aim. How can I assist you today?",
 };
 
+const SUMMARY_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-chat-summary`;
+
 export const DirectorAIChat = ({ isOpen, onToggle, chiefAim, userId }: DirectorAIChatProps) => {
   const [messages, setMessages] = useState<Message[]>([WELCOME_MESSAGE]);
   const [input, setInput] = useState("");
@@ -54,12 +56,14 @@ export const DirectorAIChat = ({ isOpen, onToggle, chiefAim, userId }: DirectorA
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [selectedVoice, setSelectedVoice] = useState(VOICE_OPTIONS[0]);
   const [previewingVoice, setPreviewingVoice] = useState<string | null>(null);
+  const [chatSummary, setChatSummary] = useState<string | null>(null);
+  const [showSummary, setShowSummary] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const previewAudioRef = useRef<HTMLAudioElement | null>(null);
   const hasLoadedHistory = useRef(false);
 
-  // Load chat history on mount
+  // Load chat history and generate summary on mount
   useEffect(() => {
     if (!userId || hasLoadedHistory.current) return;
     
@@ -82,6 +86,11 @@ export const DirectorAIChat = ({ isOpen, onToggle, chiefAim, userId }: DirectorA
             content: m.content,
           }));
           setMessages([WELCOME_MESSAGE, ...loadedMessages]);
+
+          // Generate summary if we have enough messages
+          if (data.length >= 3) {
+            generateSummary();
+          }
         }
         hasLoadedHistory.current = true;
       } catch (error) {
@@ -93,6 +102,31 @@ export const DirectorAIChat = ({ isOpen, onToggle, chiefAim, userId }: DirectorA
 
     loadHistory();
   }, [userId]);
+
+  // Generate chat summary
+  const generateSummary = async () => {
+    try {
+      const { data: session } = await supabase.auth.getSession();
+      if (!session?.session?.access_token) return;
+
+      const response = await fetch(SUMMARY_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.session.access_token}`,
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.summary) {
+          setChatSummary(data.summary);
+        }
+      }
+    } catch (error) {
+      console.error("Failed to generate summary:", error);
+    }
+  };
 
   // Save message to database
   const saveMessage = useCallback(async (role: "user" | "assistant", content: string) => {
@@ -121,7 +155,14 @@ export const DirectorAIChat = ({ isOpen, onToggle, chiefAim, userId }: DirectorA
 
       if (error) throw error;
 
+      // Clear summary from profile
+      await supabase
+        .from("user_profiles")
+        .update({ chat_summary: null, chat_summary_updated_at: null })
+        .eq("user_id", userId);
+
       setMessages([WELCOME_MESSAGE]);
+      setChatSummary(null);
       toast.success("Chat history cleared");
     } catch (error) {
       console.error("Failed to clear history:", error);
@@ -537,6 +578,24 @@ export const DirectorAIChat = ({ isOpen, onToggle, chiefAim, userId }: DirectorA
           </div>
         ) : (
           <>
+            {/* Session Summary */}
+            {chatSummary && showSummary && (
+              <div className="bg-gradient-to-r from-gold/10 to-amber-soft/10 border border-gold/20 rounded-lg p-3 mb-2">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex-1">
+                    <p className="text-xs font-medium text-gold mb-1">📽️ Previously on your journey...</p>
+                    <p className="text-sm text-foreground/90">{chatSummary}</p>
+                  </div>
+                  <button
+                    onClick={() => setShowSummary(false)}
+                    className="text-muted-foreground hover:text-foreground transition-colors p-1"
+                    title="Dismiss"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </div>
+              </div>
+            )}
             {messages.map((message) => (
               <div
                 key={message.id}
