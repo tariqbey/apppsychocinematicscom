@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Clapperboard, Settings, User, LogOut, Trophy, Users } from "lucide-react";
+import { Link } from "react-router-dom";
+import { Clapperboard, Settings, User, LogOut, Trophy, Users, MessageSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useGamification } from "@/hooks/useGamification";
@@ -48,11 +49,23 @@ export const Header = () => {
                   <CreditsDisplay credits={credits?.credits || 0} compact />
                 </button>
 
+                <Link to="/community">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="text-gold hover:text-gold/80"
+                    title="Director's Corner"
+                  >
+                    <MessageSquare className="w-5 h-5" />
+                  </Button>
+                </Link>
+
                 <Button
                   variant="ghost"
                   size="icon"
                   onClick={() => setShowLeaderboard(true)}
                   className="text-muted-foreground hover:text-foreground"
+                  title="Leaderboard"
                 >
                   <Users className="w-5 h-5" />
                 </Button>
