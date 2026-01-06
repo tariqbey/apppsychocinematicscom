@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Clapperboard, Settings, User, LogOut, Trophy, Users } from "lucide-react";
+import { Settings, User, LogOut, Trophy, Users } from "lucide-react";
+import psychoCinematicsLogo from "@/assets/psycho-cinematics-logo.png";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useGamification } from "@/hooks/useGamification";
@@ -25,15 +26,11 @@ export const Header = () => {
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
           {/* Logo */}
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-gold to-amber-soft flex items-center justify-center">
-              <Clapperboard className="w-5 h-5 text-primary-foreground" />
-            </div>
-            <div>
-              <h1 className="font-display text-xl tracking-wide text-gold-gradient">
-                PSYCHO-CINEMATICS™
-              </h1>
-              <p className="text-xs text-muted-foreground -mt-1">The Director's OS</p>
-            </div>
+            <img 
+              src={psychoCinematicsLogo} 
+              alt="PSYCHO-CINEMATICS" 
+              className="h-12 w-auto"
+            />
           </div>
 
           {/* Actions */}
