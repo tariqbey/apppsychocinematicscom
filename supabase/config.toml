@@ -20,3 +20,6 @@ verify_jwt = false
 
 [functions.suggest-tasks]
 verify_jwt = false
+
+[functions.lovable-generate-image]
+verify_jwt = false
