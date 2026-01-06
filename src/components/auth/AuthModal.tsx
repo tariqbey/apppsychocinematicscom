@@ -1,6 +1,5 @@
 import { useState } from "react";
-import { X, Mail, Lock, Loader2 } from "lucide-react";
-import psychoCinematicsLogo from "@/assets/psycho-cinematics-logo.png";
+import { X, Film, Mail, Lock, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -63,11 +62,9 @@ export const AuthModal = ({ isOpen, onClose }: AuthModalProps) => {
           >
             <X className="w-5 h-5" />
           </Button>
-          <img 
-            src={psychoCinematicsLogo} 
-            alt="PSYCHO-CINEMATICS" 
-            className="h-20 w-auto mx-auto mb-4"
-          />
+          <div className="w-16 h-16 rounded-full bg-gradient-to-br from-gold to-amber-soft mx-auto mb-4 flex items-center justify-center">
+            <Film className="w-8 h-8 text-primary-foreground" />
+          </div>
           <h2 className="text-3xl font-display tracking-wide">
             {mode === "signin" ? "Welcome Back" : "Join the Production"}
           </h2>
