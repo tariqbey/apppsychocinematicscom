@@ -129,17 +129,17 @@ export function PostCard({
 
       {/* Media */}
       {post.media_url && (
-        <div className="rounded-lg overflow-hidden">
+        <div className="rounded-lg overflow-hidden bg-black/20">
           {post.media_type === "image" ? (
             <img 
               src={post.media_url} 
               alt="Post media" 
-              className="w-full max-h-96 object-cover"
+              className="w-full max-h-[500px] object-contain mx-auto"
             />
           ) : post.media_type === "video" ? (
             <video 
               src={post.media_url} 
-              className="w-full max-h-96"
+              className="w-full max-h-[500px]"
               controls
             />
           ) : null}
