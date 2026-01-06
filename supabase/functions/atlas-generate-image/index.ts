@@ -6,6 +6,71 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+const INPUT_BUCKET = "atlas-inputs";
+
+type ParsedDataUrl = { mimeType: string; base64Data: string };
+
+function parseDataUrl(dataUrl: string): ParsedDataUrl | null {
+  const matches = dataUrl.match(/^data:([^;]+);base64,(.+)$/);
+  if (!matches) return null;
+  return { mimeType: matches[1], base64Data: matches[2] };
+}
+
+function mimeToExt(mimeType: string) {
+  if (mimeType === "image/png") return "png";
+  if (mimeType === "image/jpeg") return "jpg";
+  if (mimeType === "image/webp") return "webp";
+  return "bin";
+}
+
+function base64ToUint8Array(base64: string) {
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return bytes;
+}
+
+async function ensurePublicBucket(supabaseAdmin: any) {
+  const { data, error } = await supabaseAdmin.storage.getBucket(INPUT_BUCKET);
+  if (data && !error) return;
+
+  const { error: createError } = await supabaseAdmin.storage.createBucket(INPUT_BUCKET, { public: true });
+  // If it already exists, ignore
+  if (createError && !String(createError.message ?? "").toLowerCase().includes("already exists")) {
+    throw createError;
+  }
+}
+
+async function dataUrlToPublicUrl({
+  supabaseAdmin,
+  dataUrl,
+  userId,
+}: {
+  supabaseAdmin: any;
+  dataUrl: string;
+  userId?: string;
+}): Promise<{ publicUrl: string; mimeType: string }> {
+  const parsed = parseDataUrl(dataUrl);
+  if (!parsed) throw new Error("Invalid data URL");
+
+  await ensurePublicBucket(supabaseAdmin);
+
+  const ext = mimeToExt(parsed.mimeType);
+  const objectPath = `${userId ?? "anon"}/${crypto.randomUUID()}.${ext}`;
+  const bytes = base64ToUint8Array(parsed.base64Data);
+
+  const { error: uploadError } = await supabaseAdmin.storage
+    .from(INPUT_BUCKET)
+    .upload(objectPath, bytes, { contentType: parsed.mimeType, upsert: true });
+
+  if (uploadError) throw uploadError;
+
+  const { data } = supabaseAdmin.storage.from(INPUT_BUCKET).getPublicUrl(objectPath);
+  if (!data?.publicUrl) throw new Error("Failed to get public URL for uploaded image");
+
+  return { publicUrl: data.publicUrl, mimeType: parsed.mimeType };
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -13,53 +78,49 @@ serve(async (req) => {
 
   try {
     const ATLASCLOUD_API_KEY = Deno.env.get("ATLASCLOUD_API_KEY");
-    if (!ATLASCLOUD_API_KEY) {
-      throw new Error("ATLASCLOUD_API_KEY is not configured");
-    }
+    if (!ATLASCLOUD_API_KEY) throw new Error("ATLASCLOUD_API_KEY is not configured");
+
+    const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
+    const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    if (!SUPABASE_SERVICE_ROLE_KEY) throw new Error("SUPABASE_SERVICE_ROLE_KEY is not configured");
 
     const { prompt, aspect_ratio = "1:1", resolution = "2k", images, user_id } = await req.json();
 
-    if (!prompt) {
-      throw new Error("Prompt is required");
-    }
+    if (!prompt) throw new Error("Prompt is required");
+
+    const isEdit = Array.isArray(images) && images.length > 0;
+    const model = isEdit ? "google/nano-banana-pro/edit" : "google/nano-banana-pro/text-to-image";
 
     console.log("Starting image generation with prompt:", prompt);
 
-    // Step 1: Start image generation
+    const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+
+    // Build Atlas request
     const generateUrl = "https://api.atlascloud.ai/api/v1/model/generateImage";
     const generateBody: any = {
-      model: "google/nano-banana-pro/edit",
-      aspect_ratio,
+      model,
       enable_base64_output: false,
       enable_sync_mode: false,
       output_format: "png",
       prompt,
+      // Keep these (Atlas accepts them for Nano Banana family)
+      aspect_ratio,
       resolution,
     };
 
-    // Process images - extract mimeType from data URLs
-    if (images && images.length > 0) {
-      generateBody.images = images.map((img: string) => {
-        // Check if it's a data URL (base64)
-        if (img.startsWith("data:")) {
-          // Format: data:image/png;base64,ABC123...
-          const matches = img.match(/^data:([^;]+);base64,(.+)$/);
-          if (matches) {
-            const mimeType = matches[1];
-            const base64Data = matches[2];
-            // Atlas forwards to Google using Gemini "inlineData" parts
-            return {
-              inlineData: {
-                mimeType,
-                data: base64Data,
-              },
-            };
-          }
-        }
+    if (isEdit) {
+      // Atlas docs for many edit models use `image` (singular). We pass a hosted URL.
+      const first = images[0];
+      if (typeof first !== "string") throw new Error("Invalid image input");
 
-        // If it's a regular URL (or unrecognized format), pass through
-        return img;
-      });
+      if (first.startsWith("data:")) {
+        console.log("Edit mode: received data URL, uploading to storage first...");
+        const { publicUrl } = await dataUrlToPublicUrl({ supabaseAdmin, dataUrl: first, userId: user_id });
+        generateBody.image = publicUrl;
+      } else {
+        console.log("Edit mode: using provided image URL");
+        generateBody.image = first;
+      }
     }
 
     const generateResponse = await fetch(generateUrl, {
@@ -79,32 +140,23 @@ serve(async (req) => {
 
     const generateResult = await generateResponse.json();
     const predictionId = generateResult.data?.id;
-
-    if (!predictionId) {
-      throw new Error("No prediction ID returned from Atlas Cloud");
-    }
+    if (!predictionId) throw new Error("No prediction ID returned from Atlas Cloud");
 
     console.log("Generation started with prediction ID:", predictionId);
 
-    // Update database with prediction ID if user_id provided
     if (user_id) {
-      const supabase = createClient(
-        Deno.env.get("SUPABASE_URL") ?? "",
-        Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
-      );
-
-      await supabase.from("generated_media").insert({
+      await supabaseAdmin.from("generated_media").insert({
         user_id,
         media_type: "image",
-        model_used: "google/nano-banana-pro/edit",
+        model_used: model,
         prompt,
         status: "processing",
         prediction_id: predictionId,
-        metadata: { aspect_ratio, resolution },
+        metadata: { aspect_ratio, resolution, mode: isEdit ? "edit" : "create" },
       });
     }
 
-    // Step 2: Poll for result
+    // Poll for result
     const pollUrl = `https://api.atlascloud.ai/api/v1/model/prediction/${predictionId}`;
     let attempts = 0;
     const maxAttempts = 60; // 2 minutes max
@@ -125,40 +177,29 @@ serve(async (req) => {
 
       const pollResult = await pollResponse.json();
       const status = pollResult.data?.status;
-
       console.log(`Poll attempt ${attempts + 1}: status = ${status}`);
 
       if (status === "completed") {
         const imageUrl = pollResult.data?.outputs?.[0];
         console.log("Image generated successfully:", imageUrl);
 
-        // Update database with result
         if (user_id) {
-          const supabase = createClient(
-            Deno.env.get("SUPABASE_URL") ?? "",
-            Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
-          );
-
-          await supabase
+          await supabaseAdmin
             .from("generated_media")
             .update({ status: "completed", media_url: imageUrl })
             .eq("prediction_id", predictionId);
         }
 
-        return new Response(
-          JSON.stringify({ success: true, imageUrl, predictionId }),
-          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      } else if (status === "failed") {
+        return new Response(JSON.stringify({ success: true, imageUrl, predictionId }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      if (status === "failed") {
         const errorMessage = pollResult.data?.error || "Generation failed";
 
         if (user_id) {
-          const supabase = createClient(
-            Deno.env.get("SUPABASE_URL") ?? "",
-            Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
-          );
-
-          await supabase
+          await supabaseAdmin
             .from("generated_media")
             .update({ status: "failed", error_message: errorMessage })
             .eq("prediction_id", predictionId);
@@ -173,9 +214,9 @@ serve(async (req) => {
     throw new Error("Generation timed out");
   } catch (error) {
     console.error("atlas-generate-image error:", error);
-    return new Response(
-      JSON.stringify({ success: false, error: error instanceof Error ? error.message : "Unknown error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return new Response(JSON.stringify({ success: false, error: error instanceof Error ? error.message : "Unknown error" }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 });
