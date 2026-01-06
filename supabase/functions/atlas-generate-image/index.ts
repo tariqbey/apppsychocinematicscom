@@ -37,8 +37,26 @@ serve(async (req) => {
       resolution,
     };
 
+    // Process images - extract mimeType from data URLs
     if (images && images.length > 0) {
-      generateBody.images = images;
+      generateBody.images = images.map((img: string) => {
+        // Check if it's a data URL (base64)
+        if (img.startsWith("data:")) {
+          // Extract mimeType and base64 data from data URL
+          // Format: data:image/png;base64,ABC123...
+          const matches = img.match(/^data:([^;]+);base64,(.+)$/);
+          if (matches) {
+            const mimeType = matches[1];
+            const base64Data = matches[2];
+            return {
+              mimeType,
+              data: base64Data,
+            };
+          }
+        }
+        // If it's a regular URL, return as-is
+        return img;
+      });
     }
 
     const generateResponse = await fetch(generateUrl, {
