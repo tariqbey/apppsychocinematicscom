@@ -52,6 +52,14 @@ const MODEL_CONFIGS: Record<string, { endpoint: string; defaultParams: any }> = 
   },
 };
 
+// Map frontend model names to Atlas Cloud API model names
+const MODEL_NAME_MAP: Record<string, string> = {
+  "kling-ai/v1-5/pro/image-to-video": "kwaivgi/kling-v2.5-turbo-pro/image-to-video",
+  "kling-ai/v1-5/pro/text-to-video": "kwaivgi/kling-v2.5-turbo-pro/text-to-video",
+  "wan-ai/wan2.1-i2v-480p": "wanx-ai/wanx2.1-i2v-plus",
+  "wan-ai/wan2.1-t2v-480p": "wanx-ai/wanx2.1-t2v-plus",
+};
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -83,11 +91,14 @@ serve(async (req) => {
       throw new Error(`Unsupported model: ${model}. Available: ${Object.keys(MODEL_CONFIGS).join(", ")}`);
     }
 
-    console.log(`Starting video generation with model ${model}:`, prompt);
+    // Map to Atlas Cloud API model name if different
+    const apiModelName = MODEL_NAME_MAP[model] || model;
+    
+    console.log(`Starting video generation with model ${model} (API: ${apiModelName}):`, prompt);
 
     // Build request body
     const generateBody: any = {
-      model,
+      model: apiModelName,
       prompt,
       enable_base64_output: false,
       enable_sync_mode: false,
