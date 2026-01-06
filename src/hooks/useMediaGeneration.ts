@@ -66,7 +66,7 @@ export function useMediaGeneration() {
     setGeneratedImageUrl(null);
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/atlas-generate-image`, {
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/lovable-generate-image`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
