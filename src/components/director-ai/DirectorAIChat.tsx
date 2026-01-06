@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect } from "react";
-import { MessageCircle, X, Send, Scissors, Sparkles, Loader2 } from "lucide-react";
+import { MessageCircle, X, Send, Scissors, Sparkles, Loader2, Mic, MicOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { useVoiceInput } from "@/hooks/useVoiceInput";
 
 interface Message {
   id: string;
@@ -30,9 +31,28 @@ export const DirectorAIChat = ({ isOpen, onToggle, chiefAim }: DirectorAIChatPro
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  // Voice input
+  const handleVoiceTranscript = (transcript: string) => {
+    if (transcript.trim() && !isLoading) {
+      streamChat(transcript.trim());
+    }
+  };
+
+  const { isListening, transcript, isSupported, toggleListening } = useVoiceInput({
+    onTranscript: handleVoiceTranscript,
+    onError: (error) => toast.error(error),
+  });
+
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  // Update input field with live transcript
+  useEffect(() => {
+    if (isListening && transcript) {
+      setInput(transcript);
+    }
+  }, [isListening, transcript]);
 
   const streamChat = async (userMessage: string) => {
     const userMsg: Message = {
@@ -159,6 +179,14 @@ export const DirectorAIChat = ({ isOpen, onToggle, chiefAim }: DirectorAIChatPro
     await streamChat(cutPrompt);
   };
 
+  const handleVoiceToggle = () => {
+    if (!isSupported) {
+      toast.error("Voice input is not supported in your browser. Try Chrome or Edge.");
+      return;
+    }
+    toggleListening();
+  };
+
   const handleSend = async () => {
     if (!input.trim() || isLoading) return;
     const message = input;
@@ -242,17 +270,35 @@ export const DirectorAIChat = ({ isOpen, onToggle, chiefAim }: DirectorAIChatPro
 
       {/* Input */}
       <div className="p-4 border-t border-border">
+        {/* Voice indicator */}
+        {isListening && (
+          <div className="mb-2 flex items-center gap-2 text-xs text-gold animate-pulse">
+            <div className="w-2 h-2 rounded-full bg-cinematic-red animate-pulse" />
+            Listening... speak now
+          </div>
+        )}
         <div className="flex gap-2">
           <input
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSend()}
-            placeholder="Talk to your Director AI..."
+            placeholder={isListening ? "Listening..." : "Talk to your Director AI..."}
             className="flex-1 bg-secondary rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gold/50 placeholder:text-muted-foreground"
-            disabled={isLoading}
+            disabled={isLoading || isListening}
           />
-          <Button variant="gold" size="icon" onClick={handleSend} disabled={isLoading}>
+          <Button
+            variant={isListening ? "destructive" : "ghost"}
+            size="icon"
+            onClick={handleVoiceToggle}
+            disabled={isLoading}
+            className={cn(
+              isListening && "bg-cinematic-red hover:bg-cinematic-red/90 text-white"
+            )}
+          >
+            {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+          </Button>
+          <Button variant="gold" size="icon" onClick={handleSend} disabled={isLoading || isListening}>
             {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
           </Button>
         </div>
