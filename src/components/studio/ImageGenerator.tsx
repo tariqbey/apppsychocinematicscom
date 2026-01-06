@@ -4,7 +4,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Loader2, Sparkles, Download, ImageIcon, Pencil, Film } from "lucide-react";
-import { useMediaGeneration } from "@/hooks/useMediaGeneration";
+import { useMediaGeneration, VideoModel, MODEL_INFO } from "@/hooks/useMediaGeneration";
 import { ImageUpload } from "./ImageUpload";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -26,6 +26,14 @@ export function ImageGenerator({ onImageGenerated, onVideoGenerated }: ImageGene
   const [showAnimationPanel, setShowAnimationPanel] = useState(false);
   const [animationPrompt, setAnimationPrompt] = useState("");
   const [animationDuration, setAnimationDuration] = useState<5 | 10>(5);
+  const [animationModel, setAnimationModel] = useState<VideoModel>("openai/sora-2/image-to-video");
+
+  // Models that support image-to-video
+  const imageToVideoModels: { model: VideoModel; name: string; price: string }[] = [
+    { model: "openai/sora-2/image-to-video", name: "Sora 2", price: "$0.10/s" },
+    { model: "google/veo3", name: "Veo 3 Premium", price: "$6/5s" },
+    { model: "google/veo3-fast", name: "Veo 3 Fast", price: "$2/5s" },
+  ];
 
   const { 
     isGeneratingImage, 
@@ -59,7 +67,7 @@ export function ImageGenerator({ onImageGenerated, onVideoGenerated }: ImageGene
     if (!generatedImageUrl || !animationPrompt.trim()) return;
 
     const videoUrl = await generateVideo({
-      model: "openai/sora-2/image-to-video",
+      model: animationModel,
       prompt: animationPrompt.trim(),
       image: generatedImageUrl,
       duration: animationDuration,
@@ -71,6 +79,8 @@ export function ImageGenerator({ onImageGenerated, onVideoGenerated }: ImageGene
       onVideoGenerated(videoUrl);
     }
   };
+
+  const selectedModelInfo = imageToVideoModels.find(m => m.model === animationModel);
 
   const handleDownload = () => {
     if (generatedImageUrl) {
@@ -148,21 +158,48 @@ export function ImageGenerator({ onImageGenerated, onVideoGenerated }: ImageGene
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label>Duration</Label>
-                <Select 
-                  value={animationDuration.toString()} 
-                  onValueChange={(v) => setAnimationDuration(parseInt(v) as 5 | 10)}
-                >
-                  <SelectTrigger className="bg-background/50">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="5">5 seconds</SelectItem>
-                    <SelectItem value="10">10 seconds</SelectItem>
-                  </SelectContent>
-                </Select>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Model</Label>
+                  <Select 
+                    value={animationModel} 
+                    onValueChange={(v) => setAnimationModel(v as VideoModel)}
+                  >
+                    <SelectTrigger className="bg-background/50">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {imageToVideoModels.map((m) => (
+                        <SelectItem key={m.model} value={m.model}>
+                          {m.name} ({m.price})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Duration</Label>
+                  <Select 
+                    value={animationDuration.toString()} 
+                    onValueChange={(v) => setAnimationDuration(parseInt(v) as 5 | 10)}
+                  >
+                    <SelectTrigger className="bg-background/50">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="5">5 seconds</SelectItem>
+                      <SelectItem value="10">10 seconds</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
+
+              {selectedModelInfo && (
+                <p className="text-xs text-muted-foreground">
+                  Estimated cost: {selectedModelInfo.price}
+                </p>
+              )}
 
               <Button
                 onClick={handleAnimate}
