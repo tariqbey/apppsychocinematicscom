@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect } from "react";
-import { Play, Pause, Flame, Film, VolumeX, Volume2, Maximize, X, Upload, CheckCircle } from "lucide-react";
+import { Play, Pause, Flame, Film, VolumeX, Volume2, Maximize, X, Upload, CheckCircle, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { VideoUploader } from "./VideoUploader";
+import { MediaStudio } from "@/components/studio/MediaStudio";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
@@ -14,6 +15,7 @@ export const TheaterView = ({ onClose }: TheaterViewProps) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [showUploader, setShowUploader] = useState(false);
+  const [showMediaStudio, setShowMediaStudio] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [hasRecordedViewing, setHasRecordedViewing] = useState(false);
@@ -106,6 +108,15 @@ export const TheaterView = ({ onClose }: TheaterViewProps) => {
 
   const handleUploadComplete = (url: string) => {
     setShowUploader(false);
+  };
+
+  const handleAIVideoGenerated = async (url: string) => {
+    // Update user profile with the AI-generated video
+    await updateProfile({ mind_movie_url: url });
+    toast({
+      title: "Mind Movie Set!",
+      description: "Your AI-generated video is now your Mind Movie.",
+    });
   };
 
   const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
@@ -218,12 +229,18 @@ export const TheaterView = ({ onClose }: TheaterViewProps) => {
                   <Film className="w-16 h-16 text-muted-foreground mx-auto mb-4 opacity-50" />
                   <p className="text-muted-foreground mb-2">No Mind Movie Yet</p>
                   <p className="text-sm text-muted-foreground/70 mb-6">
-                    Upload your AI-generated vision
+                    Create with AI or upload your own
                   </p>
-                  <Button variant="gold" onClick={() => setShowUploader(true)}>
-                    <Upload className="w-4 h-4 mr-2" />
-                    Upload Mind Movie
-                  </Button>
+                  <div className="flex gap-3 justify-center">
+                    <Button variant="gold" onClick={() => setShowMediaStudio(true)}>
+                      <Sparkles className="w-4 h-4 mr-2" />
+                      Create with AI
+                    </Button>
+                    <Button variant="cinematic" onClick={() => setShowUploader(true)}>
+                      <Upload className="w-4 h-4 mr-2" />
+                      Upload Video
+                    </Button>
+                  </div>
                 </div>
               </div>
             )}
@@ -237,6 +254,10 @@ export const TheaterView = ({ onClose }: TheaterViewProps) => {
               Watch your Mind Movie daily to reinforce your new identity
             </p>
             <div className="flex items-center gap-3">
+              <Button variant="outline" onClick={() => setShowMediaStudio(true)}>
+                <Sparkles className="w-4 h-4 mr-2" />
+                Create with AI
+              </Button>
               <Button variant="cinematic" onClick={() => setShowUploader(true)}>
                 <Upload className="w-4 h-4 mr-2" />
                 {videoUrl ? "Replace Video" : "Upload Video"}
@@ -260,6 +281,13 @@ export const TheaterView = ({ onClose }: TheaterViewProps) => {
           onClose={() => setShowUploader(false)}
         />
       )}
+
+      {/* AI Media Studio Modal */}
+      <MediaStudio
+        open={showMediaStudio}
+        onOpenChange={setShowMediaStudio}
+        onVideoGenerated={handleAIVideoGenerated}
+      />
     </>
   );
 };

@@ -74,6 +74,51 @@ export type Database = {
         }
         Relationships: []
       }
+      generated_media: {
+        Row: {
+          created_at: string
+          error_message: string | null
+          id: string
+          media_type: string
+          media_url: string | null
+          metadata: Json | null
+          model_used: string
+          prediction_id: string | null
+          prompt: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          media_type: string
+          media_url?: string | null
+          metadata?: Json | null
+          model_used: string
+          prediction_id?: string | null
+          prompt: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          media_type?: string
+          media_url?: string | null
+          metadata?: Json | null
+          model_used?: string
+          prediction_id?: string | null
+          prompt?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_awards: {
         Row: {
           award_name: string
