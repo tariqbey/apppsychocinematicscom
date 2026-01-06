@@ -12,6 +12,9 @@ interface Post {
   comments_count: number;
   created_at: string;
   display_name?: string;
+  avatar_url?: string;
+  media_url?: string;
+  media_type?: string;
 }
 
 interface Comment {
@@ -21,6 +24,7 @@ interface Comment {
   content: string;
   created_at: string;
   display_name?: string;
+  avatar_url?: string;
 }
 
 export function useDirectorCorner() {
@@ -41,19 +45,23 @@ export function useDirectorCorner() {
 
       if (postsError) throw postsError;
 
-      // Fetch user profiles for display names
+      // Fetch user profiles for display names and avatars
       const userIds = [...new Set(postsData?.map(p => p.user_id) || [])];
       const { data: profiles } = await supabase
         .from("user_profiles")
-        .select("user_id, display_name")
+        .select("user_id, display_name, avatar_url")
         .in("user_id", userIds);
 
-      const profileMap = new Map(profiles?.map(p => [p.user_id, p.display_name]) || []);
+      const profileMap = new Map(profiles?.map(p => [p.user_id, { display_name: p.display_name, avatar_url: p.avatar_url }]) || []);
 
-      const postsWithNames = postsData?.map(post => ({
-        ...post,
-        display_name: profileMap.get(post.user_id) || "Anonymous Director"
-      })) || [];
+      const postsWithNames = postsData?.map(post => {
+        const profile = profileMap.get(post.user_id);
+        return {
+          ...post,
+          display_name: profile?.display_name || "Anonymous Director",
+          avatar_url: profile?.avatar_url,
+        };
+      }) || [];
 
       setPosts(postsWithNames);
 
@@ -74,7 +82,7 @@ export function useDirectorCorner() {
     }
   };
 
-  const createPost = async (content: string, postType: string) => {
+  const createPost = async (content: string, postType: string, mediaUrl?: string, mediaType?: string) => {
     if (!user) {
       toast.error("Please sign in to post");
       return false;
@@ -85,12 +93,13 @@ export function useDirectorCorner() {
         user_id: user.id,
         content,
         post_type: postType,
+        media_url: mediaUrl,
+        media_type: mediaType,
       });
 
       if (error) throw error;
 
       toast.success("Post shared with the community!");
-      await fetchPosts();
       return true;
     } catch (error) {
       console.error("Error creating post:", error);
@@ -159,15 +168,19 @@ export function useDirectorCorner() {
       const userIds = [...new Set(commentsData?.map(c => c.user_id) || [])];
       const { data: profiles } = await supabase
         .from("user_profiles")
-        .select("user_id, display_name")
+        .select("user_id, display_name, avatar_url")
         .in("user_id", userIds);
 
-      const profileMap = new Map(profiles?.map(p => [p.user_id, p.display_name]) || []);
+      const profileMap = new Map(profiles?.map(p => [p.user_id, { display_name: p.display_name, avatar_url: p.avatar_url }]) || []);
 
-      return commentsData?.map(comment => ({
-        ...comment,
-        display_name: profileMap.get(comment.user_id) || "Anonymous Director"
-      })) || [];
+      return commentsData?.map(comment => {
+        const profile = profileMap.get(comment.user_id);
+        return {
+          ...comment,
+          display_name: profile?.display_name || "Anonymous Director",
+          avatar_url: profile?.avatar_url,
+        };
+      }) || [];
     } catch (error) {
       console.error("Error fetching comments:", error);
       return [];

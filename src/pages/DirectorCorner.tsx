@@ -1,16 +1,20 @@
 import { Header } from "@/components/layout/Header";
 import { PostCard } from "@/components/community/PostCard";
 import { CreatePostForm } from "@/components/community/CreatePostForm";
+import { ProfileEditor } from "@/components/community/ProfileEditor";
 import { useDirectorCorner } from "@/hooks/useDirectorCorner";
 import { useAuth } from "@/hooks/useAuth";
+import { useUserProfile } from "@/hooks/useUserProfile";
 import { AuthModal } from "@/components/auth/AuthModal";
 import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Users, Loader2, RefreshCw, Film } from "lucide-react";
 import { useState } from "react";
 import { Link } from "react-router-dom";
 
 export default function DirectorCorner() {
   const { user } = useAuth();
+  const { profile, refetch: refetchProfile } = useUserProfile();
   const {
     posts,
     loading,
@@ -42,6 +46,33 @@ export default function DirectorCorner() {
               Share insights, celebrate wins, and connect with fellow Directors on their transformation journey.
             </p>
           </div>
+
+          {/* User Profile Card (if logged in) */}
+          {user && profile && (
+            <div className="glass-card p-5 cinematic-border flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <Avatar className="w-14 h-14 border-2 border-gold/30">
+                  <AvatarImage src={profile.avatar_url || undefined} />
+                  <AvatarFallback className="bg-gold/20 text-gold text-xl font-display">
+                    {profile.display_name?.[0]?.toUpperCase() || "D"}
+                  </AvatarFallback>
+                </Avatar>
+                <div>
+                  <p className="font-display text-lg text-gold">{profile.display_name || "Anonymous Director"}</p>
+                  {profile.bio && (
+                    <p className="text-sm text-muted-foreground line-clamp-1">{profile.bio}</p>
+                  )}
+                </div>
+              </div>
+              <ProfileEditor
+                userId={user.id}
+                currentDisplayName={profile.display_name || undefined}
+                currentAvatarUrl={profile.avatar_url || undefined}
+                currentBio={profile.bio || undefined}
+                onUpdate={refetchProfile}
+              />
+            </div>
+          )}
 
           {/* Back to Dashboard */}
           <Link to="/">

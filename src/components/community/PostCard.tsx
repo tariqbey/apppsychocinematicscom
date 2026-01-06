@@ -3,6 +3,7 @@ import { formatDistanceToNow } from "date-fns";
 import { Heart, MessageCircle, Trash2, Send, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -13,6 +14,7 @@ interface Comment {
   content: string;
   created_at: string;
   display_name?: string;
+  avatar_url?: string;
 }
 
 interface PostCardProps {
@@ -25,6 +27,9 @@ interface PostCardProps {
     comments_count: number;
     created_at: string;
     display_name?: string;
+    avatar_url?: string;
+    media_url?: string;
+    media_type?: string;
   };
   isLiked: boolean;
   onLike: (postId: string) => void;
@@ -87,9 +92,12 @@ export function PostCard({
       {/* Header */}
       <div className="flex items-start justify-between">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-gold/30 to-amber-soft/30 flex items-center justify-center text-gold font-display text-lg">
-            {post.display_name?.charAt(0).toUpperCase() || "D"}
-          </div>
+          <Avatar className="w-10 h-10 border border-gold/30">
+            <AvatarImage src={post.avatar_url} />
+            <AvatarFallback className="bg-gradient-to-br from-gold/30 to-amber-soft/30 text-gold font-display text-lg">
+              {post.display_name?.charAt(0).toUpperCase() || "D"}
+            </AvatarFallback>
+          </Avatar>
           <div>
             <p className="font-medium">{post.display_name || "Anonymous Director"}</p>
             <p className="text-xs text-muted-foreground">
@@ -115,7 +123,28 @@ export function PostCard({
       </div>
 
       {/* Content */}
-      <p className="text-foreground whitespace-pre-wrap">{post.content}</p>
+      {post.content && (
+        <p className="text-foreground whitespace-pre-wrap">{post.content}</p>
+      )}
+
+      {/* Media */}
+      {post.media_url && (
+        <div className="rounded-lg overflow-hidden">
+          {post.media_type === "image" ? (
+            <img 
+              src={post.media_url} 
+              alt="Post media" 
+              className="w-full max-h-96 object-cover"
+            />
+          ) : post.media_type === "video" ? (
+            <video 
+              src={post.media_url} 
+              className="w-full max-h-96"
+              controls
+            />
+          ) : null}
+        </div>
+      )}
 
       {/* Actions */}
       <div className="flex items-center gap-4 pt-2 border-t border-border/50">
@@ -156,9 +185,12 @@ export function PostCard({
                 <div className="space-y-3 max-h-48 overflow-y-auto">
                   {comments.map((comment) => (
                     <div key={comment.id} className="flex gap-2">
-                      <div className="w-7 h-7 rounded-full bg-secondary flex items-center justify-center text-xs font-medium shrink-0">
-                        {comment.display_name?.charAt(0).toUpperCase() || "D"}
-                      </div>
+                      <Avatar className="w-7 h-7">
+                        <AvatarImage src={comment.avatar_url} />
+                        <AvatarFallback className="bg-secondary text-xs font-medium">
+                          {comment.display_name?.charAt(0).toUpperCase() || "D"}
+                        </AvatarFallback>
+                      </Avatar>
                       <div className="flex-1 bg-secondary/50 rounded-lg p-2">
                         <div className="flex items-center gap-2 mb-1">
                           <span className="text-xs font-medium">{comment.display_name}</span>

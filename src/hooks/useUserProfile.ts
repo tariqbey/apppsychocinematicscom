@@ -18,6 +18,8 @@ export interface UserProfile {
   last_viewing_date: string | null;
   day_number: number | null;
   show_on_leaderboard: boolean;
+  avatar_url: string | null;
+  bio: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -35,43 +37,51 @@ export const useUserProfile = () => {
       return;
     }
 
-    const fetchProfile = async () => {
-      try {
-        setLoading(true);
-        const { data, error } = await supabase
-          .from("user_profiles")
-          .select("*")
-          .eq("user_id", user.id)
-          .maybeSingle();
-
-        if (error) throw error;
-
-        if (!data) {
-          // Create profile if it doesn't exist
-          const { data: newProfile, error: createError } = await supabase
-            .from("user_profiles")
-            .insert({
-              user_id: user.id,
-              display_name: user.email?.split("@")[0] || "Director",
-            })
-            .select()
-            .single();
-
-          if (createError) throw createError;
-          setProfile(newProfile);
-        } else {
-          setProfile(data);
-        }
-      } catch (err) {
-        setError(err as Error);
-        console.error("Error fetching profile:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchProfile();
+    fetchProfileData();
   }, [user]);
+
+  const fetchProfileData = async () => {
+    if (!user) return;
+    
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from("user_profiles")
+        .select("*")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (error) throw error;
+
+      if (!data) {
+        // Create profile if it doesn't exist
+        const { data: newProfile, error: createError } = await supabase
+          .from("user_profiles")
+          .insert({
+            user_id: user.id,
+            display_name: user.email?.split("@")[0] || "Director",
+          })
+          .select()
+          .single();
+
+        if (createError) throw createError;
+        setProfile(newProfile);
+      } else {
+        setProfile(data);
+      }
+    } catch (err) {
+      setError(err as Error);
+      console.error("Error fetching profile:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const refetch = () => {
+    if (user) {
+      fetchProfileData();
+    }
+  };
 
   const updateProfile = async (updates: Partial<UserProfile>) => {
     if (!user) return;
@@ -127,5 +137,6 @@ export const useUserProfile = () => {
     error,
     updateProfile,
     recordViewing,
+    refetch,
   };
 };

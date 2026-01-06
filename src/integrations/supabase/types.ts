@@ -114,6 +114,8 @@ export type Database = {
           created_at: string
           id: string
           likes_count: number
+          media_type: string | null
+          media_url: string | null
           post_type: string
           updated_at: string
           user_id: string
@@ -124,6 +126,8 @@ export type Database = {
           created_at?: string
           id?: string
           likes_count?: number
+          media_type?: string | null
+          media_url?: string | null
           post_type?: string
           updated_at?: string
           user_id: string
@@ -134,6 +138,8 @@ export type Database = {
           created_at?: string
           id?: string
           likes_count?: number
+          media_type?: string | null
+          media_url?: string | null
           post_type?: string
           updated_at?: string
           user_id?: string
@@ -302,7 +308,9 @@ export type Database = {
       }
       user_profiles: {
         Row: {
+          avatar_url: string | null
           best_streak: number | null
+          bio: string | null
           chat_summary: string | null
           chat_summary_updated_at: string | null
           chief_aim_by_when: string | null
@@ -323,7 +331,9 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          avatar_url?: string | null
           best_streak?: number | null
+          bio?: string | null
           chat_summary?: string | null
           chat_summary_updated_at?: string | null
           chief_aim_by_when?: string | null
@@ -344,7 +354,9 @@ export type Database = {
           user_id: string
         }
         Update: {
+          avatar_url?: string | null
           best_streak?: number | null
+          bio?: string | null
           chat_summary?: string | null
           chat_summary_updated_at?: string | null
           chief_aim_by_when?: string | null
