@@ -66,7 +66,7 @@ export const AuthModal = ({ isOpen, onClose }: AuthModalProps) => {
           <img 
             src={psychoCinematicsLogo} 
             alt="PSYCHO-CINEMATICS" 
-            className="h-16 w-auto mx-auto mb-4"
+            className="h-20 w-auto mx-auto mb-4"
           />
           <h2 className="text-3xl font-display tracking-wide">
             {mode === "signin" ? "Welcome Back" : "Join the Production"}
