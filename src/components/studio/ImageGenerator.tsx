@@ -3,25 +3,38 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { Loader2, Sparkles, Download, ImageIcon, Pencil } from "lucide-react";
+import { Loader2, Sparkles, Download, ImageIcon, Pencil, Film } from "lucide-react";
 import { useMediaGeneration } from "@/hooks/useMediaGeneration";
 import { ImageUpload } from "./ImageUpload";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface ImageGeneratorProps {
   onImageGenerated?: (url: string) => void;
+  onVideoGenerated?: (url: string) => void;
 }
 
 type ImageMode = "create" | "edit";
 
-export function ImageGenerator({ onImageGenerated }: ImageGeneratorProps) {
+export function ImageGenerator({ onImageGenerated, onVideoGenerated }: ImageGeneratorProps) {
   const [mode, setMode] = useState<ImageMode>("create");
   const [prompt, setPrompt] = useState("");
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
   const [aspectRatio, setAspectRatio] = useState<"1:1" | "16:9" | "9:16" | "4:3">("16:9");
   const [resolution, setResolution] = useState<"1k" | "2k" | "4k">("2k");
+  
+  // Animation state
+  const [showAnimationPanel, setShowAnimationPanel] = useState(false);
+  const [animationPrompt, setAnimationPrompt] = useState("");
+  const [animationDuration, setAnimationDuration] = useState<5 | 10>(5);
 
-  const { isGeneratingImage, generatedImageUrl, generateImage } = useMediaGeneration();
+  const { 
+    isGeneratingImage, 
+    isGeneratingVideo,
+    generatedImageUrl, 
+    generatedVideoUrl,
+    generateImage,
+    generateVideo,
+  } = useMediaGeneration();
 
   const handleGenerate = async () => {
     if (!prompt.trim()) return;
