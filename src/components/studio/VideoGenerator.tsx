@@ -115,10 +115,7 @@ export function VideoGenerator({ onVideoGenerated }: VideoGeneratorProps) {
             <SelectContent>
               {textModels.map((model) => (
                 <SelectItem key={model} value={model}>
-                  <div className="flex items-center justify-between w-full">
-                    <span>{MODEL_INFO[model].name}</span>
-                    <span className="text-muted-foreground ml-2">${MODEL_INFO[model].price}</span>
-                  </div>
+                  {MODEL_INFO[model].name}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -137,7 +134,7 @@ export function VideoGenerator({ onVideoGenerated }: VideoGeneratorProps) {
             placeholder="Upload an image to animate"
           />
           <p className="text-xs text-muted-foreground">
-            Using Sora 2 Image-to-Video • ${MODEL_INFO["openai/sora-2/image-to-video"].price}
+            Using Sora 2 Image-to-Video
           </p>
         </div>
       )}
@@ -217,13 +214,6 @@ export function VideoGenerator({ onVideoGenerated }: VideoGeneratorProps) {
         )}
       </div>
 
-      {/* Estimated Cost */}
-      <div className="p-3 rounded-lg bg-muted/50 border border-border/50">
-        <div className="flex items-center justify-between text-sm">
-          <span className="text-muted-foreground">Estimated Cost</span>
-          <span className="font-medium text-gold">${modelInfo.price}</span>
-        </div>
-      </div>
 
       <Button
         onClick={handleGenerate}
