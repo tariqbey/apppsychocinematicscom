@@ -9,6 +9,7 @@ import { EditBay } from "@/components/studio/EditBay";
 import { DirectorAIChat } from "@/components/director-ai/DirectorAIChat";
 import { DailyScorecard } from "@/components/scorecard/DailyScorecard";
 import { ChiefAimWizard } from "@/components/chief-aim/ChiefAimWizard";
+import { ThreeThings } from "@/components/tasks/ThreeThings";
 import { AuthModal } from "@/components/auth/AuthModal";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserProfile } from "@/hooks/useUserProfile";
@@ -138,6 +139,9 @@ const Index = () => {
                   </div>
                 </div>
               </button>
+
+              {/* Three Things - Daily Task Manager */}
+              <ThreeThings />
 
               {/* Two Column Layout */}
               <div className="grid md:grid-cols-2 gap-6">
