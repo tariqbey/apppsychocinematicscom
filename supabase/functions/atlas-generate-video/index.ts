@@ -34,6 +34,22 @@ const MODEL_CONFIGS: Record<string, { endpoint: string; defaultParams: any }> = 
     endpoint: "https://api.atlascloud.ai/api/v1/model/generateVideo",
     defaultParams: { duration: 5, resolution: "1080p" },
   },
+  "wan-ai/wan2.1-t2v-480p": {
+    endpoint: "https://api.atlascloud.ai/api/v1/model/generateVideo",
+    defaultParams: { duration: 5, resolution: "480p", aspect_ratio: "16:9" },
+  },
+  "wan-ai/wan2.1-i2v-480p": {
+    endpoint: "https://api.atlascloud.ai/api/v1/model/generateVideo",
+    defaultParams: { duration: 5, resolution: "480p" },
+  },
+  "kling-ai/v1-5/pro/text-to-video": {
+    endpoint: "https://api.atlascloud.ai/api/v1/model/generateVideo",
+    defaultParams: { duration: 5, resolution: "1080p", aspect_ratio: "16:9" },
+  },
+  "kling-ai/v1-5/pro/image-to-video": {
+    endpoint: "https://api.atlascloud.ai/api/v1/model/generateVideo",
+    defaultParams: { duration: 5, resolution: "1080p" },
+  },
 };
 
 serve(async (req) => {
@@ -91,7 +107,12 @@ serve(async (req) => {
       generateBody.generate_audio = true;
     }
 
-    if (image && model === "openai/sora-2/image-to-video") {
+    // Handle image input for image-to-video models
+    const isImageToVideo = model === "openai/sora-2/image-to-video" || 
+                           model === "wan-ai/wan2.1-i2v-480p" || 
+                           model === "kling-ai/v1-5/pro/image-to-video";
+    
+    if (image && isImageToVideo) {
       if (typeof image === "string" && image.startsWith("data:")) {
         const inline = dataUrlToInlineData(image);
         generateBody.image = inline ?? image;

@@ -26,8 +26,9 @@ export function VideoGenerator({ onVideoGenerated }: VideoGeneratorProps) {
 
   const { isGeneratingVideo, generatedVideoUrl, generateVideo } = useMediaGeneration();
 
-  // For frames-to-video, we use Sora 2 image-to-video model
-  const effectiveModel: VideoModel = mode === "frames" ? "openai/sora-2/image-to-video" : selectedModel;
+  // For frames-to-video, use the selected image model
+  const [selectedImageModel, setSelectedImageModel] = useState<VideoModel>("openai/sora-2/image-to-video");
+  const effectiveModel: VideoModel = mode === "frames" ? selectedImageModel : selectedModel;
   const modelInfo = MODEL_INFO[effectiveModel];
 
   const handleGenerate = async () => {
@@ -58,7 +59,10 @@ export function VideoGenerator({ onVideoGenerated }: VideoGeneratorProps) {
   const canGenerate = prompt.trim() && (mode === "text" || uploadedImage);
 
   // Models available for text-to-video
-  const textModels: VideoModel[] = ["google/veo3", "google/veo3-fast", "openai/sora-2/text-to-video"];
+  const textModels: VideoModel[] = ["google/veo3", "google/veo3-fast", "openai/sora-2/text-to-video", "wan-ai/wan2.1-t2v-480p", "kling-ai/v1-5/pro/text-to-video"];
+  
+  // Models available for image-to-video
+  const imageModels: VideoModel[] = ["openai/sora-2/image-to-video", "wan-ai/wan2.1-i2v-480p", "kling-ai/v1-5/pro/image-to-video"];
 
   return (
     <div className="space-y-6">
@@ -124,18 +128,33 @@ export function VideoGenerator({ onVideoGenerated }: VideoGeneratorProps) {
         </div>
       )}
 
-      {/* Frames Mode: Image Upload */}
+      {/* Frames Mode: Model Selection + Image Upload */}
       {mode === "frames" && (
-        <div className="space-y-2">
-          <Label>Upload Starting Frame</Label>
-          <ImageUpload
-            value={uploadedImage}
-            onChange={setUploadedImage}
-            placeholder="Upload an image to animate"
-          />
-          <p className="text-xs text-muted-foreground">
-            Using Sora 2 Image-to-Video
-          </p>
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label>Model</Label>
+            <Select value={selectedImageModel} onValueChange={(v) => setSelectedImageModel(v as VideoModel)}>
+              <SelectTrigger className="bg-background/50">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {imageModels.map((model) => (
+                  <SelectItem key={model} value={model}>
+                    {MODEL_INFO[model].name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">{modelInfo.description}</p>
+          </div>
+          <div className="space-y-2">
+            <Label>Upload Starting Frame</Label>
+            <ImageUpload
+              value={uploadedImage}
+              onChange={setUploadedImage}
+              placeholder="Upload an image to animate"
+            />
+          </div>
         </div>
       )}
 
