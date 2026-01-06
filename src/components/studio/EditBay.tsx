@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ImageGenerator } from "./ImageGenerator";
 import { VideoGenerator } from "./VideoGenerator";
-import { GenerationHistory } from "./GenerationHistory";
+import { MediaLibrary } from "./MediaLibrary";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { useToast } from "@/hooks/use-toast";
 
@@ -78,7 +78,7 @@ export function EditBay({ onClose }: EditBayProps) {
               </TabsContent>
 
               <TabsContent value="gallery" className="mt-0">
-                <GenerationHistory
+                <MediaLibrary
                   onSelect={(media) => {
                     if (media.media_url && media.media_type === "video") {
                       handleVideoGenerated(media.media_url);
