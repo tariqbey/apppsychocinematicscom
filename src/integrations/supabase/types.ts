@@ -14,7 +14,123 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      daily_scorecards: {
+        Row: {
+          behavior_execution: number
+          created_at: string
+          emotional_regulation: number
+          forward_progress: number
+          id: string
+          identity_alignment: number
+          scorecard_date: string
+          total_score: number | null
+          user_id: string
+        }
+        Insert: {
+          behavior_execution: number
+          created_at?: string
+          emotional_regulation: number
+          forward_progress: number
+          id?: string
+          identity_alignment: number
+          scorecard_date?: string
+          total_score?: number | null
+          user_id: string
+        }
+        Update: {
+          behavior_execution?: number
+          created_at?: string
+          emotional_regulation?: number
+          forward_progress?: number
+          id?: string
+          identity_alignment?: number
+          scorecard_date?: string
+          total_score?: number | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_profiles: {
+        Row: {
+          best_streak: number | null
+          chief_aim_by_when: string | null
+          chief_aim_exchange: string | null
+          chief_aim_plan: string | null
+          chief_aim_what: string | null
+          created_at: string
+          current_act: string | null
+          current_streak: number | null
+          day_number: number | null
+          director_character_name: string | null
+          display_name: string | null
+          id: string
+          last_viewing_date: string | null
+          mind_movie_url: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          best_streak?: number | null
+          chief_aim_by_when?: string | null
+          chief_aim_exchange?: string | null
+          chief_aim_plan?: string | null
+          chief_aim_what?: string | null
+          created_at?: string
+          current_act?: string | null
+          current_streak?: number | null
+          day_number?: number | null
+          director_character_name?: string | null
+          display_name?: string | null
+          id?: string
+          last_viewing_date?: string | null
+          mind_movie_url?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          best_streak?: number | null
+          chief_aim_by_when?: string | null
+          chief_aim_exchange?: string | null
+          chief_aim_plan?: string | null
+          chief_aim_what?: string | null
+          created_at?: string
+          current_act?: string | null
+          current_streak?: number | null
+          day_number?: number | null
+          director_character_name?: string | null
+          display_name?: string | null
+          id?: string
+          last_viewing_date?: string | null
+          mind_movie_url?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      viewing_history: {
+        Row: {
+          duration_seconds: number | null
+          id: string
+          user_id: string
+          view_date: string
+          viewed_at: string
+        }
+        Insert: {
+          duration_seconds?: number | null
+          id?: string
+          user_id: string
+          view_date?: string
+          viewed_at?: string
+        }
+        Update: {
+          duration_seconds?: number | null
+          id?: string
+          user_id?: string
+          view_date?: string
+          viewed_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
