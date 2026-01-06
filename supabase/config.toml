@@ -8,3 +8,9 @@ verify_jwt = false
 
 [functions.generate-chat-summary]
 verify_jwt = false
+
+[functions.atlas-generate-image]
+verify_jwt = false
+
+[functions.atlas-generate-video]
+verify_jwt = false
