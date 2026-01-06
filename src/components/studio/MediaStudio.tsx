@@ -41,14 +41,12 @@ export function MediaStudio({ open, onOpenChange, onVideoGenerated, onImageGener
           <TabsContent value="video" className="mt-6">
             <VideoGenerator onVideoGenerated={(url) => {
               onVideoGenerated?.(url);
-              onOpenChange(false);
             }} />
           </TabsContent>
 
           <TabsContent value="image" className="mt-6">
             <ImageGenerator onImageGenerated={(url) => {
               onImageGenerated?.(url);
-              onOpenChange(false);
             }} />
           </TabsContent>
 

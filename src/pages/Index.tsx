@@ -5,6 +5,7 @@ import { DailyRitualChecklist } from "@/components/dashboard/DailyRitualChecklis
 import { DefiniteChiefAimCard } from "@/components/dashboard/DefiniteChiefAimCard";
 import { StreakBanner } from "@/components/dashboard/StreakBanner";
 import { TheaterView } from "@/components/theater/TheaterView";
+import { EditBay } from "@/components/studio/EditBay";
 import { DirectorAIChat } from "@/components/director-ai/DirectorAIChat";
 import { DailyScorecard } from "@/components/scorecard/DailyScorecard";
 import { AuthModal } from "@/components/auth/AuthModal";
@@ -16,6 +17,7 @@ import { Button } from "@/components/ui/button";
 
 const Index = () => {
   const [showTheater, setShowTheater] = useState(false);
+  const [showEditBay, setShowEditBay] = useState(false);
   const [showScorecard, setShowScorecard] = useState(false);
   const [showAIChat, setShowAIChat] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
@@ -108,6 +110,7 @@ const Index = () => {
                 <DailyRitualChecklist
                   onTheaterClick={() => setShowTheater(true)}
                   onScorecardClick={() => setShowScorecard(true)}
+                  onEditBayClick={() => setShowEditBay(true)}
                 />
 
                 {/* Chief Aim */}
@@ -121,6 +124,11 @@ const Index = () => {
       {/* Theater View */}
       {showTheater && user && (
         <TheaterView onClose={() => setShowTheater(false)} />
+      )}
+
+      {/* Edit Bay */}
+      {showEditBay && user && (
+        <EditBay onClose={() => setShowEditBay(false)} />
       )}
 
       {/* Scorecard */}
