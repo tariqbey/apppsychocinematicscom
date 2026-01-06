@@ -6,6 +6,17 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+function dataUrlToInlineData(dataUrl: string) {
+  const matches = dataUrl.match(/^data:([^;]+);base64,(.+)$/);
+  if (!matches) return null;
+  return {
+    inlineData: {
+      mimeType: matches[1],
+      data: matches[2],
+    },
+  };
+}
+
 const MODEL_CONFIGS: Record<string, { endpoint: string; defaultParams: any }> = {
   "google/veo3": {
     endpoint: "https://api.atlascloud.ai/api/v1/model/generateVideo",
@@ -81,9 +92,13 @@ serve(async (req) => {
     }
 
     if (image && model === "openai/sora-2/image-to-video") {
-      generateBody.image = image;
+      if (typeof image === "string" && image.startsWith("data:")) {
+        const inline = dataUrlToInlineData(image);
+        generateBody.image = inline ?? image;
+      } else {
+        generateBody.image = image;
+      }
     }
-
     const generateResponse = await fetch(modelConfig.endpoint, {
       method: "POST",
       headers: {
