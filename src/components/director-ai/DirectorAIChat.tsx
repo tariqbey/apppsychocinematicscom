@@ -1,5 +1,5 @@
-import { useState, useRef, useEffect } from "react";
-import { MessageCircle, X, Send, Scissors, Sparkles, Loader2, Mic, MicOff } from "lucide-react";
+import { useState, useRef, useEffect, useCallback } from "react";
+import { MessageCircle, X, Send, Scissors, Sparkles, Loader2, Mic, MicOff, Volume2, VolumeX } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -18,6 +18,7 @@ interface DirectorAIChatProps {
 }
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/director-ai`;
+const TTS_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/elevenlabs-tts`;
 
 export const DirectorAIChat = ({ isOpen, onToggle, chiefAim }: DirectorAIChatProps) => {
   const [messages, setMessages] = useState<Message[]>([
@@ -29,7 +30,10 @@ export const DirectorAIChat = ({ isOpen, onToggle, chiefAim }: DirectorAIChatPro
   ]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [ttsEnabled, setTtsEnabled] = useState(true);
+  const [isSpeaking, setIsSpeaking] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   // Voice input
   const handleVoiceTranscript = (transcript: string) => {
@@ -53,6 +57,66 @@ export const DirectorAIChat = ({ isOpen, onToggle, chiefAim }: DirectorAIChatPro
       setInput(transcript);
     }
   }, [isListening, transcript]);
+
+  // Cleanup audio on unmount
+  useEffect(() => {
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+      }
+    };
+  }, []);
+
+  const speakText = useCallback(async (text: string) => {
+    if (!ttsEnabled || !text.trim()) return;
+
+    try {
+      setIsSpeaking(true);
+      
+      // Stop any currently playing audio
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+      }
+
+      const response = await fetch(TTS_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+        },
+        body: JSON.stringify({ text }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to generate speech");
+      }
+
+      const audioBlob = await response.blob();
+      const audioUrl = URL.createObjectURL(audioBlob);
+      const audio = new Audio(audioUrl);
+      audioRef.current = audio;
+
+      audio.onended = () => {
+        setIsSpeaking(false);
+        URL.revokeObjectURL(audioUrl);
+        audioRef.current = null;
+      };
+
+      audio.onerror = () => {
+        setIsSpeaking(false);
+        URL.revokeObjectURL(audioUrl);
+        audioRef.current = null;
+      };
+
+      await audio.play();
+    } catch (error) {
+      console.error("TTS error:", error);
+      setIsSpeaking(false);
+    }
+  }, [ttsEnabled]);
 
   const streamChat = async (userMessage: string) => {
     const userMsg: Message = {
@@ -157,6 +221,10 @@ export const DirectorAIChat = ({ isOpen, onToggle, chiefAim }: DirectorAIChatPro
           }
         }
       }
+      // Speak the complete response
+      if (assistantContent.trim()) {
+        speakText(assistantContent);
+      }
     } catch (error) {
       console.error("Chat error:", error);
       toast.error(error instanceof Error ? error.message : "Failed to get AI response");
@@ -218,9 +286,34 @@ export const DirectorAIChat = ({ isOpen, onToggle, chiefAim }: DirectorAIChatPro
             <p className="text-xs text-muted-foreground">Your Psycho-Cinematics Coach</p>
           </div>
         </div>
-        <Button variant="ghost" size="icon" onClick={onToggle}>
-          <X className="w-5 h-5" />
-        </Button>
+        <div className="flex items-center gap-1">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => {
+              if (isSpeaking && audioRef.current) {
+                audioRef.current.pause();
+                audioRef.current = null;
+                setIsSpeaking(false);
+              }
+              setTtsEnabled(!ttsEnabled);
+            }}
+            className={cn(
+              "relative",
+              isSpeaking && "text-gold"
+            )}
+            title={ttsEnabled ? "Disable voice" : "Enable voice"}
+          >
+            {ttsEnabled ? (
+              <Volume2 className={cn("w-5 h-5", isSpeaking && "animate-pulse")} />
+            ) : (
+              <VolumeX className="w-5 h-5 text-muted-foreground" />
+            )}
+          </Button>
+          <Button variant="ghost" size="icon" onClick={onToggle}>
+            <X className="w-5 h-5" />
+          </Button>
+        </div>
       </div>
 
       {/* Messages */}
