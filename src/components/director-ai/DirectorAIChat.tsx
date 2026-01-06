@@ -1,7 +1,8 @@
-import { useState } from "react";
-import { MessageCircle, X, Send, Scissors, RefreshCw, Sparkles } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
+import { MessageCircle, X, Send, Scissors, Sparkles, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 interface Message {
   id: string;
@@ -15,6 +16,8 @@ interface DirectorAIChatProps {
   chiefAim: string;
 }
 
+const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/director-ai`;
+
 export const DirectorAIChat = ({ isOpen, onToggle, chiefAim }: DirectorAIChatProps) => {
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -24,46 +27,143 @@ export const DirectorAIChat = ({ isOpen, onToggle, chiefAim }: DirectorAIChatPro
     },
   ]);
   const [input, setInput] = useState("");
-  const [isCutMode, setIsCutMode] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const handleCut = () => {
-    setIsCutMode(true);
-    const cutMessage: Message = {
-      id: Date.now().toString(),
-      role: "assistant",
-      content: `🎬 CUT! Let's reset, Director.
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
 
-**Step 1: RECOGNIZE** — What thought or behavior just pulled you out of character?
-
-**Step 2: CUT** — Say it out loud: "That's not my script."
-
-**Step 3: RESET** — Take 3 deep breaths. Remember: "${chiefAim}"
-
-**Step 4: RESUME** — What's the next action your Director self would take?
-
-You're the Director. This scene doesn't define the movie. Action when ready.`,
-    };
-    setMessages(prev => [...prev, cutMessage]);
-  };
-
-  const handleSend = () => {
-    if (!input.trim()) return;
-
-    const userMessage: Message = {
+  const streamChat = async (userMessage: string) => {
+    const userMsg: Message = {
       id: Date.now().toString(),
       role: "user",
-      content: input,
+      content: userMessage,
     };
 
-    const assistantMessage: Message = {
-      id: (Date.now() + 1).toString(),
-      role: "assistant",
-      content: "I hear you, Director. Remember, you're not an extra in your own movie — you're the one calling the shots. Let's get you back on script. What specific action can you take right now that aligns with your Chief Aim?",
+    setMessages((prev) => [...prev, userMsg]);
+    setIsLoading(true);
+
+    let assistantContent = "";
+
+    const updateAssistant = (chunk: string) => {
+      assistantContent += chunk;
+      setMessages((prev) => {
+        const last = prev[prev.length - 1];
+        if (last?.role === "assistant" && last.id.startsWith("streaming-")) {
+          return prev.map((m, i) =>
+            i === prev.length - 1 ? { ...m, content: assistantContent } : m
+          );
+        }
+        return [
+          ...prev,
+          { id: `streaming-${Date.now()}`, role: "assistant", content: assistantContent },
+        ];
+      });
     };
 
-    setMessages(prev => [...prev, userMessage, assistantMessage]);
+    try {
+      const conversationHistory = messages
+        .filter((m) => m.id !== "1") // Exclude welcome message
+        .map((m) => ({ role: m.role, content: m.content }));
+
+      const response = await fetch(CHAT_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+        },
+        body: JSON.stringify({
+          messages: [...conversationHistory, { role: "user", content: userMessage }],
+          chiefAim,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to get response");
+      }
+
+      if (!response.body) throw new Error("No response body");
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+
+        let newlineIndex: number;
+        while ((newlineIndex = buffer.indexOf("\n")) !== -1) {
+          let line = buffer.slice(0, newlineIndex);
+          buffer = buffer.slice(newlineIndex + 1);
+
+          if (line.endsWith("\r")) line = line.slice(0, -1);
+          if (line.startsWith(":") || line.trim() === "") continue;
+          if (!line.startsWith("data: ")) continue;
+
+          const jsonStr = line.slice(6).trim();
+          if (jsonStr === "[DONE]") break;
+
+          try {
+            const parsed = JSON.parse(jsonStr);
+            const content = parsed.choices?.[0]?.delta?.content;
+            if (content) updateAssistant(content);
+          } catch {
+            buffer = line + "\n" + buffer;
+            break;
+          }
+        }
+      }
+
+      // Final flush
+      if (buffer.trim()) {
+        for (let raw of buffer.split("\n")) {
+          if (!raw) continue;
+          if (raw.endsWith("\r")) raw = raw.slice(0, -1);
+          if (raw.startsWith(":") || raw.trim() === "") continue;
+          if (!raw.startsWith("data: ")) continue;
+          const jsonStr = raw.slice(6).trim();
+          if (jsonStr === "[DONE]") continue;
+          try {
+            const parsed = JSON.parse(jsonStr);
+            const content = parsed.choices?.[0]?.delta?.content;
+            if (content) updateAssistant(content);
+          } catch {
+            /* ignore */
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Chat error:", error);
+      toast.error(error instanceof Error ? error.message : "Failed to get AI response");
+      
+      // Remove the streaming message if it was added
+      setMessages((prev) => {
+        const last = prev[prev.length - 1];
+        if (last?.role === "assistant" && last.id.startsWith("streaming-") && !last.content) {
+          return prev.slice(0, -1);
+        }
+        return prev;
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleCut = async () => {
+    const cutPrompt = `I need to use the CUT! technique right now. I'm feeling overwhelmed or off-script. Please guide me through the 4-step reset: RECOGNIZE, CUT, RESET, RESUME. Make it personal to my Chief Aim.`;
+    await streamChat(cutPrompt);
+  };
+
+  const handleSend = async () => {
+    if (!input.trim() || isLoading) return;
+    const message = input;
     setInput("");
-    setIsCutMode(false);
+    await streamChat(message);
   };
 
   if (!isOpen) {
@@ -117,6 +217,14 @@ You're the Director. This scene doesn't define the movie. Action when ready.`,
             </div>
           </div>
         ))}
+        {isLoading && messages[messages.length - 1]?.role !== "assistant" && (
+          <div className="flex justify-start">
+            <div className="bg-secondary rounded-lg p-3">
+              <Loader2 className="w-4 h-4 animate-spin text-gold" />
+            </div>
+          </div>
+        )}
+        <div ref={messagesEndRef} />
       </div>
 
       {/* CUT! Button */}
@@ -125,6 +233,7 @@ You're the Director. This scene doesn't define the movie. Action when ready.`,
           variant="cut"
           className="w-full"
           onClick={handleCut}
+          disabled={isLoading}
         >
           <Scissors className="w-4 h-4 mr-2" />
           CUT! — I Need a Reset
@@ -138,12 +247,13 @@ You're the Director. This scene doesn't define the movie. Action when ready.`,
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleSend()}
+            onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSend()}
             placeholder="Talk to your Director AI..."
             className="flex-1 bg-secondary rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gold/50 placeholder:text-muted-foreground"
+            disabled={isLoading}
           />
-          <Button variant="gold" size="icon" onClick={handleSend}>
-            <Send className="w-4 h-4" />
+          <Button variant="gold" size="icon" onClick={handleSend} disabled={isLoading}>
+            {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
           </Button>
         </div>
       </div>
