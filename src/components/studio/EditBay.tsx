@@ -1,3 +1,4 @@
+import { useState, useRef } from "react";
 import { Film, X, Image, Video, FolderOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -14,19 +15,37 @@ interface EditBayProps {
 export function EditBay({ onClose }: EditBayProps) {
   const { updateProfile } = useUserProfile();
   const { toast } = useToast();
+  const [activeTab, setActiveTab] = useState("image");
+  const [galleryKey, setGalleryKey] = useState(0); // Force refresh gallery
+
+  const refreshGallery = () => {
+    setGalleryKey(prev => prev + 1);
+  };
 
   const handleVideoGenerated = async (url: string) => {
     await updateProfile({ mind_movie_url: url });
+    refreshGallery();
     toast({
       title: "Mind Movie Set!",
-      description: "Your AI-generated video is now your Mind Movie.",
+      description: "Your AI-generated video is now your Mind Movie. View it in the gallery.",
+      action: (
+        <Button variant="outline" size="sm" onClick={() => setActiveTab("gallery")}>
+          View Gallery
+        </Button>
+      ),
     });
   };
 
   const handleImageGenerated = (url: string) => {
+    refreshGallery();
     toast({
       title: "Image Generated!",
       description: "Your image has been saved to the gallery.",
+      action: (
+        <Button variant="outline" size="sm" onClick={() => setActiveTab("gallery")}>
+          View Gallery
+        </Button>
+      ),
     });
   };
 
@@ -52,7 +71,7 @@ export function EditBay({ onClose }: EditBayProps) {
       {/* Main Content */}
       <div className="flex-1 overflow-y-auto p-6">
         <div className="max-w-3xl mx-auto">
-          <Tabs defaultValue="image" className="w-full">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="grid w-full grid-cols-3 mb-6">
               <TabsTrigger value="image" className="gap-2">
                 <Image className="h-4 w-4" />
@@ -70,7 +89,10 @@ export function EditBay({ onClose }: EditBayProps) {
 
             <div className="glass-card p-6 cinematic-border">
               <TabsContent value="image" className="mt-0">
-                <ImageGenerator onImageGenerated={handleImageGenerated} />
+                <ImageGenerator 
+                  onImageGenerated={handleImageGenerated}
+                  onVideoGenerated={handleVideoGenerated}
+                />
               </TabsContent>
 
               <TabsContent value="video" className="mt-0">
@@ -79,6 +101,7 @@ export function EditBay({ onClose }: EditBayProps) {
 
               <TabsContent value="gallery" className="mt-0">
                 <MediaLibrary
+                  key={galleryKey}
                   onSelect={(media) => {
                     if (media.media_url && media.media_type === "video") {
                       handleVideoGenerated(media.media_url);
