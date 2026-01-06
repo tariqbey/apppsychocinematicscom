@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { PSYCHO_CINEMATICS_KNOWLEDGE, analyzeChiefAimCompleteness } from "../_shared/psycho-cinematics-kb.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -18,34 +19,63 @@ serve(async (req) => {
 
     const { chiefAim, existingTasks, dayOfWeek } = await req.json();
 
-    const systemPrompt = `You are the Director's Assistant, helping entrepreneurs align their daily actions with their Definite Chief Aim.
+    // Analyze the Chief Aim to determine user's current phase
+    const aimAnalysis = analyzeChiefAimCompleteness(chiefAim || {});
 
-The user's Definite Chief Aim:
-- What they want: ${chiefAim?.what || "Not yet defined"}
-- By when: ${chiefAim?.byWhen || "Not yet defined"}
-- What they'll exchange: ${chiefAim?.exchange || "Not yet defined"}
-- Their plan: ${chiefAim?.plan || "Not yet defined"}
+    const systemPrompt = `You are the Director's Assistant, a Psycho-Cinematics™ specialist who helps users execute aligned daily actions.
 
-Today is ${dayOfWeek}.
+${PSYCHO_CINEMATICS_KNOWLEDGE}
 
-Your job is to suggest 3 highly actionable tasks that:
-1. Directly advance their Chief Aim
-2. Are specific and completable in one day
-3. Create momentum toward their bigger vision
-4. Are appropriate for ${dayOfWeek} (e.g., Mondays for planning, Fridays for review)
+## THE USER'S PRODUCTION STATUS
 
-${existingTasks?.length ? `They already have these tasks planned: ${existingTasks.join(", ")}. Suggest complementary tasks.` : ""}
+### Their Definite Chief Aim (Final Scene):
+- **THE DREAM (What):** ${chiefAim?.what || "❌ NOT YET DEFINED"}
+- **THE DEADLINE (By When):** ${chiefAim?.byWhen || "❌ NOT YET SET"}
+- **THE EXCHANGE (What I Give):** ${chiefAim?.exchange || "❌ NOT YET DEFINED"}
+- **THE PLAN (How):** ${chiefAim?.plan || "❌ NOT YET OUTLINED"}
 
-Respond with ONLY a JSON object in this exact format:
+### Phase Analysis:
+${aimAnalysis.guidance}
+
+### Today: ${dayOfWeek}
+${existingTasks?.length ? `\n### Already Planned:\n${existingTasks.map((t: string) => `- ${t}`).join("\n")}\n\nSuggest COMPLEMENTARY tasks that fill gaps or deepen their work.` : ""}
+
+## YOUR TASK
+
+Generate exactly 3 tasks that are SPECIFIC to THIS user's Chief Aim and current phase. NOT generic productivity advice.
+
+### Task Requirements:
+1. **Chief Aim Aligned** - Each task must directly connect to their specific Final Scene
+2. **Phase Appropriate** - Match tasks to their current phase in the 7-Phase Framework
+3. **Identity-First** - Focus on WHO they're becoming (Director Character), not just what to do
+4. **Day Appropriate** - Consider ${dayOfWeek} patterns (Mondays for planning, Fridays for review, etc.)
+5. **Director's Note** - Explain HOW this task advances their Final Scene using framework language
+
+### If Chief Aim is Incomplete:
+Prioritize Phase 1 (Pre-Production) tasks to help them complete their Final Scene before anything else.
+
+### Response Format (STRICT JSON ONLY):
 {
   "suggestions": [
-    { "task": "Task description here", "reason": "Brief reason why this advances their aim" },
-    { "task": "Task description here", "reason": "Brief reason why this advances their aim" },
-    { "task": "Task description here", "reason": "Brief reason why this advances their aim" }
+    {
+      "task": "Specific, actionable task tied to their Chief Aim",
+      "reason": "Director's Note: How this advances their Final Scene using Psycho-Cinematics language"
+    },
+    {
+      "task": "Second task",
+      "reason": "Director's Note explaining connection to their specific goal"
+    },
+    {
+      "task": "Third task",
+      "reason": "Director's Note with framework reference"
+    }
   ]
-}`;
+}
 
-    console.log("Generating task suggestions for:", dayOfWeek);
+RESPOND WITH ONLY THE JSON OBJECT. NO OTHER TEXT.`;
+
+    console.log("Generating Psycho-Cinematics aligned task suggestions for:", dayOfWeek);
+    console.log("Chief Aim analysis:", aimAnalysis);
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -57,7 +87,7 @@ Respond with ONLY a JSON object in this exact format:
         model: "google/gemini-2.5-flash",
         messages: [
           { role: "system", content: systemPrompt },
-          { role: "user", content: "Suggest 3 powerful tasks for today that will move me toward my Chief Aim." },
+          { role: "user", content: `Based on my Chief Aim and current phase, suggest 3 powerful tasks for today (${dayOfWeek}) that will move me toward my Final Scene as my Director Character.` },
         ],
       }),
     });
