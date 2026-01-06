@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Progress } from "@/components/ui/progress";
-import { Image, Video, Clock, AlertCircle, Loader2, Download, Trash2, HardDrive } from "lucide-react";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Image, Video, Clock, AlertCircle, Loader2, Download, Trash2, HardDrive, X, ChevronLeft, ChevronRight } from "lucide-react";
 import { useMediaGeneration, GeneratedMedia } from "@/hooks/useMediaGeneration";
 import { formatDistanceToNow } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
@@ -28,6 +29,7 @@ export function MediaLibrary({ filter = "all", onSelect }: MediaLibraryProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [storageUsed, setStorageUsed] = useState(0);
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
+  const [lightboxMedia, setLightboxMedia] = useState<GeneratedMedia | null>(null);
   const { fetchGenerationHistory } = useMediaGeneration();
   const { toast } = useToast();
 
@@ -52,8 +54,8 @@ export function MediaLibrary({ filter = "all", onSelect }: MediaLibraryProps) {
     setIsLoading(false);
   };
 
-  const handleDownload = async (media: GeneratedMedia, e: React.MouseEvent) => {
-    e.stopPropagation();
+  const handleDownload = async (media: GeneratedMedia, e?: React.MouseEvent) => {
+    e?.stopPropagation();
     if (!media.media_url) return;
 
     try {
@@ -81,8 +83,8 @@ export function MediaLibrary({ filter = "all", onSelect }: MediaLibraryProps) {
     }
   };
 
-  const handleDelete = async (media: GeneratedMedia, e: React.MouseEvent) => {
-    e.stopPropagation();
+  const handleDelete = async (media: GeneratedMedia, e?: React.MouseEvent) => {
+    e?.stopPropagation();
     setIsDeleting(media.id);
 
     try {
@@ -98,6 +100,11 @@ export function MediaLibrary({ filter = "all", onSelect }: MediaLibraryProps) {
       // Update storage estimate
       const removedSize = media.media_type === "image" ? 2 * 1024 * 1024 : 50 * 1024 * 1024;
       setStorageUsed((prev) => Math.max(0, prev - removedSize));
+      
+      // Close lightbox if the deleted item was being viewed
+      if (lightboxMedia?.id === media.id) {
+        setLightboxMedia(null);
+      }
       
       toast({
         title: "Deleted",
@@ -118,6 +125,18 @@ export function MediaLibrary({ filter = "all", onSelect }: MediaLibraryProps) {
     ? history 
     : history.filter(item => item.media_type === filter);
 
+  const completedMedia = filteredHistory.filter(item => item.status === "completed" && item.media_url);
+
+  const currentIndex = lightboxMedia ? completedMedia.findIndex(m => m.id === lightboxMedia.id) : -1;
+
+  const navigateLightbox = (direction: "prev" | "next") => {
+    if (currentIndex === -1) return;
+    const newIndex = direction === "prev" 
+      ? (currentIndex - 1 + completedMedia.length) % completedMedia.length
+      : (currentIndex + 1) % completedMedia.length;
+    setLightboxMedia(completedMedia[newIndex]);
+  };
+
   const storagePercentage = (storageUsed / MAX_STORAGE_BYTES) * 100;
 
   if (isLoading) {
@@ -130,6 +149,111 @@ export function MediaLibrary({ filter = "all", onSelect }: MediaLibraryProps) {
 
   return (
     <div className="space-y-4">
+      {/* Lightbox Modal */}
+      <Dialog open={!!lightboxMedia} onOpenChange={(open) => !open && setLightboxMedia(null)}>
+        <DialogContent className="max-w-4xl w-full p-0 bg-black/95 border-border/50 overflow-hidden">
+          {lightboxMedia && (
+            <div className="relative">
+              {/* Close Button */}
+              <Button
+                variant="ghost"
+                size="icon"
+                className="absolute top-2 right-2 z-10 text-white hover:bg-white/20"
+                onClick={() => setLightboxMedia(null)}
+              >
+                <X className="h-5 w-5" />
+              </Button>
+
+              {/* Navigation Arrows */}
+              {completedMedia.length > 1 && (
+                <>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="absolute left-2 top-1/2 -translate-y-1/2 z-10 text-white hover:bg-white/20"
+                    onClick={() => navigateLightbox("prev")}
+                  >
+                    <ChevronLeft className="h-6 w-6" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 z-10 text-white hover:bg-white/20"
+                    onClick={() => navigateLightbox("next")}
+                  >
+                    <ChevronRight className="h-6 w-6" />
+                  </Button>
+                </>
+              )}
+
+              {/* Media Display */}
+              <div className="flex items-center justify-center min-h-[400px] max-h-[70vh]">
+                {lightboxMedia.media_type === "image" ? (
+                  <img 
+                    src={lightboxMedia.media_url!} 
+                    alt="" 
+                    className="max-w-full max-h-[70vh] object-contain"
+                  />
+                ) : (
+                  <video 
+                    src={lightboxMedia.media_url!} 
+                    controls 
+                    autoPlay
+                    className="max-w-full max-h-[70vh]"
+                  />
+                )}
+              </div>
+
+              {/* Info Bar */}
+              <div className="p-4 bg-background/80 backdrop-blur-sm border-t border-border/50">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">{lightboxMedia.prompt}</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {lightboxMedia.model_used} • {formatDistanceToNow(new Date(lightboxMedia.created_at), { addSuffix: true })}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleDownload(lightboxMedia)}
+                    >
+                      <Download className="h-4 w-4 mr-2" />
+                      Download
+                    </Button>
+                    {onSelect && lightboxMedia.media_type === "video" && (
+                      <Button
+                        size="sm"
+                        onClick={() => {
+                          onSelect(lightboxMedia);
+                          setLightboxMedia(null);
+                        }}
+                      >
+                        <Video className="h-4 w-4 mr-2" />
+                        Set as Mind Movie
+                      </Button>
+                    )}
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      onClick={() => handleDelete(lightboxMedia)}
+                      disabled={isDeleting === lightboxMedia.id}
+                    >
+                      {isDeleting === lightboxMedia.id ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Trash2 className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
       {/* Storage Indicator */}
       <div className="p-4 rounded-lg bg-muted/30 border border-border/50 space-y-2">
         <div className="flex items-center justify-between text-sm">
@@ -162,7 +286,7 @@ export function MediaLibrary({ filter = "all", onSelect }: MediaLibraryProps) {
               <div
                 key={item.id}
                 className="group relative rounded-lg border border-border/50 overflow-hidden hover:border-primary/50 transition-colors cursor-pointer"
-                onClick={() => item.status === "completed" && onSelect?.(item)}
+                onClick={() => item.status === "completed" && item.media_url && setLightboxMedia(item)}
               >
                 {/* Thumbnail */}
                 <div className="relative aspect-video bg-muted">
@@ -197,30 +321,10 @@ export function MediaLibrary({ filter = "all", onSelect }: MediaLibraryProps) {
                     </span>
                   </div>
 
-                  {/* Action Buttons - Show on Hover */}
+                  {/* Hover Overlay */}
                   {item.status === "completed" && item.media_url && (
-                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                      <Button
-                        size="sm"
-                        variant="secondary"
-                        className="h-8 w-8 p-0"
-                        onClick={(e) => handleDownload(item, e)}
-                      >
-                        <Download className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="destructive"
-                        className="h-8 w-8 p-0"
-                        onClick={(e) => handleDelete(item, e)}
-                        disabled={isDeleting === item.id}
-                      >
-                        {isDeleting === item.id ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                          <Trash2 className="h-4 w-4" />
-                        )}
-                      </Button>
+                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                      <span className="text-white text-sm font-medium">Click to preview</span>
                     </div>
                   )}
                 </div>
