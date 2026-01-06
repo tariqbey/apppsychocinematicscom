@@ -1,6 +1,7 @@
 import { useState, useCallback } from "react";
 import { Header } from "@/components/layout/Header";
 import { ProductionStatus } from "@/components/dashboard/ProductionStatus";
+import { PhaseProgress } from "@/components/dashboard/PhaseProgress";
 import { DailyRitualChecklist } from "@/components/dashboard/DailyRitualChecklist";
 import { DefiniteChiefAimCard } from "@/components/dashboard/DefiniteChiefAimCard";
 import { StreakBanner } from "@/components/dashboard/StreakBanner";
@@ -63,6 +64,18 @@ const Index = () => {
   const streak = profile?.current_streak || 0;
   const bestStreak = profile?.best_streak || 0;
 
+  // Phase progress checks
+  const chiefAimComplete = Boolean(
+    profile?.chief_aim_what && 
+    profile?.chief_aim_by_when && 
+    profile?.chief_aim_exchange && 
+    profile?.chief_aim_plan
+  );
+  const hasMindMovie = Boolean(profile?.mind_movie_url);
+  const hasViewingHistory = (profile?.current_streak || 0) > 0;
+  const hasCompletedTasks = (profile?.day_number || 0) > 1;
+  const hasScorecard = (profile?.current_streak || 0) > 0;
+
   if (authLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -111,6 +124,15 @@ const Index = () => {
             <>
               {/* Production Status */}
               <ProductionStatus currentAct={currentAct} dayNumber={dayNumber} />
+
+              {/* Phase Progress */}
+              <PhaseProgress
+                chiefAimComplete={chiefAimComplete}
+                hasMindMovie={hasMindMovie}
+                hasViewingHistory={hasViewingHistory}
+                hasCompletedTasks={hasCompletedTasks}
+                hasScorecard={hasScorecard}
+              />
 
               {/* Streak Banner */}
               <StreakBanner streak={streak} bestStreak={bestStreak} />
