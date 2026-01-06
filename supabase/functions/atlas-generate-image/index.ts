@@ -42,19 +42,22 @@ serve(async (req) => {
       generateBody.images = images.map((img: string) => {
         // Check if it's a data URL (base64)
         if (img.startsWith("data:")) {
-          // Extract mimeType and base64 data from data URL
           // Format: data:image/png;base64,ABC123...
           const matches = img.match(/^data:([^;]+);base64,(.+)$/);
           if (matches) {
             const mimeType = matches[1];
             const base64Data = matches[2];
+            // Atlas forwards to Google using Gemini "inlineData" parts
             return {
-              mimeType,
-              data: base64Data,
+              inlineData: {
+                mimeType,
+                data: base64Data,
+              },
             };
           }
         }
-        // If it's a regular URL, return as-is
+
+        // If it's a regular URL (or unrecognized format), pass through
         return img;
       });
     }
