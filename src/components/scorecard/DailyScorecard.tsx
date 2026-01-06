@@ -1,7 +1,10 @@
 import { useState } from "react";
-import { Star, Trophy, Edit3, AlertTriangle, X, Sparkles } from "lucide-react";
+import { Star, Trophy, Edit3, AlertTriangle, X, Sparkles, Coins, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { toast } from "sonner";
 
 interface ScorecardCategory {
   id: string;
@@ -12,9 +15,11 @@ interface ScorecardCategory {
 
 interface DailyScorecardProps {
   onClose: () => void;
+  onSubmitSuccess?: () => void;
 }
 
-export const DailyScorecard = ({ onClose }: DailyScorecardProps) => {
+export const DailyScorecard = ({ onClose, onSubmitSuccess }: DailyScorecardProps) => {
+  const { user } = useAuth();
   const [categories, setCategories] = useState<ScorecardCategory[]>([
     {
       id: "identity",
@@ -43,6 +48,8 @@ export const DailyScorecard = ({ onClose }: DailyScorecardProps) => {
   ]);
 
   const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [creditsEarned, setCreditsEarned] = useState(0);
 
   const updateScore = (id: string, score: number) => {
     setCategories(prev =>
@@ -77,8 +84,52 @@ export const DailyScorecard = ({ onClose }: DailyScorecardProps) => {
     }
   };
 
-  const handleSubmit = () => {
-    setSubmitted(true);
+  const handleSubmit = async () => {
+    if (!user) {
+      toast.error("Please sign in to submit your scorecard");
+      return;
+    }
+
+    setSubmitting(true);
+
+    try {
+      const identity = categories.find(c => c.id === "identity")?.score || 0;
+      const behavior = categories.find(c => c.id === "behavior")?.score || 0;
+      const emotional = categories.find(c => c.id === "emotional")?.score || 0;
+      const progress = categories.find(c => c.id === "progress")?.score || 0;
+
+      const { error } = await supabase.from("daily_scorecards").insert({
+        user_id: user.id,
+        identity_alignment: identity,
+        behavior_execution: behavior,
+        emotional_regulation: emotional,
+        forward_progress: progress,
+        total_score: totalScore,
+      });
+
+      if (error) {
+        if (error.message.includes("duplicate")) {
+          toast.error("You've already submitted a scorecard today!");
+        } else {
+          throw error;
+        }
+        return;
+      }
+
+      // Calculate credits earned
+      let earned = totalScore * 10;
+      if (totalScore === 12) earned += 50;
+      setCreditsEarned(earned);
+
+      setSubmitted(true);
+      toast.success(`Scorecard submitted! +${earned} credits earned`);
+      onSubmitSuccess?.();
+    } catch (err) {
+      console.error("Error submitting scorecard:", err);
+      toast.error("Failed to submit scorecard");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const result = getResult();
@@ -139,8 +190,21 @@ export const DailyScorecard = ({ onClose }: DailyScorecardProps) => {
                   <span className="text-muted-foreground">/ 12</span>
                 </div>
               </div>
-              <Button variant="gold" className="w-full" size="lg" onClick={handleSubmit}>
-                Submit Scorecard
+              <Button 
+                variant="gold" 
+                className="w-full" 
+                size="lg" 
+                onClick={handleSubmit}
+                disabled={submitting}
+              >
+                {submitting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Submitting...
+                  </>
+                ) : (
+                  "Submit Scorecard"
+                )}
               </Button>
             </div>
           </>
@@ -161,6 +225,12 @@ export const DailyScorecard = ({ onClose }: DailyScorecardProps) => {
               <h3 className="text-3xl font-display mb-2">{result.title}</h3>
               <p className="text-muted-foreground">{result.message}</p>
             </div>
+            {creditsEarned > 0 && (
+              <div className="flex items-center justify-center gap-2 p-3 rounded-lg bg-gold/20 border border-gold/30">
+                <Coins className="w-5 h-5 text-gold" />
+                <span className="font-display text-gold">+{creditsEarned} Credits Earned!</span>
+              </div>
+            )}
             <div className="flex items-center justify-center gap-1">
               {[...Array(4)].map((_, i) => (
                 <Star
