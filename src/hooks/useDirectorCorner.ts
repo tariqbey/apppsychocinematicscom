@@ -225,6 +225,51 @@ export function useDirectorCorner() {
 
   useEffect(() => {
     fetchPosts();
+
+    // Subscribe to real-time updates for posts
+    const postsChannel = supabase
+      .channel('director-posts-changes')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'director_posts' },
+        async (payload) => {
+          const newPost = payload.new as Post;
+          // Fetch display name for the new post
+          const { data: profile } = await supabase
+            .from("user_profiles")
+            .select("display_name")
+            .eq("user_id", newPost.user_id)
+            .single();
+          
+          setPosts(prev => [{
+            ...newPost,
+            display_name: profile?.display_name || "Anonymous Director"
+          }, ...prev]);
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'DELETE', schema: 'public', table: 'director_posts' },
+        (payload) => {
+          const deletedId = (payload.old as { id: string }).id;
+          setPosts(prev => prev.filter(p => p.id !== deletedId));
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'director_posts' },
+        (payload) => {
+          const updated = payload.new as Post;
+          setPosts(prev => prev.map(p => 
+            p.id === updated.id ? { ...p, likes_count: updated.likes_count, comments_count: updated.comments_count } : p
+          ));
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(postsChannel);
+    };
   }, [user]);
 
   return {
