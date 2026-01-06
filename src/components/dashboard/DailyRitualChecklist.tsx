@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Check, Play, FileText, Target, ClipboardCheck, Sparkles, Wand2 } from "lucide-react";
+import { Check, Play, FileText, Target, ClipboardCheck, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface RitualItem {
@@ -13,10 +13,9 @@ interface RitualItem {
 interface DailyRitualChecklistProps {
   onTheaterClick: () => void;
   onScorecardClick: () => void;
-  onEditBayClick?: () => void;
 }
 
-export const DailyRitualChecklist = ({ onTheaterClick, onScorecardClick, onEditBayClick }: DailyRitualChecklistProps) => {
+export const DailyRitualChecklist = ({ onTheaterClick, onScorecardClick }: DailyRitualChecklistProps) => {
   const [rituals, setRituals] = useState<RitualItem[]>([
     {
       id: "morning",
@@ -30,13 +29,6 @@ export const DailyRitualChecklist = ({ onTheaterClick, onScorecardClick, onEditB
       title: "Script Review",
       subtitle: "Read your Definite Chief Aim",
       icon: <FileText className="w-5 h-5" />,
-      completed: false,
-    },
-    {
-      id: "create",
-      title: "The Edit Bay",
-      subtitle: "Create AI media",
-      icon: <Wand2 className="w-5 h-5" />,
       completed: false,
     },
     {
@@ -71,8 +63,6 @@ export const DailyRitualChecklist = ({ onTheaterClick, onScorecardClick, onEditB
       onTheaterClick();
     } else if (id === "evening") {
       onScorecardClick();
-    } else if (id === "create") {
-      onEditBayClick?.();
     }
     toggleRitual(id);
   };
