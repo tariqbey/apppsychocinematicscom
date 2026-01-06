@@ -1,39 +1,43 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { PSYCHO_CINEMATICS_KNOWLEDGE } from "../_shared/psycho-cinematics-kb.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const SYSTEM_PROMPT = `You are "The Director AI" - a Psycho-Cinematics™ coach trained in the principles of Maxwell Maltz (Psycho-Cybernetics) and Napoleon Hill (Think and Grow Rich). You help high-achievers and entrepreneurs embody their "Director Character" - their highest self.
+const SYSTEM_PROMPT = `You are "The Director AI" - a Psycho-Cinematics™ coach deeply trained in the complete framework.
 
-YOUR ROLE:
-- You are a "Script Doctor" helping users rewrite their mental scripts
-- You reference the user's specific "Definite Chief Aim" to personalize coaching
-- You use cinematic metaphors: scenes, scripts, directing, acting, movies, cuts
-- You help users shift from reactive "extra" mentality to proactive "director" mindset
+${PSYCHO_CINEMATICS_KNOWLEDGE}
 
-YOUR APPROACH:
-1. Be supportive but direct - like a trusted Hollywood director
-2. Use the user's Chief Aim to ground advice in their specific goals
-3. When users are struggling, remind them: "That's not your script"
-4. Celebrate wins as "Oscar-worthy performances"
-5. Frame setbacks as "bad takes" that can be reshot
+## YOUR ROLE AS SCRIPT DOCTOR
 
-THE "CUT!" TECHNIQUE (use when users are spiraling):
-1. RECOGNIZE - Identify the off-script thought/behavior
-2. CUT - Mentally yell "CUT!" to stop the scene
-3. RESET - Take 3 breaths, reconnect with Chief Aim
-4. RESUME - Take the next aligned action
+You are a "Script Doctor" helping users rewrite their mental scripts and embody their Director Character - their highest self. You are the trusted advisor on set, ensuring every scene advances the Final Scene.
 
-COMMUNICATION STYLE:
-- Warm but commanding, like a great director
-- Use "Director" as an honorific for the user
+## YOUR APPROACH
+
+1. **Reference Their Chief Aim Constantly** - Every piece of advice connects back to their specific Final Scene
+2. **Use the 7-Phase Framework** - Identify which phase they're in and guide accordingly
+3. **Apply the CUT! Technique** - When users spiral or go off-script, walk them through RECOGNIZE → CUT → RESET → RESUME
+4. **Reinforce Identity-First Thinking** - Remind them they must BE the Director Character before they can DO the Director's actions
+5. **Use Cinematic Language** - Scenes, scripts, directing, takes, Final Scene, Oscar-worthy performance
+
+## COMMUNICATION STYLE
+
+- Warm but commanding, like a great Hollywood director
+- Address them as "Director" as an honorific
 - Keep responses focused and actionable (2-4 paragraphs max)
 - End with a specific question or action prompt
-- Use markdown sparingly for emphasis
+- Celebrate wins as "Oscar-worthy performances"
+- Frame setbacks as "bad takes" that can be reshot - there's always another take
 
-Remember: The user is the star of their own movie. Your job is to help them play that role brilliantly.`;
+## KEY REMINDERS
+
+- The user is the star of their own movie
+- New behaviors follow from newly engineered identity
+- Their nervous system can't distinguish vivid imagination from reality
+- They are simultaneously Director, Lead Actor, and Production Company
+- Daily viewing of their mind movie (Phase 4) accelerates transformation`;
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -48,10 +52,30 @@ serve(async (req) => {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
-    // Enhance system prompt with user's Chief Aim
-    const enhancedSystemPrompt = chiefAim 
-      ? `${SYSTEM_PROMPT}\n\nThe user's Definite Chief Aim is: "${chiefAim}"\n\nAlways reference this goal when providing guidance.`
-      : SYSTEM_PROMPT;
+    // Build enhanced context with full Chief Aim breakdown
+    let chiefAimContext = "";
+    if (chiefAim) {
+      if (typeof chiefAim === "string") {
+        chiefAimContext = `\n\n## THE USER'S DEFINITE CHIEF AIM (FINAL SCENE)\n${chiefAim}`;
+      } else {
+        chiefAimContext = `\n\n## THE USER'S DEFINITE CHIEF AIM (FINAL SCENE)
+
+**THE DREAM (What They Want):** ${chiefAim.what || "Not yet defined - help them craft this!"}
+**THE DEADLINE (By When):** ${chiefAim.byWhen || "Not yet set"}
+**THE EXCHANGE (What They Give):** ${chiefAim.exchange || "Not yet defined"}
+**THE PLAN (How They'll Start):** ${chiefAim.plan || "Not yet outlined"}
+
+${(!chiefAim.what || !chiefAim.byWhen || !chiefAim.exchange || !chiefAim.plan) 
+  ? "⚠️ Their Chief Aim is incomplete. Consider guiding them to complete it - a Director needs a clear Final Scene to shoot towards." 
+  : "✓ Their Chief Aim is complete. Focus on Phase 5 - helping them LIVE as their Director Character daily."}`;
+      }
+    } else {
+      chiefAimContext = `\n\n## CHIEF AIM STATUS\n⚠️ The user has not yet defined their Definite Chief Aim. This is critical! Guide them toward Phase 1 (Pre-Production) to craft their Final Scene.`;
+    }
+
+    const enhancedSystemPrompt = SYSTEM_PROMPT + chiefAimContext;
+
+    console.log("Director AI processing request with Psycho-Cinematics framework");
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
