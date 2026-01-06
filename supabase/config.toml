@@ -17,3 +17,6 @@ verify_jwt = false
 
 [functions.atlas-generate-video]
 verify_jwt = false
+
+[functions.suggest-tasks]
+verify_jwt = false

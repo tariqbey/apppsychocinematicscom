@@ -1,0 +1,363 @@
+import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { 
+  Target, Plus, Trash2, Loader2, Sparkles, ChevronLeft, ChevronRight,
+  Calendar
+} from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { useUserProfile } from "@/hooks/useUserProfile";
+import { useToast } from "@/hooks/use-toast";
+import { format, startOfWeek, addDays, isSameDay, isToday } from "date-fns";
+
+interface Task {
+  id: string;
+  task_text: string;
+  is_completed: boolean;
+  priority: number;
+  task_date: string;
+}
+
+interface Suggestion {
+  task: string;
+  reason: string;
+}
+
+const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+
+export function ThreeThings() {
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date(), { weekStartsOn: 1 }));
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [newTaskText, setNewTaskText] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSuggesting, setIsSuggesting] = useState(false);
+  const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
+  const { user } = useAuth();
+  const { profile } = useUserProfile();
+  const { toast } = useToast();
+
+  useEffect(() => {
+    if (user) {
+      loadTasks();
+    }
+  }, [user, selectedDate]);
+
+  const loadTasks = async () => {
+    if (!user) return;
+    setIsLoading(true);
+
+    const dateStr = format(selectedDate, "yyyy-MM-dd");
+    const { data, error } = await supabase
+      .from("daily_tasks")
+      .select("*")
+      .eq("user_id", user.id)
+      .eq("task_date", dateStr)
+      .order("priority");
+
+    if (error) {
+      console.error("Error loading tasks:", error);
+    } else {
+      setTasks(data || []);
+    }
+    setIsLoading(false);
+  };
+
+  const addTask = async () => {
+    if (!user || !newTaskText.trim()) return;
+    if (tasks.length >= 3) {
+      toast({
+        title: "Maximum 3 tasks",
+        description: "Focus on your top 3 priorities for the day.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const dateStr = format(selectedDate, "yyyy-MM-dd");
+    const { data, error } = await supabase
+      .from("daily_tasks")
+      .insert({
+        user_id: user.id,
+        task_text: newTaskText.trim(),
+        task_date: dateStr,
+        priority: tasks.length + 1,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      toast({ title: "Error", description: "Failed to add task", variant: "destructive" });
+    } else if (data) {
+      setTasks([...tasks, data]);
+      setNewTaskText("");
+    }
+  };
+
+  const toggleTask = async (task: Task) => {
+    const { error } = await supabase
+      .from("daily_tasks")
+      .update({ is_completed: !task.is_completed })
+      .eq("id", task.id);
+
+    if (!error) {
+      setTasks(tasks.map(t => t.id === task.id ? { ...t, is_completed: !t.is_completed } : t));
+    }
+  };
+
+  const deleteTask = async (taskId: string) => {
+    const { error } = await supabase
+      .from("daily_tasks")
+      .delete()
+      .eq("id", taskId);
+
+    if (!error) {
+      setTasks(tasks.filter(t => t.id !== taskId));
+    }
+  };
+
+  const addSuggestion = async (suggestion: Suggestion) => {
+    if (!user) return;
+    if (tasks.length >= 3) {
+      toast({
+        title: "Maximum 3 tasks",
+        description: "Delete a task first to add this suggestion.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const dateStr = format(selectedDate, "yyyy-MM-dd");
+    const { data, error } = await supabase
+      .from("daily_tasks")
+      .insert({
+        user_id: user.id,
+        task_text: suggestion.task,
+        task_date: dateStr,
+        priority: tasks.length + 1,
+      })
+      .select()
+      .single();
+
+    if (!error && data) {
+      setTasks([...tasks, data]);
+      setSuggestions(suggestions.filter(s => s.task !== suggestion.task));
+      toast({ title: "Task added", description: suggestion.task });
+    }
+  };
+
+  const getSuggestions = async () => {
+    if (!user) return;
+    setIsSuggesting(true);
+    setSuggestions([]);
+
+    try {
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/suggest-tasks`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+        },
+        body: JSON.stringify({
+          chiefAim: {
+            what: profile?.chief_aim_what,
+            byWhen: profile?.chief_aim_by_when,
+            exchange: profile?.chief_aim_exchange,
+            plan: profile?.chief_aim_plan,
+          },
+          existingTasks: tasks.map(t => t.task_text),
+          dayOfWeek: format(selectedDate, "EEEE"),
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to get suggestions");
+      }
+
+      if (data.suggestions) {
+        setSuggestions(data.suggestions);
+      }
+    } catch (error) {
+      toast({
+        title: "Suggestion failed",
+        description: error instanceof Error ? error.message : "Could not get suggestions",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSuggesting(false);
+    }
+  };
+
+  const navigateWeek = (direction: "prev" | "next") => {
+    const newStart = addDays(weekStart, direction === "prev" ? -7 : 7);
+    setWeekStart(newStart);
+  };
+
+  const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
+
+  return (
+    <div className="glass-card p-6 cinematic-border space-y-4">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center">
+            <Target className="w-5 h-5 text-primary-foreground" />
+          </div>
+          <div>
+            <h3 className="text-lg font-display tracking-wide">The Three Things</h3>
+            <p className="text-sm text-muted-foreground">Your daily priorities</p>
+          </div>
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={getSuggestions}
+          disabled={isSuggesting}
+          className="gap-2"
+        >
+          {isSuggesting ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <Sparkles className="h-4 w-4" />
+          )}
+          Director's Suggestions
+        </Button>
+      </div>
+
+      {/* Week Navigation */}
+      <div className="flex items-center justify-between">
+        <Button variant="ghost" size="icon" onClick={() => navigateWeek("prev")}>
+          <ChevronLeft className="h-4 w-4" />
+        </Button>
+        <div className="flex gap-1">
+          {weekDays.map((day, i) => (
+            <button
+              key={i}
+              onClick={() => setSelectedDate(day)}
+              className={`flex flex-col items-center px-3 py-2 rounded-lg transition-colors ${
+                isSameDay(day, selectedDate)
+                  ? "bg-primary text-primary-foreground"
+                  : isToday(day)
+                  ? "bg-primary/20 text-primary"
+                  : "hover:bg-muted"
+              }`}
+            >
+              <span className="text-xs font-medium">{DAYS[i]}</span>
+              <span className="text-lg font-bold">{format(day, "d")}</span>
+            </button>
+          ))}
+        </div>
+        <Button variant="ghost" size="icon" onClick={() => navigateWeek("next")}>
+          <ChevronRight className="h-4 w-4" />
+        </Button>
+      </div>
+
+      {/* Selected Date Header */}
+      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+        <Calendar className="h-4 w-4" />
+        <span>{format(selectedDate, "EEEE, MMMM d, yyyy")}</span>
+        {isToday(selectedDate) && (
+          <span className="px-2 py-0.5 rounded bg-primary/20 text-primary text-xs font-medium">Today</span>
+        )}
+      </div>
+
+      {/* Tasks List */}
+      <div className="space-y-2">
+        {isLoading ? (
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+          </div>
+        ) : tasks.length === 0 ? (
+          <div className="text-center py-6 text-muted-foreground">
+            <Target className="h-8 w-8 mx-auto mb-2 opacity-50" />
+            <p>No tasks for this day</p>
+            <p className="text-sm">Add up to 3 priorities</p>
+          </div>
+        ) : (
+          tasks.map((task, index) => (
+            <div
+              key={task.id}
+              className={`flex items-center gap-3 p-3 rounded-lg border transition-colors ${
+                task.is_completed
+                  ? "bg-muted/30 border-border/30"
+                  : "bg-muted/50 border-border/50"
+              }`}
+            >
+              <span className="text-xs font-bold text-primary w-5">#{index + 1}</span>
+              <Checkbox
+                checked={task.is_completed}
+                onCheckedChange={() => toggleTask(task)}
+              />
+              <span className={`flex-1 ${task.is_completed ? "line-through text-muted-foreground" : ""}`}>
+                {task.task_text}
+              </span>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                onClick={() => deleteTask(task.id)}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
+          ))
+        )}
+      </div>
+
+      {/* Add Task Input */}
+      {tasks.length < 3 && (
+        <div className="flex gap-2">
+          <Input
+            placeholder="Add a priority task..."
+            value={newTaskText}
+            onChange={(e) => setNewTaskText(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && addTask()}
+            className="bg-background/50"
+          />
+          <Button onClick={addTask} disabled={!newTaskText.trim()}>
+            <Plus className="h-4 w-4" />
+          </Button>
+        </div>
+      )}
+
+      {/* AI Suggestions */}
+      {suggestions.length > 0 && (
+        <div className="space-y-2 pt-4 border-t border-border/50">
+          <div className="flex items-center gap-2 text-sm text-gold">
+            <Sparkles className="h-4 w-4" />
+            <span className="font-medium">Director's Suggestions</span>
+          </div>
+          <ScrollArea className="max-h-[200px]">
+            <div className="space-y-2">
+              {suggestions.map((suggestion, i) => (
+                <div
+                  key={i}
+                  className="p-3 rounded-lg bg-gold/5 border border-gold/20 space-y-1"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="text-sm font-medium">{suggestion.task}</p>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="shrink-0 h-7 text-xs"
+                      onClick={() => addSuggestion(suggestion)}
+                      disabled={tasks.length >= 3}
+                    >
+                      <Plus className="h-3 w-3 mr-1" />
+                      Add
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground">{suggestion.reason}</p>
+                </div>
+              ))}
+            </div>
+          </ScrollArea>
+        </div>
+      )}
+    </div>
+  );
+}
