@@ -1,9 +1,15 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { MessageCircle, X, Send, Scissors, Sparkles, Loader2, Mic, MicOff, Volume2, VolumeX } from "lucide-react";
+import { MessageCircle, X, Send, Scissors, Sparkles, Loader2, Mic, MicOff, Volume2, VolumeX, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useVoiceInput } from "@/hooks/useVoiceInput";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface Message {
   id: string;
@@ -20,6 +26,17 @@ interface DirectorAIChatProps {
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/director-ai`;
 const TTS_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/elevenlabs-tts`;
 
+const VOICE_OPTIONS = [
+  { id: "JBFqnCBsd6RMkjVDRZzb", name: "George", description: "Authoritative, warm" },
+  { id: "EXAVITQu4vr4xnSDxMaL", name: "Sarah", description: "Friendly, expressive" },
+  { id: "TX3LPaxmHKxFdv7VOQHJ", name: "Liam", description: "Clear, professional" },
+  { id: "XrExE9yKIg1WjnnlVkGX", name: "Matilda", description: "Calm, reassuring" },
+  { id: "onwK4e9ZLuTAKqWW03F9", name: "Daniel", description: "Deep, confident" },
+  { id: "pFZP5JQG7iQjIQuC4Bku", name: "Lily", description: "Soft, gentle" },
+];
+
+type VoiceOption = (typeof VOICE_OPTIONS)[number];
+
 export const DirectorAIChat = ({ isOpen, onToggle, chiefAim }: DirectorAIChatProps) => {
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -32,6 +49,7 @@ export const DirectorAIChat = ({ isOpen, onToggle, chiefAim }: DirectorAIChatPro
   const [isLoading, setIsLoading] = useState(false);
   const [ttsEnabled, setTtsEnabled] = useState(true);
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const [selectedVoice, setSelectedVoice] = useState(VOICE_OPTIONS[0]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
@@ -87,7 +105,7 @@ export const DirectorAIChat = ({ isOpen, onToggle, chiefAim }: DirectorAIChatPro
           apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
           Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
         },
-        body: JSON.stringify({ text }),
+        body: JSON.stringify({ text, voiceId: selectedVoice.id }),
       });
 
       if (!response.ok) {
@@ -116,7 +134,7 @@ export const DirectorAIChat = ({ isOpen, onToggle, chiefAim }: DirectorAIChatPro
       console.error("TTS error:", error);
       setIsSpeaking(false);
     }
-  }, [ttsEnabled]);
+  }, [ttsEnabled, selectedVoice.id]);
 
   const streamChat = async (userMessage: string) => {
     const userMsg: Message = {
@@ -287,6 +305,42 @@ export const DirectorAIChat = ({ isOpen, onToggle, chiefAim }: DirectorAIChatPro
           </div>
         </div>
         <div className="flex items-center gap-1">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                className={cn(
+                  "text-xs gap-1 px-2",
+                  ttsEnabled ? "text-gold" : "text-muted-foreground"
+                )}
+                disabled={!ttsEnabled}
+              >
+                {ttsEnabled ? (
+                  <Volume2 className={cn("w-4 h-4", isSpeaking && "animate-pulse")} />
+                ) : (
+                  <VolumeX className="w-4 h-4" />
+                )}
+                <span className="hidden sm:inline">{selectedVoice.name}</span>
+                <ChevronDown className="w-3 h-3" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              {VOICE_OPTIONS.map((voice) => (
+                <DropdownMenuItem
+                  key={voice.id}
+                  onClick={() => setSelectedVoice(voice)}
+                  className={cn(
+                    "flex flex-col items-start gap-0.5 cursor-pointer",
+                    selectedVoice.id === voice.id && "bg-gold/10"
+                  )}
+                >
+                  <span className="font-medium">{voice.name}</span>
+                  <span className="text-xs text-muted-foreground">{voice.description}</span>
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
           <Button
             variant="ghost"
             size="icon"
@@ -298,16 +352,13 @@ export const DirectorAIChat = ({ isOpen, onToggle, chiefAim }: DirectorAIChatPro
               }
               setTtsEnabled(!ttsEnabled);
             }}
-            className={cn(
-              "relative",
-              isSpeaking && "text-gold"
-            )}
+            className="h-8 w-8"
             title={ttsEnabled ? "Disable voice" : "Enable voice"}
           >
             {ttsEnabled ? (
-              <Volume2 className={cn("w-5 h-5", isSpeaking && "animate-pulse")} />
+              <Volume2 className="w-4 h-4 text-gold" />
             ) : (
-              <VolumeX className="w-5 h-5 text-muted-foreground" />
+              <VolumeX className="w-4 h-4 text-muted-foreground" />
             )}
           </Button>
           <Button variant="ghost" size="icon" onClick={onToggle}>
