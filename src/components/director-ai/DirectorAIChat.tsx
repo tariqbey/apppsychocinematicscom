@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { MessageCircle, X, Send, Scissors, Sparkles, Loader2, Mic, MicOff, Volume2, VolumeX, ChevronDown } from "lucide-react";
+import { MessageCircle, X, Send, Scissors, Sparkles, Loader2, Mic, MicOff, Volume2, VolumeX, ChevronDown, Play, Square } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -27,12 +27,12 @@ const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/director-ai`
 const TTS_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/elevenlabs-tts`;
 
 const VOICE_OPTIONS = [
-  { id: "JBFqnCBsd6RMkjVDRZzb", name: "George", description: "Authoritative, warm" },
-  { id: "EXAVITQu4vr4xnSDxMaL", name: "Sarah", description: "Friendly, expressive" },
-  { id: "TX3LPaxmHKxFdv7VOQHJ", name: "Liam", description: "Clear, professional" },
-  { id: "XrExE9yKIg1WjnnlVkGX", name: "Matilda", description: "Calm, reassuring" },
-  { id: "onwK4e9ZLuTAKqWW03F9", name: "Daniel", description: "Deep, confident" },
-  { id: "pFZP5JQG7iQjIQuC4Bku", name: "Lily", description: "Soft, gentle" },
+  { id: "JBFqnCBsd6RMkjVDRZzb", name: "George", description: "Authoritative, warm", sample: "Welcome, Director. Let's make today count." },
+  { id: "EXAVITQu4vr4xnSDxMaL", name: "Sarah", description: "Friendly, expressive", sample: "Hey there! I'm here to help you shine." },
+  { id: "TX3LPaxmHKxFdv7VOQHJ", name: "Liam", description: "Clear, professional", sample: "Let's focus on your goals today." },
+  { id: "XrExE9yKIg1WjnnlVkGX", name: "Matilda", description: "Calm, reassuring", sample: "Take a breath. You've got this." },
+  { id: "onwK4e9ZLuTAKqWW03F9", name: "Daniel", description: "Deep, confident", sample: "Time to direct your story." },
+  { id: "pFZP5JQG7iQjIQuC4Bku", name: "Lily", description: "Soft, gentle", sample: "I believe in you. Let's begin." },
 ];
 
 type VoiceOption = (typeof VOICE_OPTIONS)[number];
@@ -50,8 +50,10 @@ export const DirectorAIChat = ({ isOpen, onToggle, chiefAim }: DirectorAIChatPro
   const [ttsEnabled, setTtsEnabled] = useState(true);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [selectedVoice, setSelectedVoice] = useState(VOICE_OPTIONS[0]);
+  const [previewingVoice, setPreviewingVoice] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const previewAudioRef = useRef<HTMLAudioElement | null>(null);
 
   // Voice input
   const handleVoiceTranscript = (transcript: string) => {
@@ -64,6 +66,63 @@ export const DirectorAIChat = ({ isOpen, onToggle, chiefAim }: DirectorAIChatPro
     onTranscript: handleVoiceTranscript,
     onError: (error) => toast.error(error),
   });
+
+  const previewVoice = useCallback(async (voice: VoiceOption, e: React.MouseEvent) => {
+    e.stopPropagation();
+    
+    // If already previewing this voice, stop it
+    if (previewingVoice === voice.id && previewAudioRef.current) {
+      previewAudioRef.current.pause();
+      previewAudioRef.current = null;
+      setPreviewingVoice(null);
+      return;
+    }
+
+    // Stop any current preview
+    if (previewAudioRef.current) {
+      previewAudioRef.current.pause();
+      previewAudioRef.current = null;
+    }
+
+    try {
+      setPreviewingVoice(voice.id);
+      
+      const response = await fetch(TTS_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+        },
+        body: JSON.stringify({ text: voice.sample, voiceId: voice.id }),
+      });
+
+      if (!response.ok) throw new Error("Failed to preview voice");
+
+      const audioBlob = await response.blob();
+      const audioUrl = URL.createObjectURL(audioBlob);
+      const audio = new Audio(audioUrl);
+      previewAudioRef.current = audio;
+
+      audio.onended = () => {
+        setPreviewingVoice(null);
+        URL.revokeObjectURL(audioUrl);
+        previewAudioRef.current = null;
+      };
+
+      audio.onerror = () => {
+        setPreviewingVoice(null);
+        URL.revokeObjectURL(audioUrl);
+        previewAudioRef.current = null;
+      };
+
+      await audio.play();
+    } catch (error) {
+      console.error("Voice preview error:", error);
+      setPreviewingVoice(null);
+      toast.error("Failed to preview voice");
+    }
+  }, [previewingVoice]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -325,18 +384,34 @@ export const DirectorAIChat = ({ isOpen, onToggle, chiefAim }: DirectorAIChatPro
                 <ChevronDown className="w-3 h-3" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48">
+            <DropdownMenuContent align="end" className="w-56">
               {VOICE_OPTIONS.map((voice) => (
                 <DropdownMenuItem
                   key={voice.id}
                   onClick={() => setSelectedVoice(voice)}
                   className={cn(
-                    "flex flex-col items-start gap-0.5 cursor-pointer",
+                    "flex items-center justify-between gap-2 cursor-pointer",
                     selectedVoice.id === voice.id && "bg-gold/10"
                   )}
                 >
-                  <span className="font-medium">{voice.name}</span>
-                  <span className="text-xs text-muted-foreground">{voice.description}</span>
+                  <div className="flex flex-col items-start gap-0.5">
+                    <span className="font-medium">{voice.name}</span>
+                    <span className="text-xs text-muted-foreground">{voice.description}</span>
+                  </div>
+                  <button
+                    onClick={(e) => previewVoice(voice, e)}
+                    className={cn(
+                      "p-1.5 rounded-full hover:bg-secondary transition-colors shrink-0",
+                      previewingVoice === voice.id && "text-gold"
+                    )}
+                    title={previewingVoice === voice.id ? "Stop preview" : "Preview voice"}
+                  >
+                    {previewingVoice === voice.id ? (
+                      <Square className="w-3 h-3 fill-current" />
+                    ) : (
+                      <Play className="w-3 h-3" />
+                    )}
+                  </button>
                 </DropdownMenuItem>
               ))}
             </DropdownMenuContent>
