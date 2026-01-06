@@ -79,7 +79,7 @@ const SCORECARD_CATEGORIES: Omit<ScorecardCategory, 'score'>[] = [
 ];
 
 export const DailyScorecard = ({ onClose, onSubmitSuccess }: DailyScorecardProps) => {
-  const { user } = useAuth();
+  const { user, session } = useAuth();
   const [categories, setCategories] = useState<ScorecardCategory[]>(
     SCORECARD_CATEGORIES.map(cat => ({ ...cat, score: 0 }))
   );
@@ -122,7 +122,9 @@ export const DailyScorecard = ({ onClose, onSubmitSuccess }: DailyScorecardProps
   };
 
   const handleSubmit = async () => {
-    if (!user) {
+    console.log("Submit clicked - user:", user?.id, "session valid:", !!session);
+    
+    if (!user || !session) {
       toast.error("Please sign in to submit your scorecard");
       return;
     }
@@ -135,14 +137,22 @@ export const DailyScorecard = ({ onClose, onSubmitSuccess }: DailyScorecardProps
       const emotional = categories.find(c => c.id === "emotional")?.score || 0;
       const progress = categories.find(c => c.id === "progress")?.score || 0;
 
-      const { error } = await supabase.from("daily_scorecards").insert({
+      console.log("Attempting insert with:", { 
+        user_id: user.id, 
+        identity, behavior, emotional, progress, 
+        total_score: totalScore 
+      });
+
+      const { data, error } = await supabase.from("daily_scorecards").insert({
         user_id: user.id,
         identity_alignment: identity,
         behavior_execution: behavior,
         emotional_regulation: emotional,
         forward_progress: progress,
         total_score: totalScore,
-      });
+      }).select();
+
+      console.log("Insert result - data:", data, "error:", error);
 
       if (error) {
         console.error("Scorecard insert error:", error);
