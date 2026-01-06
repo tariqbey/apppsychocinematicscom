@@ -8,6 +8,7 @@ import { TheaterView } from "@/components/theater/TheaterView";
 import { EditBay } from "@/components/studio/EditBay";
 import { DirectorAIChat } from "@/components/director-ai/DirectorAIChat";
 import { DailyScorecard } from "@/components/scorecard/DailyScorecard";
+import { ChiefAimWizard } from "@/components/chief-aim/ChiefAimWizard";
 import { AuthModal } from "@/components/auth/AuthModal";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserProfile } from "@/hooks/useUserProfile";
@@ -21,9 +22,10 @@ const Index = () => {
   const [showScorecard, setShowScorecard] = useState(false);
   const [showAIChat, setShowAIChat] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [showChiefAimWizard, setShowChiefAimWizard] = useState(false);
 
   const { user, loading: authLoading } = useAuth();
-  const { profile, loading: profileLoading } = useUserProfile();
+  const { profile, loading: profileLoading, updateProfile } = useUserProfile();
   const { refreshData, checkAndAwardBadges } = useGamification();
 
   const handleScorecardSuccess = useCallback(async () => {
@@ -31,6 +33,14 @@ const Index = () => {
     await checkAndAwardBadges();
   }, [refreshData, checkAndAwardBadges]);
 
+  const handleSaveChiefAim = useCallback(async (aim: { what: string; byWhen: string; exchange: string; plan: string }) => {
+    await updateProfile({
+      chief_aim_what: aim.what,
+      chief_aim_by_when: aim.byWhen,
+      chief_aim_exchange: aim.exchange,
+      chief_aim_plan: aim.plan,
+    });
+  }, [updateProfile]);
   // Default chief aim for demo/unauthenticated users
   const defaultChiefAim = {
     what: "Build a $10M annual revenue business that creates transformational impact for 100,000 people",
@@ -138,7 +148,7 @@ const Index = () => {
                 />
 
                 {/* Chief Aim */}
-                <DefiniteChiefAimCard aim={chiefAim} />
+                <DefiniteChiefAimCard aim={chiefAim} onEdit={() => setShowChiefAimWizard(true)} />
               </div>
             </>
           )}
@@ -160,6 +170,16 @@ const Index = () => {
         <DailyScorecard 
           onClose={() => setShowScorecard(false)} 
           onSubmitSuccess={handleScorecardSuccess}
+        />
+      )}
+
+      {/* Chief Aim Wizard */}
+      {showChiefAimWizard && user && (
+        <ChiefAimWizard
+          isOpen={showChiefAimWizard}
+          onClose={() => setShowChiefAimWizard(false)}
+          initialAim={chiefAim}
+          onSave={handleSaveChiefAim}
         />
       )}
 
