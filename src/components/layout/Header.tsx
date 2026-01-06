@@ -1,15 +1,17 @@
 import { useState } from "react";
-import { Clapperboard, Settings, User, LogOut, Trophy } from "lucide-react";
+import { Clapperboard, Settings, User, LogOut, Trophy, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useGamification } from "@/hooks/useGamification";
 import { AuthModal } from "@/components/auth/AuthModal";
 import { CreditsDisplay } from "@/components/gamification/CreditsDisplay";
 import { GamificationPanel } from "@/components/gamification/GamificationPanel";
+import { Leaderboard } from "@/components/leaderboard/Leaderboard";
 
 export const Header = () => {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showGamification, setShowGamification] = useState(false);
+  const [showLeaderboard, setShowLeaderboard] = useState(false);
   const { user, signOut } = useAuth();
   const { credits } = useGamification();
 
@@ -49,6 +51,14 @@ export const Header = () => {
                 <Button
                   variant="ghost"
                   size="icon"
+                  onClick={() => setShowLeaderboard(true)}
+                  className="text-muted-foreground hover:text-foreground"
+                >
+                  <Users className="w-5 h-5" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
                   onClick={() => setShowGamification(true)}
                   className="text-gold hover:text-gold/80"
                 >
@@ -77,6 +87,10 @@ export const Header = () => {
       
       {showGamification && (
         <GamificationPanel onClose={() => setShowGamification(false)} />
+      )}
+
+      {showLeaderboard && (
+        <Leaderboard onClose={() => setShowLeaderboard(false)} />
       )}
     </>
   );

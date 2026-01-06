@@ -120,6 +120,7 @@ export type Database = {
           id: string
           last_viewing_date: string | null
           mind_movie_url: string | null
+          show_on_leaderboard: boolean
           updated_at: string
           user_id: string
         }
@@ -138,6 +139,7 @@ export type Database = {
           id?: string
           last_viewing_date?: string | null
           mind_movie_url?: string | null
+          show_on_leaderboard?: boolean
           updated_at?: string
           user_id: string
         }
@@ -156,6 +158,7 @@ export type Database = {
           id?: string
           last_viewing_date?: string | null
           mind_movie_url?: string | null
+          show_on_leaderboard?: boolean
           updated_at?: string
           user_id?: string
         }
@@ -190,7 +193,17 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_leaderboard: {
+        Args: never
+        Returns: {
+          best_streak: number
+          credits: number
+          current_streak: number
+          display_name: string
+          lifetime_credits: number
+          rank: number
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never

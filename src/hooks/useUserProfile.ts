@@ -17,6 +17,7 @@ export interface UserProfile {
   best_streak: number | null;
   last_viewing_date: string | null;
   day_number: number | null;
+  show_on_leaderboard: boolean;
   created_at: string;
   updated_at: string;
 }
