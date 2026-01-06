@@ -1,12 +1,17 @@
 import { useState } from "react";
-import { Clapperboard, Settings, User, LogOut } from "lucide-react";
+import { Clapperboard, Settings, User, LogOut, Trophy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
+import { useGamification } from "@/hooks/useGamification";
 import { AuthModal } from "@/components/auth/AuthModal";
+import { CreditsDisplay } from "@/components/gamification/CreditsDisplay";
+import { GamificationPanel } from "@/components/gamification/GamificationPanel";
 
 export const Header = () => {
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [showGamification, setShowGamification] = useState(false);
   const { user, signOut } = useAuth();
+  const { credits } = useGamification();
 
   const handleSignOut = async () => {
     await signOut();
@@ -33,6 +38,22 @@ export const Header = () => {
           <div className="flex items-center gap-2">
             {user ? (
               <>
+                {/* Credits Display */}
+                <button
+                  onClick={() => setShowGamification(true)}
+                  className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+                >
+                  <CreditsDisplay credits={credits?.credits || 0} compact />
+                </button>
+
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setShowGamification(true)}
+                  className="text-gold hover:text-gold/80"
+                >
+                  <Trophy className="w-5 h-5" />
+                </Button>
                 <Button variant="ghost" size="icon">
                   <Settings className="w-5 h-5" />
                 </Button>
@@ -53,6 +74,10 @@ export const Header = () => {
       </header>
 
       <AuthModal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} />
+      
+      {showGamification && (
+        <GamificationPanel onClose={() => setShowGamification(false)} />
+      )}
     </>
   );
 };

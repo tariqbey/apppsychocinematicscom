@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { Header } from "@/components/layout/Header";
 import { ProductionStatus } from "@/components/dashboard/ProductionStatus";
 import { DailyRitualChecklist } from "@/components/dashboard/DailyRitualChecklist";
@@ -10,6 +10,7 @@ import { DailyScorecard } from "@/components/scorecard/DailyScorecard";
 import { AuthModal } from "@/components/auth/AuthModal";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserProfile } from "@/hooks/useUserProfile";
+import { useGamification } from "@/hooks/useGamification";
 import { Film, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -21,6 +22,12 @@ const Index = () => {
 
   const { user, loading: authLoading } = useAuth();
   const { profile, loading: profileLoading } = useUserProfile();
+  const { refreshData, checkAndAwardBadges } = useGamification();
+
+  const handleScorecardSuccess = useCallback(async () => {
+    await refreshData();
+    await checkAndAwardBadges();
+  }, [refreshData, checkAndAwardBadges]);
 
   // Default chief aim for demo/unauthenticated users
   const defaultChiefAim = {
@@ -118,7 +125,10 @@ const Index = () => {
 
       {/* Scorecard */}
       {showScorecard && user && (
-        <DailyScorecard onClose={() => setShowScorecard(false)} />
+        <DailyScorecard 
+          onClose={() => setShowScorecard(false)} 
+          onSubmitSuccess={handleScorecardSuccess}
+        />
       )}
 
       {/* Director AI Chat */}
