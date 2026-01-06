@@ -12,7 +12,7 @@ import { AuthModal } from "@/components/auth/AuthModal";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { useGamification } from "@/hooks/useGamification";
-import { Film, Loader2 } from "lucide-react";
+import { Film, Loader2, Wand2, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const Index = () => {
@@ -104,13 +104,37 @@ const Index = () => {
               {/* Streak Banner */}
               <StreakBanner streak={streak} bestStreak={bestStreak} />
 
+              {/* Edit Bay Card */}
+              <button
+                onClick={() => setShowEditBay(true)}
+                className="w-full glass-card p-6 cinematic-border animate-slide-up group hover:border-gold/50 transition-all duration-300 text-left"
+              >
+                <div className="flex items-center gap-4">
+                  <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-gold/20 to-amber-soft/20 flex items-center justify-center group-hover:from-gold/30 group-hover:to-amber-soft/30 transition-all duration-300">
+                    <Wand2 className="w-7 h-7 text-gold" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <h3 className="text-xl font-display tracking-wide group-hover:text-gold transition-colors">The Edit Bay</h3>
+                      <Sparkles className="w-4 h-4 text-gold/60" />
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      AI Media Generation Studio — Create images, animate them into videos, and build your Mind Movie.
+                    </p>
+                  </div>
+                  <div className="hidden sm:flex items-center gap-2 text-sm text-muted-foreground group-hover:text-gold transition-colors">
+                    <span>Enter Studio</span>
+                    <span className="text-lg">→</span>
+                  </div>
+                </div>
+              </button>
+
               {/* Two Column Layout */}
               <div className="grid md:grid-cols-2 gap-6">
                 {/* Daily Ritual */}
                 <DailyRitualChecklist
                   onTheaterClick={() => setShowTheater(true)}
                   onScorecardClick={() => setShowScorecard(true)}
-                  onEditBayClick={() => setShowEditBay(true)}
                 />
 
                 {/* Chief Aim */}
