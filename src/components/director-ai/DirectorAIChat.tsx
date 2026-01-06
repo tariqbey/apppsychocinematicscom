@@ -1,9 +1,10 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { MessageCircle, X, Send, Scissors, Sparkles, Loader2, Mic, MicOff, Volume2, VolumeX, ChevronDown, Play, Square } from "lucide-react";
+import { MessageCircle, X, Send, Scissors, Sparkles, Loader2, Mic, MicOff, Volume2, VolumeX, ChevronDown, Play, Square, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useVoiceInput } from "@/hooks/useVoiceInput";
+import { supabase } from "@/integrations/supabase/client";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -21,6 +22,7 @@ interface DirectorAIChatProps {
   isOpen: boolean;
   onToggle: () => void;
   chiefAim: string;
+  userId?: string;
 }
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/director-ai`;
@@ -37,16 +39,17 @@ const VOICE_OPTIONS = [
 
 type VoiceOption = (typeof VOICE_OPTIONS)[number];
 
-export const DirectorAIChat = ({ isOpen, onToggle, chiefAim }: DirectorAIChatProps) => {
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: "1",
-      role: "assistant",
-      content: "Welcome, Director. I'm here to keep you in character and moving toward your Chief Aim. How can I assist you today?",
-    },
-  ]);
+const WELCOME_MESSAGE: Message = {
+  id: "welcome",
+  role: "assistant",
+  content: "Welcome, Director. I'm here to keep you in character and moving toward your Chief Aim. How can I assist you today?",
+};
+
+export const DirectorAIChat = ({ isOpen, onToggle, chiefAim, userId }: DirectorAIChatProps) => {
+  const [messages, setMessages] = useState<Message[]>([WELCOME_MESSAGE]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   const [ttsEnabled, setTtsEnabled] = useState(true);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [selectedVoice, setSelectedVoice] = useState(VOICE_OPTIONS[0]);
@@ -54,6 +57,77 @@ export const DirectorAIChat = ({ isOpen, onToggle, chiefAim }: DirectorAIChatPro
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const previewAudioRef = useRef<HTMLAudioElement | null>(null);
+  const hasLoadedHistory = useRef(false);
+
+  // Load chat history on mount
+  useEffect(() => {
+    if (!userId || hasLoadedHistory.current) return;
+    
+    const loadHistory = async () => {
+      setIsLoadingHistory(true);
+      try {
+        const { data, error } = await supabase
+          .from("chat_messages")
+          .select("id, role, content")
+          .eq("user_id", userId)
+          .order("created_at", { ascending: true })
+          .limit(100);
+
+        if (error) throw error;
+
+        if (data && data.length > 0) {
+          const loadedMessages: Message[] = data.map((m) => ({
+            id: m.id,
+            role: m.role as "user" | "assistant",
+            content: m.content,
+          }));
+          setMessages([WELCOME_MESSAGE, ...loadedMessages]);
+        }
+        hasLoadedHistory.current = true;
+      } catch (error) {
+        console.error("Failed to load chat history:", error);
+      } finally {
+        setIsLoadingHistory(false);
+      }
+    };
+
+    loadHistory();
+  }, [userId]);
+
+  // Save message to database
+  const saveMessage = useCallback(async (role: "user" | "assistant", content: string) => {
+    if (!userId) return;
+    
+    try {
+      await supabase.from("chat_messages").insert({
+        user_id: userId,
+        role,
+        content,
+      });
+    } catch (error) {
+      console.error("Failed to save message:", error);
+    }
+  }, [userId]);
+
+  // Clear chat history
+  const clearHistory = useCallback(async () => {
+    if (!userId) return;
+    
+    try {
+      const { error } = await supabase
+        .from("chat_messages")
+        .delete()
+        .eq("user_id", userId);
+
+      if (error) throw error;
+
+      setMessages([WELCOME_MESSAGE]);
+      toast.success("Chat history cleared");
+    } catch (error) {
+      console.error("Failed to clear history:", error);
+      toast.error("Failed to clear history");
+    }
+  }, [userId]);
 
   // Voice input
   const handleVoiceTranscript = (transcript: string) => {
@@ -203,6 +277,7 @@ export const DirectorAIChat = ({ isOpen, onToggle, chiefAim }: DirectorAIChatPro
     };
 
     setMessages((prev) => [...prev, userMsg]);
+    saveMessage("user", userMessage);
     setIsLoading(true);
 
     let assistantContent = "";
@@ -225,7 +300,7 @@ export const DirectorAIChat = ({ isOpen, onToggle, chiefAim }: DirectorAIChatPro
 
     try {
       const conversationHistory = messages
-        .filter((m) => m.id !== "1") // Exclude welcome message
+        .filter((m) => m.id !== "welcome") // Exclude welcome message
         .map((m) => ({ role: m.role, content: m.content }));
 
       const response = await fetch(CHAT_URL, {
@@ -298,8 +373,9 @@ export const DirectorAIChat = ({ isOpen, onToggle, chiefAim }: DirectorAIChatPro
           }
         }
       }
-      // Speak the complete response
+      // Save and speak the complete response
       if (assistantContent.trim()) {
+        saveMessage("assistant", assistantContent);
         speakText(assistantContent);
       }
     } catch (error) {
@@ -436,6 +512,17 @@ export const DirectorAIChat = ({ isOpen, onToggle, chiefAim }: DirectorAIChatPro
               <VolumeX className="w-4 h-4 text-muted-foreground" />
             )}
           </Button>
+          {userId && messages.length > 1 && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={clearHistory}
+              className="h-8 w-8"
+              title="Clear chat history"
+            >
+              <Trash2 className="w-4 h-4 text-muted-foreground hover:text-destructive" />
+            </Button>
+          )}
           <Button variant="ghost" size="icon" onClick={onToggle}>
             <X className="w-5 h-5" />
           </Button>
@@ -444,32 +531,40 @@ export const DirectorAIChat = ({ isOpen, onToggle, chiefAim }: DirectorAIChatPro
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {messages.map((message) => (
-          <div
-            key={message.id}
-            className={cn(
-              "flex",
-              message.role === "user" ? "justify-end" : "justify-start"
+        {isLoadingHistory ? (
+          <div className="flex justify-center items-center h-full">
+            <Loader2 className="w-6 h-6 animate-spin text-gold" />
+          </div>
+        ) : (
+          <>
+            {messages.map((message) => (
+              <div
+                key={message.id}
+                className={cn(
+                  "flex",
+                  message.role === "user" ? "justify-end" : "justify-start"
+                )}
+              >
+                <div
+                  className={cn(
+                    "max-w-[85%] rounded-lg p-3 text-sm",
+                    message.role === "user"
+                      ? "bg-gold text-primary-foreground"
+                      : "bg-secondary text-foreground"
+                  )}
+                >
+                  <p className="whitespace-pre-wrap">{message.content}</p>
+                </div>
+              </div>
+            ))}
+            {isLoading && messages[messages.length - 1]?.role !== "assistant" && (
+              <div className="flex justify-start">
+                <div className="bg-secondary rounded-lg p-3">
+                  <Loader2 className="w-4 h-4 animate-spin text-gold" />
+                </div>
+              </div>
             )}
-          >
-            <div
-              className={cn(
-                "max-w-[85%] rounded-lg p-3 text-sm",
-                message.role === "user"
-                  ? "bg-gold text-primary-foreground"
-                  : "bg-secondary text-foreground"
-              )}
-            >
-              <p className="whitespace-pre-wrap">{message.content}</p>
-            </div>
-          </div>
-        ))}
-        {isLoading && messages[messages.length - 1]?.role !== "assistant" && (
-          <div className="flex justify-start">
-            <div className="bg-secondary rounded-lg p-3">
-              <Loader2 className="w-4 h-4 animate-spin text-gold" />
-            </div>
-          </div>
+          </>
         )}
         <div ref={messagesEndRef} />
       </div>

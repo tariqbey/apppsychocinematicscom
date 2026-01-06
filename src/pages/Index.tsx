@@ -137,6 +137,7 @@ const Index = () => {
           isOpen={showAIChat}
           onToggle={() => setShowAIChat(!showAIChat)}
           chiefAim={chiefAim.what}
+          userId={user.id}
         />
       )}
 
