@@ -1,7 +1,6 @@
 import { useState, useCallback } from "react";
 import { Header } from "@/components/layout/Header";
 import { ProductionStatus } from "@/components/dashboard/ProductionStatus";
-
 import { DailyRitualChecklist } from "@/components/dashboard/DailyRitualChecklist";
 import { DefiniteChiefAimCard } from "@/components/dashboard/DefiniteChiefAimCard";
 import { StreakBanner } from "@/components/dashboard/StreakBanner";
@@ -11,6 +10,7 @@ import { DirectorAIChat } from "@/components/director-ai/DirectorAIChat";
 import { DailyScorecard } from "@/components/scorecard/DailyScorecard";
 import { ChiefAimWizard } from "@/components/chief-aim/ChiefAimWizard";
 import { ThreeThings } from "@/components/tasks/ThreeThings";
+import { VoiceCoachCard } from "@/components/coaching/VoiceCoachCard";
 import { AuthModal } from "@/components/auth/AuthModal";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserProfile } from "@/hooks/useUserProfile";
@@ -27,7 +27,7 @@ const Index = () => {
   const [showChiefAimWizard, setShowChiefAimWizard] = useState(false);
 
   const { user, loading: authLoading } = useAuth();
-  const { profile, loading: profileLoading, updateProfile } = useUserProfile();
+  const { profile, loading: profileLoading, updateProfile, refetch: refetchProfile } = useUserProfile();
   const { refreshData, checkAndAwardBadges } = useGamification();
 
   const handleScorecardSuccess = useCallback(async () => {
@@ -153,6 +153,16 @@ const Index = () => {
                   </div>
                 </div>
               </button>
+
+              {/* Voice Coach Card */}
+              <VoiceCoachCard
+                userId={user.id}
+                phoneNumber={(profile as any)?.phone_number}
+                coachingCallEnabled={(profile as any)?.coaching_call_enabled}
+                coachingCallTime={(profile as any)?.coaching_call_time}
+                coachingCallTimezone={(profile as any)?.coaching_call_timezone}
+                onUpdate={refetchProfile}
+              />
 
               {/* Three Things - Daily Task Manager */}
               <ThreeThings />

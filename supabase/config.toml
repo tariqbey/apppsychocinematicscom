@@ -23,3 +23,12 @@ verify_jwt = false
 
 [functions.lovable-generate-image]
 verify_jwt = false
+
+[functions.initiate-coaching-call]
+verify_jwt = false
+
+[functions.coaching-call-bridge]
+verify_jwt = false
+
+[functions.schedule-coaching-calls]
+verify_jwt = false
