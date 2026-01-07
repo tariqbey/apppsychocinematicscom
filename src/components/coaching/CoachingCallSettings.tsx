@@ -114,11 +114,24 @@ export const CoachingCallSettings = ({
     }
   };
 
+  // Check if phone number is saved (matches initial value from DB)
+  const isPhoneSaved = initialPhone && initialPhone.length > 0;
+  const hasUnsavedChanges = phone !== (initialPhone || "");
+
   const handleTestCall = async () => {
-    if (!phone) {
+    if (!isPhoneSaved) {
       toast({
-        title: "Phone number required",
-        description: "Please enter your phone number first",
+        title: "Save your phone number first",
+        description: "Enter your phone number and click 'Save Settings' before testing",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (hasUnsavedChanges) {
+      toast({
+        title: "Save changes first",
+        description: "Please save your settings before testing the call",
         variant: "destructive",
       });
       return;
@@ -239,7 +252,7 @@ export const CoachingCallSettings = ({
           <Button
             variant="outline"
             onClick={handleTestCall}
-            disabled={testingCall || !phone}
+            disabled={testingCall || !isPhoneSaved || hasUnsavedChanges}
             className="flex-1"
           >
             {testingCall ? (
@@ -250,7 +263,7 @@ export const CoachingCallSettings = ({
             ) : (
               <>
                 <TestTube className="mr-2 h-4 w-4" />
-                Test Call Now
+                {!isPhoneSaved ? "Save phone first" : hasUnsavedChanges ? "Save changes first" : "Test Call Now"}
               </>
             )}
           </Button>
