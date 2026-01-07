@@ -3,8 +3,11 @@ import { useState, useCallback, useRef, useEffect } from "react";
 interface UseVoiceInputOptions {
   onTranscript?: (transcript: string) => void;
   onError?: (error: string) => void;
+  onSilence?: (transcript: string) => void;
   continuous?: boolean;
   language?: string;
+  silenceTimeout?: number;
+  autoStart?: boolean;
 }
 
 interface SpeechRecognitionEvent {
@@ -18,11 +21,42 @@ interface SpeechRecognitionErrorEvent {
 }
 
 export const useVoiceInput = (options: UseVoiceInputOptions = {}) => {
-  const { onTranscript, onError, continuous = false, language = "en-US" } = options;
+  const { 
+    onTranscript, 
+    onError, 
+    onSilence,
+    continuous = false, 
+    language = "en-US",
+    silenceTimeout = 1500,
+    autoStart = false
+  } = options;
   const [isListening, setIsListening] = useState(false);
   const [transcript, setTranscript] = useState("");
   const [isSupported, setIsSupported] = useState(true);
   const recognitionRef = useRef<any>(null);
+  const silenceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const lastTranscriptRef = useRef<string>("");
+  const hasStartedRef = useRef(false);
+
+  const clearSilenceTimer = useCallback(() => {
+    if (silenceTimerRef.current) {
+      clearTimeout(silenceTimerRef.current);
+      silenceTimerRef.current = null;
+    }
+  }, []);
+
+  const startSilenceTimer = useCallback((currentTranscript: string) => {
+    clearSilenceTimer();
+    if (currentTranscript && onSilence) {
+      silenceTimerRef.current = setTimeout(() => {
+        if (currentTranscript === lastTranscriptRef.current && currentTranscript.trim()) {
+          onSilence(currentTranscript);
+          setTranscript("");
+          lastTranscriptRef.current = "";
+        }
+      }, silenceTimeout);
+    }
+  }, [clearSilenceTimer, onSilence, silenceTimeout]);
 
   useEffect(() => {
     // Check for browser support
@@ -45,6 +79,20 @@ export const useVoiceInput = (options: UseVoiceInputOptions = {}) => {
 
     recognition.onend = () => {
       setIsListening(false);
+      clearSilenceTimer();
+      
+      // Auto-restart if in continuous mode and was intentionally started
+      if (continuous && hasStartedRef.current) {
+        try {
+          setTimeout(() => {
+            if (hasStartedRef.current && recognitionRef.current) {
+              recognitionRef.current.start();
+            }
+          }, 100);
+        } catch (error) {
+          console.warn("Could not auto-restart recognition");
+        }
+      }
     };
 
     recognition.onresult = (event: SpeechRecognitionEvent) => {
@@ -62,14 +110,26 @@ export const useVoiceInput = (options: UseVoiceInputOptions = {}) => {
 
       const currentTranscript = finalTranscript || interimTranscript;
       setTranscript(currentTranscript);
+      lastTranscriptRef.current = currentTranscript;
 
       if (finalTranscript && onTranscript) {
         onTranscript(finalTranscript);
+      }
+
+      // Start silence detection timer on any speech
+      if (currentTranscript) {
+        startSilenceTimer(currentTranscript);
       }
     };
 
     recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
       console.error("Speech recognition error:", event.error);
+      
+      // Don't stop for no-speech errors in continuous mode
+      if (event.error === "no-speech" && continuous) {
+        return;
+      }
+      
       setIsListening(false);
 
       if (onError) {
@@ -96,12 +156,24 @@ export const useVoiceInput = (options: UseVoiceInputOptions = {}) => {
 
     recognitionRef.current = recognition;
 
+    // Auto-start if requested
+    if (autoStart && !hasStartedRef.current) {
+      hasStartedRef.current = true;
+      try {
+        recognition.start();
+      } catch (error) {
+        console.warn("Could not auto-start recognition");
+      }
+    }
+
     return () => {
+      hasStartedRef.current = false;
+      clearSilenceTimer();
       if (recognitionRef.current) {
         recognitionRef.current.abort();
       }
     };
-  }, [continuous, language, onTranscript, onError]);
+  }, [continuous, language, onTranscript, onError, autoStart, clearSilenceTimer, startSilenceTimer]);
 
   const startListening = useCallback(() => {
     if (!recognitionRef.current || !isSupported) return;
