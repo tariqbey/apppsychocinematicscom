@@ -38,45 +38,6 @@ export type Database = {
         }
         Relationships: []
       }
-      coaching_call_logs: {
-        Row: {
-          call_date: string
-          call_sid: string | null
-          call_status: string
-          conversation_summary: string | null
-          created_at: string
-          duration_seconds: number | null
-          id: string
-          tasks_reviewed: Json | null
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          call_date?: string
-          call_sid?: string | null
-          call_status?: string
-          conversation_summary?: string | null
-          created_at?: string
-          duration_seconds?: number | null
-          id?: string
-          tasks_reviewed?: Json | null
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          call_date?: string
-          call_sid?: string | null
-          call_status?: string
-          conversation_summary?: string | null
-          created_at?: string
-          duration_seconds?: number | null
-          id?: string
-          tasks_reviewed?: Json | null
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
       daily_scorecards: {
         Row: {
           behavior_execution: number
@@ -356,9 +317,6 @@ export type Database = {
           chief_aim_exchange: string | null
           chief_aim_plan: string | null
           chief_aim_what: string | null
-          coaching_call_enabled: boolean | null
-          coaching_call_time: string | null
-          coaching_call_timezone: string | null
           created_at: string
           current_act: string | null
           current_streak: number | null
@@ -368,7 +326,6 @@ export type Database = {
           id: string
           last_viewing_date: string | null
           mind_movie_url: string | null
-          phone_number: string | null
           show_on_leaderboard: boolean
           updated_at: string
           user_id: string
@@ -383,9 +340,6 @@ export type Database = {
           chief_aim_exchange?: string | null
           chief_aim_plan?: string | null
           chief_aim_what?: string | null
-          coaching_call_enabled?: boolean | null
-          coaching_call_time?: string | null
-          coaching_call_timezone?: string | null
           created_at?: string
           current_act?: string | null
           current_streak?: number | null
@@ -395,7 +349,6 @@ export type Database = {
           id?: string
           last_viewing_date?: string | null
           mind_movie_url?: string | null
-          phone_number?: string | null
           show_on_leaderboard?: boolean
           updated_at?: string
           user_id: string
@@ -410,9 +363,6 @@ export type Database = {
           chief_aim_exchange?: string | null
           chief_aim_plan?: string | null
           chief_aim_what?: string | null
-          coaching_call_enabled?: boolean | null
-          coaching_call_time?: string | null
-          coaching_call_timezone?: string | null
           created_at?: string
           current_act?: string | null
           current_streak?: number | null
@@ -422,7 +372,6 @@ export type Database = {
           id?: string
           last_viewing_date?: string | null
           mind_movie_url?: string | null
-          phone_number?: string | null
           show_on_leaderboard?: boolean
           updated_at?: string
           user_id?: string
