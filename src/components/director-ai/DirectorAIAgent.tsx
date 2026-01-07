@@ -89,19 +89,22 @@ export function DirectorAIAgent({ isOpen, onClose, chiefAim }: DirectorAIAgentPr
   // Voice input hook with auto-submit on silence
   const { isListening, transcript, isSupported, startListening, stopListening } = useVoiceInput({
     onTranscript: (text) => {
+      console.log("[DirectorAI] Transcript received:", text);
       if (text.trim()) {
         setInputText(text);
       }
     },
     onSilence: (finalTranscript) => {
       // Auto-submit when user stops speaking
+      console.log("[DirectorAI] Silence callback triggered:", finalTranscript);
       if (finalTranscript.trim() && !isLoading) {
+        console.log("[DirectorAI] Auto-submitting:", finalTranscript.trim());
         setInputText("");
         streamChat(finalTranscript.trim());
       }
     },
     continuous: true,
-    silenceTimeout: 1500, // 1.5 seconds of silence before auto-submit
+    silenceTimeout: 2000, // 2 seconds of silence before auto-submit
   });
 
   // Update orb state based on listening
