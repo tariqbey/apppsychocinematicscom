@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { VoiceOrb } from "./VoiceOrb";
 import { AgentTranscript, TranscriptMessage } from "./AgentTranscript";
 import { useVoiceInput } from "@/hooks/useVoiceInput";
+import { useCoachingContext } from "@/hooks/useCoachingContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -23,9 +24,52 @@ interface DirectorAIAgentProps {
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/director-ai`;
 const TTS_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/elevenlabs-tts`;
 
-const WELCOME_MESSAGE = "Good day, Director. I'm your Psycho-Cinematics coach, here to help you stay in character and make today's scene count. How can I support your production today?";
+// Generate context-aware opening based on user status
+const generateProactiveOpening = (context: ReturnType<typeof useCoachingContext>["context"]) => {
+  if (!context) {
+    return "Good day, Director. Let's get you set up and ready to create your masterpiece.";
+  }
 
-export function DirectorAIAgent({ isOpen, onClose, chiefAim, userId }: DirectorAIAgentProps) {
+  const { greeting, dayNumber, currentStreak, chiefAimComplete, tasksSetForToday, allTasksCompleted, 
+          watchedMindMovieToday, hasMindMovie, todaysTasks, completedTasksCount, directorCharacterName } = context;
+  
+  const name = directorCharacterName ? `, ${directorCharacterName}` : "";
+  
+  // Priority 1: No Chief Aim
+  if (!chiefAimComplete) {
+    return `${greeting}${name}. Director, I see we haven't completed your Definite Chief Aim yet. This is Phase 1 - Pre-Production. Without a clear Final Scene, we're shooting blind. Every great production starts with knowing the destination. What's the dream you're building toward? What does your ultimate success look like?`;
+  }
+
+  // Priority 2: No tasks set for today
+  if (!tasksSetForToday) {
+    return `${greeting}${name}! Day ${dayNumber} of production. I notice you haven't locked in your Three Things for today yet. A Director without a shot list is just hoping for magic. What are the three scenes you're directing today that move you toward your Final Scene?`;
+  }
+
+  // Priority 3: Mind Movie not watched (if they have one)
+  if (hasMindMovie && !watchedMindMovieToday) {
+    const taskStatus = allTasksCompleted 
+      ? "Your Three Things are all complete - outstanding!" 
+      : `You've completed ${completedTasksCount} of ${todaysTasks.length} tasks.`;
+    return `${greeting}${name}! ${taskStatus} But I notice you haven't viewed your Mind Movie yet today. That daily viewing is Phase 4 - it's how we program your nervous system. Your subconscious can't tell the difference between vivid imagination and reality. Ready to step into the theater?`;
+  }
+
+  // Priority 4: Tasks in progress
+  if (tasksSetForToday && !allTasksCompleted) {
+    const remaining = todaysTasks.length - completedTasksCount;
+    const incompleteTasks = todaysTasks.filter(t => !t.is_completed).map(t => t.task_text).join(", ");
+    return `${greeting}${name}! Day ${dayNumber}, and you're on a ${currentStreak}-day streak. You've got ${remaining} scene${remaining > 1 ? 's' : ''} left to shoot today: ${incompleteTasks}. What's blocking the next take? Let's get that camera rolling.`;
+  }
+
+  // All good - celebration mode
+  if (allTasksCompleted && watchedMindMovieToday) {
+    return `${greeting}${name}! Outstanding work on Day ${dayNumber}! You've watched your Mind Movie, all Three Things are wrapped, and you're on a ${currentStreak}-day streak. This is what Oscar-worthy production looks like. You're fully in character. What scene are we directing next?`;
+  }
+
+  // Default - everything's set up, encourage progress
+  return `${greeting}${name}! Day ${dayNumber} of your production. You're on a ${currentStreak}-day streak. Your Three Things are locked in. What's the first take we're shooting today?`;
+};
+
+export function DirectorAIAgent({ isOpen, onClose, chiefAim }: DirectorAIAgentProps) {
   const [messages, setMessages] = useState<TranscriptMessage[]>([]);
   const [currentResponse, setCurrentResponse] = useState("");
   const [inputText, setInputText] = useState("");
@@ -34,56 +78,94 @@ export function DirectorAIAgent({ isOpen, onClose, chiefAim, userId }: DirectorA
   const [audioLevel, setAudioLevel] = useState(0);
   const [ttsEnabled, setTtsEnabled] = useState(true);
   const [isMinimized, setIsMinimized] = useState(false);
+  const [hasInitialized, setHasInitialized] = useState(false);
   
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const hasGreeted = useRef(false);
+  
+  // Get full coaching context
+  const { context: coachingContext, loading: contextLoading } = useCoachingContext();
 
-  // Voice input hook
+  // Voice input hook with auto-submit on silence
   const { isListening, transcript, isSupported, startListening, stopListening } = useVoiceInput({
     onTranscript: (text) => {
       if (text.trim()) {
         setInputText(text);
       }
     },
+    onSilence: (finalTranscript) => {
+      // Auto-submit when user stops speaking
+      if (finalTranscript.trim() && !isLoading) {
+        setInputText("");
+        streamChat(finalTranscript.trim());
+      }
+    },
     continuous: true,
+    silenceTimeout: 1500, // 1.5 seconds of silence before auto-submit
   });
 
   // Update orb state based on listening
   useEffect(() => {
-    if (isListening) {
+    if (isListening && orbState !== "speaking" && orbState !== "processing") {
       setOrbState("listening");
-    } else if (!isLoading && orbState === "listening") {
-      setOrbState("idle");
     }
-  }, [isListening, isLoading, orbState]);
+  }, [isListening, orbState]);
 
-  // Greet on open
+  // Auto-start listening after AI finishes speaking
   useEffect(() => {
-    if (isOpen && !hasGreeted.current && messages.length === 0) {
+    if (orbState === "idle" && hasInitialized && isSupported && !isLoading && !isListening) {
+      // Small delay before starting to listen again
+      const timer = setTimeout(() => {
+        if (orbState === "idle" && !isLoading) {
+          startListening();
+        }
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [orbState, hasInitialized, isSupported, isLoading, isListening, startListening]);
+
+  // Generate proactive greeting on open
+  useEffect(() => {
+    if (isOpen && !hasGreeted.current && messages.length === 0 && !contextLoading) {
       hasGreeted.current = true;
+      setHasInitialized(true);
+      
+      const welcomeMessage = generateProactiveOpening(coachingContext);
+      
       const welcomeMsg: TranscriptMessage = {
         id: crypto.randomUUID(),
         role: "assistant",
-        content: WELCOME_MESSAGE,
+        content: welcomeMessage,
         timestamp: new Date(),
       };
       setMessages([welcomeMsg]);
       
       if (ttsEnabled) {
-        speakText(WELCOME_MESSAGE);
+        speakText(welcomeMessage);
+      } else {
+        // If TTS is off, start listening immediately
+        if (isSupported) {
+          setTimeout(() => startListening(), 500);
+        }
       }
     }
-  }, [isOpen, messages.length, ttsEnabled]);
+  }, [isOpen, messages.length, ttsEnabled, contextLoading, coachingContext, isSupported, startListening]);
 
   // Reset on close
   useEffect(() => {
     if (!isOpen) {
       hasGreeted.current = false;
+      setHasInitialized(false);
+      setMessages([]);
+      stopListening();
+      stopSpeaking();
     }
-  }, [isOpen]);
+  }, [isOpen, stopListening]);
 
   const speakText = async (text: string) => {
     try {
+      // Stop listening while AI speaks
+      stopListening();
       setOrbState("speaking");
       
       const response = await fetch(TTS_URL, {
@@ -148,6 +230,9 @@ export function DirectorAIAgent({ isOpen, onClose, chiefAim, userId }: DirectorA
   };
 
   const streamChat = useCallback(async (userMessage: string) => {
+    // Stop listening during processing
+    stopListening();
+    
     const userMsg: TranscriptMessage = {
       id: crypto.randomUUID(),
       role: "user",
@@ -169,6 +254,24 @@ export function DirectorAIAgent({ isOpen, onClose, chiefAim, userId }: DirectorA
         content: m.content,
       }));
 
+      // Build full user context for proactive coaching
+      const userContext = coachingContext ? {
+        timeOfDay: coachingContext.timeOfDay,
+        dayNumber: coachingContext.dayNumber,
+        currentStreak: coachingContext.currentStreak,
+        bestStreak: coachingContext.bestStreak,
+        chiefAimComplete: coachingContext.chiefAimComplete,
+        directorCharacterName: coachingContext.directorCharacterName,
+        tasksSetForToday: coachingContext.tasksSetForToday,
+        allTasksCompleted: coachingContext.allTasksCompleted,
+        completedTasksCount: coachingContext.completedTasksCount,
+        todaysTasks: coachingContext.todaysTasks,
+        hasMindMovie: coachingContext.hasMindMovie,
+        watchedMindMovieToday: coachingContext.watchedMindMovieToday,
+        filledScorecardToday: coachingContext.filledScorecardToday,
+        todaysScorecardScore: coachingContext.todaysScorecardScore,
+      } : undefined;
+
       const response = await fetch(CHAT_URL, {
         method: "POST",
         headers: {
@@ -176,16 +279,22 @@ export function DirectorAIAgent({ isOpen, onClose, chiefAim, userId }: DirectorA
           ...(token && { Authorization: `Bearer ${token}` }),
           apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
         },
-        body: JSON.stringify({ messages: allMessages, chiefAim }),
+        body: JSON.stringify({ 
+          messages: allMessages, 
+          chiefAim: coachingContext?.chiefAim || chiefAim,
+          userContext,
+        }),
       });
 
       if (!response.ok) {
         if (response.status === 429) {
           toast.error("Rate limit exceeded. Please wait a moment.");
+          setOrbState("idle");
           return;
         }
         if (response.status === 402) {
           toast.error("AI credits exhausted. Please add credits.");
+          setOrbState("idle");
           return;
         }
         throw new Error("Chat request failed");
@@ -246,22 +355,19 @@ export function DirectorAIAgent({ isOpen, onClose, chiefAim, userId }: DirectorA
     } finally {
       setIsLoading(false);
     }
-  }, [messages, chiefAim, ttsEnabled]);
+  }, [messages, chiefAim, ttsEnabled, coachingContext, stopListening]);
 
   const handleSend = () => {
     if (!inputText.trim() || isLoading) return;
     const text = inputText.trim();
     setInputText("");
-    stopListening();
     streamChat(text);
   };
 
   const handleVoiceToggle = () => {
     if (isListening) {
       stopListening();
-      if (inputText.trim()) {
-        handleSend();
-      }
+      setOrbState("idle");
     } else {
       stopSpeaking();
       startListening();
@@ -270,6 +376,7 @@ export function DirectorAIAgent({ isOpen, onClose, chiefAim, userId }: DirectorA
 
   const handleCut = () => {
     stopSpeaking();
+    stopListening();
     streamChat("CUT! I need to reset. Walk me through the CUT technique right now - help me Recognize what's happening, Cut the scene, Reset my state, and Resume as my Director Character.");
   };
 
@@ -341,12 +448,26 @@ export function DirectorAIAgent({ isOpen, onClose, chiefAim, userId }: DirectorA
           />
         </div>
 
+        {/* Listening indicator */}
+        {isListening && orbState === "listening" && (
+          <p className="text-gold text-sm mb-4 animate-pulse">
+            Listening... speak freely
+          </p>
+        )}
+
         {/* Transcript */}
         <AgentTranscript 
           messages={messages}
           currentResponse={currentResponse}
           className="mb-8"
         />
+
+        {/* Live transcript while speaking */}
+        {transcript && isListening && (
+          <div className="w-full max-w-xl mb-4 px-4 py-3 bg-card/40 rounded-lg border border-gold/20">
+            <p className="text-foreground/80 italic">"{transcript}"</p>
+          </div>
+        )}
 
         {/* Input area */}
         <div className="w-full max-w-xl space-y-4">
@@ -356,7 +477,7 @@ export function DirectorAIAgent({ isOpen, onClose, chiefAim, userId }: DirectorA
                 value={inputText}
                 onChange={(e) => setInputText(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleSend()}
-                placeholder={isListening ? "Listening..." : "Type your message..."}
+                placeholder={isListening ? "Listening... or type here" : "Type your message..."}
                 className="bg-card/60 border-border/50 h-12 pr-12 text-foreground placeholder:text-muted-foreground"
                 disabled={isLoading}
               />
@@ -377,9 +498,9 @@ export function DirectorAIAgent({ isOpen, onClose, chiefAim, userId }: DirectorA
                 variant={isListening ? "default" : "outline"}
                 size="icon"
                 onClick={handleVoiceToggle}
-                disabled={isLoading}
+                disabled={isLoading || orbState === "speaking"}
                 className={isListening 
-                  ? "w-12 h-12 bg-white text-black hover:bg-white/90 animate-pulse" 
+                  ? "w-12 h-12 bg-gold text-black hover:bg-gold/90" 
                   : "w-12 h-12 border-border/50 hover:border-gold hover:text-gold"
                 }
               >

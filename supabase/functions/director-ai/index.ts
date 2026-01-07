@@ -37,7 +37,18 @@ You are a "Script Doctor" helping users rewrite their mental scripts and embody 
 - New behaviors follow from newly engineered identity
 - Their nervous system can't distinguish vivid imagination from reality
 - They are simultaneously Director, Lead Actor, and Production Company
-- Daily viewing of their mind movie (Phase 4) accelerates transformation`;
+- Daily viewing of their mind movie (Phase 4) accelerates transformation
+
+## PROACTIVE COACHING MODE
+
+You are NOT a passive assistant waiting for questions. You are an ACTIVE COACH who:
+- Checks on their daily progress
+- Holds them accountable
+- Guides them through uncompleted tasks
+- Celebrates their wins
+- Keeps them focused on their Final Scene
+
+When the conversation starts, DO NOT ask "How can I help you?" Instead, immediately begin coaching based on their current status.`;
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -45,37 +56,77 @@ serve(async (req) => {
   }
 
   try {
-    const { messages, chiefAim } = await req.json();
+    const { messages, chiefAim, userContext } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     
     if (!LOVABLE_API_KEY) {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
-    // Build enhanced context with full Chief Aim breakdown
-    let chiefAimContext = "";
+    // Build enhanced context with full user status
+    let contextSection = "";
+    
+    // Chief Aim context
     if (chiefAim) {
       if (typeof chiefAim === "string") {
-        chiefAimContext = `\n\n## THE USER'S DEFINITE CHIEF AIM (FINAL SCENE)\n${chiefAim}`;
+        contextSection += `\n\n## THE USER'S DEFINITE CHIEF AIM (FINAL SCENE)\n${chiefAim}`;
       } else {
-        chiefAimContext = `\n\n## THE USER'S DEFINITE CHIEF AIM (FINAL SCENE)
+        contextSection += `\n\n## THE USER'S DEFINITE CHIEF AIM (FINAL SCENE)
 
 **THE DREAM (What They Want):** ${chiefAim.what || "Not yet defined - help them craft this!"}
 **THE DEADLINE (By When):** ${chiefAim.byWhen || "Not yet set"}
 **THE EXCHANGE (What They Give):** ${chiefAim.exchange || "Not yet defined"}
-**THE PLAN (How They'll Start):** ${chiefAim.plan || "Not yet outlined"}
-
-${(!chiefAim.what || !chiefAim.byWhen || !chiefAim.exchange || !chiefAim.plan) 
-  ? "⚠️ Their Chief Aim is incomplete. Consider guiding them to complete it - a Director needs a clear Final Scene to shoot towards." 
-  : "✓ Their Chief Aim is complete. Focus on Phase 5 - helping them LIVE as their Director Character daily."}`;
+**THE PLAN (How They'll Start):** ${chiefAim.plan || "Not yet outlined"}`;
       }
-    } else {
-      chiefAimContext = `\n\n## CHIEF AIM STATUS\n⚠️ The user has not yet defined their Definite Chief Aim. This is critical! Guide them toward Phase 1 (Pre-Production) to craft their Final Scene.`;
     }
 
-    const enhancedSystemPrompt = SYSTEM_PROMPT + chiefAimContext;
+    // Full user context for proactive coaching
+    if (userContext) {
+      contextSection += `\n\n## CURRENT USER STATUS (Use this to coach proactively!)
 
-    console.log("Director AI processing request with Psycho-Cinematics framework");
+**Time of Day:** ${userContext.timeOfDay || "unknown"}
+**Production Day:** Day ${userContext.dayNumber || 1}
+**Current Streak:** ${userContext.currentStreak || 0} days
+**Best Streak:** ${userContext.bestStreak || 0} days
+
+### CHIEF AIM STATUS
+${userContext.chiefAimComplete 
+  ? "✓ Chief Aim is COMPLETE - They have their Final Scene defined."
+  : "⚠️ Chief Aim is INCOMPLETE - They need to define their Final Scene! This is Phase 1 priority."}
+${userContext.directorCharacterName ? `**Director Character Name:** ${userContext.directorCharacterName}` : ""}
+
+### TODAY'S THREE THINGS
+${userContext.tasksSetForToday 
+  ? `Tasks set for today: ${userContext.todaysTasks?.length || 0}
+Completed: ${userContext.completedTasksCount || 0}/${userContext.todaysTasks?.length || 0}
+${userContext.allTasksCompleted ? "✓ ALL TASKS COMPLETED - Celebrate this!" : "⚠️ Tasks still pending - check on progress"}
+${userContext.todaysTasks?.map((t: any, i: number) => `${i + 1}. ${t.is_completed ? "✓" : "○"} ${t.task_text}`).join("\n") || ""}`
+  : "⚠️ NO TASKS SET FOR TODAY - Help them lock in their Three Things!"}
+
+### MIND MOVIE STATUS
+${userContext.hasMindMovie 
+  ? (userContext.watchedMindMovieToday 
+      ? "✓ Mind Movie EXISTS and WATCHED TODAY - Great work!"
+      : "⚠️ Mind Movie exists but NOT WATCHED TODAY - Encourage them to view it!")
+  : "⚠️ NO MIND MOVIE YET - They need to create one in Phase 3!"}
+
+### DAILY SCORECARD
+${userContext.filledScorecardToday 
+  ? `✓ Scorecard completed today. Score: ${userContext.todaysScorecardScore}/12`
+  : "○ Scorecard not yet filled out today"}
+
+## COACHING PRIORITIES (in order)
+1. ${!userContext.chiefAimComplete ? "URGENT: Help them complete their Chief Aim!" : "Chief Aim complete ✓"}
+2. ${!userContext.tasksSetForToday ? "Set today's Three Things" : (userContext.allTasksCompleted ? "All tasks done ✓" : "Check on task progress")}
+3. ${!userContext.watchedMindMovieToday && userContext.hasMindMovie ? "Encourage Mind Movie viewing" : "Mind Movie status OK ✓"}
+4. ${!userContext.filledScorecardToday ? "Remind about scorecard (end of day)" : "Scorecard done ✓"}`;
+    } else if (!chiefAim) {
+      contextSection += `\n\n## CHIEF AIM STATUS\n⚠️ The user has not yet defined their Definite Chief Aim. This is critical! Guide them toward Phase 1 (Pre-Production) to craft their Final Scene.`;
+    }
+
+    const enhancedSystemPrompt = SYSTEM_PROMPT + contextSection;
+
+    console.log("Director AI processing request with full coaching context");
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
