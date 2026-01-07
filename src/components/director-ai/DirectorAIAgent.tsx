@@ -85,7 +85,8 @@ export function DirectorAIAgent({ isOpen, onClose, chiefAim }: DirectorAIAgentPr
   
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const hasGreeted = useRef(false);
-  const pendingSubmitRef = useRef<string | null>(null);
+  const [pendingVoiceSubmit, setPendingVoiceSubmit] = useState<string | null>(null);
+  const lastAutoSubmitRef = useRef<string | null>(null);
   
   // Get full coaching context
   const { context: coachingContext, loading: contextLoading } = useCoachingContext();
@@ -95,13 +96,6 @@ export function DirectorAIAgent({ isOpen, onClose, chiefAim }: DirectorAIAgentPr
     console.log("[DirectorAI] Transcript received:", text);
     if (text.trim()) {
       setInputText(prev => (prev + " " + text).trim());
-    }
-  }, []);
-
-  const handleSilence = useCallback((finalTranscript: string) => {
-    console.log("[DirectorAI] Silence callback triggered:", finalTranscript);
-    if (finalTranscript.trim()) {
-      pendingSubmitRef.current = finalTranscript.trim();
     }
   }, []);
 
@@ -116,26 +110,25 @@ export function DirectorAIAgent({ isOpen, onClose, chiefAim }: DirectorAIAgentPr
     setOrbState("idle");
   }, []);
 
-  // Voice input hook
+  // Voice input hook - use faster silence timeout for responsive feel
   const { isListening, transcript, isSupported, audioLevel: inputAudioLevel, startListening, stopListening } = useVoiceInput({
     onTranscript: handleTranscript,
-    onSilence: handleSilence,
     onAudioLevel: handleAudioLevel,
     onError: handleVoiceError,
+    onSilence: useCallback((finalTranscript: string) => {
+      const trimmed = finalTranscript.trim();
+      console.log("[DirectorAI] Silence callback triggered:", trimmed);
+      if (trimmed && trimmed !== lastAutoSubmitRef.current) {
+        lastAutoSubmitRef.current = trimmed;
+        setVoiceEnabled(false);
+        setInputText("");
+        setPendingVoiceSubmit(trimmed);
+      }
+    }, []),
     continuous: true,
-    silenceTimeout: 2000,
+    silenceTimeout: 900,
   });
 
-  // Handle pending submit from silence detection
-  useEffect(() => {
-    if (pendingSubmitRef.current && !isLoading) {
-      const text = pendingSubmitRef.current;
-      pendingSubmitRef.current = null;
-      console.log("[DirectorAI] Auto-submitting:", text);
-      setInputText("");
-      streamChat(text);
-    }
-  }, [isLoading]);
 
   // Sync voice enabled state with actual listening
   useEffect(() => {
@@ -407,6 +400,17 @@ export function DirectorAIAgent({ isOpen, onClose, chiefAim }: DirectorAIAgentPr
       setIsLoading(false);
     }
   }, [messages, chiefAim, ttsEnabled, coachingContext, stopListening]);
+
+  // Handle pending submit from silence detection - runs when state changes
+  useEffect(() => {
+    if (pendingVoiceSubmit && !isLoading) {
+      console.log("[DirectorAI] Auto-submitting:", pendingVoiceSubmit);
+      stopListening();
+      const text = pendingVoiceSubmit;
+      setPendingVoiceSubmit(null);
+      streamChat(text);
+    }
+  }, [pendingVoiceSubmit, isLoading, stopListening, streamChat]);
 
   const handleSend = () => {
     if (!inputText.trim() || isLoading) return;
