@@ -230,22 +230,14 @@ export function ImageGenerator({ onImageGenerated, onVideoGenerated }: ImageGene
                     controls
                     className="w-full rounded-lg border border-border/50"
                   />
-                  <div className="flex gap-2">
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      onClick={() => window.open(generatedVideoUrl, "_blank")}
-                    >
-                      <Download className="mr-2 h-4 w-4" />
-                      Download Video
-                    </Button>
-                    {onVideoGenerated && (
-                      <Button size="sm" onClick={() => onVideoGenerated(generatedVideoUrl)}>
-                        <Film className="mr-2 h-4 w-4" />
-                        Set as Mind Movie
-                      </Button>
-                    )}
-                  </div>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => window.open(generatedVideoUrl, "_blank")}
+                  >
+                    <Download className="mr-2 h-4 w-4" />
+                    Download Video
+                  </Button>
                 </div>
               )}
             </div>

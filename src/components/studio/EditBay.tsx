@@ -1,11 +1,10 @@
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { Film, X, Image, Video, FolderOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ImageGenerator } from "./ImageGenerator";
 import { VideoGenerator } from "./VideoGenerator";
 import { MediaLibrary } from "./MediaLibrary";
-import { useUserProfile } from "@/hooks/useUserProfile";
 import { useToast } from "@/hooks/use-toast";
 
 interface EditBayProps {
@@ -13,7 +12,6 @@ interface EditBayProps {
 }
 
 export function EditBay({ onClose }: EditBayProps) {
-  const { updateProfile } = useUserProfile();
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("image");
   const [galleryKey, setGalleryKey] = useState(0); // Force refresh gallery
@@ -22,12 +20,11 @@ export function EditBay({ onClose }: EditBayProps) {
     setGalleryKey(prev => prev + 1);
   };
 
-  const handleVideoGenerated = async (url: string) => {
-    await updateProfile({ mind_movie_url: url });
+  const handleVideoGenerated = (url: string) => {
     refreshGallery();
     toast({
-      title: "Mind Movie Set!",
-      description: "Your AI-generated video is now your Mind Movie. View it in the gallery.",
+      title: "Video Generated!",
+      description: "Your video has been saved to the gallery.",
       action: (
         <Button variant="outline" size="sm" onClick={() => setActiveTab("gallery")}>
           View Gallery
@@ -100,14 +97,7 @@ export function EditBay({ onClose }: EditBayProps) {
               </TabsContent>
 
               <TabsContent value="gallery" className="mt-0">
-                <MediaLibrary
-                  key={galleryKey}
-                  onSelect={(media) => {
-                    if (media.media_url && media.media_type === "video") {
-                      handleVideoGenerated(media.media_url);
-                    }
-                  }}
-                />
+                <MediaLibrary key={galleryKey} />
               </TabsContent>
             </div>
           </Tabs>

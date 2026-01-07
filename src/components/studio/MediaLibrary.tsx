@@ -222,18 +222,6 @@ export function MediaLibrary({ filter = "all", onSelect }: MediaLibraryProps) {
                       <Download className="h-4 w-4 mr-2" />
                       Download
                     </Button>
-                    {onSelect && lightboxMedia.media_type === "video" && (
-                      <Button
-                        size="sm"
-                        onClick={() => {
-                          onSelect(lightboxMedia);
-                          setLightboxMedia(null);
-                        }}
-                      >
-                        <Video className="h-4 w-4 mr-2" />
-                        Set as Mind Movie
-                      </Button>
-                    )}
                     <Button
                       size="sm"
                       variant="destructive"
