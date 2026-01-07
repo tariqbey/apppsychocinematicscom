@@ -35,7 +35,7 @@ export const useVoiceInput = (options: UseVoiceInputOptions = {}) => {
   const [isSupported, setIsSupported] = useState(true);
   const recognitionRef = useRef<any>(null);
   const silenceTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const lastTranscriptRef = useRef<string>("");
+  const accumulatedTranscriptRef = useRef<string>("");
   const hasStartedRef = useRef(false);
 
   const clearSilenceTimer = useCallback(() => {
@@ -48,11 +48,14 @@ export const useVoiceInput = (options: UseVoiceInputOptions = {}) => {
   const startSilenceTimer = useCallback((currentTranscript: string) => {
     clearSilenceTimer();
     if (currentTranscript && onSilence) {
+      const transcriptSnapshot = currentTranscript;
       silenceTimerRef.current = setTimeout(() => {
-        if (currentTranscript === lastTranscriptRef.current && currentTranscript.trim()) {
-          onSilence(currentTranscript);
+        // Check if transcript hasn't changed (user stopped speaking)
+        if (accumulatedTranscriptRef.current.trim()) {
+          console.log("[VoiceInput] Silence detected, submitting:", accumulatedTranscriptRef.current);
+          onSilence(accumulatedTranscriptRef.current);
           setTranscript("");
-          lastTranscriptRef.current = "";
+          accumulatedTranscriptRef.current = "";
         }
       }, silenceTimeout);
     }
@@ -108,17 +111,23 @@ export const useVoiceInput = (options: UseVoiceInputOptions = {}) => {
         }
       }
 
-      const currentTranscript = finalTranscript || interimTranscript;
-      setTranscript(currentTranscript);
-      lastTranscriptRef.current = currentTranscript;
+      // Accumulate final transcripts
+      if (finalTranscript) {
+        accumulatedTranscriptRef.current = (accumulatedTranscriptRef.current + " " + finalTranscript).trim();
+        console.log("[VoiceInput] Accumulated:", accumulatedTranscriptRef.current);
+      }
+
+      // Show current speech (accumulated + interim)
+      const displayTranscript = (accumulatedTranscriptRef.current + " " + interimTranscript).trim();
+      setTranscript(displayTranscript);
 
       if (finalTranscript && onTranscript) {
         onTranscript(finalTranscript);
       }
 
-      // Start silence detection timer on any speech
-      if (currentTranscript) {
-        startSilenceTimer(currentTranscript);
+      // Start/restart silence detection timer on any speech
+      if (displayTranscript) {
+        startSilenceTimer(displayTranscript);
       }
     };
 
@@ -178,6 +187,9 @@ export const useVoiceInput = (options: UseVoiceInputOptions = {}) => {
   const startListening = useCallback(() => {
     if (!recognitionRef.current || !isSupported) return;
 
+    console.log("[VoiceInput] Starting listening");
+    hasStartedRef.current = true;
+    accumulatedTranscriptRef.current = "";
     setTranscript("");
     try {
       recognitionRef.current.start();
@@ -190,12 +202,15 @@ export const useVoiceInput = (options: UseVoiceInputOptions = {}) => {
   const stopListening = useCallback(() => {
     if (!recognitionRef.current) return;
 
+    console.log("[VoiceInput] Stopping listening");
+    hasStartedRef.current = false;
+    clearSilenceTimer();
     try {
       recognitionRef.current.stop();
     } catch (error) {
       console.warn("Recognition already stopped");
     }
-  }, []);
+  }, [clearSilenceTimer]);
 
   const toggleListening = useCallback(() => {
     if (isListening) {
