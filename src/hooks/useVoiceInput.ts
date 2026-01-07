@@ -23,24 +23,34 @@ interface SpeechRecognitionErrorEvent {
 
 export const useVoiceInput = (options: UseVoiceInputOptions = {}) => {
   const { 
-    onTranscript, 
-    onError, 
-    onSilence,
-    onAudioLevel,
     continuous = false, 
     language = "en-US",
     silenceTimeout = 1500,
     autoStart = false
   } = options;
+
   const [isListening, setIsListening] = useState(false);
   const [transcript, setTranscript] = useState("");
   const [isSupported, setIsSupported] = useState(true);
   const [audioLevel, setAudioLevel] = useState(0);
+  
   const recognitionRef = useRef<any>(null);
   const silenceTimerRef = useRef<NodeJS.Timeout | null>(null);
   const accumulatedTranscriptRef = useRef<string>("");
   const hasStartedRef = useRef(false);
   const isStartingRef = useRef(false);
+  
+  // Store callbacks in refs to avoid re-creating recognition on every render
+  const onTranscriptRef = useRef(options.onTranscript);
+  const onErrorRef = useRef(options.onError);
+  const onSilenceRef = useRef(options.onSilence);
+  const onAudioLevelRef = useRef(options.onAudioLevel);
+  
+  // Keep refs updated
+  useEffect(() => { onTranscriptRef.current = options.onTranscript; }, [options.onTranscript]);
+  useEffect(() => { onErrorRef.current = options.onError; }, [options.onError]);
+  useEffect(() => { onSilenceRef.current = options.onSilence; }, [options.onSilence]);
+  useEffect(() => { onAudioLevelRef.current = options.onAudioLevel; }, [options.onAudioLevel]);
   
   // Audio analysis refs
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -55,19 +65,20 @@ export const useVoiceInput = (options: UseVoiceInputOptions = {}) => {
     }
   }, []);
 
-  const startSilenceTimer = useCallback((currentTranscript: string) => {
+  const startSilenceTimer = useCallback(() => {
     clearSilenceTimer();
-    if (currentTranscript && onSilence) {
+    const currentTranscript = accumulatedTranscriptRef.current;
+    if (currentTranscript && onSilenceRef.current) {
       silenceTimerRef.current = setTimeout(() => {
         if (accumulatedTranscriptRef.current.trim()) {
           console.log("[VoiceInput] Silence detected, submitting:", accumulatedTranscriptRef.current);
-          onSilence(accumulatedTranscriptRef.current);
+          onSilenceRef.current?.(accumulatedTranscriptRef.current);
           setTranscript("");
           accumulatedTranscriptRef.current = "";
         }
       }, silenceTimeout);
     }
-  }, [clearSilenceTimer, onSilence, silenceTimeout]);
+  }, [clearSilenceTimer, silenceTimeout]);
 
   // Audio level analysis
   const startAudioAnalysis = useCallback(async () => {
@@ -102,7 +113,7 @@ export const useVoiceInput = (options: UseVoiceInputOptions = {}) => {
         const normalizedLevel = Math.min(average / 128, 1);
         
         setAudioLevel(normalizedLevel);
-        onAudioLevel?.(normalizedLevel);
+        onAudioLevelRef.current?.(normalizedLevel);
         
         animationFrameRef.current = requestAnimationFrame(updateLevel);
       };
@@ -111,7 +122,7 @@ export const useVoiceInput = (options: UseVoiceInputOptions = {}) => {
     } catch (error) {
       console.warn("[VoiceInput] Could not start audio analysis:", error);
     }
-  }, [onAudioLevel]);
+  }, []);
 
   const stopAudioAnalysis = useCallback(() => {
     if (animationFrameRef.current) {
@@ -119,7 +130,7 @@ export const useVoiceInput = (options: UseVoiceInputOptions = {}) => {
       animationFrameRef.current = null;
     }
     if (audioContextRef.current) {
-      audioContextRef.current.close();
+      audioContextRef.current.close().catch(() => {});
       audioContextRef.current = null;
     }
     if (mediaStreamRef.current) {
@@ -130,6 +141,7 @@ export const useVoiceInput = (options: UseVoiceInputOptions = {}) => {
     setAudioLevel(0);
   }, []);
 
+  // Initialize recognition ONCE - only depends on config, not callbacks
   useEffect(() => {
     const SpeechRecognition =
       (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
@@ -145,23 +157,28 @@ export const useVoiceInput = (options: UseVoiceInputOptions = {}) => {
     recognition.lang = language;
 
     recognition.onstart = () => {
+      console.log("[VoiceInput] Recognition started");
       setIsListening(true);
+      isStartingRef.current = false;
     };
 
     recognition.onend = () => {
+      console.log("[VoiceInput] Recognition ended, hasStarted:", hasStartedRef.current);
       setIsListening(false);
-      clearSilenceTimer();
+      isStartingRef.current = false;
       
+      // Auto-restart if we're supposed to keep listening
       if (continuous && hasStartedRef.current) {
-        try {
-          setTimeout(() => {
-            if (hasStartedRef.current && recognitionRef.current) {
+        setTimeout(() => {
+          if (hasStartedRef.current && recognitionRef.current) {
+            try {
+              console.log("[VoiceInput] Auto-restarting...");
               recognitionRef.current.start();
+            } catch (error) {
+              console.warn("[VoiceInput] Auto-restart failed:", error);
             }
-          }, 100);
-        } catch (error) {
-          console.warn("Could not auto-restart recognition");
-        }
+          }
+        }, 100);
       }
     };
 
@@ -180,50 +197,53 @@ export const useVoiceInput = (options: UseVoiceInputOptions = {}) => {
 
       if (finalTranscript) {
         accumulatedTranscriptRef.current = (accumulatedTranscriptRef.current + " " + finalTranscript).trim();
-        console.log("[VoiceInput] Accumulated:", accumulatedTranscriptRef.current);
+        console.log("[VoiceInput] Final transcript:", accumulatedTranscriptRef.current);
+        onTranscriptRef.current?.(finalTranscript);
       }
 
       const displayTranscript = (accumulatedTranscriptRef.current + " " + interimTranscript).trim();
       setTranscript(displayTranscript);
 
-      if (finalTranscript && onTranscript) {
-        onTranscript(finalTranscript);
-      }
-
       if (displayTranscript) {
-        startSilenceTimer(displayTranscript);
+        startSilenceTimer();
       }
     };
 
     recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
-      console.error("Speech recognition error:", event.error);
+      console.error("[VoiceInput] Recognition error:", event.error);
+      isStartingRef.current = false;
       
+      // Don't treat no-speech as fatal in continuous mode
       if (event.error === "no-speech" && continuous) {
         return;
       }
       
-      setIsListening(false);
-
-      if (onError) {
-        let errorMessage = "Voice input error";
-        switch (event.error) {
-          case "no-speech":
-            errorMessage = "No speech detected. Please try again.";
-            break;
-          case "audio-capture":
-            errorMessage = "No microphone found. Please check your device.";
-            break;
-          case "not-allowed":
-            errorMessage = "Microphone access denied. Please enable it in your browser settings.";
-            break;
-          case "network":
-            errorMessage = "Network error. Please check your connection.";
-            break;
-          default:
-            errorMessage = `Voice input error: ${event.error}`;
-        }
-        onError(errorMessage);
+      // For permission errors, reset started state
+      if (event.error === "not-allowed" || event.error === "audio-capture") {
+        hasStartedRef.current = false;
+        setIsListening(false);
       }
+
+      let errorMessage = "Voice input error";
+      switch (event.error) {
+        case "no-speech":
+          errorMessage = "No speech detected. Please try again.";
+          break;
+        case "audio-capture":
+          errorMessage = "No microphone found. Please check your device.";
+          break;
+        case "not-allowed":
+          errorMessage = "Microphone access denied. Please enable it in your browser settings.";
+          break;
+        case "network":
+          errorMessage = "Network error. Please check your connection.";
+          break;
+        case "aborted":
+          return; // Don't report aborted as error
+        default:
+          errorMessage = `Voice input error: ${event.error}`;
+      }
+      onErrorRef.current?.(errorMessage);
     };
 
     recognitionRef.current = recognition;
@@ -233,7 +253,8 @@ export const useVoiceInput = (options: UseVoiceInputOptions = {}) => {
       try {
         recognition.start();
       } catch (error) {
-        console.warn("Could not auto-start recognition");
+        console.warn("[VoiceInput] Could not auto-start recognition");
+        hasStartedRef.current = false;
       }
     }
 
@@ -242,23 +263,32 @@ export const useVoiceInput = (options: UseVoiceInputOptions = {}) => {
       clearSilenceTimer();
       stopAudioAnalysis();
       if (recognitionRef.current) {
-        recognitionRef.current.abort();
+        try {
+          recognitionRef.current.abort();
+        } catch (e) {}
       }
     };
-  }, [continuous, language, onTranscript, onError, autoStart, clearSilenceTimer, startSilenceTimer, stopAudioAnalysis]);
+  }, [continuous, language, autoStart, clearSilenceTimer, startSilenceTimer, stopAudioAnalysis]);
 
   const startListening = useCallback(() => {
-    if (!recognitionRef.current || !isSupported) return;
+    if (!recognitionRef.current || !isSupported) {
+      console.log("[VoiceInput] Cannot start - not supported");
+      return;
+    }
     
-    // Guard against rapid start calls
-    if (isStartingRef.current || hasStartedRef.current) {
-      console.log("[VoiceInput] Already starting or started, skipping");
+    // Guard against rapid/duplicate start calls
+    if (isStartingRef.current) {
+      console.log("[VoiceInput] Already starting, skipping");
+      return;
+    }
+    
+    if (hasStartedRef.current) {
+      console.log("[VoiceInput] Already started, skipping");
       return;
     }
 
-    console.log("[VoiceInput] Starting listening");
+    console.log("[VoiceInput] Starting listening...");
     isStartingRef.current = true;
-    hasStartedRef.current = true;
     accumulatedTranscriptRef.current = "";
     setTranscript("");
     
@@ -266,11 +296,21 @@ export const useVoiceInput = (options: UseVoiceInputOptions = {}) => {
     
     try {
       recognitionRef.current.start();
-    } catch (error) {
-      console.warn("Recognition already started");
+      hasStartedRef.current = true;
+    } catch (error: any) {
+      console.warn("[VoiceInput] Start error:", error);
+      isStartingRef.current = false;
+      
+      // If already running, just mark as started
+      if (error.name === "InvalidStateError") {
+        hasStartedRef.current = true;
+      } else {
+        hasStartedRef.current = false;
+        onErrorRef.current?.("Failed to start voice input");
+      }
     }
     
-    // Reset starting guard after a short delay
+    // Reset starting guard
     setTimeout(() => {
       isStartingRef.current = false;
     }, 300);
@@ -279,20 +319,21 @@ export const useVoiceInput = (options: UseVoiceInputOptions = {}) => {
   const stopListening = useCallback(() => {
     if (!recognitionRef.current) return;
 
-    console.log("[VoiceInput] Stopping listening");
+    console.log("[VoiceInput] Stopping listening...");
     hasStartedRef.current = false;
+    isStartingRef.current = false;
     clearSilenceTimer();
     stopAudioAnalysis();
     
     try {
       recognitionRef.current.stop();
     } catch (error) {
-      console.warn("Recognition already stopped");
+      // Ignore stop errors
     }
   }, [clearSilenceTimer, stopAudioAnalysis]);
 
   const toggleListening = useCallback(() => {
-    if (isListening) {
+    if (isListening || hasStartedRef.current) {
       stopListening();
     } else {
       startListening();

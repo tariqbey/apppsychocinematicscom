@@ -81,39 +81,69 @@ export function DirectorAIAgent({ isOpen, onClose, chiefAim }: DirectorAIAgentPr
   const [ttsEnabled, setTtsEnabled] = useState(true);
   const [isMinimized, setIsMinimized] = useState(false);
   const [hasInitialized, setHasInitialized] = useState(false);
-  
-  // Centralized voice mode state machine
-  const [voiceMode, setVoiceMode] = useState<"off" | "listening" | "paused">("off");
-  const voiceModeRef = useRef(voiceMode);
+  const [voiceEnabled, setVoiceEnabled] = useState(false);
   
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const hasGreeted = useRef(false);
+  const pendingSubmitRef = useRef<string | null>(null);
   
   // Get full coaching context
   const { context: coachingContext, loading: contextLoading } = useCoachingContext();
 
-  // Voice input hook with auto-submit on silence
+  // Memoized callbacks for voice input - prevents hook re-initialization
+  const handleTranscript = useCallback((text: string) => {
+    console.log("[DirectorAI] Transcript received:", text);
+    if (text.trim()) {
+      setInputText(prev => (prev + " " + text).trim());
+    }
+  }, []);
+
+  const handleSilence = useCallback((finalTranscript: string) => {
+    console.log("[DirectorAI] Silence callback triggered:", finalTranscript);
+    if (finalTranscript.trim()) {
+      pendingSubmitRef.current = finalTranscript.trim();
+    }
+  }, []);
+
+  const handleAudioLevel = useCallback((level: number) => {
+    setVoiceInputLevel(level);
+  }, []);
+
+  const handleVoiceError = useCallback((error: string) => {
+    console.error("[DirectorAI] Voice error:", error);
+    toast.error(error);
+    setVoiceEnabled(false);
+    setOrbState("idle");
+  }, []);
+
+  // Voice input hook
   const { isListening, transcript, isSupported, audioLevel: inputAudioLevel, startListening, stopListening } = useVoiceInput({
-    onTranscript: (text) => {
-      console.log("[DirectorAI] Transcript received:", text);
-      if (text.trim()) {
-        setInputText(text);
-      }
-    },
-    onSilence: (finalTranscript) => {
-      console.log("[DirectorAI] Silence callback triggered:", finalTranscript);
-      if (finalTranscript.trim() && !isLoading) {
-        console.log("[DirectorAI] Auto-submitting:", finalTranscript.trim());
-        setInputText("");
-        streamChat(finalTranscript.trim());
-      }
-    },
-    onAudioLevel: (level) => {
-      setVoiceInputLevel(level);
-    },
+    onTranscript: handleTranscript,
+    onSilence: handleSilence,
+    onAudioLevel: handleAudioLevel,
+    onError: handleVoiceError,
     continuous: true,
     silenceTimeout: 2000,
   });
+
+  // Handle pending submit from silence detection
+  useEffect(() => {
+    if (pendingSubmitRef.current && !isLoading) {
+      const text = pendingSubmitRef.current;
+      pendingSubmitRef.current = null;
+      console.log("[DirectorAI] Auto-submitting:", text);
+      setInputText("");
+      streamChat(text);
+    }
+  }, [isLoading]);
+
+  // Sync voice enabled state with actual listening
+  useEffect(() => {
+    if (voiceEnabled && !isListening && orbState !== "speaking" && orbState !== "processing" && !isLoading) {
+      console.log("[DirectorAI] Voice enabled but not listening, starting...");
+      startListening();
+    }
+  }, [voiceEnabled, isListening, orbState, isLoading, startListening]);
 
   // Update orb state based on listening
   useEffect(() => {
@@ -121,33 +151,6 @@ export function DirectorAIAgent({ isOpen, onClose, chiefAim }: DirectorAIAgentPr
       setOrbState("listening");
     }
   }, [isListening, orbState]);
-
-  // Centralized voice control effect - single source of truth
-  useEffect(() => {
-    voiceModeRef.current = voiceMode;
-    
-    if (voiceMode === "listening" && !isListening && isSupported) {
-      console.log("[DirectorAI] Voice mode: listening - starting");
-      startListening();
-    } else if (voiceMode !== "listening" && isListening) {
-      console.log("[DirectorAI] Voice mode:", voiceMode, "- stopping");
-      stopListening();
-    }
-  }, [voiceMode, isListening, isSupported, startListening, stopListening]);
-
-  // Auto-resume listening after AI finishes (replaces old auto-start effect)
-  useEffect(() => {
-    if (orbState === "idle" && hasInitialized && !isLoading && voiceMode === "paused") {
-      // Resume listening after AI stops speaking
-      const timer = setTimeout(() => {
-        if (voiceModeRef.current === "paused") {
-          console.log("[DirectorAI] Resuming listening after idle");
-          setVoiceMode("listening");
-        }
-      }, 500);
-      return () => clearTimeout(timer);
-    }
-  }, [orbState, hasInitialized, isLoading, voiceMode]);
 
   // Generate proactive greeting on open
   useEffect(() => {
@@ -166,13 +169,12 @@ export function DirectorAIAgent({ isOpen, onClose, chiefAim }: DirectorAIAgentPr
       setMessages([welcomeMsg]);
       
       if (ttsEnabled) {
-        setVoiceMode("paused"); // Will resume after TTS ends
         speakText(welcomeMessage);
-      } else {
-        // If TTS is off, start listening immediately via state machine
-        if (isSupported) {
-          setTimeout(() => setVoiceMode("listening"), 500);
-        }
+      } else if (isSupported) {
+        // If TTS is off, start listening after a short delay
+        setTimeout(() => {
+          setVoiceEnabled(true);
+        }, 500);
       }
     }
   }, [isOpen, messages.length, ttsEnabled, contextLoading, coachingContext, isSupported]);
@@ -183,15 +185,16 @@ export function DirectorAIAgent({ isOpen, onClose, chiefAim }: DirectorAIAgentPr
       hasGreeted.current = false;
       setHasInitialized(false);
       setMessages([]);
-      setVoiceMode("off");
+      setVoiceEnabled(false);
+      stopListening();
       stopSpeaking();
     }
-  }, [isOpen]);
+  }, [isOpen, stopListening]);
 
   const speakText = async (text: string) => {
     try {
-      // Pause voice mode while AI speaks
-      setVoiceMode("paused");
+      // Stop listening while AI speaks
+      stopListening();
       setOrbState("speaking");
       
       const response = await fetch(TTS_URL, {
@@ -231,18 +234,31 @@ export function DirectorAIAgent({ isOpen, onClose, chiefAim }: DirectorAIAgentPr
         setAudioLevel(0);
         setOrbState("idle");
         URL.revokeObjectURL(audioUrl);
+        
+        // Resume listening after TTS finishes
+        setTimeout(() => {
+          setVoiceEnabled(true);
+        }, 300);
       };
       
       audio.onerror = () => {
         clearInterval(levelInterval);
         setAudioLevel(0);
         setOrbState("idle");
+        // Resume listening even if TTS failed
+        setTimeout(() => {
+          setVoiceEnabled(true);
+        }, 300);
       };
       
       await audio.play();
     } catch (error) {
       console.error("TTS error:", error);
       setOrbState("idle");
+      // Resume listening on error
+      setTimeout(() => {
+        setVoiceEnabled(true);
+      }, 300);
     }
   };
 
@@ -256,8 +272,9 @@ export function DirectorAIAgent({ isOpen, onClose, chiefAim }: DirectorAIAgentPr
   };
 
   const streamChat = useCallback(async (userMessage: string) => {
-    // Pause voice mode during processing
-    setVoiceMode("paused");
+    // Stop listening during processing
+    stopListening();
+    setVoiceEnabled(false);
     
     const userMsg: TranscriptMessage = {
       id: crypto.randomUUID(),
@@ -373,15 +390,23 @@ export function DirectorAIAgent({ isOpen, onClose, chiefAim }: DirectorAIAgentPr
         await speakText(fullResponse);
       } else {
         setOrbState("idle");
+        // Resume listening if no TTS
+        setTimeout(() => {
+          setVoiceEnabled(true);
+        }, 300);
       }
     } catch (error) {
       console.error("Chat error:", error);
       toast.error("Failed to get response. Please try again.");
       setOrbState("idle");
+      // Resume listening on error
+      setTimeout(() => {
+        setVoiceEnabled(true);
+      }, 300);
     } finally {
       setIsLoading(false);
     }
-  }, [messages, chiefAim, ttsEnabled, coachingContext]);
+  }, [messages, chiefAim, ttsEnabled, coachingContext, stopListening]);
 
   const handleSend = () => {
     if (!inputText.trim() || isLoading) return;
@@ -391,18 +416,21 @@ export function DirectorAIAgent({ isOpen, onClose, chiefAim }: DirectorAIAgentPr
   };
 
   const handleVoiceToggle = () => {
-    if (voiceMode === "listening") {
-      setVoiceMode("off");
+    if (voiceEnabled || isListening) {
+      stopListening();
+      setVoiceEnabled(false);
       setOrbState("idle");
     } else {
       stopSpeaking();
-      setVoiceMode("listening");
+      setVoiceEnabled(true);
+      startListening();
     }
   };
 
   const handleCut = () => {
     stopSpeaking();
-    setVoiceMode("paused");
+    stopListening();
+    setVoiceEnabled(false);
     streamChat("CUT! I need to reset. Walk me through the CUT technique right now - help me Recognize what's happening, Cut the scene, Reset my state, and Resume as my Director Character.");
   };
 
@@ -529,16 +557,16 @@ export function DirectorAIAgent({ isOpen, onClose, chiefAim }: DirectorAIAgentPr
             {/* Voice button */}
             {isSupported && (
               <Button
-                variant={isListening ? "default" : "outline"}
+                variant={voiceEnabled || isListening ? "default" : "outline"}
                 size="icon"
                 onClick={handleVoiceToggle}
                 disabled={isLoading || orbState === "speaking"}
-                className={isListening 
+                className={(voiceEnabled || isListening)
                   ? "w-12 h-12 bg-gold text-black hover:bg-gold/90" 
                   : "w-12 h-12 border-border/50 hover:border-gold hover:text-gold"
                 }
               >
-                {isListening ? <Mic className="w-5 h-5" /> : <MicOff className="w-5 h-5" />}
+                {(voiceEnabled || isListening) ? <Mic className="w-5 h-5" /> : <MicOff className="w-5 h-5" />}
               </Button>
             )}
           </div>
