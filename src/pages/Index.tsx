@@ -208,9 +208,29 @@ const Index = () => {
           {!showAIChat && (
             <button
               onClick={() => setShowAIChat(true)}
-              className="fixed bottom-6 right-6 z-40 w-16 h-16 rounded-full bg-gradient-to-br from-gold to-amber-600 hover:from-gold/90 hover:to-amber-600/90 shadow-lg shadow-gold/30 flex items-center justify-center transition-all duration-300 hover:scale-105 group"
+              className="fixed bottom-6 right-6 z-40 flex items-center gap-3 group"
             >
-              <Bot className="w-7 h-7 text-black group-hover:scale-110 transition-transform" />
+              {/* Label */}
+              <div className="bg-card/95 backdrop-blur-sm border border-border px-4 py-2 rounded-lg shadow-lg opacity-0 group-hover:opacity-100 translate-x-2 group-hover:translate-x-0 transition-all duration-300">
+                <span className="text-sm font-medium text-foreground whitespace-nowrap">Talk to Director AI</span>
+              </div>
+              
+              {/* Animated Orb Button */}
+              <div className="relative">
+                {/* Outer glow rings */}
+                <div className="absolute inset-0 rounded-full bg-gradient-to-br from-gold/40 to-amber-600/40 blur-xl animate-pulse" />
+                <div className="absolute -inset-2 rounded-full border border-gold/20 animate-[spin_8s_linear_infinite]" />
+                <div className="absolute -inset-4 rounded-full border border-gold/10 animate-[spin_12s_linear_infinite_reverse]" />
+                
+                {/* Main button */}
+                <div className="relative w-16 h-16 rounded-full bg-gradient-to-br from-gold via-amber-500 to-amber-600 shadow-[0_0_30px_rgba(212,175,55,0.5)] flex items-center justify-center transition-all duration-300 group-hover:scale-110 group-hover:shadow-[0_0_50px_rgba(212,175,55,0.7)]">
+                  {/* Inner highlight */}
+                  <div className="absolute inset-1 rounded-full bg-gradient-to-br from-white/30 to-transparent" />
+                  
+                  {/* Icon */}
+                  <Bot className="w-7 h-7 text-black relative z-10 group-hover:scale-110 transition-transform" />
+                </div>
+              </div>
             </button>
           )}
           
