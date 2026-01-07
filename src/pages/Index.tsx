@@ -1,7 +1,6 @@
 import { useState, useCallback } from "react";
 import { Header } from "@/components/layout/Header";
 import { ProductionStatus } from "@/components/dashboard/ProductionStatus";
-
 import { DailyRitualChecklist } from "@/components/dashboard/DailyRitualChecklist";
 import { DefiniteChiefAimCard } from "@/components/dashboard/DefiniteChiefAimCard";
 import { StreakBanner } from "@/components/dashboard/StreakBanner";
@@ -12,11 +11,11 @@ import { DailyScorecard } from "@/components/scorecard/DailyScorecard";
 import { ChiefAimWizard } from "@/components/chief-aim/ChiefAimWizard";
 import { ThreeThings } from "@/components/tasks/ThreeThings";
 import { AuthModal } from "@/components/auth/AuthModal";
+import Landing from "@/pages/Landing";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { useGamification } from "@/hooks/useGamification";
-import { Film, Loader2, Wand2, Sparkles, Bot } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Loader2, Wand2, Sparkles, Bot } from "lucide-react";
 
 const Index = () => {
   const [showTheater, setShowTheater] = useState(false);
@@ -76,6 +75,16 @@ const Index = () => {
   const hasCompletedTasks = (profile?.day_number || 0) > 1;
   const hasScorecard = (profile?.current_streak || 0) > 0;
 
+  // Show landing page for unauthenticated users
+  if (!user && !authLoading) {
+    return (
+      <>
+        <Landing onOpenAuth={() => setShowAuthModal(true)} />
+        <AuthModal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} />
+      </>
+    );
+  }
+
   if (authLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -97,79 +106,59 @@ const Index = () => {
           {/* Welcome Message */}
           <div className="text-center mb-8 animate-fade-in">
             <h2 className="text-4xl font-display tracking-wide mb-2">
-              Welcome{user ? " Back" : ""}, <span className="text-gold-gradient">Director</span>
+              Welcome Back, <span className="text-gold-gradient">Director</span>
             </h2>
             <p className="text-muted-foreground">
-              {user
-                ? "The set is ready. Let's make today's scene count."
-                : "Sign in to begin your transformation journey."}
+              The set is ready. Let's make today's scene count.
             </p>
           </div>
 
-          {!user ? (
-            /* Unauthenticated State */
-            <div className="glass-card p-12 cinematic-border text-center animate-slide-up">
-              <div className="w-20 h-20 rounded-full bg-gradient-to-br from-gold/20 to-amber-soft/20 mx-auto mb-6 flex items-center justify-center">
-                <Film className="w-10 h-10 text-gold" />
+          {/* Production Status */}
+          <ProductionStatus currentAct={currentAct} dayNumber={dayNumber} />
+
+
+          {/* Streak Banner */}
+          <StreakBanner streak={streak} bestStreak={bestStreak} />
+
+          {/* Edit Bay Card */}
+          <button
+            onClick={() => setShowEditBay(true)}
+            className="w-full glass-card p-6 cinematic-border animate-slide-up group hover:border-gold/50 transition-all duration-300 text-left"
+          >
+            <div className="flex items-center gap-4">
+              <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-gold/20 to-amber-soft/20 flex items-center justify-center group-hover:from-gold/30 group-hover:to-amber-soft/30 transition-all duration-300">
+                <Wand2 className="w-7 h-7 text-gold" />
               </div>
-              <h3 className="text-2xl font-display mb-4">Begin Your Director Journey</h3>
-              <p className="text-muted-foreground mb-8 max-w-md mx-auto">
-                Create your Mind Movie, track your daily rituals, and transform your identity with the Psycho-Cinematics™ framework.
-              </p>
-              <Button variant="gold" size="lg" onClick={() => setShowAuthModal(true)}>
-                Enter the Studio
-              </Button>
-            </div>
-          ) : (
-            <>
-              {/* Production Status */}
-              <ProductionStatus currentAct={currentAct} dayNumber={dayNumber} />
-
-
-              {/* Streak Banner */}
-              <StreakBanner streak={streak} bestStreak={bestStreak} />
-
-              {/* Edit Bay Card */}
-              <button
-                onClick={() => setShowEditBay(true)}
-                className="w-full glass-card p-6 cinematic-border animate-slide-up group hover:border-gold/50 transition-all duration-300 text-left"
-              >
-                <div className="flex items-center gap-4">
-                  <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-gold/20 to-amber-soft/20 flex items-center justify-center group-hover:from-gold/30 group-hover:to-amber-soft/30 transition-all duration-300">
-                    <Wand2 className="w-7 h-7 text-gold" />
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <h3 className="text-xl font-display tracking-wide group-hover:text-gold transition-colors">The Edit Bay</h3>
-                      <Sparkles className="w-4 h-4 text-gold/60" />
-                    </div>
-                    <p className="text-sm text-muted-foreground">
-                      AI Media Generation Studio — Create images, animate them into videos, and build your Mind Movie.
-                    </p>
-                  </div>
-                  <div className="hidden sm:flex items-center gap-2 text-sm text-muted-foreground group-hover:text-gold transition-colors">
-                    <span>Enter Studio</span>
-                    <span className="text-lg">→</span>
-                  </div>
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-1">
+                  <h3 className="text-xl font-display tracking-wide group-hover:text-gold transition-colors">The Edit Bay</h3>
+                  <Sparkles className="w-4 h-4 text-gold/60" />
                 </div>
-              </button>
-
-              {/* Three Things - Daily Task Manager */}
-              <ThreeThings />
-
-              {/* Two Column Layout */}
-              <div className="grid md:grid-cols-2 gap-6">
-                {/* Daily Ritual */}
-                <DailyRitualChecklist
-                  onTheaterClick={() => setShowTheater(true)}
-                  onScorecardClick={() => setShowScorecard(true)}
-                />
-
-                {/* Chief Aim */}
-                <DefiniteChiefAimCard aim={chiefAim} onEdit={() => setShowChiefAimWizard(true)} />
+                <p className="text-sm text-muted-foreground">
+                  AI Media Generation Studio — Create images, animate them into videos, and build your Mind Movie.
+                </p>
               </div>
-            </>
-          )}
+              <div className="hidden sm:flex items-center gap-2 text-sm text-muted-foreground group-hover:text-gold transition-colors">
+                <span>Enter Studio</span>
+                <span className="text-lg">→</span>
+              </div>
+            </div>
+          </button>
+
+          {/* Three Things - Daily Task Manager */}
+          <ThreeThings />
+
+          {/* Two Column Layout */}
+          <div className="grid md:grid-cols-2 gap-6">
+            {/* Daily Ritual */}
+            <DailyRitualChecklist
+              onTheaterClick={() => setShowTheater(true)}
+              onScorecardClick={() => setShowScorecard(true)}
+            />
+
+            {/* Chief Aim */}
+            <DefiniteChiefAimCard aim={chiefAim} onEdit={() => setShowChiefAimWizard(true)} />
+          </div>
         </div>
       </main>
 
