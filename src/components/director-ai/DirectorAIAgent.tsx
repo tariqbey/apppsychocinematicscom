@@ -82,6 +82,10 @@ export function DirectorAIAgent({ isOpen, onClose, chiefAim }: DirectorAIAgentPr
   const [isMinimized, setIsMinimized] = useState(false);
   const [hasInitialized, setHasInitialized] = useState(false);
   
+  // Centralized voice mode state machine
+  const [voiceMode, setVoiceMode] = useState<"off" | "listening" | "paused">("off");
+  const voiceModeRef = useRef(voiceMode);
+  
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const hasGreeted = useRef(false);
   
@@ -118,18 +122,32 @@ export function DirectorAIAgent({ isOpen, onClose, chiefAim }: DirectorAIAgentPr
     }
   }, [isListening, orbState]);
 
-  // Auto-start listening after AI finishes speaking
+  // Centralized voice control effect - single source of truth
   useEffect(() => {
-    if (orbState === "idle" && hasInitialized && isSupported && !isLoading && !isListening) {
-      // Small delay before starting to listen again
+    voiceModeRef.current = voiceMode;
+    
+    if (voiceMode === "listening" && !isListening && isSupported) {
+      console.log("[DirectorAI] Voice mode: listening - starting");
+      startListening();
+    } else if (voiceMode !== "listening" && isListening) {
+      console.log("[DirectorAI] Voice mode:", voiceMode, "- stopping");
+      stopListening();
+    }
+  }, [voiceMode, isListening, isSupported, startListening, stopListening]);
+
+  // Auto-resume listening after AI finishes (replaces old auto-start effect)
+  useEffect(() => {
+    if (orbState === "idle" && hasInitialized && !isLoading && voiceMode === "paused") {
+      // Resume listening after AI stops speaking
       const timer = setTimeout(() => {
-        if (orbState === "idle" && !isLoading) {
-          startListening();
+        if (voiceModeRef.current === "paused") {
+          console.log("[DirectorAI] Resuming listening after idle");
+          setVoiceMode("listening");
         }
       }, 500);
       return () => clearTimeout(timer);
     }
-  }, [orbState, hasInitialized, isSupported, isLoading, isListening, startListening]);
+  }, [orbState, hasInitialized, isLoading, voiceMode]);
 
   // Generate proactive greeting on open
   useEffect(() => {
@@ -148,15 +166,16 @@ export function DirectorAIAgent({ isOpen, onClose, chiefAim }: DirectorAIAgentPr
       setMessages([welcomeMsg]);
       
       if (ttsEnabled) {
+        setVoiceMode("paused"); // Will resume after TTS ends
         speakText(welcomeMessage);
       } else {
-        // If TTS is off, start listening immediately
+        // If TTS is off, start listening immediately via state machine
         if (isSupported) {
-          setTimeout(() => startListening(), 500);
+          setTimeout(() => setVoiceMode("listening"), 500);
         }
       }
     }
-  }, [isOpen, messages.length, ttsEnabled, contextLoading, coachingContext, isSupported, startListening]);
+  }, [isOpen, messages.length, ttsEnabled, contextLoading, coachingContext, isSupported]);
 
   // Reset on close
   useEffect(() => {
@@ -164,15 +183,15 @@ export function DirectorAIAgent({ isOpen, onClose, chiefAim }: DirectorAIAgentPr
       hasGreeted.current = false;
       setHasInitialized(false);
       setMessages([]);
-      stopListening();
+      setVoiceMode("off");
       stopSpeaking();
     }
-  }, [isOpen, stopListening]);
+  }, [isOpen]);
 
   const speakText = async (text: string) => {
     try {
-      // Stop listening while AI speaks
-      stopListening();
+      // Pause voice mode while AI speaks
+      setVoiceMode("paused");
       setOrbState("speaking");
       
       const response = await fetch(TTS_URL, {
@@ -237,8 +256,8 @@ export function DirectorAIAgent({ isOpen, onClose, chiefAim }: DirectorAIAgentPr
   };
 
   const streamChat = useCallback(async (userMessage: string) => {
-    // Stop listening during processing
-    stopListening();
+    // Pause voice mode during processing
+    setVoiceMode("paused");
     
     const userMsg: TranscriptMessage = {
       id: crypto.randomUUID(),
@@ -362,7 +381,7 @@ export function DirectorAIAgent({ isOpen, onClose, chiefAim }: DirectorAIAgentPr
     } finally {
       setIsLoading(false);
     }
-  }, [messages, chiefAim, ttsEnabled, coachingContext, stopListening]);
+  }, [messages, chiefAim, ttsEnabled, coachingContext]);
 
   const handleSend = () => {
     if (!inputText.trim() || isLoading) return;
@@ -372,18 +391,18 @@ export function DirectorAIAgent({ isOpen, onClose, chiefAim }: DirectorAIAgentPr
   };
 
   const handleVoiceToggle = () => {
-    if (isListening) {
-      stopListening();
+    if (voiceMode === "listening") {
+      setVoiceMode("off");
       setOrbState("idle");
     } else {
       stopSpeaking();
-      startListening();
+      setVoiceMode("listening");
     }
   };
 
   const handleCut = () => {
     stopSpeaking();
-    stopListening();
+    setVoiceMode("paused");
     streamChat("CUT! I need to reset. Walk me through the CUT technique right now - help me Recognize what's happening, Cut the scene, Reset my state, and Resume as my Director Character.");
   };
 

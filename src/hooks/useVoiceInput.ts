@@ -40,6 +40,7 @@ export const useVoiceInput = (options: UseVoiceInputOptions = {}) => {
   const silenceTimerRef = useRef<NodeJS.Timeout | null>(null);
   const accumulatedTranscriptRef = useRef<string>("");
   const hasStartedRef = useRef(false);
+  const isStartingRef = useRef(false);
   
   // Audio analysis refs
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -248,8 +249,15 @@ export const useVoiceInput = (options: UseVoiceInputOptions = {}) => {
 
   const startListening = useCallback(() => {
     if (!recognitionRef.current || !isSupported) return;
+    
+    // Guard against rapid start calls
+    if (isStartingRef.current || hasStartedRef.current) {
+      console.log("[VoiceInput] Already starting or started, skipping");
+      return;
+    }
 
     console.log("[VoiceInput] Starting listening");
+    isStartingRef.current = true;
     hasStartedRef.current = true;
     accumulatedTranscriptRef.current = "";
     setTranscript("");
@@ -261,6 +269,11 @@ export const useVoiceInput = (options: UseVoiceInputOptions = {}) => {
     } catch (error) {
       console.warn("Recognition already started");
     }
+    
+    // Reset starting guard after a short delay
+    setTimeout(() => {
+      isStartingRef.current = false;
+    }, 300);
   }, [isSupported, startAudioAnalysis]);
 
   const stopListening = useCallback(() => {
