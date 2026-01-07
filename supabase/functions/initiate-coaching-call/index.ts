@@ -12,13 +12,13 @@ serve(async (req) => {
   }
 
   try {
-    const TELNYX_API_KEY = Deno.env.get("TELNYX_API_KEY");
-    const TELNYX_PHONE_NUMBER = Deno.env.get("TELNYX_PHONE_NUMBER");
+    const VAPI_API_KEY = Deno.env.get("VAPI_API_KEY");
+    const VAPI_PHONE_NUMBER_ID = Deno.env.get("VAPI_PHONE_NUMBER_ID");
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
-    if (!TELNYX_API_KEY || !TELNYX_PHONE_NUMBER) {
-      throw new Error("Missing Telnyx configuration");
+    if (!VAPI_API_KEY || !VAPI_PHONE_NUMBER_ID) {
+      throw new Error("Missing Vapi configuration (VAPI_API_KEY or VAPI_PHONE_NUMBER_ID)");
     }
 
     const supabase = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!);
@@ -29,7 +29,7 @@ serve(async (req) => {
       throw new Error("user_id is required");
     }
 
-    console.log(`Initiating coaching call for user: ${user_id}`);
+    console.log(`Initiating Vapi coaching call for user: ${user_id}`);
 
     // Fetch user profile with phone number
     const { data: profile, error: profileError } = await supabase
@@ -39,6 +39,7 @@ serve(async (req) => {
       .single();
 
     if (profileError || !profile) {
+      console.error("Profile error:", profileError);
       throw new Error("User profile not found");
     }
 
@@ -54,55 +55,87 @@ serve(async (req) => {
       .eq("user_id", user_id)
       .eq("task_date", today);
 
-    // Build context for the call
-    const callContext = {
-      user_id,
-      director_name: profile.director_character_name || profile.display_name || "Director",
-      chief_aim: {
-        what: profile.chief_aim_what,
-        by_when: profile.chief_aim_by_when,
-        exchange: profile.chief_aim_exchange,
-        plan: profile.chief_aim_plan,
-      },
-      tasks: tasks || [],
-      current_streak: profile.current_streak || 0,
-      day_number: profile.day_number || 1,
-    };
+    const directorName = profile.director_character_name || profile.display_name || "Director";
+    const tasksList = tasks?.map((t, i) => `${i + 1}. ${t.task_text} (${t.is_completed ? "completed" : "pending"})`).join("\n") || "No tasks set for today";
 
-    // Get the webhook URL for the streaming bridge
-    const webhookUrl = `${SUPABASE_URL}/functions/v1/coaching-call-bridge`;
+    // Build personalized system prompt
+    const systemPrompt = `You are the Director's Coach, a supportive and motivating AI voice assistant for the Psycho-Cinematics personal development system.
 
-    // Initiate call via Telnyx Call Control API
-    const telnyxResponse = await fetch("https://api.telnyx.com/v2/calls", {
+Your role is to help the user stay accountable to their Definite Chief Aim through daily check-in calls.
+
+USER CONTEXT:
+- Director Name: ${directorName}
+- Current Streak: ${profile.current_streak || 0} days
+- Day Number: ${profile.day_number || 1}
+- Chief Aim: ${profile.chief_aim_what || "Not yet defined"}
+- Target Date: ${profile.chief_aim_by_when || "Not set"}
+- Today's Three Things:
+${tasksList}
+
+CONVERSATION FLOW:
+1. Greet them warmly by their Director name
+2. Celebrate their streak if they have one going
+3. Ask if they've watched their Mind Movie today
+4. Go through their Three Things one by one, asking about progress
+5. Remind them of their Definite Chief Aim and encourage them
+6. End with motivation and a call to action for the day
+
+VOICE GUIDELINES:
+- Be warm, encouraging, and energetic
+- Keep responses conversational and natural for voice
+- Use short sentences that sound good when spoken
+- Celebrate wins, no matter how small
+- If they're struggling, be empathetic but gently motivating`;
+
+    const firstMessage = profile.current_streak && profile.current_streak > 1
+      ? `Good morning, ${directorName}! This is your Director's Coach. Wow, ${profile.current_streak} days in a row - you're on fire! Let's make today count. Have you had a chance to watch your Mind Movie yet?`
+      : `Good morning, ${directorName}! This is your Director's Coach calling for your daily check-in. How are you feeling about your journey today?`;
+
+    // Initiate call via Vapi API
+    const vapiResponse = await fetch("https://api.vapi.ai/call/phone", {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${TELNYX_API_KEY}`,
+        "Authorization": `Bearer ${VAPI_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        connection_id: "your-connection-id", // This needs to be set up in Telnyx portal
-        to: profile.phone_number,
-        from: TELNYX_PHONE_NUMBER,
-        webhook_url: webhookUrl,
-        webhook_url_method: "POST",
-        stream_url: webhookUrl.replace("https://", "wss://"),
-        stream_track: "both_tracks",
-        client_state: btoa(JSON.stringify(callContext)),
-        answering_machine_detection: "detect",
-        record: "record-from-answer",
+        phoneNumberId: VAPI_PHONE_NUMBER_ID,
+        customer: {
+          number: profile.phone_number,
+        },
+        assistant: {
+          name: "Director's Coach",
+          firstMessage: firstMessage,
+          model: {
+            provider: "openai",
+            model: "gpt-4o",
+            messages: [{ role: "system", content: systemPrompt }],
+          },
+          voice: {
+            provider: "11labs",
+            voiceId: "pNInz6obpgDQGcFmaJgB", // Adam voice - warm and professional
+          },
+          serverMessages: ["end-of-call-report"],
+          server: {
+            url: `${SUPABASE_URL}/functions/v1/vapi-call-webhook`,
+          },
+        },
+        metadata: {
+          user_id: user_id,
+        },
       }),
     });
 
-    if (!telnyxResponse.ok) {
-      const errorText = await telnyxResponse.text();
-      console.error("Telnyx API error:", errorText);
-      throw new Error(`Telnyx API error: ${telnyxResponse.status}`);
+    if (!vapiResponse.ok) {
+      const errorText = await vapiResponse.text();
+      console.error("Vapi API error:", vapiResponse.status, errorText);
+      throw new Error(`Vapi API error: ${vapiResponse.status} - ${errorText}`);
     }
 
-    const telnyxData = await telnyxResponse.json();
-    const callSid = telnyxData.data?.call_control_id;
+    const vapiData = await vapiResponse.json();
+    const callId = vapiData.id;
 
-    console.log(`Call initiated with SID: ${callSid}`);
+    console.log(`Vapi call initiated with ID: ${callId}`);
 
     // Log the call attempt
     const { error: logError } = await supabase
@@ -110,7 +143,7 @@ serve(async (req) => {
       .insert({
         user_id,
         call_status: "initiated",
-        call_sid: callSid,
+        call_sid: callId,
         tasks_reviewed: tasks,
       });
 
@@ -121,8 +154,8 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({
         success: true,
-        call_sid: callSid,
-        message: "Coaching call initiated",
+        call_id: callId,
+        message: "Coaching call initiated via Vapi",
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
