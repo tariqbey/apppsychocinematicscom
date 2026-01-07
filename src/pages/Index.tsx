@@ -7,7 +7,7 @@ import { DefiniteChiefAimCard } from "@/components/dashboard/DefiniteChiefAimCar
 import { StreakBanner } from "@/components/dashboard/StreakBanner";
 import { TheaterView } from "@/components/theater/TheaterView";
 import { EditBay } from "@/components/studio/EditBay";
-import { DirectorAIChat } from "@/components/director-ai/DirectorAIChat";
+import { DirectorAIAgent } from "@/components/director-ai/DirectorAIAgent";
 import { DailyScorecard } from "@/components/scorecard/DailyScorecard";
 import { ChiefAimWizard } from "@/components/chief-aim/ChiefAimWizard";
 import { ThreeThings } from "@/components/tasks/ThreeThings";
@@ -15,7 +15,7 @@ import { AuthModal } from "@/components/auth/AuthModal";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { useGamification } from "@/hooks/useGamification";
-import { Film, Loader2, Wand2, Sparkles } from "lucide-react";
+import { Film, Loader2, Wand2, Sparkles, Bot } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const Index = () => {
@@ -201,14 +201,26 @@ const Index = () => {
         />
       )}
 
-      {/* Director AI Chat */}
+      {/* Director AI Agent */}
       {user && (
-        <DirectorAIChat
-          isOpen={showAIChat}
-          onToggle={() => setShowAIChat(!showAIChat)}
-          chiefAim={chiefAim.what}
-          userId={user.id}
-        />
+        <>
+          {/* AI Agent Trigger Button */}
+          {!showAIChat && (
+            <button
+              onClick={() => setShowAIChat(true)}
+              className="fixed bottom-6 right-6 z-40 w-16 h-16 rounded-full bg-gradient-to-br from-gold to-amber-600 hover:from-gold/90 hover:to-amber-600/90 shadow-lg shadow-gold/30 flex items-center justify-center transition-all duration-300 hover:scale-105 group"
+            >
+              <Bot className="w-7 h-7 text-black group-hover:scale-110 transition-transform" />
+            </button>
+          )}
+          
+          <DirectorAIAgent
+            isOpen={showAIChat}
+            onClose={() => setShowAIChat(false)}
+            chiefAim={chiefAim}
+            userId={user.id}
+          />
+        </>
       )}
 
       {/* Auth Modal */}
