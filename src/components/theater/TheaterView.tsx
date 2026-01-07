@@ -1,11 +1,23 @@
 import { useState, useRef, useEffect } from "react";
-import { Play, Pause, Flame, Film, VolumeX, Volume2, Maximize, X, Upload, CheckCircle, Sparkles } from "lucide-react";
+import { Play, Pause, Flame, Film, VolumeX, Volume2, Maximize, X, Upload, CheckCircle, Sparkles, Target, Plus, Trash2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import { VideoUploader } from "./VideoUploader";
 import { MediaStudio } from "@/components/studio/MediaStudio";
 import { useUserProfile } from "@/hooks/useUserProfile";
+import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
+import { format } from "date-fns";
+
+interface Task {
+  id: string;
+  task_text: string;
+  is_completed: boolean;
+  priority: number;
+}
 
 interface TheaterViewProps {
   onClose: () => void;
@@ -19,8 +31,13 @@ export const TheaterView = ({ onClose }: TheaterViewProps) => {
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [hasRecordedViewing, setHasRecordedViewing] = useState(false);
+  const [showThreeThings, setShowThreeThings] = useState(false);
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [newTaskText, setNewTaskText] = useState("");
+  const [isLoadingTasks, setIsLoadingTasks] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const { profile, updateProfile, recordViewing } = useUserProfile();
+  const { user } = useAuth();
   const { toast } = useToast();
 
   const streak = profile?.current_streak || 0;
@@ -69,6 +86,84 @@ export const TheaterView = ({ onClose }: TheaterViewProps) => {
     if (!hasRecordedViewing) {
       recordViewing(Math.floor(duration));
       setHasRecordedViewing(true);
+    }
+    // Show Three Things prompt after video ends
+    setShowThreeThings(true);
+    loadTodaysTasks();
+  };
+
+  // Load today's tasks
+  const loadTodaysTasks = async () => {
+    if (!user) return;
+    setIsLoadingTasks(true);
+
+    const dateStr = format(new Date(), "yyyy-MM-dd");
+    const { data, error } = await supabase
+      .from("daily_tasks")
+      .select("*")
+      .eq("user_id", user.id)
+      .eq("task_date", dateStr)
+      .order("priority");
+
+    if (!error && data) {
+      setTasks(data);
+    }
+    setIsLoadingTasks(false);
+  };
+
+  // Add a task
+  const addTask = async () => {
+    if (!user || !newTaskText.trim()) return;
+    if (tasks.length >= 3) {
+      toast({
+        title: "Maximum 3 tasks",
+        description: "Focus on your top 3 priorities for the day.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const dateStr = format(new Date(), "yyyy-MM-dd");
+    const { data, error } = await supabase
+      .from("daily_tasks")
+      .insert({
+        user_id: user.id,
+        task_text: newTaskText.trim(),
+        task_date: dateStr,
+        priority: tasks.length + 1,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      toast({ title: "Error", description: "Failed to add task", variant: "destructive" });
+    } else if (data) {
+      setTasks([...tasks, data]);
+      setNewTaskText("");
+    }
+  };
+
+  // Toggle task completion
+  const toggleTask = async (task: Task) => {
+    const { error } = await supabase
+      .from("daily_tasks")
+      .update({ is_completed: !task.is_completed })
+      .eq("id", task.id);
+
+    if (!error) {
+      setTasks(tasks.map(t => t.id === task.id ? { ...t, is_completed: !t.is_completed } : t));
+    }
+  };
+
+  // Delete task
+  const deleteTask = async (taskId: string) => {
+    const { error } = await supabase
+      .from("daily_tasks")
+      .delete()
+      .eq("id", taskId);
+
+    if (!error) {
+      setTasks(tasks.filter(t => t.id !== taskId));
     }
   };
 
@@ -238,6 +333,113 @@ export const TheaterView = ({ onClose }: TheaterViewProps) => {
             )}
           </div>
         </div>
+
+        {/* Three Things Panel - appears after video ends */}
+        {showThreeThings && (
+          <div className="absolute inset-0 z-10 bg-cinematic-midnight/95 backdrop-blur-sm flex items-center justify-center animate-fade-in">
+            <div className="w-full max-w-xl p-8 rounded-2xl bg-card border border-gold/30 shadow-2xl">
+              <div className="text-center mb-6">
+                <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-br from-gold to-amber-soft flex items-center justify-center">
+                  <Target className="w-8 h-8 text-primary-foreground" />
+                </div>
+                <h3 className="text-2xl font-display tracking-wide mb-2">
+                  Now, Your Three Things
+                </h3>
+                <p className="text-muted-foreground">
+                  What are the 3 most important things you'll accomplish today?
+                </p>
+              </div>
+
+              {/* Tasks List */}
+              <div className="space-y-3 mb-4">
+                {isLoadingTasks ? (
+                  <div className="flex items-center justify-center py-6">
+                    <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+                  </div>
+                ) : tasks.length === 0 ? (
+                  <div className="text-center py-4 text-muted-foreground text-sm">
+                    <p>No tasks yet. Add your priorities below.</p>
+                  </div>
+                ) : (
+                  tasks.map((task, index) => (
+                    <div
+                      key={task.id}
+                      className={`flex items-center gap-3 p-3 rounded-lg border transition-colors ${
+                        task.is_completed
+                          ? "bg-muted/30 border-border/30"
+                          : "bg-muted/50 border-border/50"
+                      }`}
+                    >
+                      <span className="text-sm font-bold text-gold w-6">#{index + 1}</span>
+                      <Checkbox
+                        checked={task.is_completed}
+                        onCheckedChange={() => toggleTask(task)}
+                      />
+                      <span className={`flex-1 ${task.is_completed ? "line-through text-muted-foreground" : ""}`}>
+                        {task.task_text}
+                      </span>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                        onClick={() => deleteTask(task.id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))
+                )}
+              </div>
+
+              {/* Add Task Input */}
+              {tasks.length < 3 && (
+                <div className="flex gap-2 mb-6">
+                  <Input
+                    placeholder={`Add priority #${tasks.length + 1}...`}
+                    value={newTaskText}
+                    onChange={(e) => setNewTaskText(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && addTask()}
+                    className="bg-background/50"
+                  />
+                  <Button onClick={addTask} disabled={!newTaskText.trim()} variant="gold">
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
+
+              {/* Progress indicator */}
+              <div className="flex items-center justify-center gap-2 mb-6">
+                {[1, 2, 3].map((num) => (
+                  <div
+                    key={num}
+                    className={`w-3 h-3 rounded-full transition-colors ${
+                      tasks.length >= num ? "bg-gold" : "bg-muted"
+                    }`}
+                  />
+                ))}
+                <span className="text-sm text-muted-foreground ml-2">{tasks.length}/3 set</span>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-3 justify-center">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowThreeThings(false)}
+                >
+                  Back to Theater
+                </Button>
+                <Button
+                  variant="gold"
+                  onClick={onClose}
+                  disabled={tasks.length === 0}
+                >
+                  <CheckCircle className="w-4 h-4 mr-2" />
+                  Start My Day
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Bottom Actions */}
         <div className="p-6 border-t border-border/50">
