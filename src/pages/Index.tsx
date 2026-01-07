@@ -1,7 +1,7 @@
 import { useState, useCallback } from "react";
 import { Header } from "@/components/layout/Header";
 import { ProductionStatus } from "@/components/dashboard/ProductionStatus";
-import { PhaseProgress } from "@/components/dashboard/PhaseProgress";
+
 import { DailyRitualChecklist } from "@/components/dashboard/DailyRitualChecklist";
 import { DefiniteChiefAimCard } from "@/components/dashboard/DefiniteChiefAimCard";
 import { StreakBanner } from "@/components/dashboard/StreakBanner";
@@ -125,14 +125,6 @@ const Index = () => {
               {/* Production Status */}
               <ProductionStatus currentAct={currentAct} dayNumber={dayNumber} />
 
-              {/* Phase Progress */}
-              <PhaseProgress
-                chiefAimComplete={chiefAimComplete}
-                hasMindMovie={hasMindMovie}
-                hasViewingHistory={hasViewingHistory}
-                hasCompletedTasks={hasCompletedTasks}
-                hasScorecard={hasScorecard}
-              />
 
               {/* Streak Banner */}
               <StreakBanner streak={streak} bestStreak={bestStreak} />
