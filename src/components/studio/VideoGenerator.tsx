@@ -90,12 +90,6 @@ export function VideoGenerator({ onVideoGenerated }: VideoGeneratorProps) {
                 <Download className="mr-2 h-4 w-4" />
                 Download
               </Button>
-              {onVideoGenerated && (
-                <Button size="sm" onClick={() => onVideoGenerated(generatedVideoUrl)}>
-                  <Video className="mr-2 h-4 w-4" />
-                  Set as Mind Movie
-                </Button>
-              )}
             </div>
           </div>
           <div className="relative rounded-lg overflow-hidden border border-border/50">

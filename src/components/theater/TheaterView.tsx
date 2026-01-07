@@ -110,14 +110,6 @@ export const TheaterView = ({ onClose }: TheaterViewProps) => {
     setShowUploader(false);
   };
 
-  const handleAIVideoGenerated = async (url: string) => {
-    // Update user profile with the AI-generated video
-    await updateProfile({ mind_movie_url: url });
-    toast({
-      title: "Mind Movie Set!",
-      description: "Your AI-generated video is now your Mind Movie.",
-    });
-  };
 
   const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
 
@@ -286,7 +278,6 @@ export const TheaterView = ({ onClose }: TheaterViewProps) => {
       <MediaStudio
         open={showMediaStudio}
         onOpenChange={setShowMediaStudio}
-        onVideoGenerated={handleAIVideoGenerated}
       />
     </>
   );

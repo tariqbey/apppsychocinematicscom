@@ -51,18 +51,7 @@ export function MediaStudio({ open, onOpenChange, onVideoGenerated, onImageGener
           </TabsContent>
 
           <TabsContent value="history" className="mt-6">
-            <GenerationHistory 
-              onSelect={(media) => {
-                if (media.media_url) {
-                  if (media.media_type === "video") {
-                    onVideoGenerated?.(media.media_url);
-                  } else {
-                    onImageGenerated?.(media.media_url);
-                  }
-                  onOpenChange(false);
-                }
-              }}
-            />
+            <GenerationHistory />
           </TabsContent>
         </Tabs>
       </DialogContent>
