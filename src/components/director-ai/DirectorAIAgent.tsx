@@ -3,6 +3,7 @@ import { X, Mic, MicOff, Volume2, VolumeX, Zap, Send, Minimize2, Maximize2 } fro
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { VoiceOrb } from "./VoiceOrb";
+import { VoiceWaveform } from "./VoiceWaveform";
 import { AgentTranscript, TranscriptMessage } from "./AgentTranscript";
 import { useVoiceInput } from "@/hooks/useVoiceInput";
 import { useCoachingContext } from "@/hooks/useCoachingContext";
@@ -76,6 +77,7 @@ export function DirectorAIAgent({ isOpen, onClose, chiefAim }: DirectorAIAgentPr
   const [isLoading, setIsLoading] = useState(false);
   const [orbState, setOrbState] = useState<"idle" | "listening" | "speaking" | "processing">("idle");
   const [audioLevel, setAudioLevel] = useState(0);
+  const [voiceInputLevel, setVoiceInputLevel] = useState(0);
   const [ttsEnabled, setTtsEnabled] = useState(true);
   const [isMinimized, setIsMinimized] = useState(false);
   const [hasInitialized, setHasInitialized] = useState(false);
@@ -87,7 +89,7 @@ export function DirectorAIAgent({ isOpen, onClose, chiefAim }: DirectorAIAgentPr
   const { context: coachingContext, loading: contextLoading } = useCoachingContext();
 
   // Voice input hook with auto-submit on silence
-  const { isListening, transcript, isSupported, startListening, stopListening } = useVoiceInput({
+  const { isListening, transcript, isSupported, audioLevel: inputAudioLevel, startListening, stopListening } = useVoiceInput({
     onTranscript: (text) => {
       console.log("[DirectorAI] Transcript received:", text);
       if (text.trim()) {
@@ -95,7 +97,6 @@ export function DirectorAIAgent({ isOpen, onClose, chiefAim }: DirectorAIAgentPr
       }
     },
     onSilence: (finalTranscript) => {
-      // Auto-submit when user stops speaking
       console.log("[DirectorAI] Silence callback triggered:", finalTranscript);
       if (finalTranscript.trim() && !isLoading) {
         console.log("[DirectorAI] Auto-submitting:", finalTranscript.trim());
@@ -103,8 +104,11 @@ export function DirectorAIAgent({ isOpen, onClose, chiefAim }: DirectorAIAgentPr
         streamChat(finalTranscript.trim());
       }
     },
+    onAudioLevel: (level) => {
+      setVoiceInputLevel(level);
+    },
     continuous: true,
-    silenceTimeout: 2000, // 2 seconds of silence before auto-submit
+    silenceTimeout: 2000,
   });
 
   // Update orb state based on listening
@@ -444,18 +448,26 @@ export function DirectorAIAgent({ isOpen, onClose, chiefAim }: DirectorAIAgentPr
         </div>
 
         {/* Voice Orb */}
-        <div className="mb-8">
+        <div className="mb-6">
           <VoiceOrb 
             state={orbState} 
-            audioLevel={audioLevel}
+            audioLevel={orbState === "listening" ? voiceInputLevel : audioLevel}
           />
         </div>
 
-        {/* Listening indicator */}
+        {/* Voice Waveform - shows when listening */}
         {isListening && orbState === "listening" && (
-          <p className="text-gold text-sm mb-4 animate-pulse">
-            Listening... speak freely
-          </p>
+          <div className="flex flex-col items-center gap-2 mb-6">
+            <VoiceWaveform 
+              audioLevel={voiceInputLevel} 
+              isActive={voiceInputLevel > 0.1}
+              barCount={9}
+              className="h-10"
+            />
+            <p className="text-gold/80 text-xs tracking-widest uppercase">
+              {voiceInputLevel > 0.15 ? "Hearing you..." : "Listening..."}
+            </p>
+          </div>
         )}
 
         {/* Transcript */}
