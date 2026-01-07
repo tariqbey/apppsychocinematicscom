@@ -139,8 +139,7 @@ export const DailyScorecard = ({ onClose, onSubmitSuccess }: DailyScorecardProps
 
       console.log("Attempting insert with:", { 
         user_id: user.id, 
-        identity, behavior, emotional, progress, 
-        total_score: totalScore 
+        identity, behavior, emotional, progress
       });
 
       const { data, error } = await supabase.from("daily_scorecards").insert({
@@ -149,7 +148,6 @@ export const DailyScorecard = ({ onClose, onSubmitSuccess }: DailyScorecardProps
         behavior_execution: behavior,
         emotional_regulation: emotional,
         forward_progress: progress,
-        total_score: totalScore,
       }).select();
 
       console.log("Insert result - data:", data, "error:", error);
