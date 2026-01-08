@@ -230,6 +230,42 @@ export type Database = {
         }
         Relationships: []
       }
+      mind_movie_scripts: {
+        Row: {
+          chief_aim_snapshot: Json | null
+          created_at: string | null
+          id: string
+          scenes: Json | null
+          status: string | null
+          title: string | null
+          updated_at: string | null
+          user_id: string
+          visual_style: string | null
+        }
+        Insert: {
+          chief_aim_snapshot?: Json | null
+          created_at?: string | null
+          id?: string
+          scenes?: Json | null
+          status?: string | null
+          title?: string | null
+          updated_at?: string | null
+          user_id: string
+          visual_style?: string | null
+        }
+        Update: {
+          chief_aim_snapshot?: Json | null
+          created_at?: string | null
+          id?: string
+          scenes?: Json | null
+          status?: string | null
+          title?: string | null
+          updated_at?: string | null
+          user_id?: string
+          visual_style?: string | null
+        }
+        Relationships: []
+      }
       post_comments: {
         Row: {
           content: string
