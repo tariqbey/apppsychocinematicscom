@@ -58,11 +58,11 @@ export function VideoGenerator({ onVideoGenerated }: VideoGeneratorProps) {
 
   const canGenerate = prompt.trim() && (mode === "text" || uploadedImage);
 
-  // Models available for text-to-video (Sora 2 Developer only)
-  const textModels: VideoModel[] = ["openai/sora-2/text-to-video-developer"];
+  // Models available for text-to-video
+  const textModels: VideoModel[] = ["openai/sora-2/text-to-video-developer", "wan-ai/wan2.1-t2v-480p"];
   
   // Models available for image-to-video
-  const imageModels: VideoModel[] = ["openai/sora-2/image-to-video", "wan-ai/wan2.1-i2v-480p", "kling-ai/v1-5/pro/image-to-video"];
+  const imageModels: VideoModel[] = ["openai/sora-2/image-to-video", "wan-ai/wan2.1-i2v-480p"];
 
   return (
     <div className="space-y-6">
@@ -102,34 +102,46 @@ export function VideoGenerator({ onVideoGenerated }: VideoGeneratorProps) {
         </div>
       )}
 
-      {/* Text Mode: Model Info + Cameo ID */}
+      {/* Text Mode: Model Selection + Cameo ID */}
       {mode === "text" && (
         <div className="space-y-4">
-          <div className="p-3 rounded-lg bg-primary/10 border border-primary/20">
-            <div className="flex items-center gap-2 mb-1">
-              <Sparkles className="h-4 w-4 text-primary" />
-              <span className="font-medium text-sm">{modelInfo.name}</span>
-            </div>
+          <div className="space-y-2">
+            <Label>Model</Label>
+            <Select value={selectedModel} onValueChange={(v) => setSelectedModel(v as VideoModel)}>
+              <SelectTrigger className="bg-background/50">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {textModels.map((model) => (
+                  <SelectItem key={model} value={model}>
+                    {MODEL_INFO[model].name} - {MODEL_INFO[model].price}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <p className="text-xs text-muted-foreground">{modelInfo.description}</p>
           </div>
           
-          <div className="space-y-2">
-            <Label htmlFor="cameo-id" className="flex items-center gap-2">
-              Sora Cameo ID
-              <span className="text-xs text-muted-foreground">(optional)</span>
-            </Label>
-            <input
-              id="cameo-id"
-              type="text"
-              placeholder="@Jetson_Life"
-              value={cameoId}
-              onChange={(e) => setCameoId(e.target.value)}
-              className="flex h-10 w-full rounded-md border border-input bg-background/50 px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-            />
-            <p className="text-xs text-muted-foreground">
-              Enter a shareable Sora Cameo ID to include that character in your video
-            </p>
-          </div>
+          {/* Cameo ID - Only for Sora 2 Developer */}
+          {selectedModel === "openai/sora-2/text-to-video-developer" && (
+            <div className="space-y-2">
+              <Label htmlFor="cameo-id" className="flex items-center gap-2">
+                Sora Cameo ID
+                <span className="text-xs text-muted-foreground">(optional)</span>
+              </Label>
+              <input
+                id="cameo-id"
+                type="text"
+                placeholder="@Jetson_Life"
+                value={cameoId}
+                onChange={(e) => setCameoId(e.target.value)}
+                className="flex h-10 w-full rounded-md border border-input bg-background/50 px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              />
+              <p className="text-xs text-muted-foreground">
+                Enter a shareable Sora Cameo ID to include that character in your video
+              </p>
+            </div>
+          )}
         </div>
       )}
 
