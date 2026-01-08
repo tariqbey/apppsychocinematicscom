@@ -1,7 +1,14 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Clapperboard, Settings, User, LogOut, Trophy, Users, MessageSquare, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/hooks/useAuth";
 import { useAdminStatus } from "@/hooks/useAdminStatus";
 import { useGamification } from "@/hooks/useGamification";
@@ -19,6 +26,7 @@ export const Header = () => {
   const { isAdmin } = useAdminStatus();
   const { credits } = useGamification();
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   const handleSignOut = async () => {
     await signOut();
@@ -98,17 +106,26 @@ export const Header = () => {
                     </Button>
                   </Link>
                 )}
-                <Link to="/settings">
-                  <Button variant="ghost" size="icon" title="Settings">
-                    <Settings className="w-5 h-5" />
-                  </Button>
-                </Link>
-                <Button variant="ghost" size="icon" onClick={handleSignOut}>
-                  <LogOut className="w-5 h-5" />
-                </Button>
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-gold/20 to-amber-soft/20 border border-gold/30 flex items-center justify-center">
-                  <User className="w-5 h-5 text-gold" />
-                </div>
+
+                {/* User Avatar Dropdown */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button className="w-10 h-10 rounded-full bg-gradient-to-br from-gold/20 to-amber-soft/20 border border-gold/30 flex items-center justify-center hover:border-gold/60 transition-colors cursor-pointer">
+                      <User className="w-5 h-5 text-gold" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-48">
+                    <DropdownMenuItem onClick={() => navigate("/settings")}>
+                      <Settings className="w-4 h-4 mr-2" />
+                      Account Settings
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={handleSignOut} className="text-destructive focus:text-destructive">
+                      <LogOut className="w-4 h-4 mr-2" />
+                      Log out
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </>
             ) : (
               <Button variant="gold" onClick={() => setShowAuthModal(true)}>
