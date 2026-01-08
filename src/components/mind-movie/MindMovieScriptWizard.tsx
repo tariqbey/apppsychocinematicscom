@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { X, ChevronLeft, ChevronRight, Sparkles, Save, Clapperboard, Palette, Layout, Wand2 } from "lucide-react";
+import { X, ChevronLeft, ChevronRight, Sparkles, Save, Clapperboard, Palette, Layout, Wand2, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
@@ -9,6 +9,7 @@ import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { StoryboardGrid } from "./StoryboardGrid";
 import { useMindMovieScript, type Scene } from "@/hooks/useMindMovieScript";
+import { ImageUpload } from "@/components/studio/ImageUpload";
 import { toast } from "sonner";
 
 interface MindMovieScriptWizardProps {
@@ -20,7 +21,7 @@ interface MindMovieScriptWizardProps {
     exchange?: string;
     plan?: string;
   };
-  onOpenEditBay?: (prompt: string) => void;
+  onOpenEditBay?: (prompt: string, referencePhoto?: string | null) => void;
 }
 
 const VISUAL_STYLES = [
@@ -41,6 +42,7 @@ export function MindMovieScriptWizard({
   const [step, setStep] = useState(1);
   const [visualStyle, setVisualStyle] = useState("cinematic");
   const [userDescription, setUserDescription] = useState("");
+  const [referencePhoto, setReferencePhoto] = useState<string | null>(null);
   const [generatedTitle, setGeneratedTitle] = useState("");
   const [generatedScenes, setGeneratedScenes] = useState<Scene[]>([]);
   
@@ -91,9 +93,9 @@ export function MindMovieScriptWizard({
     );
   };
 
-  const handleGenerateInEditBay = (prompt: string) => {
+  const handleGenerateInEditBay = (prompt: string, refPhoto?: string | null) => {
     if (onOpenEditBay) {
-      onOpenEditBay(prompt);
+      onOpenEditBay(prompt, refPhoto || referencePhoto);
       onClose();
     } else {
       navigator.clipboard.writeText(prompt);
@@ -214,6 +216,29 @@ export function MindMovieScriptWizard({
                   </RadioGroup>
                 </div>
 
+                {/* Reference Photo Upload */}
+                <div className="space-y-3">
+                  <Label className="text-base font-semibold flex items-center gap-2">
+                    <User className="w-4 h-4" />
+                    Upload Your Photo (Optional)
+                  </Label>
+                  <p className="text-sm text-muted-foreground">
+                    Upload a clear photo of yourself. The AI will use this to make the generated images feature you in each scene.
+                  </p>
+                  <ImageUpload
+                    value={referencePhoto}
+                    onChange={setReferencePhoto}
+                    placeholder="Upload your reference photo"
+                    className="max-w-sm"
+                  />
+                  {referencePhoto && (
+                    <p className="text-xs text-green-600 flex items-center gap-1">
+                      <Sparkles className="w-3 h-3" />
+                      Your likeness will be incorporated into generated images
+                    </p>
+                  )}
+                </div>
+
                 {/* User Description */}
                 <div className="space-y-3">
                   <Label htmlFor="description" className="text-base font-semibold">
@@ -275,6 +300,7 @@ export function MindMovieScriptWizard({
                   scenes={generatedScenes}
                   onUpdateScene={handleUpdateScene}
                   onGenerateInEditBay={handleGenerateInEditBay}
+                  referencePhoto={referencePhoto}
                   isEditable={true}
                 />
               </div>

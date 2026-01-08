@@ -9,9 +9,11 @@ import { useToast } from "@/hooks/use-toast";
 
 interface EditBayProps {
   onClose: () => void;
+  initialPrompt?: string;
+  initialReferencePhoto?: string | null;
 }
 
-export function EditBay({ onClose }: EditBayProps) {
+export function EditBay({ onClose, initialPrompt, initialReferencePhoto }: EditBayProps) {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("image");
   const [galleryKey, setGalleryKey] = useState(0); // Force refresh gallery
@@ -89,6 +91,8 @@ export function EditBay({ onClose }: EditBayProps) {
                 <ImageGenerator 
                   onImageGenerated={handleImageGenerated}
                   onVideoGenerated={handleVideoGenerated}
+                  initialPrompt={initialPrompt}
+                  initialReferencePhoto={initialReferencePhoto}
                 />
               </TabsContent>
 

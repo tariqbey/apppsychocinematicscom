@@ -1,9 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { Loader2, Sparkles, Download, ImageIcon, Pencil, Film } from "lucide-react";
+import { Loader2, Sparkles, Download, ImageIcon, Pencil, Film, User } from "lucide-react";
 import { useMediaGeneration, VideoModel, MODEL_INFO } from "@/hooks/useMediaGeneration";
 import { ImageUpload } from "./ImageUpload";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -11,14 +11,22 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 interface ImageGeneratorProps {
   onImageGenerated?: (url: string) => void;
   onVideoGenerated?: (url: string) => void;
+  initialPrompt?: string;
+  initialReferencePhoto?: string | null;
 }
 
 type ImageMode = "create" | "edit";
 
-export function ImageGenerator({ onImageGenerated, onVideoGenerated }: ImageGeneratorProps) {
-  const [mode, setMode] = useState<ImageMode>("create");
-  const [prompt, setPrompt] = useState("");
+export function ImageGenerator({ 
+  onImageGenerated, 
+  onVideoGenerated,
+  initialPrompt,
+  initialReferencePhoto,
+}: ImageGeneratorProps) {
+  const [mode, setMode] = useState<ImageMode>(initialReferencePhoto ? "edit" : "create");
+  const [prompt, setPrompt] = useState(initialPrompt || "");
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
+  const [referencePhoto, setReferencePhoto] = useState<string | null>(initialReferencePhoto || null);
   const [aspectRatio, setAspectRatio] = useState<"1:1" | "16:9" | "9:16" | "4:3">("16:9");
   const [resolution, setResolution] = useState<"1k" | "2k" | "4k">("2k");
   
@@ -27,6 +35,20 @@ export function ImageGenerator({ onImageGenerated, onVideoGenerated }: ImageGene
   const [animationPrompt, setAnimationPrompt] = useState("");
   const [animationDuration, setAnimationDuration] = useState<5 | 10>(5);
   const [animationModel, setAnimationModel] = useState<VideoModel>("kling-ai/v1-5/pro/image-to-video");
+
+  // Set initial values when props change
+  useEffect(() => {
+    if (initialPrompt) {
+      setPrompt(initialPrompt);
+    }
+  }, [initialPrompt]);
+
+  useEffect(() => {
+    if (initialReferencePhoto) {
+      setReferencePhoto(initialReferencePhoto);
+      setMode("edit");
+    }
+  }, [initialReferencePhoto]);
 
   // Models that support image-to-video
   const imageToVideoModels: { model: VideoModel; name: string; price: string }[] = [
@@ -48,13 +70,33 @@ export function ImageGenerator({ onImageGenerated, onVideoGenerated }: ImageGene
 
   const handleGenerate = async () => {
     if (!prompt.trim()) return;
-    if (mode === "edit" && !uploadedImage) return;
+    
+    // Combine all images for generation
+    const imagesToUse: string[] = [];
+    
+    // Always include reference photo first if available (for likeness)
+    if (referencePhoto) {
+      imagesToUse.push(referencePhoto);
+    }
+    
+    // Add uploaded image for editing if in edit mode
+    if (mode === "edit" && uploadedImage) {
+      imagesToUse.push(uploadedImage);
+    }
+
+    // Enhance prompt with reference photo context
+    let enhancedPrompt = prompt.trim();
+    if (referencePhoto && !uploadedImage) {
+      enhancedPrompt = `Generate an image featuring the person from the reference photo. ${enhancedPrompt}`;
+    } else if (referencePhoto && uploadedImage) {
+      enhancedPrompt = `Edit this image to feature the person from the reference photo. ${enhancedPrompt}`;
+    }
 
     const url = await generateImage({
-      prompt: prompt.trim(),
+      prompt: enhancedPrompt,
       aspect_ratio: aspectRatio,
       resolution,
-      images: mode === "edit" && uploadedImage ? [uploadedImage] : undefined,
+      images: imagesToUse.length > 0 ? imagesToUse : undefined,
     });
 
     if (url && onImageGenerated) {
@@ -90,7 +132,7 @@ export function ImageGenerator({ onImageGenerated, onVideoGenerated }: ImageGene
     }
   };
 
-  const canGenerate = prompt.trim() && (mode === "create" || uploadedImage);
+  const canGenerate = prompt.trim() && (mode === "create" || uploadedImage || referencePhoto);
   const canAnimate = generatedImageUrl && animationPrompt.trim() && !isGeneratingVideo;
 
   return (
@@ -244,6 +286,29 @@ export function ImageGenerator({ onImageGenerated, onVideoGenerated }: ImageGene
           )}
         </div>
       )}
+
+      {/* Reference Photo for Likeness */}
+      <div className="space-y-2">
+        <Label className="flex items-center gap-2">
+          <User className="h-4 w-4" />
+          Reference Photo (Optional)
+        </Label>
+        <p className="text-xs text-muted-foreground">
+          Upload a photo of yourself to include your likeness in generated images.
+        </p>
+        <ImageUpload
+          value={referencePhoto}
+          onChange={setReferencePhoto}
+          placeholder="Upload your reference photo"
+          className="max-w-xs"
+        />
+        {referencePhoto && (
+          <p className="text-xs text-green-600 flex items-center gap-1">
+            <Sparkles className="w-3 h-3" />
+            Your likeness will be incorporated into generated images
+          </p>
+        )}
+      </div>
 
       {/* Edit Mode: Image Upload */}
       {mode === "edit" && (
