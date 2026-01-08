@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useAdminStatus } from "@/hooks/useAdminStatus";
 import { useGamification } from "@/hooks/useGamification";
+import { useToast } from "@/hooks/use-toast";
 import { AuthModal } from "@/components/auth/AuthModal";
 import { CreditsDisplay } from "@/components/gamification/CreditsDisplay";
 import { GamificationPanel } from "@/components/gamification/GamificationPanel";
@@ -17,9 +18,14 @@ export const Header = () => {
   const { user, signOut } = useAuth();
   const { isAdmin } = useAdminStatus();
   const { credits } = useGamification();
+  const { toast } = useToast();
 
   const handleSignOut = async () => {
     await signOut();
+    toast({
+      title: "Signed out",
+      description: "You've left the studio. See you next time, Director!",
+    });
   };
 
   return (
