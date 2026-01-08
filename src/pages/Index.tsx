@@ -27,6 +27,7 @@ const Index = () => {
   const [showChiefAimWizard, setShowChiefAimWizard] = useState(false);
   const [showMindMovieWizard, setShowMindMovieWizard] = useState(false);
   const [editBayInitialPrompt, setEditBayInitialPrompt] = useState<string | undefined>();
+  const [editBayReferencePhoto, setEditBayReferencePhoto] = useState<string | null>(null);
 
   const { user, loading: authLoading } = useAuth();
   const { profile, loading: profileLoading, updateProfile } = useUserProfile();
@@ -212,7 +213,15 @@ const Index = () => {
 
       {/* Edit Bay */}
       {showEditBay && user && (
-        <EditBay onClose={() => setShowEditBay(false)} />
+        <EditBay 
+          onClose={() => {
+            setShowEditBay(false);
+            setEditBayInitialPrompt(undefined);
+            setEditBayReferencePhoto(null);
+          }}
+          initialPrompt={editBayInitialPrompt}
+          initialReferencePhoto={editBayReferencePhoto}
+        />
       )}
 
       {/* Scorecard */}
@@ -229,8 +238,9 @@ const Index = () => {
           isOpen={showMindMovieWizard}
           onClose={() => setShowMindMovieWizard(false)}
           chiefAim={chiefAim}
-          onOpenEditBay={(prompt) => {
+          onOpenEditBay={(prompt, referencePhoto) => {
             setEditBayInitialPrompt(prompt);
+            setEditBayReferencePhoto(referencePhoto || null);
             setShowEditBay(true);
             setShowMindMovieWizard(false);
           }}
