@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { Clapperboard, Settings, User, LogOut, Trophy, Users, MessageSquare } from "lucide-react";
+import { Clapperboard, Settings, User, LogOut, Trophy, Users, MessageSquare, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
+import { useAdminStatus } from "@/hooks/useAdminStatus";
 import { useGamification } from "@/hooks/useGamification";
 import { AuthModal } from "@/components/auth/AuthModal";
 import { CreditsDisplay } from "@/components/gamification/CreditsDisplay";
@@ -14,6 +15,7 @@ export const Header = () => {
   const [showGamification, setShowGamification] = useState(false);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const { user, signOut } = useAuth();
+  const { isAdmin } = useAdminStatus();
   const { credits } = useGamification();
 
   const handleSignOut = async () => {
@@ -74,11 +76,24 @@ export const Header = () => {
                   size="icon"
                   onClick={() => setShowGamification(true)}
                   className="text-gold hover:text-gold/80"
+                  title="Awards & Progress"
                 >
                   <Trophy className="w-5 h-5" />
                 </Button>
+                {isAdmin && (
+                  <Link to="/admin">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="text-red-400 hover:text-red-300"
+                      title="Admin Dashboard"
+                    >
+                      <Shield className="w-5 h-5" />
+                    </Button>
+                  </Link>
+                )}
                 <Link to="/settings">
-                  <Button variant="ghost" size="icon">
+                  <Button variant="ghost" size="icon" title="Settings">
                     <Settings className="w-5 h-5" />
                   </Button>
                 </Link>
