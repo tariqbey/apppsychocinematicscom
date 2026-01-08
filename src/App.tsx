@@ -8,6 +8,7 @@ import DirectorCorner from "./pages/DirectorCorner";
 import Subscribe from "./pages/Subscribe";
 import SubscriptionSuccess from "./pages/SubscriptionSuccess";
 import CreditsSuccess from "./pages/CreditsSuccess";
+import AdminDashboard from "./pages/AdminDashboard";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -24,6 +25,7 @@ const App = () => (
           <Route path="/subscribe" element={<Subscribe />} />
           <Route path="/subscription-success" element={<SubscriptionSuccess />} />
           <Route path="/credits-success" element={<CreditsSuccess />} />
+          <Route path="/admin" element={<AdminDashboard />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

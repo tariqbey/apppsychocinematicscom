@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { Clapperboard, Settings, User, LogOut, Trophy, Users, MessageSquare } from "lucide-react";
+import { Clapperboard, Settings, User, LogOut, Trophy, Users, MessageSquare, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useGamification } from "@/hooks/useGamification";
+import { useAdminStatus } from "@/hooks/useAdminStatus";
 import { AuthModal } from "@/components/auth/AuthModal";
 import { CreditsDisplay } from "@/components/gamification/CreditsDisplay";
 import { GamificationPanel } from "@/components/gamification/GamificationPanel";
@@ -15,6 +16,7 @@ export const Header = () => {
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const { user, signOut } = useAuth();
   const { credits } = useGamification();
+  const { isAdmin } = useAdminStatus();
 
   const handleSignOut = async () => {
     await signOut();
@@ -59,6 +61,19 @@ export const Header = () => {
                     <MessageSquare className="w-5 h-5" />
                   </Button>
                 </Link>
+
+                {isAdmin && (
+                  <Link to="/admin">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="text-red-500 hover:text-red-400"
+                      title="Admin Dashboard"
+                    >
+                      <Shield className="w-5 h-5" />
+                    </Button>
+                  </Link>
+                )}
 
                 <Button
                   variant="ghost"
