@@ -4,8 +4,7 @@ import type { Scene } from "@/hooks/useMindMovieScript";
 interface StoryboardGridProps {
   scenes: Scene[];
   onUpdateScene?: (order: number, updates: Partial<Scene>) => void;
-  onGenerateInEditBay?: (prompt: string, referencePhoto?: string | null) => void;
-  referencePhoto?: string | null;
+  onGenerateInEditBay?: (prompt: string) => void;
   isEditable?: boolean;
 }
 
@@ -13,7 +12,6 @@ export function StoryboardGrid({
   scenes, 
   onUpdateScene, 
   onGenerateInEditBay,
-  referencePhoto,
   isEditable = true,
 }: StoryboardGridProps) {
   const sortedScenes = [...scenes].sort((a, b) => a.order - b.order);
@@ -30,7 +28,6 @@ export function StoryboardGrid({
               : undefined
           }
           onGenerateInEditBay={onGenerateInEditBay}
-          referencePhoto={referencePhoto}
           isEditing={isEditable}
         />
       ))}

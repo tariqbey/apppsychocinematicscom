@@ -11,8 +11,7 @@ import type { Scene } from "@/hooks/useMindMovieScript";
 interface SceneCardProps {
   scene: Scene;
   onUpdate?: (updates: Partial<Scene>) => void;
-  onGenerateInEditBay?: (prompt: string, referencePhoto?: string | null) => void;
-  referencePhoto?: string | null;
+  onGenerateInEditBay?: (prompt: string) => void;
   isEditing?: boolean;
   isDragging?: boolean;
 }
@@ -21,7 +20,6 @@ export function SceneCard({
   scene, 
   onUpdate, 
   onGenerateInEditBay,
-  referencePhoto,
   isEditing = false,
   isDragging = false,
 }: SceneCardProps) {
@@ -191,7 +189,7 @@ export function SceneCard({
             {onGenerateInEditBay && (
               <Button
                 size="sm"
-                onClick={() => onGenerateInEditBay(scene.prompt, referencePhoto)}
+                onClick={() => onGenerateInEditBay(scene.prompt)}
                 className="flex-1"
               >
                 <Sparkles className="w-3 h-3 mr-1" />
