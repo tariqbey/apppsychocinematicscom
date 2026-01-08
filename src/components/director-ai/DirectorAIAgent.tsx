@@ -608,17 +608,18 @@ export function DirectorAIAgent({ isOpen, onClose, chiefAim }: DirectorAIAgentPr
 
           {/* Action buttons */}
           <div className="flex items-center justify-center gap-4">
-            {/* STOP Button - visible when loading or speaking */}
-            {(isLoading || orbState === "speaking" || orbState === "processing") && (
-              <Button
-                variant="outline"
-                onClick={stopConversation}
-                className="border-2 border-red-500/70 bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 font-bold px-6"
-              >
-                <Square className="w-4 h-4 mr-2 fill-current" />
-                STOP
-              </Button>
-            )}
+            {/* STOP & EXIT Button - always visible, stops everything and closes */}
+            <Button
+              variant="outline"
+              onClick={() => {
+                stopConversation();
+                onClose();
+              }}
+              className="border-2 border-red-500/70 bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 font-bold px-6"
+            >
+              <Square className="w-4 h-4 mr-2 fill-current" />
+              STOP & EXIT
+            </Button>
 
             {/* CUT! Button */}
             <Button
