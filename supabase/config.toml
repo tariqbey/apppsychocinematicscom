@@ -26,3 +26,18 @@ verify_jwt = false
 
 [functions.generate-storyboard]
 verify_jwt = false
+
+[functions.check-credits]
+verify_jwt = false
+
+[functions.deduct-credits]
+verify_jwt = false
+
+[functions.purchase-credits]
+verify_jwt = false
+
+[functions.confirm-credit-purchase]
+verify_jwt = false
+
+[functions.allocate-monthly-credits]
+verify_jwt = false
