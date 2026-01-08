@@ -1,14 +1,15 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useAdminStatus } from "@/hooks/useAdminStatus";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Users, CreditCard, TrendingUp, DollarSign, Image, Video, Activity, Search } from "lucide-react";
+import { Users, CreditCard, TrendingUp, DollarSign, Image, Video, Activity, Search, Shield, ArrowLeft } from "lucide-react";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from "recharts";
 import { format, subDays } from "date-fns";
 
@@ -43,27 +44,14 @@ const IMAGE_COST = 0.01;
 const VIDEO_COST = 0.20;
 
 const AdminDashboard = () => {
-  const { user, loading: authLoading } = useAuth();
+  const { loading: authLoading } = useAuth();
   const { isAdmin, loading: adminLoading } = useAdminStatus();
-  const navigate = useNavigate();
   
   const [stats, setStats] = useState<PlatformStats | null>(null);
   const [users, setUsers] = useState<UserData[]>([]);
   const [dailyStats, setDailyStats] = useState<DailyStats[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    if (!authLoading && !user) {
-      navigate("/");
-    }
-  }, [user, authLoading, navigate]);
-
-  useEffect(() => {
-    if (!adminLoading && !isAdmin) {
-      navigate("/");
-    }
-  }, [isAdmin, adminLoading, navigate]);
 
   useEffect(() => {
     if (isAdmin) {
@@ -207,12 +195,33 @@ const AdminDashboard = () => {
   if (!isAdmin) return null;
 
   return (
-    <div className="min-h-screen bg-background p-6">
-      <div className="max-w-7xl mx-auto space-y-8">
-        {/* Header */}
+    <div className="min-h-screen bg-background">
+      {/* Admin Header */}
+      <header className="sticky top-0 z-40 border-b border-red-500/30 bg-background/95 backdrop-blur">
+        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-red-500/20 border border-red-500/30 flex items-center justify-center">
+              <Shield className="w-5 h-5 text-red-400" />
+            </div>
+            <div>
+              <h1 className="font-semibold text-foreground">Admin Dashboard</h1>
+              <p className="text-xs text-red-400">Back Office</p>
+            </div>
+          </div>
+          <Link to="/">
+            <Button variant="outline" size="sm" className="border-border">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Studio
+            </Button>
+          </Link>
+        </div>
+      </header>
+
+      <div className="max-w-7xl mx-auto p-6 space-y-8">
+        {/* Page Title */}
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Admin Dashboard</h1>
-          <p className="text-muted-foreground">Platform analytics and user management</p>
+          <h2 className="text-2xl font-bold text-foreground">Platform Analytics</h2>
+          <p className="text-muted-foreground">Overview of users, credits, and usage</p>
         </div>
 
         {/* KPI Cards */}

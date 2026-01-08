@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useAdminStatus } from "@/hooks/useAdminStatus";
-import { useEffect } from "react";
+import { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -12,12 +12,22 @@ export default function Settings() {
   const { user, loading: authLoading } = useAuth();
   const { isAdmin, loading: adminLoading } = useAdminStatus();
   const navigate = useNavigate();
+  const [activeTab, setActiveTab] = useState("account");
 
   useEffect(() => {
     if (!authLoading && !user) {
       navigate("/");
     }
   }, [user, authLoading, navigate]);
+
+  // Navigate to admin dashboard when admin tab is selected
+  const handleTabChange = (value: string) => {
+    if (value === "admin") {
+      navigate("/admin");
+    } else {
+      setActiveTab(value);
+    }
+  };
 
   if (authLoading || adminLoading) {
     return (
@@ -39,7 +49,7 @@ export default function Settings() {
           <h1 className="text-3xl font-display text-gold-gradient">Settings</h1>
         </div>
 
-        <Tabs defaultValue="account" className="space-y-6">
+        <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
           <TabsList className="bg-card border border-border">
             <TabsTrigger value="account" className="data-[state=active]:bg-gold/20">
               <User className="h-4 w-4 mr-2" />
@@ -87,28 +97,6 @@ export default function Settings() {
               </CardContent>
             </Card>
           </TabsContent>
-
-          {isAdmin && (
-            <TabsContent value="admin">
-              <Card className="bg-card border-red-500/30">
-                <CardHeader>
-                  <CardTitle className="text-red-400 flex items-center gap-2">
-                    <Shield className="h-5 w-5" />
-                    Admin Dashboard
-                  </CardTitle>
-                  <CardDescription>Access system administration and usage tracking</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Link to="/admin">
-                    <Button variant="destructive" className="bg-red-600 hover:bg-red-700">
-                      <Shield className="h-4 w-4 mr-2" />
-                      Open Admin Dashboard
-                    </Button>
-                  </Link>
-                </CardContent>
-              </Card>
-            </TabsContent>
-          )}
         </Tabs>
       </div>
     </div>
