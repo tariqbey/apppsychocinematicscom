@@ -85,10 +85,13 @@ export function DirectorAIAgent({ isOpen, onClose, chiefAim }: DirectorAIAgentPr
   const [voiceEnabled, setVoiceEnabled] = useState(false);
   
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const audioUrlRef = useRef<string | null>(null);
+  const audioLevelIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const hasGreeted = useRef(false);
   const [pendingVoiceSubmit, setPendingVoiceSubmit] = useState<string | null>(null);
   const lastAutoSubmitRef = useRef<string | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+  const ttsAbortControllerRef = useRef<AbortController | null>(null);
   
   // Get full coaching context
   const { context: coachingContext, loading: contextLoading } = useCoachingContext();
@@ -192,6 +195,9 @@ export function DirectorAIAgent({ isOpen, onClose, chiefAim }: DirectorAIAgentPr
       stopListening();
       setOrbState("speaking");
       
+      // Create abort controller for this TTS request
+      ttsAbortControllerRef.current = new AbortController();
+      
       const response = await fetch(TTS_URL, {
         method: "POST",
         headers: {
@@ -203,6 +209,7 @@ export function DirectorAIAgent({ isOpen, onClose, chiefAim }: DirectorAIAgentPr
           text,
           voiceId: "JBFqnCBsd6RMkjVDRZzb", // George - commanding voice
         }),
+        signal: ttsAbortControllerRef.current.signal,
       });
 
       if (!response.ok) {
@@ -211,24 +218,35 @@ export function DirectorAIAgent({ isOpen, onClose, chiefAim }: DirectorAIAgentPr
 
       const audioBlob = await response.blob();
       const audioUrl = URL.createObjectURL(audioBlob);
+      audioUrlRef.current = audioUrl;
       
       if (audioRef.current) {
         audioRef.current.pause();
+        audioRef.current.src = "";
       }
       
       const audio = new Audio(audioUrl);
       audioRef.current = audio;
       
       // Simulate audio level changes for visual effect
-      const levelInterval = setInterval(() => {
+      if (audioLevelIntervalRef.current) {
+        clearInterval(audioLevelIntervalRef.current);
+      }
+      audioLevelIntervalRef.current = setInterval(() => {
         setAudioLevel(Math.random() * 0.5 + 0.3);
       }, 100);
       
       audio.onended = () => {
-        clearInterval(levelInterval);
+        if (audioLevelIntervalRef.current) {
+          clearInterval(audioLevelIntervalRef.current);
+          audioLevelIntervalRef.current = null;
+        }
         setAudioLevel(0);
         setOrbState("idle");
-        URL.revokeObjectURL(audioUrl);
+        if (audioUrlRef.current) {
+          URL.revokeObjectURL(audioUrlRef.current);
+          audioUrlRef.current = null;
+        }
         
         // Resume listening after TTS finishes
         setTimeout(() => {
@@ -237,9 +255,16 @@ export function DirectorAIAgent({ isOpen, onClose, chiefAim }: DirectorAIAgentPr
       };
       
       audio.onerror = () => {
-        clearInterval(levelInterval);
+        if (audioLevelIntervalRef.current) {
+          clearInterval(audioLevelIntervalRef.current);
+          audioLevelIntervalRef.current = null;
+        }
         setAudioLevel(0);
         setOrbState("idle");
+        if (audioUrlRef.current) {
+          URL.revokeObjectURL(audioUrlRef.current);
+          audioUrlRef.current = null;
+        }
         // Resume listening even if TTS failed
         setTimeout(() => {
           setVoiceEnabled(true);
@@ -247,20 +272,45 @@ export function DirectorAIAgent({ isOpen, onClose, chiefAim }: DirectorAIAgentPr
       };
       
       await audio.play();
-    } catch (error) {
-      console.error("TTS error:", error);
+    } catch (error: any) {
+      if (error?.name === "AbortError") {
+        console.log("[DirectorAI] TTS request aborted");
+      } else {
+        console.error("TTS error:", error);
+      }
       setOrbState("idle");
-      // Resume listening on error
-      setTimeout(() => {
-        setVoiceEnabled(true);
-      }, 300);
+      // Resume listening on error (unless aborted)
+      if (error?.name !== "AbortError") {
+        setTimeout(() => {
+          setVoiceEnabled(true);
+        }, 300);
+      }
+    } finally {
+      ttsAbortControllerRef.current = null;
     }
   };
 
   const stopSpeaking = useCallback(() => {
+    // Abort TTS fetch request
+    if (ttsAbortControllerRef.current) {
+      ttsAbortControllerRef.current.abort();
+      ttsAbortControllerRef.current = null;
+    }
+    // Stop audio playback
     if (audioRef.current) {
       audioRef.current.pause();
+      audioRef.current.src = "";
       audioRef.current = null;
+    }
+    // Revoke audio URL
+    if (audioUrlRef.current) {
+      URL.revokeObjectURL(audioUrlRef.current);
+      audioUrlRef.current = null;
+    }
+    // Clear level animation interval
+    if (audioLevelIntervalRef.current) {
+      clearInterval(audioLevelIntervalRef.current);
+      audioLevelIntervalRef.current = null;
     }
     setOrbState("idle");
     setAudioLevel(0);
