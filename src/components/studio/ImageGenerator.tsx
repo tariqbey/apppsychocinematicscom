@@ -12,7 +12,6 @@ interface ImageGeneratorProps {
   onImageGenerated?: (url: string) => void;
   onVideoGenerated?: (url: string) => void;
   initialPrompt?: string;
-  initialReferencePhoto?: string | null;
 }
 
 type ImageMode = "create" | "edit";
@@ -21,12 +20,11 @@ export function ImageGenerator({
   onImageGenerated, 
   onVideoGenerated,
   initialPrompt,
-  initialReferencePhoto,
 }: ImageGeneratorProps) {
-  const [mode, setMode] = useState<ImageMode>(initialReferencePhoto ? "edit" : "create");
+  const [mode, setMode] = useState<ImageMode>("create");
   const [prompt, setPrompt] = useState(initialPrompt || "");
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
-  const [referencePhoto, setReferencePhoto] = useState<string | null>(initialReferencePhoto || null);
+  const [referencePhoto, setReferencePhoto] = useState<string | null>(null);
   const [aspectRatio, setAspectRatio] = useState<"1:1" | "16:9" | "9:16" | "4:3">("16:9");
   const [resolution, setResolution] = useState<"1k" | "2k" | "4k">("2k");
   
@@ -36,19 +34,12 @@ export function ImageGenerator({
   const [animationDuration, setAnimationDuration] = useState<5 | 10>(5);
   const [animationModel, setAnimationModel] = useState<VideoModel>("kling-ai/v1-5/pro/image-to-video");
 
-  // Set initial values when props change
+  // Set initial prompt when props change
   useEffect(() => {
     if (initialPrompt) {
       setPrompt(initialPrompt);
     }
   }, [initialPrompt]);
-
-  useEffect(() => {
-    if (initialReferencePhoto) {
-      setReferencePhoto(initialReferencePhoto);
-      setMode("edit");
-    }
-  }, [initialReferencePhoto]);
 
   // Models that support image-to-video
   const imageToVideoModels: { model: VideoModel; name: string; price: string }[] = [
