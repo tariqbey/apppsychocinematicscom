@@ -46,8 +46,6 @@ export function ImageGenerator({
     { model: "kling-ai/v1-5/pro/image-to-video", name: "Kling 1.5 Pro", price: "$0.08/s" },
     { model: "openai/sora-2/image-to-video", name: "Sora 2", price: "$0.10/s" },
     { model: "wan-ai/wan2.1-i2v-480p", name: "Wan 2.1", price: "$0.05/s" },
-    { model: "google/veo3", name: "Veo 3 Premium", price: "$6/5s" },
-    { model: "google/veo3-fast", name: "Veo 3 Fast", price: "$2/5s" },
   ];
 
   const { 

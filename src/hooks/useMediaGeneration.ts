@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 
-export type VideoModel = "google/veo3" | "google/veo3-fast" | "openai/sora-2/text-to-video" | "openai/sora-2/image-to-video" | "wan-ai/wan2.1-i2v-480p" | "wan-ai/wan2.1-t2v-480p" | "kling-ai/v1-5/pro/image-to-video" | "kling-ai/v1-5/pro/text-to-video";
+export type VideoModel = "openai/sora-2/text-to-video-developer" | "openai/sora-2/image-to-video" | "wan-ai/wan2.1-i2v-480p" | "wan-ai/wan2.1-t2v-480p" | "kling-ai/v1-5/pro/image-to-video" | "kling-ai/v1-5/pro/text-to-video";
 
 export interface ImageGenerationParams {
   prompt: string;
@@ -19,7 +19,7 @@ export interface VideoGenerationParams {
   resolution?: "720p" | "1080p";
   aspect_ratio?: "16:9" | "9:16" | "1:1";
   image?: string;
-  generate_audio?: boolean;
+  cameo_id?: string;
 }
 
 export interface GeneratedMedia {
@@ -38,9 +38,7 @@ export interface GeneratedMedia {
 }
 
 export const MODEL_INFO: Record<VideoModel, { name: string; price: string; description: string }> = {
-  "google/veo3": { name: "Veo 3 Premium", price: "$6/5s", description: "Highest quality with audio" },
-  "google/veo3-fast": { name: "Veo 3 Fast", price: "$2/5s", description: "Fast and balanced" },
-  "openai/sora-2/text-to-video": { name: "Sora 2", price: "$0.10/s", description: "OpenAI text-to-video" },
+  "openai/sora-2/text-to-video-developer": { name: "Sora 2 Developer", price: "$0.10/s", description: "OpenAI text-to-video with Cameo support" },
   "openai/sora-2/image-to-video": { name: "Sora 2 Image", price: "$0.10/s", description: "Animate an image" },
   "wan-ai/wan2.1-t2v-480p": { name: "Wan 2.1", price: "$0.05/s", description: "Fast text-to-video" },
   "wan-ai/wan2.1-i2v-480p": { name: "Wan 2.1 Image", price: "$0.05/s", description: "Image animation" },

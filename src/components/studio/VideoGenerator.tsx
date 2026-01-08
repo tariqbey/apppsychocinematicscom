@@ -18,11 +18,11 @@ export function VideoGenerator({ onVideoGenerated }: VideoGeneratorProps) {
   const [mode, setMode] = useState<VideoMode>("text");
   const [prompt, setPrompt] = useState("");
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
-  const [selectedModel, setSelectedModel] = useState<VideoModel>("google/veo3-fast");
+  const [selectedModel, setSelectedModel] = useState<VideoModel>("openai/sora-2/text-to-video-developer");
   const [duration, setDuration] = useState<5 | 10>(5);
   const [resolution, setResolution] = useState<"720p" | "1080p">("1080p");
   const [aspectRatio, setAspectRatio] = useState<"16:9" | "9:16" | "1:1">("16:9");
-  const [generateAudio, setGenerateAudio] = useState(true);
+  const [cameoId, setCameoId] = useState("");
 
   const { isGeneratingVideo, generatedVideoUrl, generateVideo } = useMediaGeneration();
 
@@ -41,8 +41,8 @@ export function VideoGenerator({ onVideoGenerated }: VideoGeneratorProps) {
       duration,
       resolution,
       aspect_ratio: aspectRatio,
-      generate_audio: effectiveModel.includes("veo") ? generateAudio : undefined,
       image: mode === "frames" ? uploadedImage ?? undefined : undefined,
+      cameo_id: mode === "text" && cameoId.trim() ? cameoId.trim() : undefined,
     });
 
     if (url && onVideoGenerated) {
@@ -58,8 +58,8 @@ export function VideoGenerator({ onVideoGenerated }: VideoGeneratorProps) {
 
   const canGenerate = prompt.trim() && (mode === "text" || uploadedImage);
 
-  // Models available for text-to-video
-  const textModels: VideoModel[] = ["google/veo3", "google/veo3-fast", "openai/sora-2/text-to-video", "wan-ai/wan2.1-t2v-480p", "kling-ai/v1-5/pro/text-to-video"];
+  // Models available for text-to-video (Sora 2 Developer only)
+  const textModels: VideoModel[] = ["openai/sora-2/text-to-video-developer"];
   
   // Models available for image-to-video
   const imageModels: VideoModel[] = ["openai/sora-2/image-to-video", "wan-ai/wan2.1-i2v-480p", "kling-ai/v1-5/pro/image-to-video"];
@@ -102,23 +102,34 @@ export function VideoGenerator({ onVideoGenerated }: VideoGeneratorProps) {
         </div>
       )}
 
-      {/* Text Mode: Model Selection */}
+      {/* Text Mode: Model Info + Cameo ID */}
       {mode === "text" && (
-        <div className="space-y-2">
-          <Label>Model</Label>
-          <Select value={selectedModel} onValueChange={(v) => setSelectedModel(v as VideoModel)}>
-            <SelectTrigger className="bg-background/50">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {textModels.map((model) => (
-                <SelectItem key={model} value={model}>
-                  {MODEL_INFO[model].name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <p className="text-xs text-muted-foreground">{modelInfo.description}</p>
+        <div className="space-y-4">
+          <div className="p-3 rounded-lg bg-primary/10 border border-primary/20">
+            <div className="flex items-center gap-2 mb-1">
+              <Sparkles className="h-4 w-4 text-primary" />
+              <span className="font-medium text-sm">{modelInfo.name}</span>
+            </div>
+            <p className="text-xs text-muted-foreground">{modelInfo.description}</p>
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="cameo-id" className="flex items-center gap-2">
+              Sora Cameo ID
+              <span className="text-xs text-muted-foreground">(optional)</span>
+            </Label>
+            <input
+              id="cameo-id"
+              type="text"
+              placeholder="@Jetson_Life"
+              value={cameoId}
+              onChange={(e) => setCameoId(e.target.value)}
+              className="flex h-10 w-full rounded-md border border-input bg-background/50 px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+            />
+            <p className="text-xs text-muted-foreground">
+              Enter a shareable Sora Cameo ID to include that character in your video
+            </p>
+          </div>
         </div>
       )}
 
@@ -210,21 +221,6 @@ export function VideoGenerator({ onVideoGenerated }: VideoGeneratorProps) {
           </Select>
         </div>
 
-        {/* Audio toggle only for Veo models in text mode */}
-        {mode === "text" && effectiveModel.includes("veo") && (
-          <div className="space-y-2">
-            <Label>Generate Audio</Label>
-            <Select value={generateAudio ? "yes" : "no"} onValueChange={(v) => setGenerateAudio(v === "yes")}>
-              <SelectTrigger className="bg-background/50">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="yes">Yes, with audio</SelectItem>
-                <SelectItem value="no">No audio</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        )}
       </div>
 
 
