@@ -23,3 +23,6 @@ verify_jwt = false
 
 [functions.lovable-generate-image]
 verify_jwt = false
+
+[functions.generate-storyboard]
+verify_jwt = false
