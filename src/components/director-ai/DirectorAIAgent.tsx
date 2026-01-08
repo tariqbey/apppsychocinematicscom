@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from "react";
+import { Square } from "lucide-react";
 import { X, Mic, MicOff, Volume2, VolumeX, Zap, Send, Minimize2, Maximize2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -87,6 +88,7 @@ export function DirectorAIAgent({ isOpen, onClose, chiefAim }: DirectorAIAgentPr
   const hasGreeted = useRef(false);
   const [pendingVoiceSubmit, setPendingVoiceSubmit] = useState<string | null>(null);
   const lastAutoSubmitRef = useRef<string | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
   
   // Get full coaching context
   const { context: coachingContext, loading: contextLoading } = useCoachingContext();
@@ -255,14 +257,32 @@ export function DirectorAIAgent({ isOpen, onClose, chiefAim }: DirectorAIAgentPr
     }
   };
 
-  const stopSpeaking = () => {
+  const stopSpeaking = useCallback(() => {
     if (audioRef.current) {
       audioRef.current.pause();
       audioRef.current = null;
     }
     setOrbState("idle");
     setAudioLevel(0);
-  };
+  }, []);
+
+  const stopConversation = useCallback(() => {
+    // Abort any in-flight fetch
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+    // Stop TTS
+    stopSpeaking();
+    // Stop listening
+    stopListening();
+    setVoiceEnabled(false);
+    // Clear loading/processing state
+    setIsLoading(false);
+    setCurrentResponse("");
+    setOrbState("idle");
+    setPendingVoiceSubmit(null);
+  }, [stopSpeaking, stopListening]);
 
   const streamChat = useCallback(async (userMessage: string) => {
     // Stop listening during processing
@@ -308,6 +328,9 @@ export function DirectorAIAgent({ isOpen, onClose, chiefAim }: DirectorAIAgentPr
         todaysScorecardScore: coachingContext.todaysScorecardScore,
       } : undefined;
 
+      // Create abort controller for this request
+      abortControllerRef.current = new AbortController();
+
       const response = await fetch(CHAT_URL, {
         method: "POST",
         headers: {
@@ -320,6 +343,7 @@ export function DirectorAIAgent({ isOpen, onClose, chiefAim }: DirectorAIAgentPr
           chiefAim: coachingContext?.chiefAim || chiefAim,
           userContext,
         }),
+        signal: abortControllerRef.current.signal,
       });
 
       if (!response.ok) {
@@ -388,16 +412,23 @@ export function DirectorAIAgent({ isOpen, onClose, chiefAim }: DirectorAIAgentPr
           setVoiceEnabled(true);
         }, 300);
       }
-    } catch (error) {
-      console.error("Chat error:", error);
-      toast.error("Failed to get response. Please try again.");
+    } catch (error: any) {
+      if (error?.name === "AbortError") {
+        console.log("[DirectorAI] Request aborted by user");
+      } else {
+        console.error("Chat error:", error);
+        toast.error("Failed to get response. Please try again.");
+      }
       setOrbState("idle");
-      // Resume listening on error
-      setTimeout(() => {
-        setVoiceEnabled(true);
-      }, 300);
+      // Resume listening on error (unless aborted)
+      if (error?.name !== "AbortError") {
+        setTimeout(() => {
+          setVoiceEnabled(true);
+        }, 300);
+      }
     } finally {
       setIsLoading(false);
+      abortControllerRef.current = null;
     }
   }, [messages, chiefAim, ttsEnabled, coachingContext, stopListening]);
 
@@ -577,6 +608,18 @@ export function DirectorAIAgent({ isOpen, onClose, chiefAim }: DirectorAIAgentPr
 
           {/* Action buttons */}
           <div className="flex items-center justify-center gap-4">
+            {/* STOP Button - visible when loading or speaking */}
+            {(isLoading || orbState === "speaking" || orbState === "processing") && (
+              <Button
+                variant="outline"
+                onClick={stopConversation}
+                className="border-2 border-red-500/70 bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 font-bold px-6"
+              >
+                <Square className="w-4 h-4 mr-2 fill-current" />
+                STOP
+              </Button>
+            )}
+
             {/* CUT! Button */}
             <Button
               variant="destructive"
