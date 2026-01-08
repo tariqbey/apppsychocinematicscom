@@ -18,17 +18,9 @@ function dataUrlToInlineData(dataUrl: string) {
 }
 
 const MODEL_CONFIGS: Record<string, { endpoint: string; defaultParams: any }> = {
-  "google/veo3": {
+  "openai/sora-2/text-to-video-developer": {
     endpoint: "https://api.atlascloud.ai/api/v1/model/generateVideo",
-    defaultParams: { duration: 5, resolution: "1080p", aspect_ratio: "16:9", generate_audio: true },
-  },
-  "google/veo3-fast": {
-    endpoint: "https://api.atlascloud.ai/api/v1/model/generateVideo",
-    defaultParams: { duration: 5, resolution: "720p", aspect_ratio: "16:9", generate_audio: false },
-  },
-  "openai/sora-2/text-to-video": {
-    endpoint: "https://api.atlascloud.ai/api/v1/model/generateVideo",
-    defaultParams: { duration: 5, resolution: "1080p", aspect_ratio: "16:9" },
+    defaultParams: { duration: 4, resolution: "1080p", aspect_ratio: "16:9" },
   },
   "openai/sora-2/image-to-video": {
     endpoint: "https://api.atlascloud.ai/api/v1/model/generateVideo",
@@ -54,6 +46,7 @@ const MODEL_CONFIGS: Record<string, { endpoint: string; defaultParams: any }> = 
 
 // Map frontend model names to Atlas Cloud API model names
 const MODEL_NAME_MAP: Record<string, string> = {
+  "openai/sora-2/text-to-video-developer": "openai/sora-2/text-to-video-developer",
   "kling-ai/v1-5/pro/image-to-video": "kwaivgi/kling-v2.5-turbo-pro/image-to-video",
   "kling-ai/v1-5/pro/text-to-video": "kwaivgi/kling-v2.5-turbo-pro/text-to-video",
   "wan-ai/wan2.1-i2v-480p": "wanx-ai/wanx2.1-i2v-plus",
@@ -72,13 +65,13 @@ serve(async (req) => {
     }
 
     const {
-      model = "google/veo3-fast",
+      model = "openai/sora-2/text-to-video-developer",
       prompt,
       duration,
       resolution,
       aspect_ratio,
       image,
-      generate_audio,
+      cameo_id,
       user_id,
     } = await req.json();
 
@@ -112,10 +105,28 @@ serve(async (req) => {
       generateBody.aspect_ratio = modelConfig.defaultParams.aspect_ratio;
     }
 
-    if (model.includes("veo3") && generate_audio !== undefined) {
-      generateBody.generate_audio = generate_audio;
-    } else if (model === "google/veo3") {
-      generateBody.generate_audio = true;
+    // For Sora 2 developer model, handle Cameo ID by including it in the prompt
+    if (model === "openai/sora-2/text-to-video-developer" && cameo_id) {
+      // Ensure the cameo_id starts with @ for proper reference
+      const formattedCameoId = cameo_id.startsWith("@") ? cameo_id : `@${cameo_id}`;
+      // Prepend the cameo reference to the prompt
+      generateBody.prompt = `${formattedCameoId} ${generateBody.prompt}`;
+      console.log(`Including Sora Cameo: ${formattedCameoId}`);
+    }
+
+    // Sora 2 developer uses 'size' instead of 'resolution' and different duration values
+    if (model === "openai/sora-2/text-to-video-developer") {
+      // Map duration to Sora 2 supported values (4, 8, 12 seconds)
+      const soraDuration = duration <= 4 ? 4 : duration <= 8 ? 8 : 12;
+      generateBody.duration = soraDuration;
+      
+      // Map resolution to size format
+      if (aspect_ratio === "16:9" || generateBody.aspect_ratio === "16:9") {
+        generateBody.size = resolution === "720p" ? "720*1280" : "1280*720";
+      } else if (aspect_ratio === "9:16" || generateBody.aspect_ratio === "9:16") {
+        generateBody.size = resolution === "720p" ? "1280*720" : "720*1280";
+      }
+      delete generateBody.resolution;
     }
 
     // Handle image input for image-to-video models
