@@ -3,11 +3,12 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Progress } from "@/components/ui/progress";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { Image, Video, Clock, AlertCircle, Loader2, Download, Trash2, HardDrive, X, ChevronLeft, ChevronRight } from "lucide-react";
+import { Image, Video, Clock, AlertCircle, Loader2, Download, Trash2, HardDrive, X, ChevronLeft, ChevronRight, RefreshCw } from "lucide-react";
 import { useMediaGeneration, GeneratedMedia } from "@/hooks/useMediaGeneration";
 import { formatDistanceToNow } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 
 interface MediaLibraryProps {
   filter?: "image" | "video" | "all";
@@ -32,10 +33,18 @@ export function MediaLibrary({ filter = "all", onSelect }: MediaLibraryProps) {
   const [lightboxMedia, setLightboxMedia] = useState<GeneratedMedia | null>(null);
   const { fetchGenerationHistory } = useMediaGeneration();
   const { toast } = useToast();
+  const { user, loading: authLoading } = useAuth();
 
+  // Load history when user becomes available
   useEffect(() => {
-    loadHistory();
-  }, []);
+    if (authLoading) return;
+    if (user?.id) {
+      loadHistory();
+    } else {
+      setIsLoading(false);
+      setHistory([]);
+    }
+  }, [user?.id, authLoading]);
 
   const loadHistory = async () => {
     setIsLoading(true);
@@ -139,10 +148,21 @@ export function MediaLibrary({ filter = "all", onSelect }: MediaLibraryProps) {
 
   const storagePercentage = (storageUsed / MAX_STORAGE_BYTES) * 100;
 
-  if (isLoading) {
+  // Show loading while auth is resolving
+  if (authLoading || isLoading) {
     return (
       <div className="flex items-center justify-center py-8">
         <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  // Show sign-in message if not authenticated
+  if (!user) {
+    return (
+      <div className="text-center py-8 text-muted-foreground">
+        <Clock className="h-8 w-8 mx-auto mb-2 opacity-50" />
+        <p>Please sign in to view your gallery</p>
       </div>
     );
   }
@@ -249,9 +269,20 @@ export function MediaLibrary({ filter = "all", onSelect }: MediaLibraryProps) {
             <HardDrive className="h-4 w-4 text-muted-foreground" />
             <span className="text-muted-foreground">Storage Used</span>
           </div>
-          <span className="font-medium">
-            {formatBytes(storageUsed)} / {formatBytes(MAX_STORAGE_BYTES)}
-          </span>
+          <div className="flex items-center gap-2">
+            <span className="font-medium">
+              {formatBytes(storageUsed)} / {formatBytes(MAX_STORAGE_BYTES)}
+            </span>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6"
+              onClick={loadHistory}
+              title="Refresh gallery"
+            >
+              <RefreshCw className="h-3 w-3" />
+            </Button>
+          </div>
         </div>
         <Progress value={storagePercentage} className="h-2" />
         {storagePercentage > 80 && (

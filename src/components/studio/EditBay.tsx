@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Film, X, Image, Video, FolderOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -15,11 +15,20 @@ interface EditBayProps {
 export function EditBay({ onClose, initialPrompt }: EditBayProps) {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("image");
-  const [galleryKey, setGalleryKey] = useState(0); // Force refresh gallery
+  const [galleryKey, setGalleryKey] = useState(0);
+  const previousTab = useRef(activeTab);
 
   const refreshGallery = () => {
     setGalleryKey(prev => prev + 1);
   };
+
+  // Refresh gallery when switching to gallery tab
+  useEffect(() => {
+    if (activeTab === "gallery" && previousTab.current !== "gallery") {
+      refreshGallery();
+    }
+    previousTab.current = activeTab;
+  }, [activeTab]);
 
   const handleVideoGenerated = (url: string) => {
     refreshGallery();
