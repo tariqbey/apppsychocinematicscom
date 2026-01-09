@@ -29,6 +29,11 @@ export interface MindMovieScript {
   status: string;
   created_at: string;
   updated_at: string;
+  // Soundtrack fields
+  soundtrack_url?: string | null;
+  song_lyrics?: string | null;
+  music_style?: string | null;
+  suno_task_id?: string | null;
 }
 
 export function useMindMovieScript() {

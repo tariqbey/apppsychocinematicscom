@@ -271,8 +271,12 @@ export type Database = {
           chief_aim_snapshot: Json | null
           created_at: string | null
           id: string
+          music_style: string | null
           scenes: Json | null
+          song_lyrics: string | null
+          soundtrack_url: string | null
           status: string | null
+          suno_task_id: string | null
           title: string | null
           updated_at: string | null
           user_id: string
@@ -282,8 +286,12 @@ export type Database = {
           chief_aim_snapshot?: Json | null
           created_at?: string | null
           id?: string
+          music_style?: string | null
           scenes?: Json | null
+          song_lyrics?: string | null
+          soundtrack_url?: string | null
           status?: string | null
+          suno_task_id?: string | null
           title?: string | null
           updated_at?: string | null
           user_id: string
@@ -293,8 +301,12 @@ export type Database = {
           chief_aim_snapshot?: Json | null
           created_at?: string | null
           id?: string
+          music_style?: string | null
           scenes?: Json | null
+          song_lyrics?: string | null
+          soundtrack_url?: string | null
           status?: string | null
+          suno_task_id?: string | null
           title?: string | null
           updated_at?: string | null
           user_id?: string

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { X, ChevronLeft, ChevronRight, Sparkles, Save, Clapperboard, Palette, Layout, Wand2 } from "lucide-react";
+import { X, ChevronLeft, ChevronRight, Sparkles, Save, Clapperboard, Palette, Layout, Wand2, Music } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
@@ -8,7 +8,10 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { StoryboardGrid } from "./StoryboardGrid";
+import { LyricsEditor } from "./LyricsEditor";
+import { SoundtrackPlayer } from "./SoundtrackPlayer";
 import { useMindMovieScript, type Scene } from "@/hooks/useMindMovieScript";
+import { useMindMovieMusic, MUSIC_STYLES, type MusicStyle } from "@/hooks/useMindMovieMusic";
 import { toast } from "sonner";
 
 interface MindMovieScriptWizardProps {
@@ -53,6 +56,23 @@ export function MindMovieScriptWizard({
     fetchLatestScript,
   } = useMindMovieScript();
 
+  const {
+    isGeneratingLyrics,
+    isGeneratingMusic,
+    generatedLyrics,
+    soundtrackUrl,
+    musicStyle,
+    vocalGender,
+    generationStatus,
+    setMusicStyle,
+    setVocalGender,
+    setGeneratedLyrics,
+    generateLyrics,
+    generateMusic,
+    saveLyrics,
+    loadExistingMusic,
+  } = useMindMovieMusic();
+
   useEffect(() => {
     if (isOpen) {
       fetchLatestScript().then((script) => {
@@ -60,11 +80,18 @@ export function MindMovieScriptWizard({
           setGeneratedTitle(script.title || "");
           setGeneratedScenes(script.scenes);
           setVisualStyle(script.visual_style || "cinematic");
+          // Load existing music data
+          loadExistingMusic({
+            song_lyrics: script.song_lyrics,
+            soundtrack_url: script.soundtrack_url,
+            music_style: script.music_style,
+            suno_task_id: script.suno_task_id,
+          });
           setStep(3);
         }
       });
     }
-  }, [isOpen, fetchLatestScript]);
+  }, [isOpen, fetchLatestScript, loadExistingMusic]);
 
   const handleGenerateStoryboard = async () => {
     const result = await generateStoryboard(chiefAim, visualStyle, userDescription);
@@ -101,7 +128,47 @@ export function MindMovieScriptWizard({
     }
   };
 
+  const handleGenerateLyrics = async () => {
+    if (!musicStyle) {
+      toast.error("Please select a music style first");
+      return;
+    }
+    
+    const scenesForLyrics = generatedScenes.map(s => ({
+      order: s.order,
+      title: s.title,
+      narrative: s.narrative,
+      emotional_tone: s.emotionalTone,
+    }));
+
+    await generateLyrics(
+      {
+        what: chiefAim.what || "",
+        byWhen: chiefAim.byWhen || "",
+        exchange: chiefAim.exchange || "",
+        plan: chiefAim.plan || "",
+      },
+      scenesForLyrics,
+      musicStyle
+    );
+  };
+
+  const handleGenerateMusic = async () => {
+    if (!generatedLyrics || !currentScript) {
+      toast.error("Please generate lyrics first and save your storyboard");
+      return;
+    }
+    await generateMusic(generatedLyrics, generatedTitle || "My Mind Movie", currentScript.id);
+  };
+
+  const handleSaveLyrics = async () => {
+    if (!currentScript || !generatedLyrics) return;
+    await saveLyrics(currentScript.id, generatedLyrics);
+  };
+
   if (!isOpen) return null;
+
+  const totalSteps = 4;
 
   return (
     <div className="fixed inset-0 z-50 bg-background/95 backdrop-blur-sm">
@@ -115,7 +182,7 @@ export function MindMovieScriptWizard({
             <div>
               <h1 className="text-xl font-bold">Mind Movie Script Writer</h1>
               <p className="text-sm text-muted-foreground">
-                Create your visual storyboard from your Definite Chief Aim
+                Create your visual storyboard and soundtrack from your Definite Chief Aim
               </p>
             </div>
           </div>
@@ -132,6 +199,7 @@ export function MindMovieScriptWizard({
                 { num: 1, label: "Foundation", icon: Palette },
                 { num: 2, label: "Generate", icon: Wand2 },
                 { num: 3, label: "Storyboard", icon: Layout },
+                { num: 4, label: "Soundtrack", icon: Music },
               ].map(({ num, label, icon: Icon }) => (
                 <div
                   key={num}
@@ -153,7 +221,7 @@ export function MindMovieScriptWizard({
               ))}
             </div>
           </div>
-          <Progress value={(step / 3) * 100} className="h-1" />
+          <Progress value={(step / totalSteps) * 100} className="h-1" />
         </div>
 
         {/* Content */}
@@ -279,6 +347,149 @@ export function MindMovieScriptWizard({
                 />
               </div>
             )}
+
+            {/* Step 4: Soundtrack */}
+            {step === 4 && (
+              <div className="space-y-6">
+                <div>
+                  <h2 className="text-2xl font-bold mb-2">Create Your Soundtrack</h2>
+                  <p className="text-muted-foreground">
+                    Generate personalized rap lyrics from your Chief Aim, then create your Mind Movie anthem.
+                  </p>
+                </div>
+
+                {/* Music Style Selection */}
+                <div className="space-y-3">
+                  <Label className="text-base font-semibold">Choose Your Music Style</Label>
+                  <RadioGroup
+                    value={musicStyle || ""}
+                    onValueChange={(val) => setMusicStyle(val as MusicStyle)}
+                    className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3"
+                  >
+                    {MUSIC_STYLES.map((style) => (
+                      <Label
+                        key={style.value}
+                        htmlFor={`style-${style.value}`}
+                        className={`flex flex-col p-4 rounded-lg border-2 cursor-pointer transition-all ${
+                          musicStyle === style.value
+                            ? "border-primary bg-primary/5"
+                            : "border-border hover:border-primary/50"
+                        }`}
+                      >
+                        <RadioGroupItem
+                          value={style.value}
+                          id={`style-${style.value}`}
+                          className="sr-only"
+                        />
+                        <span className="font-medium">{style.label}</span>
+                        <span className="text-xs text-muted-foreground mt-1">
+                          {style.description}
+                        </span>
+                      </Label>
+                    ))}
+                  </RadioGroup>
+                </div>
+
+                {/* Vocal Gender Selection */}
+                <div className="space-y-3">
+                  <Label className="text-base font-semibold">Vocal Style</Label>
+                  <RadioGroup
+                    value={vocalGender}
+                    onValueChange={(val) => setVocalGender(val as 'm' | 'f')}
+                    className="flex gap-4"
+                  >
+                    <Label
+                      htmlFor="vocal-m"
+                      className={`flex items-center gap-2 p-3 rounded-lg border-2 cursor-pointer transition-all ${
+                        vocalGender === 'm'
+                          ? "border-primary bg-primary/5"
+                          : "border-border hover:border-primary/50"
+                      }`}
+                    >
+                      <RadioGroupItem value="m" id="vocal-m" className="sr-only" />
+                      <span className="font-medium">Male Voice</span>
+                    </Label>
+                    <Label
+                      htmlFor="vocal-f"
+                      className={`flex items-center gap-2 p-3 rounded-lg border-2 cursor-pointer transition-all ${
+                        vocalGender === 'f'
+                          ? "border-primary bg-primary/5"
+                          : "border-border hover:border-primary/50"
+                      }`}
+                    >
+                      <RadioGroupItem value="f" id="vocal-f" className="sr-only" />
+                      <span className="font-medium">Female Voice</span>
+                    </Label>
+                  </RadioGroup>
+                </div>
+
+                {/* Generate Lyrics Button */}
+                {!generatedLyrics && (
+                  <Button
+                    onClick={handleGenerateLyrics}
+                    disabled={!musicStyle || isGeneratingLyrics}
+                    className="w-full"
+                    size="lg"
+                  >
+                    {isGeneratingLyrics ? (
+                      <>
+                        <Sparkles className="w-4 h-4 mr-2 animate-spin" />
+                        Writing Lyrics...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="w-4 h-4 mr-2" />
+                        Generate Lyrics from Chief Aim
+                      </>
+                    )}
+                  </Button>
+                )}
+
+                {/* Lyrics Editor */}
+                {(generatedLyrics || isGeneratingLyrics) && (
+                  <div className="space-y-4">
+                    <h3 className="font-semibold text-lg">Your Lyrics</h3>
+                    <LyricsEditor
+                      lyrics={generatedLyrics || ""}
+                      onChange={setGeneratedLyrics}
+                      onRegenerate={handleGenerateLyrics}
+                      onSave={handleSaveLyrics}
+                      isGenerating={isGeneratingLyrics}
+                    />
+                  </div>
+                )}
+
+                {/* Generate Music Button */}
+                {generatedLyrics && !soundtrackUrl && !isGeneratingMusic && (
+                  <Button
+                    onClick={handleGenerateMusic}
+                    disabled={isGeneratingMusic || !currentScript}
+                    className="w-full"
+                    size="lg"
+                    variant="default"
+                  >
+                    <Music className="w-4 h-4 mr-2" />
+                    Generate Soundtrack with Suno AI
+                  </Button>
+                )}
+
+                {/* Music Generation Status / Player */}
+                {(isGeneratingMusic || soundtrackUrl) && (
+                  <SoundtrackPlayer
+                    audioUrl={soundtrackUrl || ""}
+                    title={generatedTitle || "Mind Movie Anthem"}
+                    isGenerating={isGeneratingMusic}
+                    generationStatus={generationStatus}
+                  />
+                )}
+
+                {!currentScript && generatedLyrics && (
+                  <p className="text-sm text-amber-600 bg-amber-50 dark:bg-amber-950/30 p-3 rounded-lg">
+                    ⚠️ Please save your storyboard first (Step 3) before generating the soundtrack.
+                  </p>
+                )}
+              </div>
+            )}
           </div>
         </ScrollArea>
 
@@ -315,6 +526,13 @@ export function MindMovieScriptWizard({
             )}
 
             {step === 3 && (
+              <Button onClick={() => setStep(4)}>
+                Continue to Soundtrack
+                <Music className="w-4 h-4 ml-2" />
+              </Button>
+            )}
+
+            {step === 4 && (
               <Button onClick={onClose}>
                 Done
                 <ChevronRight className="w-4 h-4 ml-1" />
