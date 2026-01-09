@@ -12,8 +12,8 @@ const logStep = (step: string, details?: any) => {
   console.log(`[ALLOCATE-MONTHLY-CREDITS] ${step}${detailsStr}`);
 };
 
-// Monthly allowance in dollars for subscribers
-const MONTHLY_ALLOWANCE_LIMIT = 10.00;
+// Monthly allowance in CREDITS for subscribers (1000 credits = $10)
+const MONTHLY_ALLOWANCE_LIMIT_CREDITS = 1000;
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -53,7 +53,7 @@ serve(async (req) => {
       return new Response(JSON.stringify({
         success: true,
         isAdmin: true,
-        monthlyAllowanceLimit: 9999
+        monthlyAllowanceLimit: 999999
       }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 200,
@@ -124,14 +124,14 @@ serve(async (req) => {
     const now = new Date();
 
     if (!creditsData) {
-      // First time - create with $10 monthly allowance, usage starts at 0
+      // First time - create with 1000 credits monthly allowance
       const { data: newCredits, error: insertError } = await supabaseClient
         .from("production_credits")
         .insert({
           user_id: user.id,
           monthly_credits: 0, // Legacy field
           purchased_credits: 0,
-          monthly_allowance_limit: MONTHLY_ALLOWANCE_LIMIT,
+          monthly_allowance_limit: MONTHLY_ALLOWANCE_LIMIT_CREDITS,
           monthly_allowance_used: 0,
           monthly_credits_reset_at: periodEnd.toISOString()
         })
@@ -145,18 +145,18 @@ serve(async (req) => {
         .from("credit_transactions")
         .insert({
           user_id: user.id,
-          amount: MONTHLY_ALLOWANCE_LIMIT,
+          amount: MONTHLY_ALLOWANCE_LIMIT_CREDITS,
           api_cost_usd: 0,
           transaction_type: "monthly_allocation",
-          description: `Monthly $${MONTHLY_ALLOWANCE_LIMIT} API allowance activated`
+          description: `Monthly ${MONTHLY_ALLOWANCE_LIMIT_CREDITS} credits allowance activated`
         });
 
-      logStep("Created new credits with monthly allowance", { limit: MONTHLY_ALLOWANCE_LIMIT });
+      logStep("Created new credits with monthly allowance", { limit: MONTHLY_ALLOWANCE_LIMIT_CREDITS });
 
       return new Response(JSON.stringify({
         success: true,
         subscribed: true,
-        monthlyAllowanceLimit: MONTHLY_ALLOWANCE_LIMIT,
+        monthlyAllowanceLimit: MONTHLY_ALLOWANCE_LIMIT_CREDITS,
         monthlyAllowanceUsed: 0,
         allocated: true
       }), {
@@ -176,7 +176,7 @@ serve(async (req) => {
         .from("production_credits")
         .update({
           monthly_allowance_used: 0,
-          monthly_allowance_limit: MONTHLY_ALLOWANCE_LIMIT,
+          monthly_allowance_limit: MONTHLY_ALLOWANCE_LIMIT_CREDITS,
           monthly_credits_reset_at: periodEnd.toISOString()
         })
         .eq("user_id", user.id);
@@ -188,10 +188,10 @@ serve(async (req) => {
         .from("credit_transactions")
         .insert({
           user_id: user.id,
-          amount: MONTHLY_ALLOWANCE_LIMIT,
+          amount: MONTHLY_ALLOWANCE_LIMIT_CREDITS,
           api_cost_usd: 0,
           transaction_type: "monthly_reset",
-          description: `Monthly $${MONTHLY_ALLOWANCE_LIMIT} API allowance reset`
+          description: `Monthly ${MONTHLY_ALLOWANCE_LIMIT_CREDITS} credits allowance reset`
         });
 
       logStep("Reset monthly usage", { nextReset: periodEnd });
@@ -199,7 +199,7 @@ serve(async (req) => {
       return new Response(JSON.stringify({
         success: true,
         subscribed: true,
-        monthlyAllowanceLimit: MONTHLY_ALLOWANCE_LIMIT,
+        monthlyAllowanceLimit: MONTHLY_ALLOWANCE_LIMIT_CREDITS,
         monthlyAllowanceUsed: 0,
         allocated: true,
         nextReset: periodEnd.toISOString()
@@ -209,8 +209,8 @@ serve(async (req) => {
       });
     }
 
-    const monthlyAllowanceUsed = parseFloat(creditsData.monthly_allowance_used || 0);
-    const monthlyAllowanceLimit = parseFloat(creditsData.monthly_allowance_limit || MONTHLY_ALLOWANCE_LIMIT);
+    const monthlyAllowanceUsed = Math.round(parseFloat(creditsData.monthly_allowance_used || 0));
+    const monthlyAllowanceLimit = Math.round(parseFloat(creditsData.monthly_allowance_limit || MONTHLY_ALLOWANCE_LIMIT_CREDITS));
 
     logStep("No reset needed", { 
       monthlyAllowanceUsed, 

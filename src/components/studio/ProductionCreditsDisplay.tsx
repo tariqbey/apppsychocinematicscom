@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
-import { useProductionCredits, USAGE_PACKS } from "@/hooks/useProductionCredits";
+import { useProductionCredits, CREDIT_PACKS } from "@/hooks/useProductionCredits";
 import { cn } from "@/lib/utils";
 
 interface ProductionCreditsDisplayProps {
@@ -61,14 +61,14 @@ export const ProductionCreditsDisplay = ({ compact = false, showBuyButton = true
           >
             <Coins className="h-4 w-4" />
             <span>
-              {credits.isAdmin ? "∞" : `$${credits.totalRemaining.toFixed(2)}`}
+              {credits.isAdmin ? "∞" : `${credits.totalRemaining.toLocaleString()} credits`}
             </span>
             {isCritical && !credits.isAdmin && (
               <AlertTriangle className="h-3 w-3" />
             )}
           </Button>
         </DialogTrigger>
-        <UsagePurchaseDialog 
+        <CreditsPurchaseDialog 
           credits={credits}
           onPurchase={handlePurchase}
           purchasingPack={purchasingPack}
@@ -87,7 +87,7 @@ export const ProductionCreditsDisplay = ({ compact = false, showBuyButton = true
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Coins className="h-5 w-5 text-primary" />
-            <CardTitle className="text-lg">API Usage</CardTitle>
+            <CardTitle className="text-lg">Credits</CardTitle>
           </div>
           {credits.isAdmin && (
             <span className="px-2 py-1 text-xs font-medium bg-primary/20 text-primary rounded-full flex items-center gap-1">
@@ -97,7 +97,7 @@ export const ProductionCreditsDisplay = ({ compact = false, showBuyButton = true
           )}
         </div>
         <CardDescription>
-          Your $10/month API allowance
+          1,000 credits/month included
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -111,7 +111,7 @@ export const ProductionCreditsDisplay = ({ compact = false, showBuyButton = true
                 isCritical && "text-destructive",
                 isWarning && "text-yellow-600"
               )}>
-                ${credits.monthlyAllowanceUsed.toFixed(2)} / ${credits.monthlyAllowanceLimit.toFixed(2)}
+                {credits.monthlyAllowanceUsed.toLocaleString()} / {credits.monthlyAllowanceLimit.toLocaleString()}
               </span>
             </div>
             <Progress 
@@ -131,7 +131,7 @@ export const ProductionCreditsDisplay = ({ compact = false, showBuyButton = true
             {isCritical && (
               <p className="text-xs text-destructive flex items-center gap-1">
                 <AlertTriangle className="h-3 w-3" />
-                {isLimitReached ? "Monthly allowance used - purchase more to continue" : "Almost at limit"}
+                {isLimitReached ? "Monthly credits used - purchase more to continue" : "Almost at limit"}
               </p>
             )}
           </div>
@@ -141,13 +141,13 @@ export const ProductionCreditsDisplay = ({ compact = false, showBuyButton = true
           <div className="p-3 rounded-lg bg-muted/50">
             <p className="text-xs text-muted-foreground">Monthly Left</p>
             <p className="text-xl font-bold">
-              {credits.isAdmin ? "∞" : `$${credits.remainingMonthlyAllowance.toFixed(2)}`}
+              {credits.isAdmin ? "∞" : credits.remainingMonthlyAllowance.toLocaleString()}
             </p>
           </div>
           <div className="p-3 rounded-lg bg-muted/50">
             <p className="text-xs text-muted-foreground">Purchased</p>
             <p className="text-xl font-bold">
-              {credits.isAdmin ? "∞" : `$${credits.purchasedBalance.toFixed(2)}`}
+              {credits.isAdmin ? "∞" : credits.purchasedBalance.toLocaleString()}
             </p>
           </div>
         </div>
@@ -159,7 +159,7 @@ export const ProductionCreditsDisplay = ({ compact = false, showBuyButton = true
               "text-2xl font-bold",
               credits.isAdmin ? "text-primary" : isLimitReached ? "text-destructive" : "text-primary"
             )}>
-              {credits.isAdmin ? "Unlimited" : `$${credits.totalRemaining.toFixed(2)}`}
+              {credits.isAdmin ? "Unlimited" : `${credits.totalRemaining.toLocaleString()} credits`}
             </span>
           </div>
         </div>
@@ -172,10 +172,10 @@ export const ProductionCreditsDisplay = ({ compact = false, showBuyButton = true
                 isLimitReached && "bg-destructive hover:bg-destructive/90"
               )}>
                 <Zap className="h-4 w-4" />
-                {isLimitReached ? "Buy More to Continue" : "Buy More Usage"}
+                {isLimitReached ? "Buy Credits to Continue" : "Buy More Credits"}
               </Button>
             </DialogTrigger>
-            <UsagePurchaseDialog 
+            <CreditsPurchaseDialog 
               credits={credits}
               onPurchase={handlePurchase}
               purchasingPack={purchasingPack}
@@ -185,37 +185,38 @@ export const ProductionCreditsDisplay = ({ compact = false, showBuyButton = true
 
         <div className="text-xs text-muted-foreground space-y-1">
           <p><strong>Estimated costs:</strong></p>
-          <p>• 10-second video ≈ $1.00</p>
-          <p>• 2K image ≈ $0.05</p>
-          <p>• 4K image ≈ $0.08</p>
-          <p>• Music generation ≈ $0.15</p>
+          <p>• 5-sec video ≈ 60 credits</p>
+          <p>• 10-sec video ≈ 110 credits</p>
+          <p>• 2K image ≈ 15 credits</p>
+          <p>• 4K image ≈ 18 credits</p>
+          <p>• Music generation ≈ 25 credits</p>
         </div>
       </CardContent>
     </Card>
   );
 };
 
-interface UsagePurchaseDialogProps {
+interface CreditsPurchaseDialogProps {
   credits: any;
   onPurchase: (packId: string) => void;
   purchasingPack: string | null;
 }
 
-const UsagePurchaseDialog = ({ credits, onPurchase, purchasingPack }: UsagePurchaseDialogProps) => {
+const CreditsPurchaseDialog = ({ credits, onPurchase, purchasingPack }: CreditsPurchaseDialogProps) => {
   return (
     <DialogContent className="max-w-md">
       <DialogHeader>
         <DialogTitle className="flex items-center gap-2">
           <Zap className="h-5 w-5 text-primary" />
-          Buy API Usage
+          Buy Credits
         </DialogTitle>
         <DialogDescription>
-          Add more API usage to your account. Current balance: ${credits.totalRemaining.toFixed(2)}
+          Add more credits to your account. Current balance: {credits.totalRemaining.toLocaleString()} credits
         </DialogDescription>
       </DialogHeader>
       
       <div className="grid gap-3 py-4">
-        {USAGE_PACKS.map((pack) => (
+        {CREDIT_PACKS.map((pack) => (
           <button
             key={pack.id}
             onClick={() => onPurchase(pack.id)}
@@ -232,7 +233,7 @@ const UsagePurchaseDialog = ({ credits, onPurchase, purchasingPack }: UsagePurch
                 <Coins className="h-5 w-5 text-primary" />
               </div>
               <div className="text-left">
-                <p className="font-semibold">${pack.dollarAmount} API Usage</p>
+                <p className="font-semibold">{pack.credits.toLocaleString()} Credits</p>
                 {pack.bonus && (
                   <p className="text-xs text-primary flex items-center gap-1">
                     <Gift className="h-3 w-3" />
@@ -261,7 +262,7 @@ const UsagePurchaseDialog = ({ credits, onPurchase, purchasingPack }: UsagePurch
       </div>
 
       <p className="text-xs text-muted-foreground text-center">
-        Secure checkout powered by Stripe. Usage balance never expires.
+        Secure checkout powered by Stripe. Credits never expire.
       </p>
     </DialogContent>
   );

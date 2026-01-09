@@ -2,7 +2,7 @@ import { useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { useProductionCredits, API_COSTS } from "@/hooks/useProductionCredits";
+import { useProductionCredits } from "@/hooks/useProductionCredits";
 
 export type VideoModel = "openai/sora-2/text-to-video-developer" | "openai/sora-2/image-to-video" | "wan-ai/wan2.1-i2v-480p" | "wan-ai/wan2.1-t2v-480p" | "kling-ai/v1-5/pro/image-to-video" | "kling-ai/v1-5/pro/text-to-video";
 
@@ -39,12 +39,12 @@ export interface GeneratedMedia {
 }
 
 export const MODEL_INFO: Record<VideoModel, { name: string; price: string; description: string }> = {
-  "openai/sora-2/text-to-video-developer": { name: "Sora 2 Developer", price: "$1/10s", description: "OpenAI text-to-video with Cameo support" },
-  "openai/sora-2/image-to-video": { name: "Sora 2 Image", price: "$1/10s", description: "Animate an image" },
-  "wan-ai/wan2.1-t2v-480p": { name: "Wan 2.1", price: "$1/10s", description: "Fast text-to-video" },
-  "wan-ai/wan2.1-i2v-480p": { name: "Wan 2.1 Image", price: "$1/10s", description: "Image animation" },
-  "kling-ai/v1-5/pro/text-to-video": { name: "Kling 1.5 Pro", price: "$1/10s", description: "Kling text-to-video" },
-  "kling-ai/v1-5/pro/image-to-video": { name: "Kling 1.5 Pro Image", price: "$1/10s", description: "Kling image animation" },
+  "openai/sora-2/text-to-video-developer": { name: "Sora 2 Developer", price: "60-110 credits", description: "OpenAI text-to-video with Cameo support" },
+  "openai/sora-2/image-to-video": { name: "Sora 2 Image", price: "60-110 credits", description: "Animate an image" },
+  "wan-ai/wan2.1-t2v-480p": { name: "Wan 2.1", price: "60-110 credits", description: "Fast text-to-video" },
+  "wan-ai/wan2.1-i2v-480p": { name: "Wan 2.1 Image", price: "60-110 credits", description: "Image animation" },
+  "kling-ai/v1-5/pro/text-to-video": { name: "Kling 1.5 Pro", price: "60-110 credits", description: "Kling text-to-video" },
+  "kling-ai/v1-5/pro/image-to-video": { name: "Kling 1.5 Pro Image", price: "60-110 credits", description: "Kling image animation" },
 };
 
 export function useMediaGeneration() {
@@ -54,33 +54,16 @@ export function useMediaGeneration() {
   const [generatedVideoUrl, setGeneratedVideoUrl] = useState<string | null>(null);
   const { toast } = useToast();
   const { user, session } = useAuth();
-  const { credits, deductCredits, fetchCredits, estimateCost, estimateDisplayCost, canAfford } = useProductionCredits();
+  const { credits, deductCredits, fetchCredits, estimateCreditCost, canAfford } = useProductionCredits();
 
-  // Calculate cost for a generation (in dollars)
-  const calculateCreditCost = useCallback((
-    mediaType: "image" | "video",
-    duration?: number,
-    resolution?: string
-  ): number => {
-    if (mediaType === "video") {
-      return (duration || 10) * API_COSTS.video.perSecond;
-    } else {
-      const res = resolution?.toLowerCase() || "2k";
-      return res.includes("4k") ? API_COSTS.image["4k"] : API_COSTS.image["2k"];
-    }
-  }, []);
-
-  // Check if user can afford a generation
+  // Check if user can afford a generation (uses credit-based check)
   const canAffordGeneration = useCallback((
     mediaType: "image" | "video",
     duration?: number,
     resolution?: string
   ): boolean => {
-    if (!credits) return false;
-    if (credits.isAdmin) return true;
-    const cost = calculateCreditCost(mediaType, duration, resolution);
-    return credits.totalRemaining >= cost;
-  }, [credits, calculateCreditCost]);
+    return canAfford(mediaType, duration, resolution);
+  }, [canAfford]);
 
   const generateImage = async (params: ImageGenerationParams): Promise<string | null> => {
     if (!user) {
@@ -88,12 +71,12 @@ export function useMediaGeneration() {
       return null;
     }
 
-    // Check balance first
-    const cost = calculateCreditCost("image", undefined, params.resolution);
-    if (credits && !credits.isAdmin && credits.totalRemaining < cost) {
+    // Check balance first (in credits)
+    const creditCost = estimateCreditCost("image", undefined, params.resolution);
+    if (credits && !credits.isAdmin && credits.totalRemaining < creditCost) {
       toast({ 
-        title: "Insufficient balance", 
-        description: `You need $${cost.toFixed(2)}. You have $${credits.totalRemaining.toFixed(2)}.`, 
+        title: "Insufficient credits", 
+        description: `You need ${creditCost} credits. You have ${credits.totalRemaining} credits.`, 
         variant: "destructive" 
       });
       return null;
@@ -103,12 +86,16 @@ export function useMediaGeneration() {
     setGeneratedImageUrl(null);
 
     try {
-      // Deduct before generation
+      // Deduct before generation (backend handles the full cost with markup)
       if (!credits?.isAdmin) {
         const deductResult = await deductCredits("image", undefined, params.resolution);
         if (!deductResult.success) {
-          throw new Error(deductResult.error || "Failed to deduct usage");
+          throw new Error(deductResult.error || "Failed to deduct credits");
         }
+        toast({
+          title: "Credits deducted",
+          description: `Used ${deductResult.creditsDeducted || creditCost} credits. ${deductResult.totalRemaining || 0} remaining.`,
+        });
       }
 
       const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/lovable-generate-image`, {
@@ -150,12 +137,12 @@ export function useMediaGeneration() {
 
     const duration = params.duration || 10;
     
-    // Check balance first
-    const cost = calculateCreditCost("video", duration);
-    if (credits && !credits.isAdmin && credits.totalRemaining < cost) {
+    // Check balance first (in credits)
+    const creditCost = estimateCreditCost("video", duration);
+    if (credits && !credits.isAdmin && credits.totalRemaining < creditCost) {
       toast({ 
-        title: "Insufficient balance", 
-        description: `You need $${cost.toFixed(2)}. You have $${credits.totalRemaining.toFixed(2)}.`, 
+        title: "Insufficient credits", 
+        description: `You need ${creditCost} credits. You have ${credits.totalRemaining} credits.`, 
         variant: "destructive" 
       });
       return null;
@@ -165,12 +152,16 @@ export function useMediaGeneration() {
     setGeneratedVideoUrl(null);
 
     try {
-      // Deduct before generation
+      // Deduct before generation (backend handles the full cost with markup)
       if (!credits?.isAdmin) {
         const deductResult = await deductCredits("video", duration);
         if (!deductResult.success) {
-          throw new Error(deductResult.error || "Failed to deduct usage");
+          throw new Error(deductResult.error || "Failed to deduct credits");
         }
+        toast({
+          title: "Credits deducted",
+          description: `Used ${deductResult.creditsDeducted || creditCost} credits. ${deductResult.totalRemaining || 0} remaining.`,
+        });
       }
 
       const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/atlas-generate-video`, {
@@ -232,9 +223,8 @@ export function useMediaGeneration() {
     setGeneratedImageUrl,
     setGeneratedVideoUrl,
     credits,
-    calculateCreditCost,
     canAffordGeneration,
     refreshCredits: fetchCredits,
-    estimateDisplayCost,
+    estimateCreditCost,
   };
 }
