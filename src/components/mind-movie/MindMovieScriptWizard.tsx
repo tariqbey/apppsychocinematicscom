@@ -104,6 +104,7 @@ export function MindMovieScriptWizard({
   const [generatedScenes, setGeneratedScenes] = useState<Scene[]>([]);
   const [isAddingScenes, setIsAddingScenes] = useState(false);
   const [savedPersonas, setSavedPersonas] = useState<SavedPersona[]>([]);
+  const [songCount, setSongCount] = useState<1 | 2>(1);
   
   const { 
     isGenerating, 
@@ -119,6 +120,7 @@ export function MindMovieScriptWizard({
     isGeneratingMusic,
     generatedLyrics,
     soundtrackUrl,
+    songs,
     musicStyle,
     customStyleText,
     vocalGender,
@@ -285,7 +287,7 @@ export function MindMovieScriptWizard({
       toast.error("Please generate lyrics first and save your storyboard");
       return;
     }
-    await generateMusic(generatedLyrics, generatedTitle || "My Mind Movie", currentScript.id, customStyleText.trim() || undefined);
+    await generateMusic(generatedLyrics, generatedTitle || "My Mind Movie", currentScript.id, customStyleText.trim() || undefined, songCount);
   };
 
   const handleRegenerateMusic = async () => {
@@ -293,8 +295,9 @@ export function MindMovieScriptWizard({
       toast.error("Please generate lyrics first and save your storyboard");
       return;
     }
-    await regenerateMusic(generatedLyrics, generatedTitle || "My Mind Movie", currentScript.id, customStyleText.trim() || undefined);
+    await regenerateMusic(generatedLyrics, generatedTitle || "My Mind Movie", currentScript.id, customStyleText.trim() || undefined, songCount);
   };
+
 
   const handleSaveLyrics = async () => {
     if (!currentScript || !generatedLyrics) return;
@@ -906,8 +909,44 @@ export function MindMovieScriptWizard({
                   </div>
                 )}
 
+                {/* Song Count Selection */}
+                {generatedLyrics && !soundtrackUrl && !isGeneratingMusic && songs.length === 0 && (
+                  <div className="space-y-3">
+                    <Label className="text-base font-semibold">Number of Songs to Generate</Label>
+                    <RadioGroup
+                      value={String(songCount)}
+                      onValueChange={(val) => setSongCount(Number(val) as 1 | 2)}
+                      className="flex gap-4"
+                    >
+                      <Label
+                        htmlFor="song-1"
+                        className={`flex items-center gap-2 p-3 rounded-lg border-2 cursor-pointer transition-all ${
+                          songCount === 1
+                            ? "border-primary bg-primary/5"
+                            : "border-border hover:border-primary/50"
+                        }`}
+                      >
+                        <RadioGroupItem value="1" id="song-1" className="sr-only" />
+                        <span className="font-medium">1 Song</span>
+                      </Label>
+                      <Label
+                        htmlFor="song-2"
+                        className={`flex items-center gap-2 p-3 rounded-lg border-2 cursor-pointer transition-all ${
+                          songCount === 2
+                            ? "border-primary bg-primary/5"
+                            : "border-border hover:border-primary/50"
+                        }`}
+                      >
+                        <RadioGroupItem value="2" id="song-2" className="sr-only" />
+                        <span className="font-medium">2 Songs</span>
+                        <span className="text-xs text-muted-foreground">(More variety)</span>
+                      </Label>
+                    </RadioGroup>
+                  </div>
+                )}
+
                 {/* Generate Music Button */}
-                {generatedLyrics && !soundtrackUrl && !isGeneratingMusic && (
+                {generatedLyrics && !soundtrackUrl && !isGeneratingMusic && songs.length === 0 && (
                   <Button
                     onClick={handleGenerateMusic}
                     disabled={isGeneratingMusic || !currentScript}
@@ -916,24 +955,40 @@ export function MindMovieScriptWizard({
                     variant="default"
                   >
                     <Music className="w-4 h-4 mr-2" />
-                    Generate Soundtrack with Suno AI
+                    Generate {songCount} Soundtrack{songCount > 1 ? 's' : ''} with Suno AI
                   </Button>
                 )}
 
                 {/* Music Generation Status / Player */}
-                {(isGeneratingMusic || soundtrackUrl) && (
+                {(isGeneratingMusic || soundtrackUrl || songs.length > 0) && (
                   <div className="space-y-4">
-                    <SoundtrackPlayer
-                      audioUrl={soundtrackUrl || ""}
-                      title={generatedTitle || "Mind Movie Anthem"}
-                      isGenerating={isGeneratingMusic}
-                      generationStatus={generationStatus}
-                      onSaveToLibrary={() => saveToLibrary(generatedTitle || "Mind Movie Anthem", generatedLyrics || "")}
-                      isSavedToLibrary={isSavedToLibrary}
-                    />
+                    {songs.length > 1 ? (
+                      // Multiple songs display
+                      songs.map((song, index) => (
+                        <SoundtrackPlayer
+                          key={index}
+                          audioUrl={song.soundtrackUrl || ""}
+                          title={`${generatedTitle || "Mind Movie Anthem"} (Version ${index + 1})`}
+                          isGenerating={isGeneratingMusic && !song.soundtrackUrl}
+                          generationStatus={song.generationStatus}
+                          onSaveToLibrary={() => saveToLibrary(generatedTitle || "Mind Movie Anthem", generatedLyrics || "", index)}
+                          isSavedToLibrary={song.isSavedToLibrary}
+                        />
+                      ))
+                    ) : (
+                      // Single song display (backward compatible)
+                      <SoundtrackPlayer
+                        audioUrl={soundtrackUrl || ""}
+                        title={generatedTitle || "Mind Movie Anthem"}
+                        isGenerating={isGeneratingMusic}
+                        generationStatus={generationStatus}
+                        onSaveToLibrary={() => saveToLibrary(generatedTitle || "Mind Movie Anthem", generatedLyrics || "")}
+                        isSavedToLibrary={isSavedToLibrary}
+                      />
+                    )}
                     
                     {/* Regenerate Button - only show when soundtrack exists and not generating */}
-                    {soundtrackUrl && !isGeneratingMusic && (
+                    {(soundtrackUrl || songs.some(s => s.soundtrackUrl)) && !isGeneratingMusic && (
                       <Button
                         onClick={handleRegenerateMusic}
                         variant="outline"
@@ -942,7 +997,7 @@ export function MindMovieScriptWizard({
                         disabled={!currentScript}
                       >
                         <RefreshCw className="w-4 h-4 mr-2" />
-                        Regenerate with {personaId.trim() ? 'Custom Persona' : 'Current Settings'}
+                        Regenerate {songCount} Song{songCount > 1 ? 's' : ''} with {personaId.trim() ? 'Custom Persona' : 'Current Settings'}
                       </Button>
                     )}
                   </div>
