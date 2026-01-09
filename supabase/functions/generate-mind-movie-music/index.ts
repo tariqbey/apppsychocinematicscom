@@ -132,9 +132,9 @@ async function handleGenerateMusic(body: GenerateMusicRequest, supabase: any): P
   
   console.log('[generate-music] Starting Suno generation for:', title);
   
-  const SUNO_API_KEY = Deno.env.get('SUNO_API_KEY');
-  if (!SUNO_API_KEY) {
-    throw new Error('SUNO_API_KEY not configured');
+  const KIA_API_KEY = Deno.env.get('KIA_API_KEY');
+  if (!KIA_API_KEY) {
+    throw new Error('KIA_API_KEY not configured');
   }
 
   // Map music style to Suno style tags
@@ -167,7 +167,7 @@ async function handleGenerateMusic(body: GenerateMusicRequest, supabase: any): P
   const sunoResponse = await fetch('https://api.kie.ai/api/v1/generate', {
     method: 'POST',
     headers: {
-      'Authorization': `Bearer ${SUNO_API_KEY}`,
+      'Authorization': `Bearer ${KIA_API_KEY}`,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
@@ -219,9 +219,9 @@ async function handleCheckStatus(body: CheckStatusRequest, supabase: any): Promi
   
   console.log('[check-status] Checking task:', taskId);
   
-  const SUNO_API_KEY = Deno.env.get('SUNO_API_KEY');
-  if (!SUNO_API_KEY) {
-    throw new Error('SUNO_API_KEY not configured');
+  const KIA_API_KEY = Deno.env.get('KIA_API_KEY');
+  if (!KIA_API_KEY) {
+    throw new Error('KIA_API_KEY not configured');
   }
 
   const statusResponse = await fetch(
@@ -229,7 +229,7 @@ async function handleCheckStatus(body: CheckStatusRequest, supabase: any): Promi
     {
       method: 'GET',
       headers: {
-        'Authorization': `Bearer ${SUNO_API_KEY}`,
+        'Authorization': `Bearer ${KIA_API_KEY}`,
       },
     }
   );
