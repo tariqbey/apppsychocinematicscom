@@ -2,45 +2,50 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
 
-export interface ProductionCredits {
+export interface ProductionUsage {
   isAdmin: boolean;
-  monthlyCredits: number;
-  purchasedCredits: number;
-  totalCredits: number;
+  monthlyAllowanceUsed: number;
+  monthlyAllowanceLimit: number;
+  remainingMonthlyAllowance: number;
+  purchasedBalance: number;
+  totalRemaining: number;
   monthlyCreditsResetAt?: string;
   canGenerate: boolean;
+  usagePercentage: number;
 }
 
-export interface CreditPack {
+export interface UsagePack {
   id: string;
-  credits: number;
+  dollarAmount: number;
   price: number;
-  pricePerCredit: number;
+  bonus?: string;
 }
 
-export const CREDIT_PACKS: CreditPack[] = [
-  { id: "pack_20", credits: 20, price: 12, pricePerCredit: 0.60 },
-  { id: "pack_40", credits: 40, price: 24, pricePerCredit: 0.60 },
-  { id: "pack_60", credits: 60, price: 36, pricePerCredit: 0.60 },
-  { id: "pack_100", credits: 100, price: 60, pricePerCredit: 0.60 },
+export const USAGE_PACKS: UsagePack[] = [
+  { id: "pack_5", dollarAmount: 5, price: 5 },
+  { id: "pack_10", dollarAmount: 10, price: 10 },
+  { id: "pack_20", dollarAmount: 22, price: 20, bonus: "10% bonus" },
+  { id: "pack_30", dollarAmount: 35, price: 30, bonus: "17% bonus" },
 ];
 
-// Credit costs for generation
-export const CREDIT_COSTS = {
+// API costs for generation (in dollars)
+export const API_COSTS = {
   video: {
-    // 1 credit per 10 seconds
-    calculate: (durationSeconds: number) => (durationSeconds / 10),
+    perSecond: 0.10, // $0.10 per second
   },
   image: {
-    "2k": 0.18,
-    "4k": 0.24,
-    default: 0.18,
+    "2k": 0.05,
+    "4k": 0.08,
+    default: 0.05,
+  },
+  music: {
+    default: 0.15,
   },
 };
 
 export const useProductionCredits = () => {
   const { user, session } = useAuth();
-  const [credits, setCredits] = useState<ProductionCredits | null>(null);
+  const [credits, setCredits] = useState<ProductionUsage | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -63,10 +68,10 @@ export const useProductionCredits = () => {
 
       if (fnError) throw fnError;
       
-      setCredits(data as ProductionCredits);
+      setCredits(data as ProductionUsage);
     } catch (err) {
-      console.error("Error fetching credits:", err);
-      setError(err instanceof Error ? err.message : "Failed to fetch credits");
+      console.error("Error fetching usage:", err);
+      setError(err instanceof Error ? err.message : "Failed to fetch usage");
     } finally {
       setLoading(false);
     }
@@ -84,20 +89,21 @@ export const useProductionCredits = () => {
 
       if (fnError) throw fnError;
       
-      // Refresh credits after allocation
+      // Refresh usage after allocation
       await fetchCredits();
       return data;
     } catch (err) {
-      console.error("Error allocating credits:", err);
+      console.error("Error allocating monthly usage:", err);
       return null;
     }
   }, [session?.access_token, fetchCredits]);
 
   const deductCredits = useCallback(async (
-    mediaType: "video" | "image",
+    mediaType: "video" | "image" | "music",
     duration?: number,
     resolution?: string,
-    generationId?: string
+    generationId?: string,
+    apiCost?: number
   ) => {
     if (!session?.access_token) {
       return { success: false, error: "Not authenticated" };
@@ -105,7 +111,7 @@ export const useProductionCredits = () => {
 
     try {
       const { data, error: fnError } = await supabase.functions.invoke("deduct-credits", {
-        body: { mediaType, duration, resolution, generationId },
+        body: { mediaType, duration, resolution, generationId, apiCost },
         headers: {
           Authorization: `Bearer ${session.access_token}`,
         },
@@ -114,14 +120,14 @@ export const useProductionCredits = () => {
       if (fnError) throw fnError;
 
       if (data.success) {
-        // Refresh credits after deduction
+        // Refresh usage after deduction
         await fetchCredits();
       }
 
       return data;
     } catch (err) {
-      console.error("Error deducting credits:", err);
-      return { success: false, error: err instanceof Error ? err.message : "Failed to deduct credits" };
+      console.error("Error deducting usage:", err);
+      return { success: false, error: err instanceof Error ? err.message : "Failed to deduct usage" };
     }
   }, [session?.access_token, fetchCredits]);
 
@@ -148,7 +154,7 @@ export const useProductionCredits = () => {
 
       return { success: false, error: "No checkout URL returned" };
     } catch (err) {
-      console.error("Error purchasing credits:", err);
+      console.error("Error purchasing usage:", err);
       return { success: false, error: err instanceof Error ? err.message : "Failed to start purchase" };
     }
   }, [session?.access_token]);
@@ -162,7 +168,7 @@ export const useProductionCredits = () => {
       if (fnError) throw fnError;
 
       if (data.success) {
-        // Refresh credits after purchase confirmation
+        // Refresh usage after purchase confirmation
         await fetchCredits();
       }
 
@@ -173,11 +179,41 @@ export const useProductionCredits = () => {
     }
   }, [fetchCredits]);
 
-  // Fetch credits on mount and when user changes
+  // Calculate estimated cost for a generation
+  const estimateCost = useCallback((
+    mediaType: "video" | "image" | "music",
+    duration?: number,
+    resolution?: string
+  ): number => {
+    if (mediaType === "video") {
+      const durationSeconds = duration || 10;
+      return durationSeconds * API_COSTS.video.perSecond;
+    } else if (mediaType === "image") {
+      const res = resolution?.toLowerCase() || "2k";
+      return res.includes("4k") ? API_COSTS.image["4k"] : API_COSTS.image["2k"];
+    } else if (mediaType === "music") {
+      return API_COSTS.music.default;
+    }
+    return 0;
+  }, []);
+
+  // Check if user can afford a specific generation
+  const canAfford = useCallback((
+    mediaType: "video" | "image" | "music",
+    duration?: number,
+    resolution?: string
+  ): boolean => {
+    if (!credits) return false;
+    if (credits.isAdmin) return true;
+    const cost = estimateCost(mediaType, duration, resolution);
+    return credits.totalRemaining >= cost;
+  }, [credits, estimateCost]);
+
+  // Fetch usage on mount and when user changes
   useEffect(() => {
     if (user) {
       fetchCredits();
-      // Also try to allocate monthly credits for subscribers
+      // Also try to allocate/reset monthly usage for subscribers
       allocateMonthlyCredits();
     } else {
       setCredits(null);
@@ -194,5 +230,12 @@ export const useProductionCredits = () => {
     purchaseCredits,
     confirmPurchase,
     allocateMonthlyCredits,
+    estimateCost,
+    canAfford,
   };
 };
+
+// Legacy exports for compatibility
+export type ProductionCredits = ProductionUsage;
+export const CREDIT_PACKS = USAGE_PACKS;
+export const CREDIT_COSTS = API_COSTS;

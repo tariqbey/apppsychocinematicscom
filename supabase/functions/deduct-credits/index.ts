@@ -11,18 +11,19 @@ const logStep = (step: string, details?: any) => {
   console.log(`[DEDUCT-CREDITS] ${step}${detailsStr}`);
 };
 
-// Credit costs based on the pricing model
-const CREDIT_COSTS = {
-  // Video: 10-second = 1 credit, 15-second = 1.5 credits
+// API costs in dollars - these are the actual costs you pay per generation
+const API_COSTS = {
   video: {
-    base: 1, // per 10 seconds
-    perSecond: 0.1
+    // Approximate cost per second of video generation
+    perSecond: 0.10  // $0.10 per second = $1.00 for 10-second video
   },
-  // Images: 2K = 0.18, 4K = 0.24
   image: {
-    "2k": 0.18,
-    "4k": 0.24,
-    default: 0.18
+    "2k": 0.05,      // $0.05 per 2K image
+    "4k": 0.08,      // $0.08 per 4K image
+    default: 0.05
+  },
+  music: {
+    default: 0.15    // $0.15 per song generation
   }
 };
 
@@ -34,8 +35,8 @@ serve(async (req) => {
   try {
     logStep("Function started");
 
-    const { mediaType, duration, resolution, generationId } = await req.json();
-    logStep("Request params", { mediaType, duration, resolution, generationId });
+    const { mediaType, duration, resolution, generationId, apiCost } = await req.json();
+    logStep("Request params", { mediaType, duration, resolution, generationId, apiCost });
 
     if (!mediaType) throw new Error("mediaType is required");
 
@@ -69,29 +70,35 @@ serve(async (req) => {
       return new Response(JSON.stringify({
         success: true,
         isAdmin: true,
-        creditsDeducted: 0,
-        remainingCredits: 9999
+        costDeducted: 0,
+        totalRemaining: 9999
       }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 200,
       });
     }
 
-    // Calculate credits to deduct
-    let creditsToDeduct = 0;
-    if (mediaType === "video") {
-      // Video: 1 credit per 10 seconds
+    // Calculate API cost to deduct (in dollars)
+    let costToDeduct = 0;
+    
+    // If apiCost is provided directly, use it; otherwise calculate
+    if (apiCost !== undefined && apiCost > 0) {
+      costToDeduct = parseFloat(apiCost);
+    } else if (mediaType === "video") {
       const durationSeconds = duration || 10;
-      creditsToDeduct = (durationSeconds / 10) * CREDIT_COSTS.video.base;
+      costToDeduct = durationSeconds * API_COSTS.video.perSecond;
     } else if (mediaType === "image") {
-      // Image: 0.18 for 2K, 0.24 for 4K
       const res = resolution?.toLowerCase() || "2k";
-      creditsToDeduct = res.includes("4k") ? CREDIT_COSTS.image["4k"] : CREDIT_COSTS.image["2k"];
+      costToDeduct = res.includes("4k") ? API_COSTS.image["4k"] : API_COSTS.image["2k"];
+    } else if (mediaType === "music") {
+      costToDeduct = API_COSTS.music.default;
     }
 
-    logStep("Credits to deduct", { creditsToDeduct });
+    // Round to 2 decimal places
+    costToDeduct = Math.round(costToDeduct * 100) / 100;
+    logStep("Cost to deduct", { costToDeduct, mediaType });
 
-    // Get current credits
+    // Get current usage/balance
     const { data: creditsData, error: creditsError } = await supabaseClient
       .from("production_credits")
       .select("*")
@@ -102,48 +109,59 @@ serve(async (req) => {
       throw new Error("No credits record found. Please subscribe first.");
     }
 
-    const monthlyCredits = parseFloat(creditsData.monthly_credits);
-    const purchasedCredits = parseFloat(creditsData.purchased_credits);
-    const totalCredits = monthlyCredits + purchasedCredits;
+    const monthlyAllowanceUsed = parseFloat(creditsData.monthly_allowance_used || 0);
+    const monthlyAllowanceLimit = parseFloat(creditsData.monthly_allowance_limit || 10);
+    const purchasedBalance = parseFloat(creditsData.purchased_credits || 0);
+    
+    const remainingMonthlyAllowance = Math.max(0, monthlyAllowanceLimit - monthlyAllowanceUsed);
+    const totalRemaining = remainingMonthlyAllowance + purchasedBalance;
 
-    if (totalCredits < creditsToDeduct) {
-      logStep("Insufficient credits", { required: creditsToDeduct, available: totalCredits });
+    if (totalRemaining < costToDeduct) {
+      logStep("Insufficient balance", { required: costToDeduct, available: totalRemaining });
       return new Response(JSON.stringify({
         success: false,
-        error: "Insufficient credits",
-        creditsRequired: creditsToDeduct,
-        creditsAvailable: totalCredits
+        error: "limit_reached",
+        message: "You've used your monthly allowance. Purchase more to continue generating.",
+        costRequired: costToDeduct,
+        totalRemaining,
+        remainingMonthlyAllowance,
+        purchasedBalance,
+        usagePercentage: 100
       }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 402,
       });
     }
 
-    // Deduct from monthly first, then purchased
-    let newMonthlyCredits = monthlyCredits;
-    let newPurchasedCredits = purchasedCredits;
-    let remainingDeduction = creditsToDeduct;
+    // Deduct from monthly allowance first, then purchased balance
+    let newMonthlyAllowanceUsed = monthlyAllowanceUsed;
+    let newPurchasedBalance = purchasedBalance;
+    let deductFromMonthly = 0;
+    let deductFromPurchased = 0;
 
-    if (monthlyCredits >= remainingDeduction) {
-      newMonthlyCredits = monthlyCredits - remainingDeduction;
-      remainingDeduction = 0;
+    if (remainingMonthlyAllowance >= costToDeduct) {
+      // All from monthly
+      deductFromMonthly = costToDeduct;
+      newMonthlyAllowanceUsed = monthlyAllowanceUsed + costToDeduct;
     } else {
-      remainingDeduction -= monthlyCredits;
-      newMonthlyCredits = 0;
-      newPurchasedCredits = purchasedCredits - remainingDeduction;
+      // Use remaining monthly + some purchased
+      deductFromMonthly = remainingMonthlyAllowance;
+      deductFromPurchased = costToDeduct - remainingMonthlyAllowance;
+      newMonthlyAllowanceUsed = monthlyAllowanceLimit; // Fully used
+      newPurchasedBalance = purchasedBalance - deductFromPurchased;
     }
 
-    // Update credits
+    // Update the record
     const { error: updateError } = await supabaseClient
       .from("production_credits")
       .update({
-        monthly_credits: newMonthlyCredits,
-        purchased_credits: newPurchasedCredits
+        monthly_allowance_used: newMonthlyAllowanceUsed,
+        purchased_credits: newPurchasedBalance
       })
       .eq("user_id", user.id);
 
     if (updateError) {
-      throw new Error(`Failed to update credits: ${updateError.message}`);
+      throw new Error(`Failed to update usage: ${updateError.message}`);
     }
 
     // Log the transaction
@@ -151,26 +169,36 @@ serve(async (req) => {
       .from("credit_transactions")
       .insert({
         user_id: user.id,
-        amount: -creditsToDeduct,
+        amount: -costToDeduct,
+        api_cost_usd: costToDeduct,
         transaction_type: "generation",
         description: `${mediaType} generation`,
         media_type: mediaType,
         generation_id: generationId
       });
 
-    const remainingCredits = newMonthlyCredits + newPurchasedCredits;
-    logStep("Credits deducted", { 
-      deducted: creditsToDeduct, 
-      remaining: remainingCredits 
+    const newRemainingMonthly = Math.max(0, monthlyAllowanceLimit - newMonthlyAllowanceUsed);
+    const newTotalRemaining = newRemainingMonthly + newPurchasedBalance;
+    const usagePercentage = (newMonthlyAllowanceUsed / monthlyAllowanceLimit) * 100;
+
+    logStep("Usage deducted", { 
+      costDeducted: costToDeduct,
+      newMonthlyAllowanceUsed,
+      newPurchasedBalance,
+      newTotalRemaining,
+      usagePercentage: usagePercentage.toFixed(1)
     });
 
     return new Response(JSON.stringify({
       success: true,
       isAdmin: false,
-      creditsDeducted: creditsToDeduct,
-      remainingCredits,
-      monthlyCredits: newMonthlyCredits,
-      purchasedCredits: newPurchasedCredits
+      costDeducted: costToDeduct,
+      monthlyAllowanceUsed: newMonthlyAllowanceUsed,
+      monthlyAllowanceLimit,
+      remainingMonthlyAllowance: newRemainingMonthly,
+      purchasedBalance: newPurchasedBalance,
+      totalRemaining: newTotalRemaining,
+      usagePercentage: Math.min(100, usagePercentage)
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 200,

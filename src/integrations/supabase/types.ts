@@ -80,6 +80,7 @@ export type Database = {
       credit_transactions: {
         Row: {
           amount: number
+          api_cost_usd: number | null
           created_at: string
           description: string | null
           generation_id: string | null
@@ -91,6 +92,7 @@ export type Database = {
         }
         Insert: {
           amount: number
+          api_cost_usd?: number | null
           created_at?: string
           description?: string | null
           generation_id?: string | null
@@ -102,6 +104,7 @@ export type Database = {
         }
         Update: {
           amount?: number
+          api_cost_usd?: number | null
           created_at?: string
           description?: string | null
           generation_id?: string | null
@@ -379,6 +382,8 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          monthly_allowance_limit: number
+          monthly_allowance_used: number
           monthly_credits: number
           monthly_credits_reset_at: string | null
           purchased_credits: number
@@ -388,6 +393,8 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
+          monthly_allowance_limit?: number
+          monthly_allowance_used?: number
           monthly_credits?: number
           monthly_credits_reset_at?: string | null
           purchased_credits?: number
@@ -397,6 +404,8 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
+          monthly_allowance_limit?: number
+          monthly_allowance_used?: number
           monthly_credits?: number
           monthly_credits_reset_at?: string | null
           purchased_credits?: number
