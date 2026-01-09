@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect, forwardRef } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { Play, Pause, Volume2, VolumeX, Download, Music, Library, Check } from 'lucide-react';
@@ -12,14 +12,14 @@ interface SoundtrackPlayerProps {
   isSavedToLibrary?: boolean;
 }
 
-export const SoundtrackPlayer = forwardRef<HTMLDivElement, SoundtrackPlayerProps>(({
+export const SoundtrackPlayer: React.FC<SoundtrackPlayerProps> = ({
   audioUrl,
   title = 'Mind Movie Soundtrack',
   isGenerating = false,
   generationStatus,
   onSaveToLibrary,
   isSavedToLibrary = false,
-}, ref) => {
+}) => {
   const audioRef = useRef<HTMLAudioElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -104,7 +104,7 @@ export const SoundtrackPlayer = forwardRef<HTMLDivElement, SoundtrackPlayerProps
 
   if (isGenerating) {
     return (
-      <div ref={ref} className="bg-card border border-border rounded-lg p-6">
+      <div className="bg-card border border-border rounded-lg p-6">
         <div className="flex items-center gap-4">
           <div className="w-16 h-16 rounded-lg bg-primary/10 flex items-center justify-center">
             <Music className="h-8 w-8 text-primary animate-pulse" />
@@ -124,11 +124,11 @@ export const SoundtrackPlayer = forwardRef<HTMLDivElement, SoundtrackPlayerProps
   }
 
   if (!audioUrl) {
-    return <div ref={ref} />;
+    return null;
   }
 
   return (
-    <div ref={ref} className="bg-card border border-border rounded-lg p-6">
+    <div className="bg-card border border-border rounded-lg p-6">
       <audio ref={audioRef} src={audioUrl} preload="metadata" />
       
       <div className="flex items-center gap-4">
@@ -236,6 +236,4 @@ export const SoundtrackPlayer = forwardRef<HTMLDivElement, SoundtrackPlayerProps
       </div>
     </div>
   );
-});
-
-SoundtrackPlayer.displayName = 'SoundtrackPlayer';
+};

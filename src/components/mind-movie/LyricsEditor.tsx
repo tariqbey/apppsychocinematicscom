@@ -1,4 +1,4 @@
-import React, { forwardRef } from 'react';
+import React from 'react';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { RefreshCw, Save, FileText } from 'lucide-react';
@@ -12,14 +12,14 @@ interface LyricsEditorProps {
   isSaving?: boolean;
 }
 
-export const LyricsEditor = forwardRef<HTMLDivElement, LyricsEditorProps>(({
+export const LyricsEditor: React.FC<LyricsEditorProps> = ({
   lyrics,
   onChange,
   onRegenerate,
   onSave,
   isGenerating,
   isSaving = false,
-}, ref) => {
+}) => {
   // Count words and characters
   const wordCount = lyrics.trim().split(/\s+/).filter(Boolean).length;
   const charCount = lyrics.length;
@@ -28,7 +28,7 @@ export const LyricsEditor = forwardRef<HTMLDivElement, LyricsEditorProps>(({
   const sections = lyrics.split(/\[([^\]]+)\]/g).filter(Boolean);
 
   return (
-    <div ref={ref} className="space-y-4">
+    <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <FileText className="h-4 w-4" />
@@ -81,6 +81,4 @@ export const LyricsEditor = forwardRef<HTMLDivElement, LyricsEditorProps>(({
       </div>
     </div>
   );
-});
-
-LyricsEditor.displayName = 'LyricsEditor';
+};
