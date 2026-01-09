@@ -1,5 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
+import { checkRateLimit, rateLimitResponse } from "../_shared/rate-limiter.ts";
+import { safeErrorResponse } from "../_shared/error-handler.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -29,15 +31,31 @@ serve(async (req) => {
     );
 
     const authHeader = req.headers.get("Authorization");
-    if (!authHeader) throw new Error("No authorization header provided");
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: "Authentication required", code: "E1001" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     const token = authHeader.replace("Bearer ", "");
     const { data: userData, error: userError } = await supabaseClient.auth.getUser(token);
-    if (userError) throw new Error(`Authentication error: ${userError.message}`);
+    if (userError || !userData.user?.id) {
+      return new Response(JSON.stringify({ error: "Authentication failed", code: "E1001" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
     
     const user = userData.user;
-    if (!user?.id) throw new Error("User not authenticated");
     logStep("User authenticated", { userId: user.id });
+
+    // Rate limiting: 60 requests per minute for credit checks
+    const rateLimit = checkRateLimit(user.id, { maxRequests: 60, windowMs: 60000 });
+    if (!rateLimit.allowed) {
+      logStep("Rate limit exceeded", { userId: user.id });
+      return rateLimitResponse(corsHeaders, rateLimit.resetIn);
+    }
 
     // Check if user is admin (unlimited usage)
     const { data: roleData } = await supabaseClient
@@ -89,7 +107,10 @@ serve(async (req) => {
 
       if (insertError) {
         logStep("Error creating credits", { error: insertError.message });
-        throw new Error(`Failed to create credits: ${insertError.message}`);
+        return new Response(JSON.stringify({ error: "Unable to initialize credits", code: "E1003" }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
       }
       creditsData = newCredits;
     }
@@ -126,11 +147,6 @@ serve(async (req) => {
       status: 200,
     });
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    logStep("ERROR", { message: errorMessage });
-    return new Response(JSON.stringify({ error: errorMessage }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-      status: 500,
-    });
+    return safeErrorResponse(error, corsHeaders, "CHECK-CREDITS");
   }
 });

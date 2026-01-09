@@ -1,5 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.89.0";
+import { checkRateLimit, rateLimitResponse } from "../_shared/rate-limiter.ts";
+import { safeErrorResponse } from "../_shared/error-handler.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -61,7 +63,44 @@ serve(async (req) => {
   try {
     const ATLASCLOUD_API_KEY = Deno.env.get("ATLASCLOUD_API_KEY");
     if (!ATLASCLOUD_API_KEY) {
-      throw new Error("ATLASCLOUD_API_KEY is not configured");
+      console.error("ATLASCLOUD_API_KEY not configured");
+      return new Response(JSON.stringify({ success: false, error: "Video service unavailable", code: "E1002" }), {
+        status: 503,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Authenticate user
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) {
+      return new Response(JSON.stringify({ success: false, error: "Authentication required", code: "E1001" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
+    );
+    
+    const token = authHeader.replace("Bearer ", "");
+    const { data: userData, error: userError } = await supabase.auth.getUser(token);
+    
+    if (userError || !userData.user?.id) {
+      return new Response(JSON.stringify({ success: false, error: "Authentication failed", code: "E1001" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const userId = userData.user.id;
+
+    // Rate limiting: 5 video generations per minute (expensive operation)
+    const rateLimit = checkRateLimit(userId, { maxRequests: 5, windowMs: 60000 });
+    if (!rateLimit.allowed) {
+      console.log("Rate limit exceeded for video generation", { userId: userId.substring(0, 8) });
+      return rateLimitResponse(corsHeaders, rateLimit.resetIn);
     }
 
     const {
@@ -72,22 +111,27 @@ serve(async (req) => {
       aspect_ratio,
       image,
       cameo_id,
-      user_id,
     } = await req.json();
 
     if (!prompt) {
-      throw new Error("Prompt is required");
+      return new Response(JSON.stringify({ success: false, error: "Prompt is required", code: "E1004" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     const modelConfig = MODEL_CONFIGS[model];
     if (!modelConfig) {
-      throw new Error(`Unsupported model: ${model}. Available: ${Object.keys(MODEL_CONFIGS).join(", ")}`);
+      return new Response(JSON.stringify({ success: false, error: "Invalid video model selected", code: "E1004" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     // Map to Atlas Cloud API model name if different
     const apiModelName = MODEL_NAME_MAP[model] || model;
     
-    console.log(`Starting video generation with model ${model} (API: ${apiModelName}):`, prompt);
+    console.log(`Starting video generation with model ${model}:`, prompt.substring(0, 100));
 
     // Build request body
     const generateBody: any = {
@@ -153,36 +197,35 @@ serve(async (req) => {
 
     if (!generateResponse.ok) {
       const errorText = await generateResponse.text();
-      console.error("Atlas Cloud generate error:", errorText);
-      throw new Error(`Failed to start generation: ${errorText}`);
+      console.error("Atlas Cloud generate error:", errorText.substring(0, 200));
+      return new Response(JSON.stringify({ success: false, error: "Video generation service unavailable", code: "E1007" }), {
+        status: 503,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     const generateResult = await generateResponse.json();
     const predictionId = generateResult.data?.id;
 
     if (!predictionId) {
-      throw new Error("No prediction ID returned from Atlas Cloud");
+      return new Response(JSON.stringify({ success: false, error: "Failed to start video generation", code: "E1007" }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     console.log("Generation started with prediction ID:", predictionId);
 
-    // Update database with prediction ID if user_id provided
-    if (user_id) {
-      const supabase = createClient(
-        Deno.env.get("SUPABASE_URL") ?? "",
-        Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
-      );
-
-      await supabase.from("generated_media").insert({
-        user_id,
-        media_type: "video",
-        model_used: model,
-        prompt,
-        status: "processing",
-        prediction_id: predictionId,
-        metadata: { duration: generateBody.duration, resolution: generateBody.resolution, aspect_ratio: generateBody.aspect_ratio },
-      });
-    }
+    // Update database with prediction ID
+    await supabase.from("generated_media").insert({
+      user_id: userId,
+      media_type: "video",
+      model_used: model,
+      prompt,
+      status: "processing",
+      prediction_id: predictionId,
+      metadata: { duration: generateBody.duration, resolution: generateBody.resolution, aspect_ratio: generateBody.aspect_ratio },
+    });
 
     // Step 2: Poll for result (video takes longer)
     const pollUrl = `https://api.atlascloud.ai/api/v1/model/prediction/${predictionId}`;
@@ -198,7 +241,7 @@ serve(async (req) => {
 
       if (!pollResponse.ok) {
         const errorText = await pollResponse.text();
-        console.error("Poll error:", errorText);
+        console.error("Poll error:", errorText.substring(0, 100));
         attempts++;
         continue;
       }
@@ -210,20 +253,13 @@ serve(async (req) => {
 
       if (status === "completed") {
         const videoUrl = pollResult.data?.outputs?.[0];
-        console.log("Video generated successfully:", videoUrl);
+        console.log("Video generated successfully");
 
         // Update database with result
-        if (user_id) {
-          const supabase = createClient(
-            Deno.env.get("SUPABASE_URL") ?? "",
-            Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
-          );
-
-          await supabase
-            .from("generated_media")
-            .update({ status: "completed", media_url: videoUrl })
-            .eq("prediction_id", predictionId);
-        }
+        await supabase
+          .from("generated_media")
+          .update({ status: "completed", media_url: videoUrl })
+          .eq("prediction_id", predictionId);
 
         return new Response(
           JSON.stringify({ success: true, videoUrl, predictionId }),
@@ -231,31 +267,27 @@ serve(async (req) => {
         );
       } else if (status === "failed") {
         const errorMessage = pollResult.data?.error || "Generation failed";
+        console.error("Video generation failed:", errorMessage);
 
-        if (user_id) {
-          const supabase = createClient(
-            Deno.env.get("SUPABASE_URL") ?? "",
-            Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
-          );
+        await supabase
+          .from("generated_media")
+          .update({ status: "failed", error_message: errorMessage })
+          .eq("prediction_id", predictionId);
 
-          await supabase
-            .from("generated_media")
-            .update({ status: "failed", error_message: errorMessage })
-            .eq("prediction_id", predictionId);
-        }
-
-        throw new Error(errorMessage);
+        return new Response(JSON.stringify({ success: false, error: "Video generation failed. Please try again.", code: "E1007" }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
       }
 
       attempts++;
     }
 
-    throw new Error("Generation timed out");
+    return new Response(JSON.stringify({ success: false, error: "Video generation timed out. Please try again.", code: "E1007" }), {
+      status: 504,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   } catch (error) {
-    console.error("atlas-generate-video error:", error);
-    return new Response(
-      JSON.stringify({ success: false, error: error instanceof Error ? error.message : "Unknown error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return safeErrorResponse(error, corsHeaders, "ATLAS-GENERATE-VIDEO");
   }
 });

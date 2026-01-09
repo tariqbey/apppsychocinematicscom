@@ -1,6 +1,8 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@18.5.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
+import { checkRateLimit, rateLimitResponse } from "../_shared/rate-limiter.ts";
+import { safeErrorResponse } from "../_shared/error-handler.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -29,38 +31,65 @@ serve(async (req) => {
     logStep("Function started");
 
     const { sessionId } = await req.json();
-    logStep("Session ID received", { sessionId });
+    logStep("Session ID received", { sessionId: sessionId?.substring(0, 20) + "..." });
 
     if (!sessionId) {
-      throw new Error("Session ID is required");
+      return new Response(JSON.stringify({ error: "Session information required", code: "E1004" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
-    if (!stripeKey) throw new Error("STRIPE_SECRET_KEY is not set");
+    if (!stripeKey) {
+      logStep("Configuration error - missing Stripe key");
+      return new Response(JSON.stringify({ error: "Payment service unavailable", code: "E1002" }), {
+        status: 503,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
     
-    // Retrieve the session
+    // Retrieve and verify the session from Stripe (server-side verification)
     const session = await stripe.checkout.sessions.retrieve(sessionId);
     logStep("Session retrieved", { 
       status: session.payment_status,
-      metadata: session.metadata 
+      hasMetadata: !!session.metadata 
     });
 
     if (session.payment_status !== "paid") {
-      throw new Error("Payment not completed");
+      return new Response(JSON.stringify({ error: "Payment not completed", code: "E1006" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     const userId = session.metadata?.user_id;
     const packId = session.metadata?.pack_id;
     
     if (!userId || !packId) {
-      throw new Error("Missing user_id or pack_id in session metadata");
+      logStep("Invalid session metadata");
+      return new Response(JSON.stringify({ error: "Invalid payment session", code: "E1004" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Rate limit per user: 10 confirmations per minute (prevent replay attacks)
+    const rateLimit = checkRateLimit(`confirm_${userId}`, { maxRequests: 10, windowMs: 60000 });
+    if (!rateLimit.allowed) {
+      logStep("Rate limit exceeded for confirmations", { userId });
+      return rateLimitResponse(corsHeaders, rateLimit.resetIn);
     }
 
     const pack = CREDIT_PACKS[packId];
     if (!pack) {
-      throw new Error(`Unknown pack: ${packId}`);
+      logStep("Unknown pack", { packId });
+      return new Response(JSON.stringify({ error: "Invalid credit pack", code: "E1004" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     const supabaseClient = createClient(
@@ -69,7 +98,7 @@ serve(async (req) => {
       { auth: { persistSession: false } }
     );
 
-    // Check if this session was already processed
+    // Check if this session was already processed (idempotency check)
     const { data: existingTransaction } = await supabaseClient
       .from("credit_transactions")
       .select("id")
@@ -77,7 +106,7 @@ serve(async (req) => {
       .single();
 
     if (existingTransaction) {
-      logStep("Session already processed", { sessionId });
+      logStep("Session already processed", { sessionId: sessionId?.substring(0, 20) });
       return new Response(JSON.stringify({
         success: true,
         alreadyProcessed: true,
@@ -107,7 +136,13 @@ serve(async (req) => {
           monthly_allowance_used: 0
         });
 
-      if (insertError) throw new Error(`Failed to create credits: ${insertError.message}`);
+      if (insertError) {
+        logStep("Error creating credits record", { error: insertError.message });
+        return new Response(JSON.stringify({ error: "Unable to process credits", code: "E1003" }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
     } else {
       // Add credits to purchased_credits
       const currentPurchased = Math.round(parseFloat(creditsData.purchased_credits || 0));
@@ -120,7 +155,13 @@ serve(async (req) => {
         })
         .eq("user_id", userId);
 
-      if (updateError) throw new Error(`Failed to update credits: ${updateError.message}`);
+      if (updateError) {
+        logStep("Error updating credits", { error: updateError.message });
+        return new Response(JSON.stringify({ error: "Unable to update credits", code: "E1003" }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
     }
 
     // Log the transaction
@@ -131,13 +172,12 @@ serve(async (req) => {
         amount: pack.credits,
         api_cost_usd: 0,
         transaction_type: "purchase",
-        description: `Purchased ${pack.credits} credits (${packId})`,
+        description: `Purchased ${pack.credits} credits`,
         stripe_session_id: sessionId
       });
 
     logStep("Purchase confirmed", { 
-      userId, 
-      packId, 
+      userId: userId.substring(0, 8) + "...", 
       credits: pack.credits 
     });
 
@@ -150,11 +190,6 @@ serve(async (req) => {
       status: 200,
     });
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    logStep("ERROR", { message: errorMessage });
-    return new Response(JSON.stringify({ error: errorMessage }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-      status: 500,
-    });
+    return safeErrorResponse(error, corsHeaders, "CONFIRM-CREDIT-PURCHASE");
   }
 });
