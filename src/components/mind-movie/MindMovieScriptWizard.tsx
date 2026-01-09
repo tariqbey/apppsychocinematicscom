@@ -457,39 +457,106 @@ export function MindMovieScriptWizard({
                 <div>
                   <h2 className="text-2xl font-bold mb-2">Create Your Soundtrack</h2>
                   <p className="text-muted-foreground">
-                    Generate personalized rap lyrics from your Chief Aim, then create your Mind Movie anthem.
+                    Generate personalized lyrics from your Chief Aim, then create your Mind Movie anthem.
                   </p>
                 </div>
 
-                {/* Music Style Selection */}
-                <div className="space-y-3">
+                {/* Music Style Selection with Categories */}
+                <div className="space-y-4">
                   <Label className="text-base font-semibold">Choose Your Music Style</Label>
+                  
                   <RadioGroup
                     value={musicStyle || ""}
                     onValueChange={(val) => setMusicStyle(val as MusicStyle)}
-                    className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3"
+                    className="space-y-4"
                   >
-                    {MUSIC_STYLES.map((style) => (
-                      <Label
-                        key={style.value}
-                        htmlFor={`style-${style.value}`}
-                        className={`flex flex-col p-4 rounded-lg border-2 cursor-pointer transition-all ${
-                          musicStyle === style.value
-                            ? "border-primary bg-primary/5"
-                            : "border-border hover:border-primary/50"
-                        }`}
-                      >
-                        <RadioGroupItem
-                          value={style.value}
-                          id={`style-${style.value}`}
-                          className="sr-only"
-                        />
-                        <span className="font-medium">{style.label}</span>
-                        <span className="text-xs text-muted-foreground mt-1">
-                          {style.description}
-                        </span>
-                      </Label>
-                    ))}
+                    {/* Hip-Hop/Rap */}
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium text-muted-foreground">Hip-Hop & Rap</p>
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+                        {MUSIC_STYLES.filter(s => s.category === 'hip-hop').map((style) => (
+                          <Label
+                            key={style.value}
+                            htmlFor={`style-${style.value}`}
+                            className={`flex flex-col p-3 rounded-lg border-2 cursor-pointer transition-all ${
+                              musicStyle === style.value
+                                ? "border-primary bg-primary/5"
+                                : "border-border hover:border-primary/50"
+                            }`}
+                          >
+                            <RadioGroupItem value={style.value} id={`style-${style.value}`} className="sr-only" />
+                            <span className="font-medium text-sm">{style.label}</span>
+                            <span className="text-xs text-muted-foreground">{style.description}</span>
+                          </Label>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Pop & Electronic */}
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium text-muted-foreground">Pop & Electronic</p>
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+                        {MUSIC_STYLES.filter(s => s.category === 'pop-electronic').map((style) => (
+                          <Label
+                            key={style.value}
+                            htmlFor={`style-${style.value}`}
+                            className={`flex flex-col p-3 rounded-lg border-2 cursor-pointer transition-all ${
+                              musicStyle === style.value
+                                ? "border-primary bg-primary/5"
+                                : "border-border hover:border-primary/50"
+                            }`}
+                          >
+                            <RadioGroupItem value={style.value} id={`style-${style.value}`} className="sr-only" />
+                            <span className="font-medium text-sm">{style.label}</span>
+                            <span className="text-xs text-muted-foreground">{style.description}</span>
+                          </Label>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Orchestral & Cinematic */}
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium text-muted-foreground">Orchestral & Cinematic</p>
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+                        {MUSIC_STYLES.filter(s => s.category === 'orchestral').map((style) => (
+                          <Label
+                            key={style.value}
+                            htmlFor={`style-${style.value}`}
+                            className={`flex flex-col p-3 rounded-lg border-2 cursor-pointer transition-all ${
+                              musicStyle === style.value
+                                ? "border-primary bg-primary/5"
+                                : "border-border hover:border-primary/50"
+                            }`}
+                          >
+                            <RadioGroupItem value={style.value} id={`style-${style.value}`} className="sr-only" />
+                            <span className="font-medium text-sm">{style.label}</span>
+                            <span className="text-xs text-muted-foreground">{style.description}</span>
+                          </Label>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Other Genres */}
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium text-muted-foreground">Other Genres</p>
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+                        {MUSIC_STYLES.filter(s => s.category === 'other').map((style) => (
+                          <Label
+                            key={style.value}
+                            htmlFor={`style-${style.value}`}
+                            className={`flex flex-col p-3 rounded-lg border-2 cursor-pointer transition-all ${
+                              musicStyle === style.value
+                                ? "border-primary bg-primary/5"
+                                : "border-border hover:border-primary/50"
+                            }`}
+                          >
+                            <RadioGroupItem value={style.value} id={`style-${style.value}`} className="sr-only" />
+                            <span className="font-medium text-sm">{style.label}</span>
+                            <span className="text-xs text-muted-foreground">{style.description}</span>
+                          </Label>
+                        ))}
+                      </div>
+                    </div>
                   </RadioGroup>
                 </div>
 
