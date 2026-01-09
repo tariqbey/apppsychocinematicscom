@@ -7,7 +7,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Progress } from "@/components/ui/progress";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -306,9 +305,20 @@ export function MindMovieScriptWizard({
 
   const totalSteps = 4;
 
+  // Lock body scroll when wizard is open
+  useEffect(() => {
+    if (isOpen) {
+      const originalOverflow = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+      return () => {
+        document.body.style.overflow = originalOverflow;
+      };
+    }
+  }, [isOpen]);
+
   return (
-    <div className="fixed inset-0 z-50 bg-background/95 backdrop-blur-sm">
-      <div className="h-full flex flex-col">
+    <div className="fixed inset-0 z-50 w-screen h-[100dvh] bg-background/95 backdrop-blur-sm">
+      <div className="h-[100dvh] flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-border/50">
           <div className="flex items-center gap-3">
@@ -361,8 +371,8 @@ export function MindMovieScriptWizard({
         </div>
 
         {/* Content */}
-        <ScrollArea className="flex-1 min-h-0">
-          <div className="p-6 max-w-4xl mx-auto">
+        <div className="flex-1 min-h-0 overflow-y-auto">
+          <div className="p-6 max-w-4xl mx-auto pb-[env(safe-area-inset-bottom)]">
             {/* Step 1: Foundation */}
             {step === 1 && (
               <div className="space-y-6">
@@ -946,7 +956,7 @@ export function MindMovieScriptWizard({
               </div>
             )}
           </div>
-        </ScrollArea>
+        </div>
 
         {/* Footer */}
         <div className="border-t border-border/50 p-4">
