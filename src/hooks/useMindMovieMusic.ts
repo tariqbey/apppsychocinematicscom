@@ -4,43 +4,127 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 
 export type MusicStyle = 
+  // Hip-Hop/Rap
   | 'Hip-Hop Motivational'
   | 'Cinematic Hip-Hop'
   | 'Conscious Rap'
   | 'Lo-Fi Hip-Hop'
-  | 'Trap Inspirational';
+  | 'Trap Inspirational'
+  // Pop & Electronic
+  | 'Uplifting Pop'
+  | 'Cinematic Electronic'
+  | 'Ambient Chill'
+  | 'Synthwave Retro'
+  // Orchestral & Cinematic
+  | 'Epic Orchestral'
+  | 'Inspirational Piano'
+  | 'Cinematic Drama'
+  // Other Genres
+  | 'Acoustic Folk'
+  | 'R&B Soul'
+  | 'Indie Rock Anthem';
 
 export interface MusicStyleOption {
   value: MusicStyle;
   label: string;
   description: string;
+  category: 'hip-hop' | 'pop-electronic' | 'orchestral' | 'other';
 }
 
 export const MUSIC_STYLES: MusicStyleOption[] = [
+  // Hip-Hop/Rap
   {
     value: 'Hip-Hop Motivational',
     label: 'Hip-Hop Motivational',
     description: 'Upbeat, energetic, and empowering',
+    category: 'hip-hop',
   },
   {
     value: 'Cinematic Hip-Hop',
     label: 'Cinematic Hip-Hop',
     description: 'Epic, orchestral elements, dramatic',
+    category: 'hip-hop',
   },
   {
     value: 'Conscious Rap',
     label: 'Conscious Rap',
     description: 'Thoughtful, soulful, message-focused',
+    category: 'hip-hop',
   },
   {
     value: 'Lo-Fi Hip-Hop',
     label: 'Lo-Fi Hip-Hop',
     description: 'Chill, reflective, mellow vibes',
+    category: 'hip-hop',
   },
   {
     value: 'Trap Inspirational',
     label: 'Trap Inspirational',
     description: 'Modern, hard-hitting, powerful',
+    category: 'hip-hop',
+  },
+  // Pop & Electronic
+  {
+    value: 'Uplifting Pop',
+    label: 'Uplifting Pop',
+    description: 'Catchy, feel-good, radio-friendly',
+    category: 'pop-electronic',
+  },
+  {
+    value: 'Cinematic Electronic',
+    label: 'Cinematic Electronic',
+    description: 'Modern, atmospheric, building energy',
+    category: 'pop-electronic',
+  },
+  {
+    value: 'Ambient Chill',
+    label: 'Ambient Chill',
+    description: 'Peaceful, meditative, flowing',
+    category: 'pop-electronic',
+  },
+  {
+    value: 'Synthwave Retro',
+    label: 'Synthwave Retro',
+    description: '80s inspired, nostalgic, driving',
+    category: 'pop-electronic',
+  },
+  // Orchestral & Cinematic
+  {
+    value: 'Epic Orchestral',
+    label: 'Epic Orchestral',
+    description: 'Grand, heroic, triumphant',
+    category: 'orchestral',
+  },
+  {
+    value: 'Inspirational Piano',
+    label: 'Inspirational Piano',
+    description: 'Emotional, elegant, uplifting',
+    category: 'orchestral',
+  },
+  {
+    value: 'Cinematic Drama',
+    label: 'Cinematic Drama',
+    description: 'Intense, building, movie score',
+    category: 'orchestral',
+  },
+  // Other Genres
+  {
+    value: 'Acoustic Folk',
+    label: 'Acoustic Folk',
+    description: 'Warm, organic, storytelling',
+    category: 'other',
+  },
+  {
+    value: 'R&B Soul',
+    label: 'R&B Soul',
+    description: 'Smooth, soulful, emotional',
+    category: 'other',
+  },
+  {
+    value: 'Indie Rock Anthem',
+    label: 'Indie Rock Anthem',
+    description: 'Energetic, guitar-driven, inspiring',
+    category: 'other',
   },
 ];
 
