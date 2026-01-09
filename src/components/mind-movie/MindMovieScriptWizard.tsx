@@ -64,12 +64,14 @@ export function MindMovieScriptWizard({
     musicStyle,
     vocalGender,
     generationStatus,
+    isSavedToLibrary,
     setMusicStyle,
     setVocalGender,
     setGeneratedLyrics,
     generateLyrics,
     generateMusic,
     saveLyrics,
+    saveToLibrary,
     loadExistingMusic,
   } = useMindMovieMusic();
 
@@ -480,6 +482,8 @@ export function MindMovieScriptWizard({
                     title={generatedTitle || "Mind Movie Anthem"}
                     isGenerating={isGeneratingMusic}
                     generationStatus={generationStatus}
+                    onSaveToLibrary={() => saveToLibrary(generatedTitle || "Mind Movie Anthem", generatedLyrics || "")}
+                    isSavedToLibrary={isSavedToLibrary}
                   />
                 )}
 

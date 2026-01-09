@@ -1,13 +1,15 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
-import { Play, Pause, Volume2, VolumeX, Download, Music } from 'lucide-react';
+import { Play, Pause, Volume2, VolumeX, Download, Music, Library, Check } from 'lucide-react';
 
 interface SoundtrackPlayerProps {
   audioUrl: string;
   title?: string;
   isGenerating?: boolean;
   generationStatus?: string | null;
+  onSaveToLibrary?: () => void;
+  isSavedToLibrary?: boolean;
 }
 
 export const SoundtrackPlayer: React.FC<SoundtrackPlayerProps> = ({
@@ -15,6 +17,8 @@ export const SoundtrackPlayer: React.FC<SoundtrackPlayerProps> = ({
   title = 'Mind Movie Soundtrack',
   isGenerating = false,
   generationStatus,
+  onSaveToLibrary,
+  isSavedToLibrary = false,
 }) => {
   const audioRef = useRef<HTMLAudioElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -167,19 +171,43 @@ export const SoundtrackPlayer: React.FC<SoundtrackPlayerProps> = ({
 
           {/* Controls */}
           <div className="flex items-center justify-between">
-            <Button
-              variant="default"
-              size="sm"
-              onClick={togglePlay}
-              className="gap-2"
-            >
-              {isPlaying ? (
-                <Pause className="h-4 w-4" />
-              ) : (
-                <Play className="h-4 w-4" />
+            <div className="flex items-center gap-2">
+              <Button
+                variant="default"
+                size="sm"
+                onClick={togglePlay}
+                className="gap-2"
+              >
+                {isPlaying ? (
+                  <Pause className="h-4 w-4" />
+                ) : (
+                  <Play className="h-4 w-4" />
+                )}
+                {isPlaying ? 'Pause' : 'Play'}
+              </Button>
+
+              {onSaveToLibrary && (
+                <Button
+                  variant={isSavedToLibrary ? "secondary" : "outline"}
+                  size="sm"
+                  onClick={onSaveToLibrary}
+                  disabled={isSavedToLibrary}
+                  className="gap-2"
+                >
+                  {isSavedToLibrary ? (
+                    <>
+                      <Check className="h-4 w-4" />
+                      Saved
+                    </>
+                  ) : (
+                    <>
+                      <Library className="h-4 w-4" />
+                      Save to Library
+                    </>
+                  )}
+                </Button>
               )}
-              {isPlaying ? 'Pause' : 'Play'}
-            </Button>
+            </div>
 
             <div className="flex items-center gap-2">
               <Button
