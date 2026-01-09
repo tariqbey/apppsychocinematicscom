@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { X, ChevronLeft, ChevronRight, Sparkles, Save, Clapperboard, Palette, Layout, Wand2, Music, Check, RefreshCw, Plus, User, ChevronDown, Trash2 } from "lucide-react";
+import { X, ChevronLeft, ChevronRight, Sparkles, Save, Clapperboard, Palette, Layout, Wand2, Music, Check, RefreshCw, Plus, User, ChevronDown, Trash2, HelpCircle, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
@@ -16,6 +16,12 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { StoryboardGrid } from "./StoryboardGrid";
 import { LyricsEditor } from "./LyricsEditor";
 import { SoundtrackPlayer } from "./SoundtrackPlayer";
@@ -690,6 +696,38 @@ export function MindMovieScriptWizard({
                   <div className="flex items-center gap-2">
                     <User className="w-4 h-4 text-muted-foreground" />
                     <Label htmlFor="persona-id" className="text-base font-semibold">Custom Voice Persona (Optional)</Label>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-5 w-5 text-muted-foreground hover:text-foreground">
+                            <HelpCircle className="w-4 h-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent side="top" className="max-w-xs p-3 bg-popover border border-border z-50">
+                          <div className="space-y-2 text-sm">
+                            <p className="font-medium">What is a Suno Persona?</p>
+                            <p className="text-muted-foreground">
+                              A Persona ID lets you use a custom voice for your soundtrack. You can create one by:
+                            </p>
+                            <ol className="list-decimal list-inside text-muted-foreground space-y-1 text-xs">
+                              <li>Go to Suno.com and sign in</li>
+                              <li>Navigate to "Personas" in your library</li>
+                              <li>Create a new persona or select an existing one</li>
+                              <li>Copy the persona ID from the URL or settings</li>
+                            </ol>
+                            <a 
+                              href="https://suno.com/library" 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 text-primary hover:underline text-xs mt-2"
+                            >
+                              Open Suno Library
+                              <ExternalLink className="w-3 h-3" />
+                            </a>
+                          </div>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                   </div>
                   <p className="text-sm text-muted-foreground">
                     Enter a Suno persona ID to use your custom voice, or select from your saved personas. Leave empty to use the default voice for your selected genre.
