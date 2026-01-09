@@ -124,7 +124,7 @@ export const SoundtrackPlayer = forwardRef<HTMLDivElement, SoundtrackPlayerProps
   }
 
   if (!audioUrl) {
-    return null;
+    return <div ref={ref} />;
   }
 
   return (
