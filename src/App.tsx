@@ -10,6 +10,7 @@ import SubscriptionSuccess from "./pages/SubscriptionSuccess";
 import CreditsSuccess from "./pages/CreditsSuccess";
 import AdminDashboard from "./pages/AdminDashboard";
 import Settings from "./pages/Settings";
+import Tutorial from "./pages/Tutorial";
 import NotFound from "./pages/NotFound";
 import { RequireAdmin } from "./components/auth/RequireAdmin";
 
@@ -29,6 +30,7 @@ const App = () => (
           <Route path="/credits-success" element={<CreditsSuccess />} />
           <Route path="/admin" element={<RequireAdmin><AdminDashboard /></RequireAdmin>} />
           <Route path="/settings" element={<Settings />} />
+          <Route path="/tutorial" element={<Tutorial />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
