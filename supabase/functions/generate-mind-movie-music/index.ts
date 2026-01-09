@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { generateLyricsSystemPrompt } from "../_shared/rap-lyrics-kb.ts";
+import { generateLyricsSystemPrompt } from "../_shared/lyrics-kb.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -99,7 +99,7 @@ async function handleGenerateLyrics(body: GenerateLyricsRequest): Promise<Respon
       model: 'google/gemini-2.5-flash',
       messages: [
         { role: 'system', content: systemPrompt },
-        { role: 'user', content: 'Write the complete motivational rap lyrics for my Mind Movie visualization.' }
+        { role: 'user', content: `Write the complete ${musicStyle} lyrics for my Mind Movie visualization.` }
       ],
       temperature: 0.8,
       max_tokens: 2000,
@@ -139,14 +139,29 @@ async function handleGenerateMusic(body: GenerateMusicRequest, supabase: any): P
 
   // Map music style to Suno style tags
   const styleMap: Record<string, string> = {
+    // Hip-Hop & Rap
     'Hip-Hop Motivational': 'Hip-Hop, Motivational, Upbeat, Inspiring, Energetic',
     'Cinematic Hip-Hop': 'Hip-Hop, Cinematic, Orchestral, Epic, Dramatic',
     'Conscious Rap': 'Hip-Hop, Conscious, Thoughtful, Soulful, Deep',
     'Lo-Fi Hip-Hop': 'Lo-Fi, Hip-Hop, Chill, Reflective, Mellow',
     'Trap Inspirational': 'Trap, Hip-Hop, Modern, Hard-hitting, Motivational',
+    // Pop & Electronic
+    'Uplifting Pop': 'Pop, Uplifting, Catchy, Energetic, Feel-good',
+    'Indie Pop': 'Indie Pop, Dreamy, Atmospheric, Emotional, Melodic',
+    'EDM Anthem': 'EDM, Electronic, Anthemic, High-energy, Euphoric',
+    'Synthwave': 'Synthwave, Retro, Electronic, Nostalgic, Cinematic',
+    'Ambient Electronic': 'Ambient, Electronic, Atmospheric, Ethereal, Meditative',
+    // Orchestral & Cinematic
+    'Epic Orchestral': 'Orchestral, Epic, Cinematic, Powerful, Grand',
+    'Cinematic Inspirational': 'Cinematic, Inspirational, Emotional, Uplifting, Dramatic',
+    // Other Genres
+    'R&B Soul': 'R&B, Soul, Smooth, Emotional, Groovy',
+    'Gospel Inspirational': 'Gospel, Inspirational, Uplifting, Spiritual, Powerful',
+    'Acoustic Folk': 'Acoustic, Folk, Heartfelt, Organic, Storytelling',
+    'Country Inspirational': 'Country, Inspirational, Heartfelt, Americana, Uplifting',
   };
 
-  const sunoStyle = styleMap[musicStyle] || 'Hip-Hop, Motivational';
+  const sunoStyle = styleMap[musicStyle] || 'Pop, Inspirational, Uplifting';
 
   // Call Kie.ai Suno API
   const sunoResponse = await fetch('https://api.kie.ai/api/v1/generate', {
