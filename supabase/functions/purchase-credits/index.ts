@@ -1,6 +1,8 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@18.5.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
+import { checkRateLimit, rateLimitResponse } from "../_shared/rate-limiter.ts";
+import { safeErrorResponse } from "../_shared/error-handler.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -49,7 +51,10 @@ serve(async (req) => {
 
     const pack = CREDIT_PACKS[packId as keyof typeof CREDIT_PACKS];
     if (!pack) {
-      throw new Error(`Invalid pack ID: ${packId}`);
+      return new Response(JSON.stringify({ error: "Invalid credit pack selected", code: "E1004" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     const supabaseClient = createClient(
@@ -58,18 +63,40 @@ serve(async (req) => {
     );
 
     const authHeader = req.headers.get("Authorization");
-    if (!authHeader) throw new Error("No authorization header provided");
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: "Authentication required", code: "E1001" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     const token = authHeader.replace("Bearer ", "");
     const { data: userData, error: userError } = await supabaseClient.auth.getUser(token);
-    if (userError) throw new Error(`Authentication error: ${userError.message}`);
+    if (userError || !userData.user?.email) {
+      return new Response(JSON.stringify({ error: "Authentication failed", code: "E1001" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
     
     const user = userData.user;
-    if (!user?.email) throw new Error("User not authenticated or email not available");
-    logStep("User authenticated", { userId: user.id, email: user.email });
+    logStep("User authenticated", { userId: user.id.substring(0, 8) + "..." });
+
+    // Rate limiting: 10 purchase attempts per minute
+    const rateLimit = checkRateLimit(user.id, { maxRequests: 10, windowMs: 60000 });
+    if (!rateLimit.allowed) {
+      logStep("Rate limit exceeded", { userId: user.id.substring(0, 8) });
+      return rateLimitResponse(corsHeaders, rateLimit.resetIn);
+    }
 
     const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
-    if (!stripeKey) throw new Error("STRIPE_SECRET_KEY is not set");
+    if (!stripeKey) {
+      logStep("Configuration error - missing Stripe key");
+      return new Response(JSON.stringify({ error: "Payment service unavailable", code: "E1002" }), {
+        status: 503,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
 
@@ -78,7 +105,7 @@ serve(async (req) => {
     let customerId;
     if (customers.data.length > 0) {
       customerId = customers.data[0].id;
-      logStep("Found existing customer", { customerId });
+      logStep("Found existing customer");
     }
 
     // Create checkout session for one-time payment
@@ -101,18 +128,13 @@ serve(async (req) => {
       }
     });
 
-    logStep("Checkout session created", { sessionId: session.id, url: session.url });
+    logStep("Checkout session created");
 
     return new Response(JSON.stringify({ url: session.url }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 200,
     });
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    logStep("ERROR", { message: errorMessage });
-    return new Response(JSON.stringify({ error: errorMessage }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-      status: 500,
-    });
+    return safeErrorResponse(error, corsHeaders, "PURCHASE-CREDITS");
   }
 });

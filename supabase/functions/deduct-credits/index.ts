@@ -1,5 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
+import { checkRateLimit, rateLimitResponse } from "../_shared/rate-limiter.ts";
+import { safeErrorResponse } from "../_shared/error-handler.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -43,7 +45,12 @@ serve(async (req) => {
     const { mediaType, duration, resolution, generationId, apiCost } = await req.json();
     logStep("Request params", { mediaType, duration, resolution, generationId, apiCost });
 
-    if (!mediaType) throw new Error("mediaType is required");
+    if (!mediaType) {
+      return new Response(JSON.stringify({ error: "Media type is required", code: "E1004" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     const supabaseClient = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
@@ -52,15 +59,31 @@ serve(async (req) => {
     );
 
     const authHeader = req.headers.get("Authorization");
-    if (!authHeader) throw new Error("No authorization header provided");
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: "Authentication required", code: "E1001" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     const token = authHeader.replace("Bearer ", "");
     const { data: userData, error: userError } = await supabaseClient.auth.getUser(token);
-    if (userError) throw new Error(`Authentication error: ${userError.message}`);
+    if (userError || !userData.user?.id) {
+      return new Response(JSON.stringify({ error: "Authentication failed", code: "E1001" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
     
     const user = userData.user;
-    if (!user?.id) throw new Error("User not authenticated");
     logStep("User authenticated", { userId: user.id });
+
+    // Rate limiting: 30 requests per minute for deductions (expensive operations)
+    const rateLimit = checkRateLimit(user.id, { maxRequests: 30, windowMs: 60000 });
+    if (!rateLimit.allowed) {
+      logStep("Rate limit exceeded", { userId: user.id });
+      return rateLimitResponse(corsHeaders, rateLimit.resetIn);
+    }
 
     // Check if user is admin (skip deduction)
     const { data: roleData } = await supabaseClient
@@ -120,7 +143,10 @@ serve(async (req) => {
       .single();
 
     if (!creditsData) {
-      throw new Error("No credits record found. Please subscribe first.");
+      return new Response(JSON.stringify({ error: "No credits available. Please subscribe first.", code: "E1009" }), {
+        status: 402,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     // All values in CREDITS
@@ -135,8 +161,8 @@ serve(async (req) => {
       logStep("Insufficient credits", { required: creditsToDeduct, available: totalRemaining });
       return new Response(JSON.stringify({
         success: false,
-        error: "limit_reached",
-        message: "You don't have enough credits. Purchase more to continue generating.",
+        error: "Insufficient credits",
+        code: "E1009",
         creditsRequired: creditsToDeduct,
         totalRemaining,
         remainingMonthlyAllowance,
@@ -176,7 +202,11 @@ serve(async (req) => {
       .eq("user_id", user.id);
 
     if (updateError) {
-      throw new Error(`Failed to update usage: ${updateError.message}`);
+      logStep("Update error", { error: updateError.message });
+      return new Response(JSON.stringify({ error: "Unable to process credit deduction", code: "E1003" }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     // Log the transaction (store both credits and dollar amounts for reference)
@@ -219,11 +249,6 @@ serve(async (req) => {
       status: 200,
     });
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    logStep("ERROR", { message: errorMessage });
-    return new Response(JSON.stringify({ error: errorMessage }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-      status: 500,
-    });
+    return safeErrorResponse(error, corsHeaders, "DEDUCT-CREDITS");
   }
 });

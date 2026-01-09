@@ -1,5 +1,8 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.89.0";
 import { PSYCHO_CINEMATICS_KNOWLEDGE } from "../_shared/psycho-cinematics-kb.ts";
+import { checkRateLimit, rateLimitResponse } from "../_shared/rate-limiter.ts";
+import { safeErrorResponse } from "../_shared/error-handler.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -56,11 +59,48 @@ serve(async (req) => {
   }
 
   try {
+    // Authenticate user
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: "Authentication required", code: "E1001" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const supabaseClient = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
+    );
+    
+    const token = authHeader.replace("Bearer ", "");
+    const { data: userData, error: userError } = await supabaseClient.auth.getUser(token);
+    
+    if (userError || !userData.user?.id) {
+      return new Response(JSON.stringify({ error: "Authentication failed", code: "E1001" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const userId = userData.user.id;
+
+    // Rate limiting: 60 messages per minute for chat
+    const rateLimit = checkRateLimit(userId, { maxRequests: 60, windowMs: 60000 });
+    if (!rateLimit.allowed) {
+      console.log("Rate limit exceeded for Director AI", { userId: userId.substring(0, 8) });
+      return rateLimitResponse(corsHeaders, rateLimit.resetIn);
+    }
+
     const { messages, chiefAim, userContext } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     
     if (!LOVABLE_API_KEY) {
-      throw new Error("LOVABLE_API_KEY is not configured");
+      console.error("LOVABLE_API_KEY not configured");
+      return new Response(JSON.stringify({ error: "AI service unavailable", code: "E1002" }), {
+        status: 503,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     // Build enhanced context with full user status
@@ -126,7 +166,7 @@ ${userContext.filledScorecardToday
 
     const enhancedSystemPrompt = SYSTEM_PROMPT + contextSection;
 
-    console.log("Director AI processing request with full coaching context");
+    console.log("Director AI processing request");
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -146,21 +186,21 @@ ${userContext.filledScorecardToday
 
     if (!response.ok) {
       if (response.status === 429) {
-        return new Response(JSON.stringify({ error: "Rate limit exceeded. Please try again in a moment." }), {
+        return new Response(JSON.stringify({ error: "Rate limit exceeded. Please try again in a moment.", code: "E1005" }), {
           status: 429,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
       if (response.status === 402) {
-        return new Response(JSON.stringify({ error: "AI credits exhausted. Please add credits to continue." }), {
+        return new Response(JSON.stringify({ error: "Insufficient credits. Please add credits to continue.", code: "E1009" }), {
           status: 402,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
       const errorText = await response.text();
-      console.error("AI gateway error:", response.status, errorText);
-      return new Response(JSON.stringify({ error: "AI service temporarily unavailable" }), {
-        status: 500,
+      console.error("AI gateway error:", response.status, errorText.substring(0, 100));
+      return new Response(JSON.stringify({ error: "AI service temporarily unavailable", code: "E1007" }), {
+        status: 503,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -169,10 +209,6 @@ ${userContext.filledScorecardToday
       headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
     });
   } catch (error) {
-    console.error("Director AI error:", error);
-    return new Response(JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return safeErrorResponse(error, corsHeaders, "DIRECTOR-AI");
   }
 });
