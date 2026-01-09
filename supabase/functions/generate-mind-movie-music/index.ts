@@ -35,7 +35,18 @@ interface GenerateMusicRequest {
   title: string;
   vocalGender: 'm' | 'f';
   scriptId: string;
+  personaId?: string;
 }
+
+// Hip-hop persona for all hip-hop style songs
+const HIP_HOP_PERSONA_ID = '5b650802-2e77-4f1c-b6ad-a73401c3456d';
+const HIP_HOP_STYLES = [
+  'Hip-Hop Motivational',
+  'Cinematic Hip-Hop',
+  'Conscious Rap',
+  'Lo-Fi Hip-Hop',
+  'Trap Inspirational'
+];
 
 interface CheckStatusRequest {
   action: 'check-status';
@@ -179,6 +190,9 @@ async function handleGenerateMusic(body: GenerateMusicRequest, supabase: any): P
       title: title.substring(0, 80), // Suno title limit
       vocalGender: vocalGender,
       callBackUrl: 'https://example.com/callback', // Required by Kie.ai but we use polling
+      // Use hip-hop persona for hip-hop styles, or custom personaId if provided
+      ...(body.personaId ? { personaId: body.personaId } : 
+          HIP_HOP_STYLES.includes(musicStyle) ? { personaId: HIP_HOP_PERSONA_ID } : {}),
     }),
   });
 
