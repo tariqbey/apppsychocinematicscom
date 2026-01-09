@@ -12,7 +12,10 @@ const logStep = (step: string, details?: any) => {
   console.log(`[CHECK-SUBSCRIPTION] ${step}${detailsStr}`);
 };
 
-const MONTHLY_CREDITS = 20;
+// Trial credits: 200 (enough for 5 images at 15 credits + 2 videos at ~60 credits each)
+const TRIAL_CREDITS = 200;
+// Full monthly credits for paid subscribers
+const MONTHLY_CREDITS = 1000;
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -98,6 +101,14 @@ serve(async (req) => {
         endDate: subscriptionEnd 
       });
 
+      // Determine if this is a trial or paid subscription
+      const isTrialing = subscription.status === "trialing";
+      const creditsToAllocate = isTrialing ? TRIAL_CREDITS : MONTHLY_CREDITS;
+      const allocationType = isTrialing ? "trial_allocation" : "monthly_allocation";
+      const allocationDescription = isTrialing 
+        ? "Free trial credits (5 images + 2 videos)" 
+        : "Monthly subscription credits";
+
       // Ensure user has production credits allocated
       const { data: creditsData } = await supabaseClient
         .from("production_credits")
@@ -106,12 +117,14 @@ serve(async (req) => {
         .single();
 
       if (!creditsData) {
-        // First subscription - allocate 20 credits
+        // First subscription - allocate credits based on trial vs paid
         await supabaseClient
           .from("production_credits")
           .insert({
             user_id: user.id,
-            monthly_credits: MONTHLY_CREDITS,
+            monthly_credits: 0,
+            monthly_allowance_limit: creditsToAllocate,
+            monthly_allowance_used: 0,
             purchased_credits: 0,
             monthly_credits_reset_at: subscriptionEnd
           });
@@ -120,12 +133,33 @@ serve(async (req) => {
           .from("credit_transactions")
           .insert({
             user_id: user.id,
-            amount: MONTHLY_CREDITS,
-            transaction_type: "monthly_allocation",
-            description: "Initial subscription credits"
+            amount: creditsToAllocate,
+            transaction_type: allocationType,
+            description: allocationDescription
           });
 
-        logStep("Allocated initial monthly credits", { credits: MONTHLY_CREDITS });
+        logStep("Allocated initial credits", { credits: creditsToAllocate, isTrialing });
+      } else if (!isTrialing && creditsData.monthly_allowance_limit === TRIAL_CREDITS) {
+        // User just upgraded from trial to paid - upgrade their allowance
+        await supabaseClient
+          .from("production_credits")
+          .update({
+            monthly_allowance_limit: MONTHLY_CREDITS,
+            monthly_allowance_used: 0,
+            monthly_credits_reset_at: subscriptionEnd
+          })
+          .eq("user_id", user.id);
+
+        await supabaseClient
+          .from("credit_transactions")
+          .insert({
+            user_id: user.id,
+            amount: MONTHLY_CREDITS,
+            transaction_type: "monthly_allocation",
+            description: "Upgraded to full subscription credits"
+          });
+
+        logStep("Upgraded trial to full subscription credits", { credits: MONTHLY_CREDITS });
       }
     } else {
       logStep("No active subscription found");

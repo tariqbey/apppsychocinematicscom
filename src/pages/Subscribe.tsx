@@ -10,17 +10,18 @@ import { AuthModal } from "@/components/auth/AuthModal";
 const features = [
   { icon: Brain, text: "Director AI - Unlimited conversations" },
   { icon: Film, text: "Mind Movie Studio - Full access" },
-  { icon: Zap, text: "20 Monthly Production Credits" },
+  { icon: Zap, text: "1000 Monthly Production Credits ($10 value)" },
   { icon: BarChart3, text: "Daily Scorecard & Progress Tracking" },
   { icon: Crown, text: "Chief Aim Wizard & Identity System" },
   { icon: Users, text: "Director's Corner Community" },
 ];
 
 const creditInfo = [
-  { type: "10-second video", cost: "1 credit" },
-  { type: "15-second video", cost: "1.5 credits" },
-  { type: "2K image", cost: "0.18 credits" },
-  { type: "4K image", cost: "0.24 credits" },
+  { type: "5-second video", cost: "60 credits" },
+  { type: "10-second video", cost: "110 credits" },
+  { type: "2K image", cost: "15 credits" },
+  { type: "4K image", cost: "18 credits" },
+  { type: "Music generation", cost: "25 credits" },
 ];
 
 const Subscribe = () => {
@@ -97,7 +98,7 @@ const Subscribe = () => {
               $29<span className="text-lg font-normal text-muted-foreground">/month</span>
             </CardTitle>
             <CardDescription className="text-base">
-              7-day free trial • Cancel anytime
+              3-day free trial with 200 credits • Cancel anytime
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -128,7 +129,8 @@ const Subscribe = () => {
                 ))}
               </div>
               <p className="text-xs text-muted-foreground mt-3">
-                20 credits = ~20 ten-second videos OR ~100 2K images (or mix & match!)
+                <strong>Trial:</strong> 200 credits = 5 images + 2 videos to test the platform<br/>
+                <strong>Paid:</strong> 1000 credits/month = ~16 videos OR ~66 images (or mix & match!)
               </p>
             </div>
 
@@ -152,7 +154,7 @@ const Subscribe = () => {
               ) : (
                 <>
                   <Zap className="h-5 w-5" />
-                  Start 7-Day Free Trial
+                  Start 3-Day Free Trial
                 </>
               )}
             </Button>
