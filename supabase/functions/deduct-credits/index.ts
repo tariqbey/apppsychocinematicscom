@@ -14,7 +14,6 @@ const logStep = (step: string, details?: any) => {
 // API costs in dollars - these are the actual costs you pay per generation
 const API_COSTS = {
   video: {
-    // Approximate cost per second of video generation
     perSecond: 0.10  // $0.10 per second = $1.00 for 10-second video
   },
   image: {
@@ -26,6 +25,12 @@ const API_COSTS = {
     default: 0.15    // $0.15 per song generation
   }
 };
+
+// Markup added to each generation (in dollars)
+const MARKUP_DOLLARS = 0.10; // $0.10 markup per generation
+
+// Convert dollars to credits (1 credit = $0.01)
+const dollarsToCredits = (dollars: number): number => Math.round(dollars * 100);
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -70,33 +75,42 @@ serve(async (req) => {
       return new Response(JSON.stringify({
         success: true,
         isAdmin: true,
-        costDeducted: 0,
-        totalRemaining: 9999
+        creditsDeducted: 0,
+        totalRemaining: 999999
       }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 200,
       });
     }
 
-    // Calculate API cost to deduct (in dollars)
-    let costToDeduct = 0;
+    // Calculate API cost (in dollars)
+    let baseCostDollars = 0;
     
-    // If apiCost is provided directly, use it; otherwise calculate
     if (apiCost !== undefined && apiCost > 0) {
-      costToDeduct = parseFloat(apiCost);
+      baseCostDollars = parseFloat(apiCost);
     } else if (mediaType === "video") {
       const durationSeconds = duration || 10;
-      costToDeduct = durationSeconds * API_COSTS.video.perSecond;
+      baseCostDollars = durationSeconds * API_COSTS.video.perSecond;
     } else if (mediaType === "image") {
       const res = resolution?.toLowerCase() || "2k";
-      costToDeduct = res.includes("4k") ? API_COSTS.image["4k"] : API_COSTS.image["2k"];
+      baseCostDollars = res.includes("4k") ? API_COSTS.image["4k"] : API_COSTS.image["2k"];
     } else if (mediaType === "music") {
-      costToDeduct = API_COSTS.music.default;
+      baseCostDollars = API_COSTS.music.default;
     }
 
-    // Round to 2 decimal places
-    costToDeduct = Math.round(costToDeduct * 100) / 100;
-    logStep("Cost to deduct", { costToDeduct, mediaType });
+    // Add markup to get total cost in dollars
+    const totalCostDollars = baseCostDollars + MARKUP_DOLLARS;
+    
+    // Convert to credits (1 credit = $0.01)
+    const creditsToDeduct = dollarsToCredits(totalCostDollars);
+    
+    logStep("Cost calculation", { 
+      baseCostDollars, 
+      markup: MARKUP_DOLLARS,
+      totalCostDollars,
+      creditsToDeduct, 
+      mediaType 
+    });
 
     // Get current usage/balance
     const { data: creditsData, error: creditsError } = await supabaseClient
@@ -109,20 +123,21 @@ serve(async (req) => {
       throw new Error("No credits record found. Please subscribe first.");
     }
 
-    const monthlyAllowanceUsed = parseFloat(creditsData.monthly_allowance_used || 0);
-    const monthlyAllowanceLimit = parseFloat(creditsData.monthly_allowance_limit || 10);
-    const purchasedBalance = parseFloat(creditsData.purchased_credits || 0);
+    // All values in CREDITS
+    const monthlyAllowanceUsed = Math.round(parseFloat(creditsData.monthly_allowance_used || 0));
+    const monthlyAllowanceLimit = Math.round(parseFloat(creditsData.monthly_allowance_limit || 1000));
+    const purchasedBalance = Math.round(parseFloat(creditsData.purchased_credits || 0));
     
     const remainingMonthlyAllowance = Math.max(0, monthlyAllowanceLimit - monthlyAllowanceUsed);
     const totalRemaining = remainingMonthlyAllowance + purchasedBalance;
 
-    if (totalRemaining < costToDeduct) {
-      logStep("Insufficient balance", { required: costToDeduct, available: totalRemaining });
+    if (totalRemaining < creditsToDeduct) {
+      logStep("Insufficient credits", { required: creditsToDeduct, available: totalRemaining });
       return new Response(JSON.stringify({
         success: false,
         error: "limit_reached",
-        message: "You've used your monthly allowance. Purchase more to continue generating.",
-        costRequired: costToDeduct,
+        message: "You don't have enough credits. Purchase more to continue generating.",
+        creditsRequired: creditsToDeduct,
         totalRemaining,
         remainingMonthlyAllowance,
         purchasedBalance,
@@ -139,14 +154,14 @@ serve(async (req) => {
     let deductFromMonthly = 0;
     let deductFromPurchased = 0;
 
-    if (remainingMonthlyAllowance >= costToDeduct) {
+    if (remainingMonthlyAllowance >= creditsToDeduct) {
       // All from monthly
-      deductFromMonthly = costToDeduct;
-      newMonthlyAllowanceUsed = monthlyAllowanceUsed + costToDeduct;
+      deductFromMonthly = creditsToDeduct;
+      newMonthlyAllowanceUsed = monthlyAllowanceUsed + creditsToDeduct;
     } else {
       // Use remaining monthly + some purchased
       deductFromMonthly = remainingMonthlyAllowance;
-      deductFromPurchased = costToDeduct - remainingMonthlyAllowance;
+      deductFromPurchased = creditsToDeduct - remainingMonthlyAllowance;
       newMonthlyAllowanceUsed = monthlyAllowanceLimit; // Fully used
       newPurchasedBalance = purchasedBalance - deductFromPurchased;
     }
@@ -164,15 +179,15 @@ serve(async (req) => {
       throw new Error(`Failed to update usage: ${updateError.message}`);
     }
 
-    // Log the transaction
+    // Log the transaction (store both credits and dollar amounts for reference)
     await supabaseClient
       .from("credit_transactions")
       .insert({
         user_id: user.id,
-        amount: -costToDeduct,
-        api_cost_usd: costToDeduct,
+        amount: -creditsToDeduct, // Negative for deductions, in credits
+        api_cost_usd: totalCostDollars, // Total cost including markup
         transaction_type: "generation",
-        description: `${mediaType} generation`,
+        description: `${mediaType} generation - ${creditsToDeduct} credits`,
         media_type: mediaType,
         generation_id: generationId
       });
@@ -181,8 +196,8 @@ serve(async (req) => {
     const newTotalRemaining = newRemainingMonthly + newPurchasedBalance;
     const usagePercentage = (newMonthlyAllowanceUsed / monthlyAllowanceLimit) * 100;
 
-    logStep("Usage deducted", { 
-      costDeducted: costToDeduct,
+    logStep("Credits deducted", { 
+      creditsDeducted: creditsToDeduct,
       newMonthlyAllowanceUsed,
       newPurchasedBalance,
       newTotalRemaining,
@@ -192,7 +207,7 @@ serve(async (req) => {
     return new Response(JSON.stringify({
       success: true,
       isAdmin: false,
-      costDeducted: costToDeduct,
+      creditsDeducted: creditsToDeduct,
       monthlyAllowanceUsed: newMonthlyAllowanceUsed,
       monthlyAllowanceLimit,
       remainingMonthlyAllowance: newRemainingMonthly,

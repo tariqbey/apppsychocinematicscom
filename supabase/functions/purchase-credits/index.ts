@@ -12,25 +12,25 @@ const logStep = (step: string, details?: any) => {
   console.log(`[PURCHASE-CREDITS] ${step}${detailsStr}`);
 };
 
-// API Usage pack configurations - selling dollar amounts now
-const USAGE_PACKS = {
+// Credit pack configurations (1 credit = $0.01)
+const CREDIT_PACKS = {
   "pack_5": {
-    dollarAmount: 5,
-    priceId: "price_1SnPcbKb1BapFa4im2AI9BLW", // $5 = $5 API usage
+    credits: 500,      // $5 = 500 credits
+    priceId: "price_1SnPcbKb1BapFa4im2AI9BLW",
     price: 5
   },
   "pack_10": {
-    dollarAmount: 10,
-    priceId: "price_1SnPdJKb1BapFa4iCo5KlNTO", // $10 = $10 API usage
+    credits: 1000,     // $10 = 1000 credits
+    priceId: "price_1SnPdJKb1BapFa4iCo5KlNTO",
     price: 10
   },
   "pack_20": {
-    dollarAmount: 22, // Bonus: Pay $20, get $22 API usage (10% bonus)
+    credits: 2200,     // $20 = 2200 credits (10% bonus)
     priceId: "price_1SnPexKb1BapFa4iM8alKETd",
     price: 20
   },
   "pack_30": {
-    dollarAmount: 35, // Bonus: Pay $30, get $35 API usage (~17% bonus)
+    credits: 3500,     // $30 = 3500 credits (~17% bonus)
     priceId: "price_1SnPfBKb1BapFa4igfHVYycR",
     price: 30
   }
@@ -47,7 +47,7 @@ serve(async (req) => {
     const { packId } = await req.json();
     logStep("Requested pack", { packId });
 
-    const pack = USAGE_PACKS[packId as keyof typeof USAGE_PACKS];
+    const pack = CREDIT_PACKS[packId as keyof typeof CREDIT_PACKS];
     if (!pack) {
       throw new Error(`Invalid pack ID: ${packId}`);
     }
@@ -97,7 +97,7 @@ serve(async (req) => {
       metadata: {
         user_id: user.id,
         pack_id: packId,
-        dollar_amount: pack.dollarAmount.toString()
+        credits: pack.credits.toString()
       }
     });
 

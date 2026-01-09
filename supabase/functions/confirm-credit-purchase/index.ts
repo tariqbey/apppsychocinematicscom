@@ -12,12 +12,12 @@ const logStep = (step: string, details?: any) => {
   console.log(`[CONFIRM-CREDIT-PURCHASE] ${step}${detailsStr}`);
 };
 
-// Usage pack configurations - matches purchase-credits (dollar-based)
-const USAGE_PACKS: Record<string, { dollarAmount: number; price: number }> = {
-  "pack_5": { dollarAmount: 5, price: 5 },
-  "pack_10": { dollarAmount: 10, price: 10 },
-  "pack_20": { dollarAmount: 22, price: 20 },
-  "pack_30": { dollarAmount: 35, price: 30 }
+// Credit pack configurations (1 credit = $0.01)
+const CREDIT_PACKS: Record<string, { credits: number; price: number }> = {
+  "pack_5": { credits: 500, price: 5 },
+  "pack_10": { credits: 1000, price: 10 },
+  "pack_20": { credits: 2200, price: 20 },
+  "pack_30": { credits: 3500, price: 30 }
 };
 
 serve(async (req) => {
@@ -58,7 +58,7 @@ serve(async (req) => {
       throw new Error("Missing user_id or pack_id in session metadata");
     }
 
-    const pack = USAGE_PACKS[packId];
+    const pack = CREDIT_PACKS[packId];
     if (!pack) {
       throw new Error(`Unknown pack: ${packId}`);
     }
@@ -81,7 +81,7 @@ serve(async (req) => {
       return new Response(JSON.stringify({
         success: true,
         alreadyProcessed: true,
-        dollarAmount: pack.dollarAmount
+        credits: pack.credits
       }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 200,
@@ -102,16 +102,16 @@ serve(async (req) => {
         .insert({
           user_id: userId,
           monthly_credits: 0,
-          purchased_credits: pack.dollarAmount,
-          monthly_allowance_limit: 10,
+          purchased_credits: pack.credits,
+          monthly_allowance_limit: 1000,
           monthly_allowance_used: 0
         });
 
       if (insertError) throw new Error(`Failed to create credits: ${insertError.message}`);
     } else {
-      // Add to purchased_credits (which is now dollar balance)
-      const currentPurchased = parseFloat(creditsData.purchased_credits || 0);
-      const newPurchased = currentPurchased + pack.dollarAmount;
+      // Add credits to purchased_credits
+      const currentPurchased = Math.round(parseFloat(creditsData.purchased_credits || 0));
+      const newPurchased = currentPurchased + pack.credits;
 
       const { error: updateError } = await supabaseClient
         .from("production_credits")
@@ -128,22 +128,22 @@ serve(async (req) => {
       .from("credit_transactions")
       .insert({
         user_id: userId,
-        amount: pack.dollarAmount,
+        amount: pack.credits,
         api_cost_usd: 0,
         transaction_type: "purchase",
-        description: `Purchased $${pack.dollarAmount} API usage (${packId})`,
+        description: `Purchased ${pack.credits} credits (${packId})`,
         stripe_session_id: sessionId
       });
 
     logStep("Purchase confirmed", { 
       userId, 
       packId, 
-      dollarAmount: pack.dollarAmount 
+      credits: pack.credits 
     });
 
     return new Response(JSON.stringify({
       success: true,
-      dollarAmount: pack.dollarAmount,
+      credits: pack.credits,
       packId
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

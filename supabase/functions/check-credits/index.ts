@@ -11,8 +11,8 @@ const logStep = (step: string, details?: any) => {
   console.log(`[CHECK-CREDITS] ${step}${detailsStr}`);
 };
 
-// Default monthly allowance limit in dollars
-const MONTHLY_ALLOWANCE_LIMIT = 10.00;
+// Default monthly allowance limit in CREDITS (1 credit = $0.01, so 1000 = $10)
+const MONTHLY_ALLOWANCE_LIMIT_CREDITS = 1000;
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -54,10 +54,10 @@ serve(async (req) => {
       return new Response(JSON.stringify({
         isAdmin: true,
         monthlyAllowanceUsed: 0,
-        monthlyAllowanceLimit: 9999,
-        remainingMonthlyAllowance: 9999,
-        purchasedBalance: 9999,
-        totalRemaining: 9999,
+        monthlyAllowanceLimit: 999999,
+        remainingMonthlyAllowance: 999999,
+        purchasedBalance: 999999,
+        totalRemaining: 999999,
         canGenerate: true,
         usagePercentage: 0
       }), {
@@ -81,7 +81,7 @@ serve(async (req) => {
           user_id: user.id,
           monthly_credits: 0,
           purchased_credits: 0,
-          monthly_allowance_limit: MONTHLY_ALLOWANCE_LIMIT,
+          monthly_allowance_limit: MONTHLY_ALLOWANCE_LIMIT_CREDITS,
           monthly_allowance_used: 0
         })
         .select()
@@ -94,14 +94,15 @@ serve(async (req) => {
       creditsData = newCredits;
     }
 
-    const monthlyAllowanceUsed = parseFloat(creditsData.monthly_allowance_used || 0);
-    const monthlyAllowanceLimit = parseFloat(creditsData.monthly_allowance_limit || MONTHLY_ALLOWANCE_LIMIT);
-    const purchasedBalance = parseFloat(creditsData.purchased_credits || 0);
+    // All values are now in CREDITS (integers)
+    const monthlyAllowanceUsed = Math.round(parseFloat(creditsData.monthly_allowance_used || 0));
+    const monthlyAllowanceLimit = Math.round(parseFloat(creditsData.monthly_allowance_limit || MONTHLY_ALLOWANCE_LIMIT_CREDITS));
+    const purchasedBalance = Math.round(parseFloat(creditsData.purchased_credits || 0));
     const remainingMonthlyAllowance = Math.max(0, monthlyAllowanceLimit - monthlyAllowanceUsed);
     const totalRemaining = remainingMonthlyAllowance + purchasedBalance;
     const usagePercentage = monthlyAllowanceLimit > 0 ? (monthlyAllowanceUsed / monthlyAllowanceLimit) * 100 : 0;
 
-    logStep("Usage retrieved", { 
+    logStep("Usage retrieved (credits)", { 
       monthlyAllowanceUsed,
       monthlyAllowanceLimit,
       remainingMonthlyAllowance,
@@ -118,7 +119,7 @@ serve(async (req) => {
       purchasedBalance,
       totalRemaining,
       monthlyCreditsResetAt: creditsData.monthly_credits_reset_at,
-      canGenerate: totalRemaining > 0.01, // Need at least $0.01
+      canGenerate: totalRemaining >= 1, // Need at least 1 credit
       usagePercentage: Math.min(100, usagePercentage)
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

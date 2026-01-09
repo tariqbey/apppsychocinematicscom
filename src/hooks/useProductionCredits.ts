@@ -14,21 +14,22 @@ export interface ProductionUsage {
   usagePercentage: number;
 }
 
-export interface UsagePack {
+export interface CreditPack {
   id: string;
-  dollarAmount: number;
+  credits: number;
   price: number;
   bonus?: string;
 }
 
-export const USAGE_PACKS: UsagePack[] = [
-  { id: "pack_5", dollarAmount: 5, price: 5 },
-  { id: "pack_10", dollarAmount: 10, price: 10 },
-  { id: "pack_20", dollarAmount: 22, price: 20, bonus: "10% bonus" },
-  { id: "pack_30", dollarAmount: 35, price: 30, bonus: "17% bonus" },
+// Credit packs (1 credit = $0.01)
+export const CREDIT_PACKS: CreditPack[] = [
+  { id: "pack_5", credits: 500, price: 5 },
+  { id: "pack_10", credits: 1000, price: 10 },
+  { id: "pack_20", credits: 2200, price: 20, bonus: "+200 bonus" },
+  { id: "pack_30", credits: 3500, price: 30, bonus: "+500 bonus" },
 ];
 
-// API costs for generation (in dollars)
+// API costs for generation (in dollars - for internal calculation)
 export const API_COSTS = {
   video: {
     perSecond: 0.10, // $0.10 per second
@@ -43,8 +44,20 @@ export const API_COSTS = {
   },
 };
 
-// Markup added to display costs (user-facing price)
+// Markup added to display costs (user-facing price) in dollars
 export const DISPLAY_MARKUP = 0.10; // $0.10 markup per generation
+
+// Conversion helpers
+export const dollarsToCredits = (dollars: number): number => Math.round(dollars * 100);
+export const creditsToDollars = (credits: number): number => credits / 100;
+
+// Legacy export for compatibility
+export const USAGE_PACKS = CREDIT_PACKS.map(pack => ({
+  id: pack.id,
+  dollarAmount: creditsToDollars(pack.credits),
+  price: pack.price,
+  bonus: pack.bonus,
+}));
 
 export const useProductionCredits = () => {
   const { user, session } = useAuth();
@@ -73,8 +86,8 @@ export const useProductionCredits = () => {
       
       setCredits(data as ProductionUsage);
     } catch (err) {
-      console.error("Error fetching usage:", err);
-      setError(err instanceof Error ? err.message : "Failed to fetch usage");
+      console.error("Error fetching credits:", err);
+      setError(err instanceof Error ? err.message : "Failed to fetch credits");
     } finally {
       setLoading(false);
     }
@@ -92,11 +105,11 @@ export const useProductionCredits = () => {
 
       if (fnError) throw fnError;
       
-      // Refresh usage after allocation
+      // Refresh after allocation
       await fetchCredits();
       return data;
     } catch (err) {
-      console.error("Error allocating monthly usage:", err);
+      console.error("Error allocating monthly credits:", err);
       return null;
     }
   }, [session?.access_token, fetchCredits]);
@@ -123,14 +136,14 @@ export const useProductionCredits = () => {
       if (fnError) throw fnError;
 
       if (data.success) {
-        // Refresh usage after deduction
+        // Refresh credits after deduction
         await fetchCredits();
       }
 
       return data;
     } catch (err) {
-      console.error("Error deducting usage:", err);
-      return { success: false, error: err instanceof Error ? err.message : "Failed to deduct usage" };
+      console.error("Error deducting credits:", err);
+      return { success: false, error: err instanceof Error ? err.message : "Failed to deduct credits" };
     }
   }, [session?.access_token, fetchCredits]);
 
@@ -157,7 +170,7 @@ export const useProductionCredits = () => {
 
       return { success: false, error: "No checkout URL returned" };
     } catch (err) {
-      console.error("Error purchasing usage:", err);
+      console.error("Error purchasing credits:", err);
       return { success: false, error: err instanceof Error ? err.message : "Failed to start purchase" };
     }
   }, [session?.access_token]);
@@ -171,7 +184,7 @@ export const useProductionCredits = () => {
       if (fnError) throw fnError;
 
       if (data.success) {
-        // Refresh usage after purchase confirmation
+        // Refresh credits after purchase confirmation
         await fetchCredits();
       }
 
@@ -182,7 +195,7 @@ export const useProductionCredits = () => {
     }
   }, [fetchCredits]);
 
-  // Calculate actual API cost for a generation (internal billing)
+  // Calculate actual API cost for a generation (in dollars - internal)
   const estimateCost = useCallback((
     mediaType: "video" | "image" | "music",
     duration?: number,
@@ -200,8 +213,8 @@ export const useProductionCredits = () => {
     return 0;
   }, []);
 
-  // Calculate display cost for user-facing UI (actual cost + markup)
-  const estimateDisplayCost = useCallback((
+  // Calculate cost with markup (in dollars - for display conversion)
+  const estimateCostWithMarkup = useCallback((
     mediaType: "video" | "image" | "music",
     duration?: number,
     resolution?: string
@@ -209,7 +222,26 @@ export const useProductionCredits = () => {
     return estimateCost(mediaType, duration, resolution) + DISPLAY_MARKUP;
   }, [estimateCost]);
 
-  // Check if user can afford a specific generation
+  // Calculate display cost in CREDITS (what user sees and pays)
+  const estimateCreditCost = useCallback((
+    mediaType: "video" | "image" | "music",
+    duration?: number,
+    resolution?: string
+  ): number => {
+    const costWithMarkup = estimateCostWithMarkup(mediaType, duration, resolution);
+    return dollarsToCredits(costWithMarkup);
+  }, [estimateCostWithMarkup]);
+
+  // Legacy: estimate display cost in dollars (for backward compatibility)
+  const estimateDisplayCost = useCallback((
+    mediaType: "video" | "image" | "music",
+    duration?: number,
+    resolution?: string
+  ): number => {
+    return estimateCostWithMarkup(mediaType, duration, resolution);
+  }, [estimateCostWithMarkup]);
+
+  // Check if user can afford a specific generation (in credits)
   const canAfford = useCallback((
     mediaType: "video" | "image" | "music",
     duration?: number,
@@ -217,15 +249,15 @@ export const useProductionCredits = () => {
   ): boolean => {
     if (!credits) return false;
     if (credits.isAdmin) return true;
-    const cost = estimateCost(mediaType, duration, resolution);
-    return credits.totalRemaining >= cost;
-  }, [credits, estimateCost]);
+    const creditCost = estimateCreditCost(mediaType, duration, resolution);
+    return credits.totalRemaining >= creditCost;
+  }, [credits, estimateCreditCost]);
 
-  // Fetch usage on mount and when user changes
+  // Fetch credits on mount and when user changes
   useEffect(() => {
     if (user) {
       fetchCredits();
-      // Also try to allocate/reset monthly usage for subscribers
+      // Also try to allocate/reset monthly credits for subscribers
       allocateMonthlyCredits();
     } else {
       setCredits(null);
@@ -244,11 +276,13 @@ export const useProductionCredits = () => {
     allocateMonthlyCredits,
     estimateCost,
     estimateDisplayCost,
+    estimateCreditCost,
     canAfford,
+    dollarsToCredits,
+    creditsToDollars,
   };
 };
 
 // Legacy exports for compatibility
 export type ProductionCredits = ProductionUsage;
-export const CREDIT_PACKS = USAGE_PACKS;
 export const CREDIT_COSTS = API_COSTS;
