@@ -17,6 +17,7 @@ import { AuthModal } from "@/components/auth/AuthModal";
 import { CreditsDisplay } from "@/components/gamification/CreditsDisplay";
 import { GamificationPanel } from "@/components/gamification/GamificationPanel";
 import { Leaderboard } from "@/components/leaderboard/Leaderboard";
+import { ProductionCreditsDisplay } from "@/components/studio/ProductionCreditsDisplay";
 
 export const Header = () => {
   const [showAuthModal, setShowAuthModal] = useState(false);
@@ -57,7 +58,10 @@ export const Header = () => {
           <div className="flex items-center gap-2">
             {user ? (
               <>
-                {/* Credits Display */}
+                {/* Production Credits Display */}
+                <ProductionCreditsDisplay compact />
+                
+                {/* Gamification Credits Display */}
                 <button
                   onClick={() => setShowGamification(true)}
                   className="flex items-center gap-2 hover:opacity-80 transition-opacity"
