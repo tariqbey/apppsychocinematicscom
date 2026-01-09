@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { X, ChevronLeft, ChevronRight, Sparkles, Save, Clapperboard, Palette, Layout, Wand2, Music, Check, RefreshCw, Plus, User } from "lucide-react";
+import { useState, useEffect, useCallback } from "react";
+import { X, ChevronLeft, ChevronRight, Sparkles, Save, Clapperboard, Palette, Layout, Wand2, Music, Check, RefreshCw, Plus, User, ChevronDown, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
@@ -8,12 +8,62 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { StoryboardGrid } from "./StoryboardGrid";
 import { LyricsEditor } from "./LyricsEditor";
 import { SoundtrackPlayer } from "./SoundtrackPlayer";
 import { useMindMovieScript, type Scene } from "@/hooks/useMindMovieScript";
 import { useMindMovieMusic, MUSIC_STYLES, type MusicStyle } from "@/hooks/useMindMovieMusic";
 import { toast } from "sonner";
+
+const PERSONA_STORAGE_KEY = 'mind-movie-saved-personas';
+
+interface SavedPersona {
+  id: string;
+  label: string;
+  lastUsed: number;
+}
+
+const loadSavedPersonas = (): SavedPersona[] => {
+  try {
+    const stored = localStorage.getItem(PERSONA_STORAGE_KEY);
+    return stored ? JSON.parse(stored) : [];
+  } catch {
+    return [];
+  }
+};
+
+const savePersonaToStorage = (personaId: string, label?: string) => {
+  const personas = loadSavedPersonas();
+  const existing = personas.find(p => p.id === personaId);
+  
+  if (existing) {
+    existing.lastUsed = Date.now();
+    if (label) existing.label = label;
+  } else {
+    personas.push({
+      id: personaId,
+      label: label || `Persona ${personas.length + 1}`,
+      lastUsed: Date.now(),
+    });
+  }
+  
+  // Keep only the 10 most recent
+  const sorted = personas.sort((a, b) => b.lastUsed - a.lastUsed).slice(0, 10);
+  localStorage.setItem(PERSONA_STORAGE_KEY, JSON.stringify(sorted));
+};
+
+const removePersonaFromStorage = (personaId: string) => {
+  const personas = loadSavedPersonas().filter(p => p.id !== personaId);
+  localStorage.setItem(PERSONA_STORAGE_KEY, JSON.stringify(personas));
+};
 
 interface MindMovieScriptWizardProps {
   isOpen: boolean;
@@ -48,6 +98,7 @@ export function MindMovieScriptWizard({
   const [generatedTitle, setGeneratedTitle] = useState("");
   const [generatedScenes, setGeneratedScenes] = useState<Scene[]>([]);
   const [isAddingScenes, setIsAddingScenes] = useState(false);
+  const [savedPersonas, setSavedPersonas] = useState<SavedPersona[]>([]);
   
   const { 
     isGenerating, 
@@ -80,6 +131,11 @@ export function MindMovieScriptWizard({
     loadExistingMusic,
   } = useMindMovieMusic();
 
+  // Load saved personas on mount
+  useEffect(() => {
+    setSavedPersonas(loadSavedPersonas());
+  }, []);
+
   useEffect(() => {
     if (isOpen) {
       fetchLatestScript().then((script) => {
@@ -99,6 +155,30 @@ export function MindMovieScriptWizard({
       });
     }
   }, [isOpen, fetchLatestScript, loadExistingMusic]);
+
+  const handleSelectPersona = useCallback((persona: SavedPersona) => {
+    setPersonaId(persona.id);
+    savePersonaToStorage(persona.id, persona.label);
+    setSavedPersonas(loadSavedPersonas());
+  }, [setPersonaId]);
+
+  const handleSaveCurrentPersona = useCallback(() => {
+    if (personaId.trim()) {
+      const label = prompt('Enter a name for this persona:', `Persona ${savedPersonas.length + 1}`);
+      if (label) {
+        savePersonaToStorage(personaId.trim(), label);
+        setSavedPersonas(loadSavedPersonas());
+        toast.success('Persona saved!');
+      }
+    }
+  }, [personaId, savedPersonas.length]);
+
+  const handleRemovePersona = useCallback((personaIdToRemove: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    removePersonaFromStorage(personaIdToRemove);
+    setSavedPersonas(loadSavedPersonas());
+    toast.success('Persona removed');
+  }, []);
 
   const handleGenerateStoryboard = async (addScenes = false) => {
     if (addScenes) {
@@ -612,15 +692,85 @@ export function MindMovieScriptWizard({
                     <Label htmlFor="persona-id" className="text-base font-semibold">Custom Voice Persona (Optional)</Label>
                   </div>
                   <p className="text-sm text-muted-foreground">
-                    Enter a Suno persona ID to use your custom voice. Leave empty to use the default voice for your selected genre.
+                    Enter a Suno persona ID to use your custom voice, or select from your saved personas. Leave empty to use the default voice for your selected genre.
                   </p>
-                  <Input
-                    id="persona-id"
-                    placeholder="e.g., 5b650802-2e77-4f1c-b6ad-a73401c3456d"
-                    value={personaId}
-                    onChange={(e) => setPersonaId(e.target.value)}
-                    className="font-mono text-sm"
-                  />
+                  
+                  <div className="flex gap-2">
+                    <div className="flex-1 relative">
+                      <Input
+                        id="persona-id"
+                        placeholder="e.g., 5b650802-2e77-4f1c-b6ad-a73401c3456d"
+                        value={personaId}
+                        onChange={(e) => setPersonaId(e.target.value)}
+                        className="font-mono text-sm pr-10"
+                      />
+                    </div>
+                    
+                    {/* Saved Personas Dropdown */}
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="outline" size="icon" className="shrink-0">
+                          <ChevronDown className="w-4 h-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-72 bg-popover border border-border z-50">
+                        <DropdownMenuLabel>Saved Personas</DropdownMenuLabel>
+                        <DropdownMenuSeparator />
+                        {savedPersonas.length === 0 ? (
+                          <div className="px-2 py-3 text-sm text-muted-foreground text-center">
+                            No saved personas yet.
+                            <br />
+                            <span className="text-xs">Enter a persona ID and save it for quick access.</span>
+                          </div>
+                        ) : (
+                          savedPersonas.map((persona) => (
+                            <DropdownMenuItem
+                              key={persona.id}
+                              onClick={() => handleSelectPersona(persona)}
+                              className="flex items-center justify-between cursor-pointer"
+                            >
+                              <div className="flex-1 min-w-0">
+                                <div className="font-medium truncate">{persona.label}</div>
+                                <div className="text-xs text-muted-foreground font-mono truncate">
+                                  {persona.id.substring(0, 12)}...
+                                </div>
+                              </div>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6 shrink-0 ml-2 hover:bg-destructive/10 hover:text-destructive"
+                                onClick={(e) => handleRemovePersona(persona.id, e)}
+                              >
+                                <Trash2 className="w-3 h-3" />
+                              </Button>
+                            </DropdownMenuItem>
+                          ))
+                        )}
+                        {personaId.trim() && !savedPersonas.some(p => p.id === personaId.trim()) && (
+                          <>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem onClick={handleSaveCurrentPersona} className="cursor-pointer">
+                              <Save className="w-4 h-4 mr-2" />
+                              Save Current Persona
+                            </DropdownMenuItem>
+                          </>
+                        )}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                  
+                  {/* Quick save button when new persona entered */}
+                  {personaId.trim() && !savedPersonas.some(p => p.id === personaId.trim()) && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleSaveCurrentPersona}
+                      className="text-xs text-muted-foreground hover:text-foreground"
+                    >
+                      <Save className="w-3 h-3 mr-1" />
+                      Save this persona for quick access
+                    </Button>
+                  )}
                 </div>
 
                 {/* Generate Lyrics Button */}
