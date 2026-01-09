@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { X, ChevronLeft, ChevronRight, Sparkles, Save, Clapperboard, Palette, Layout, Wand2, Music } from "lucide-react";
+import { X, ChevronLeft, ChevronRight, Sparkles, Save, Clapperboard, Palette, Layout, Wand2, Music, Check, RefreshCw, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
@@ -95,13 +95,36 @@ export function MindMovieScriptWizard({
     }
   }, [isOpen, fetchLatestScript, loadExistingMusic]);
 
-  const handleGenerateStoryboard = async () => {
-    const result = await generateStoryboard(chiefAim, visualStyle, userDescription);
+  const handleGenerateStoryboard = async (addScenes = false) => {
+    const existingScenes = addScenes ? generatedScenes : undefined;
+    const result = await generateStoryboard(chiefAim, visualStyle, userDescription, existingScenes);
     if (result) {
-      setGeneratedTitle(result.title);
-      setGeneratedScenes(result.scenes);
-      setStep(3);
+      if (addScenes && generatedScenes.length > 0) {
+        // Merge new scenes with existing, adjusting order numbers
+        const maxOrder = Math.max(...generatedScenes.map(s => s.order));
+        const newScenes = result.scenes.map((s, i) => ({
+          ...s,
+          order: maxOrder + i + 1,
+        }));
+        setGeneratedScenes([...generatedScenes, ...newScenes]);
+        setGeneratedTitle(result.title || generatedTitle);
+      } else {
+        setGeneratedTitle(result.title);
+        setGeneratedScenes(result.scenes);
+      }
+      // Stay on step 2 to show approval controls
     }
+  };
+
+  const handleApproveStoryboard = async () => {
+    await saveScript(
+      generatedTitle,
+      generatedScenes,
+      chiefAim,
+      visualStyle,
+      currentScript?.id
+    );
+    setStep(3);
   };
 
   const handleSaveStoryboard = async () => {
@@ -303,25 +326,85 @@ export function MindMovieScriptWizard({
               </div>
             )}
 
-            {/* Step 2: Generating */}
+            {/* Step 2: Generating / Review */}
             {step === 2 && (
-              <div className="flex flex-col items-center justify-center py-12 space-y-6">
-                <div className="relative">
-                  <div className="w-24 h-24 rounded-full bg-gradient-to-br from-amber-500/20 to-orange-600/20 animate-pulse flex items-center justify-center">
-                    <Wand2 className="w-12 h-12 text-amber-500 animate-bounce" />
+              <div className="space-y-6">
+                {isGenerating ? (
+                  <div className="flex flex-col items-center justify-center py-12 space-y-6">
+                    <div className="relative">
+                      <div className="w-24 h-24 rounded-full bg-gradient-to-br from-amber-500/20 to-orange-600/20 animate-pulse flex items-center justify-center">
+                        <Wand2 className="w-12 h-12 text-amber-500 animate-bounce" />
+                      </div>
+                      <div className="absolute inset-0 w-24 h-24 rounded-full border-4 border-amber-500/30 animate-ping" />
+                    </div>
+                    <div className="text-center">
+                      <h2 className="text-2xl font-bold mb-2">Creating Your Storyboard</h2>
+                      <p className="text-muted-foreground">
+                        The AI is crafting personalized scenes for your Mind Movie...
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Sparkles className="w-4 h-4 animate-pulse text-amber-500" />
+                      <span>This usually takes 10-20 seconds</span>
+                    </div>
                   </div>
-                  <div className="absolute inset-0 w-24 h-24 rounded-full border-4 border-amber-500/30 animate-ping" />
-                </div>
-                <div className="text-center">
-                  <h2 className="text-2xl font-bold mb-2">Creating Your Storyboard</h2>
-                  <p className="text-muted-foreground">
-                    The AI is crafting personalized scenes for your Mind Movie...
-                  </p>
-                </div>
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Sparkles className="w-4 h-4 animate-pulse text-amber-500" />
-                  <span>This usually takes 10-20 seconds</span>
-                </div>
+                ) : generatedScenes.length > 0 ? (
+                  <div className="space-y-6">
+                    <div>
+                      <h2 className="text-2xl font-bold mb-2">Review Your Storyboard</h2>
+                      <p className="text-muted-foreground">
+                        {generatedScenes.length} scenes generated. Review and approve, or regenerate for a different take.
+                      </p>
+                    </div>
+
+                    {/* Storyboard Preview */}
+                    <StoryboardGrid
+                      scenes={generatedScenes}
+                      onUpdateScene={handleUpdateScene}
+                      onGenerateInEditBay={handleGenerateInEditBay}
+                      isEditable={true}
+                    />
+
+                    {/* Action Buttons */}
+                    <div className="flex flex-wrap gap-3 pt-4 border-t border-border/50">
+                      <Button
+                        onClick={handleApproveStoryboard}
+                        disabled={isLoading}
+                        className="flex-1 sm:flex-none"
+                      >
+                        <Check className="w-4 h-4 mr-2" />
+                        {isLoading ? "Saving..." : "Approve & Save"}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        onClick={() => handleGenerateStoryboard(false)}
+                        disabled={isGenerating}
+                        className="flex-1 sm:flex-none"
+                      >
+                        <RefreshCw className="w-4 h-4 mr-2" />
+                        Regenerate
+                      </Button>
+                      <Button
+                        variant="outline"
+                        onClick={() => handleGenerateStoryboard(true)}
+                        disabled={isGenerating}
+                        className="flex-1 sm:flex-none"
+                      >
+                        <Plus className="w-4 h-4 mr-2" />
+                        Add More Scenes
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-12 space-y-6">
+                    <div className="text-center">
+                      <h2 className="text-2xl font-bold mb-2">Ready to Generate</h2>
+                      <p className="text-muted-foreground">
+                        Click the button below to create your storyboard.
+                      </p>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
@@ -522,10 +605,27 @@ export function MindMovieScriptWizard({
               </Button>
             )}
 
-            {step === 2 && (
+            {step === 2 && isGenerating && (
               <Button disabled>
                 <Sparkles className="w-4 h-4 mr-2 animate-spin" />
                 Generating...
+              </Button>
+            )}
+
+            {step === 2 && !isGenerating && generatedScenes.length === 0 && (
+              <Button
+                onClick={() => handleGenerateStoryboard(false)}
+                disabled={isGenerating}
+              >
+                Generate Storyboard
+                <Sparkles className="w-4 h-4 ml-2" />
+              </Button>
+            )}
+
+            {step === 2 && !isGenerating && generatedScenes.length > 0 && (
+              <Button onClick={handleApproveStoryboard} disabled={isLoading}>
+                <Check className="w-4 h-4 mr-2" />
+                {isLoading ? "Saving..." : "Approve & Continue"}
               </Button>
             )}
 

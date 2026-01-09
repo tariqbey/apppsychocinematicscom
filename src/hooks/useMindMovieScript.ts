@@ -81,7 +81,8 @@ export function useMindMovieScript() {
   const generateStoryboard = useCallback(async (
     chiefAim: { what?: string; byWhen?: string; exchange?: string; plan?: string },
     visualStyle: string,
-    userDescription: string
+    userDescription: string,
+    existingScenes?: Scene[]
   ) => {
     if (!user) {
       toast.error("Please sign in to generate a storyboard");
@@ -102,6 +103,8 @@ export function useMindMovieScript() {
             chiefAim,
             visualStyle,
             userDescription,
+            existingScenes: existingScenes || undefined,
+            addMoreScenes: existingScenes ? true : false,
           }),
         }
       );

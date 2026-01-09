@@ -11,7 +11,7 @@ serve(async (req) => {
   }
 
   try {
-    const { chiefAim, visualStyle, userDescription, existingScenes } = await req.json();
+    const { chiefAim, visualStyle, userDescription, existingScenes, addMoreScenes } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     
     if (!LOVABLE_API_KEY) {
@@ -35,7 +35,27 @@ Generate prompts that are optimized for AI image generation:
 - Specify aspect ratio as 16:9 for video frames
 - Include emotional tone and atmosphere`;
 
-    const userPrompt = `Create a storyboard for a Mind Movie based on this Definite Chief Aim:
+    const userPrompt = addMoreScenes && existingScenes?.length > 0 
+      ? `You have already created ${existingScenes.length} scenes for a Mind Movie. The user wants to ADD MORE SCENES to extend the storyboard.
+
+EXISTING SCENES:
+${JSON.stringify(existingScenes, null, 2)}
+
+Based on this Definite Chief Aim, create 2-4 ADDITIONAL scenes that naturally extend the story. These new scenes should:
+1. Continue logically from where the existing scenes left off
+2. Add new moments, milestones, or perspectives not yet covered
+3. Build toward an even more powerful climax
+
+WHAT I WANT: ${chiefAim?.what || "Not specified"}
+BY WHEN: ${chiefAim?.byWhen || "Not specified"}
+WHAT I WILL GIVE: ${chiefAim?.exchange || "Not specified"}
+MY PLAN: ${chiefAim?.plan || "Not specified"}
+
+VISUAL STYLE: ${visualStyle || "Cinematic and inspiring"}
+USER'S VISION: ${userDescription || "Not provided"}
+
+Generate only the NEW scenes (2-4 additional scenes). Number them starting from 1 - the caller will renumber them.`
+      : `Create a storyboard for a Mind Movie based on this Definite Chief Aim:
 
 WHAT I WANT: ${chiefAim?.what || "Not specified"}
 BY WHEN: ${chiefAim?.byWhen || "Not specified"}
@@ -45,8 +65,6 @@ MY PLAN: ${chiefAim?.plan || "Not specified"}
 VISUAL STYLE PREFERENCE: ${visualStyle || "Cinematic and inspiring"}
 
 USER'S DESCRIPTION OF THEIR VISION: ${userDescription || "Not provided"}
-
-${existingScenes ? `EXISTING SCENES TO REFINE: ${JSON.stringify(existingScenes)}` : ""}
 
 Generate 5-8 scenes that tell the story of achieving this goal. Each scene should build toward the final triumphant visualization.`;
 
