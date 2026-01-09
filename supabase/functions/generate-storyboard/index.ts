@@ -36,25 +36,16 @@ Generate prompts that are optimized for AI image generation:
 - Include emotional tone and atmosphere`;
 
     const userPrompt = addMoreScenes && existingScenes?.length > 0 
-      ? `You have already created ${existingScenes.length} scenes for a Mind Movie. The user wants to ADD MORE SCENES to extend the storyboard.
+      ? `Add 3 MORE scenes to extend this Mind Movie storyboard.
 
-EXISTING SCENES:
-${JSON.stringify(existingScenes, null, 2)}
+Current scene count: ${existingScenes.length}
+Last scene title: "${existingScenes[existingScenes.length - 1]?.title || 'Unknown'}"
 
-Based on this Definite Chief Aim, create 2-4 ADDITIONAL scenes that naturally extend the story. These new scenes should:
-1. Continue logically from where the existing scenes left off
-2. Add new moments, milestones, or perspectives not yet covered
-3. Build toward an even more powerful climax
+Chief Aim: ${chiefAim?.what || "Not specified"}
+By When: ${chiefAim?.byWhen || "Not specified"}
+Visual Style: ${visualStyle || "Cinematic"}
 
-WHAT I WANT: ${chiefAim?.what || "Not specified"}
-BY WHEN: ${chiefAim?.byWhen || "Not specified"}
-WHAT I WILL GIVE: ${chiefAim?.exchange || "Not specified"}
-MY PLAN: ${chiefAim?.plan || "Not specified"}
-
-VISUAL STYLE: ${visualStyle || "Cinematic and inspiring"}
-USER'S VISION: ${userDescription || "Not provided"}
-
-Generate only the NEW scenes (2-4 additional scenes). Number them starting from 1 - the caller will renumber them.`
+Create 3 NEW scenes that continue the story toward the triumphant finale. Number them starting from 1.`
       : `Create a storyboard for a Mind Movie based on this Definite Chief Aim:
 
 WHAT I WANT: ${chiefAim?.what || "Not specified"}
@@ -158,11 +149,24 @@ Generate 5-8 scenes that tell the story of achieving this goal. Each scene shoul
     console.log("[generate-storyboard] AI response:", JSON.stringify(data, null, 2));
 
     const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
+    const finishReason = data.choices?.[0]?.native_finish_reason || data.choices?.[0]?.finish_reason;
+    
     if (!toolCall || toolCall.function.name !== "create_storyboard") {
-      throw new Error("Invalid response from AI");
+      console.error("[generate-storyboard] Invalid tool call. Finish reason:", finishReason);
+      // Provide more specific error message
+      if (finishReason === "MALFORMED_FUNCTION_CALL") {
+        throw new Error("AI failed to generate storyboard. Please try again.");
+      }
+      throw new Error("Invalid response from AI. Please try again.");
     }
 
-    const storyboard = JSON.parse(toolCall.function.arguments);
+    let storyboard;
+    try {
+      storyboard = JSON.parse(toolCall.function.arguments);
+    } catch (parseError) {
+      console.error("[generate-storyboard] Failed to parse arguments:", toolCall.function.arguments);
+      throw new Error("Failed to parse AI response. Please try again.");
+    }
 
     return new Response(JSON.stringify(storyboard), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
