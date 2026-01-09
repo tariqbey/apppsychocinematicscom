@@ -18,8 +18,6 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AuthModal } from "@/components/auth/AuthModal";
-import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
 import psychoCinematicsLogo from "@/assets/psycho-cinematics-logo.png";
 import heroImage from "@/assets/hero-image.png";
 
@@ -30,26 +28,10 @@ interface LandingPageProps {
 export const LandingPage = ({ onLogin }: LandingPageProps) => {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authMode, setAuthMode] = useState<"signin" | "signup">("signup");
-  const [isLoading, setIsLoading] = useState(false);
 
-  const handleGetStarted = async () => {
-    setIsLoading(true);
-    try {
-      const { data, error } = await supabase.functions.invoke('create-subscription');
-      
-      if (error) throw error;
-      
-      if (data?.url) {
-        window.open(data.url, '_blank');
-      } else {
-        throw new Error('No checkout URL returned');
-      }
-    } catch (error: any) {
-      console.error('Checkout error:', error);
-      toast.error('Unable to start checkout. Please try again.');
-    } finally {
-      setIsLoading(false);
-    }
+  const handleGetStarted = () => {
+    setAuthMode("signup");
+    setShowAuthModal(true);
   };
 
   const handleLogin = () => {
@@ -149,9 +131,9 @@ export const LandingPage = ({ onLogin }: LandingPageProps) => {
               </p>
               
               <div className="flex flex-col sm:flex-row gap-4">
-                <Button variant="gold" size="lg" onClick={handleGetStarted} className="text-lg px-8" disabled={isLoading}>
+                <Button variant="gold" size="lg" onClick={handleGetStarted} className="text-lg px-8">
                   <Play className="w-5 h-5 mr-2" />
-                  {isLoading ? "Processing..." : "Start Your Journey"}
+                  Start Your Journey
                 </Button>
                 <Button variant="outline" size="lg" onClick={handleLogin} className="text-lg px-8">
                   Already a Director? Login
@@ -305,8 +287,8 @@ export const LandingPage = ({ onLogin }: LandingPageProps) => {
                 ))}
               </ul>
               
-              <Button variant="gold" size="lg" className="w-full text-lg" onClick={handleGetStarted} disabled={isLoading}>
-                {isLoading ? "Processing..." : "Start Your Journey"}
+              <Button variant="gold" size="lg" className="w-full text-lg" onClick={handleGetStarted}>
+                Start Your Journey
               </Button>
               
               <p className="text-xs text-muted-foreground text-center mt-4">
