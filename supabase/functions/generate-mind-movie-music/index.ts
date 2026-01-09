@@ -36,6 +36,7 @@ interface GenerateMusicRequest {
   vocalGender: 'm' | 'f';
   scriptId: string;
   personaId?: string;
+  songCount?: number;
 }
 
 // Hip-hop persona for all hip-hop style songs
@@ -139,9 +140,9 @@ async function handleGenerateLyrics(body: GenerateLyricsRequest): Promise<Respon
 }
 
 async function handleGenerateMusic(body: GenerateMusicRequest, supabase: any): Promise<Response> {
-  const { lyrics, musicStyle, title, vocalGender, scriptId } = body;
+  const { lyrics, musicStyle, title, vocalGender, scriptId, songCount = 1 } = body;
   
-  console.log('[generate-music] Starting Suno generation for:', title);
+  console.log('[generate-music] Starting Suno generation for:', title, 'songCount:', songCount);
   
   const KIA_API_KEY = Deno.env.get('KIA_API_KEY');
   if (!KIA_API_KEY) {
@@ -173,58 +174,73 @@ async function handleGenerateMusic(body: GenerateMusicRequest, supabase: any): P
   };
 
   const sunoStyle = styleMap[musicStyle] || 'Pop, Inspirational, Uplifting';
+  
+  // Generate multiple songs if requested
+  const taskIds: string[] = [];
+  const effectiveSongCount = Math.min(songCount, 2); // Cap at 2 songs
+  
+  for (let i = 0; i < effectiveSongCount; i++) {
+    // Call Kie.ai Suno API
+    const sunoResponse = await fetch('https://api.kie.ai/api/v1/generate', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${KIA_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        prompt: lyrics,
+        customMode: true,
+        instrumental: false,
+        model: 'V4_5',
+        style: sunoStyle,
+        title: effectiveSongCount > 1 ? `${title.substring(0, 70)} (v${i + 1})` : title.substring(0, 80),
+        vocalGender: vocalGender,
+        callBackUrl: 'https://example.com/callback', // Required by Kie.ai but we use polling
+        // Use hip-hop persona for hip-hop styles, or custom personaId if provided
+        ...(body.personaId ? { personaId: body.personaId } : 
+            HIP_HOP_STYLES.includes(musicStyle) ? { personaId: HIP_HOP_PERSONA_ID } : {}),
+      }),
+    });
 
-  // Call Kie.ai Suno API
-  const sunoResponse = await fetch('https://api.kie.ai/api/v1/generate', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${KIA_API_KEY}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      prompt: lyrics,
-      customMode: true,
-      instrumental: false,
-      model: 'V4_5',
-      style: sunoStyle,
-      title: title.substring(0, 80), // Suno title limit
-      vocalGender: vocalGender,
-      callBackUrl: 'https://example.com/callback', // Required by Kie.ai but we use polling
-      // Use hip-hop persona for hip-hop styles, or custom personaId if provided
-      ...(body.personaId ? { personaId: body.personaId } : 
-          HIP_HOP_STYLES.includes(musicStyle) ? { personaId: HIP_HOP_PERSONA_ID } : {}),
-    }),
-  });
+    if (!sunoResponse.ok) {
+      const errorText = await sunoResponse.text();
+      console.error(`[generate-music] Suno API error for song ${i + 1}:`, sunoResponse.status, errorText);
+      throw new Error(`Suno API error: ${sunoResponse.status}`);
+    }
 
-  if (!sunoResponse.ok) {
-    const errorText = await sunoResponse.text();
-    console.error('[generate-music] Suno API error:', sunoResponse.status, errorText);
-    throw new Error(`Suno API error: ${sunoResponse.status}`);
+    const sunoData = await sunoResponse.json();
+    console.log(`[generate-music] Suno response for song ${i + 1}:`, JSON.stringify(sunoData));
+
+    if (sunoData.code !== 200 || !sunoData.data?.taskId) {
+      throw new Error(sunoData.msg || `Failed to start music generation for song ${i + 1}`);
+    }
+
+    taskIds.push(sunoData.data.taskId);
+    
+    // Small delay between requests to avoid rate limiting
+    if (i < effectiveSongCount - 1) {
+      await new Promise(resolve => setTimeout(resolve, 500));
+    }
   }
 
-  const sunoData = await sunoResponse.json();
-  console.log('[generate-music] Suno response:', JSON.stringify(sunoData));
-
-  if (sunoData.code !== 200 || !sunoData.data?.taskId) {
-    throw new Error(sunoData.msg || 'Failed to start music generation');
-  }
-
-  const taskId = sunoData.data.taskId;
-
-  // Store the task ID in the database
+  // Store the first task ID in the database (for backward compatibility)
   const { error: updateError } = await supabase
     .from('mind_movie_scripts')
-    .update({ suno_task_id: taskId, music_style: musicStyle })
+    .update({ suno_task_id: taskIds[0], music_style: musicStyle })
     .eq('id', scriptId);
 
   if (updateError) {
     console.error('[generate-music] Failed to save task ID:', updateError);
   }
 
-  console.log('[generate-music] Started generation with taskId:', taskId);
+  console.log('[generate-music] Started generation with taskIds:', taskIds);
 
   return new Response(
-    JSON.stringify({ taskId, status: 'PENDING' }),
+    JSON.stringify({ 
+      taskId: taskIds[0], // For backward compatibility
+      taskIds,
+      status: 'PENDING' 
+    }),
     { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
   );
 }

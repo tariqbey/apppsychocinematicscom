@@ -151,11 +151,19 @@ interface Scene {
   emotional_tone: string;
 }
 
+interface SongGeneration {
+  taskId: string | null;
+  soundtrackUrl: string | null;
+  generationStatus: string | null;
+  isSavedToLibrary: boolean;
+}
+
 interface UseMindMovieMusicReturn {
   isGeneratingLyrics: boolean;
   isGeneratingMusic: boolean;
   generatedLyrics: string | null;
   soundtrackUrl: string | null;
+  soundtrackUrls: string[];
   musicStyle: MusicStyle | null;
   customStyleText: string;
   vocalGender: 'm' | 'f';
@@ -163,17 +171,18 @@ interface UseMindMovieMusicReturn {
   taskId: string | null;
   generationStatus: string | null;
   isSavedToLibrary: boolean;
+  songs: SongGeneration[];
   setMusicStyle: (style: MusicStyle) => void;
   setCustomStyleText: (text: string) => void;
   setVocalGender: (gender: 'm' | 'f') => void;
   setPersonaId: (id: string) => void;
   setGeneratedLyrics: (lyrics: string) => void;
   generateLyrics: (chiefAim: ChiefAim, scenes: Scene[], style: MusicStyle, customStyle?: string) => Promise<void>;
-  generateMusic: (lyrics: string, title: string, scriptId: string, customStyle?: string) => Promise<void>;
-  regenerateMusic: (lyrics: string, title: string, scriptId: string, customStyle?: string) => Promise<void>;
+  generateMusic: (lyrics: string, title: string, scriptId: string, customStyle?: string, songCount?: number) => Promise<void>;
+  regenerateMusic: (lyrics: string, title: string, scriptId: string, customStyle?: string, songCount?: number) => Promise<void>;
   checkMusicStatus: (scriptId: string) => Promise<boolean>;
   saveLyrics: (scriptId: string, lyrics: string) => Promise<void>;
-  saveToLibrary: (title: string, lyrics: string) => Promise<void>;
+  saveToLibrary: (title: string, lyrics: string, songIndex?: number) => Promise<void>;
   loadExistingMusic: (script: { 
     song_lyrics?: string | null; 
     soundtrack_url?: string | null; 
@@ -189,14 +198,18 @@ export const useMindMovieMusic = (): UseMindMovieMusicReturn => {
   const [isGeneratingMusic, setIsGeneratingMusic] = useState(false);
   const [generatedLyrics, setGeneratedLyrics] = useState<string | null>(null);
   const [soundtrackUrl, setSoundtrackUrl] = useState<string | null>(null);
+  const [soundtrackUrls, setSoundtrackUrls] = useState<string[]>([]);
   const [musicStyle, setMusicStyle] = useState<MusicStyle | null>(null);
   const [customStyleText, setCustomStyleText] = useState<string>('');
   const [vocalGender, setVocalGender] = useState<'m' | 'f'>('m');
   const [personaId, setPersonaId] = useState<string>('');
   const [taskId, setTaskId] = useState<string | null>(null);
+  const [taskIds, setTaskIds] = useState<string[]>([]);
   const [generationStatus, setGenerationStatus] = useState<string | null>(null);
   const [isSavedToLibrary, setIsSavedToLibrary] = useState(false);
+  const [songs, setSongs] = useState<SongGeneration[]>([]);
   const pollingRef = useRef<number | null>(null);
+  const pollingRefs = useRef<Map<number, number>>(new Map());
 
   const generateLyrics = useCallback(async (
     chiefAim: ChiefAim,
@@ -299,11 +312,144 @@ export const useMindMovieMusic = (): UseMindMovieMusicReturn => {
     poll();
   }, [toast]);
 
+  // Multi-song polling function
+  const pollForCompletionMulti = useCallback((tid: string, scriptId: string, songIndex: number, totalSongs: number) => {
+    let attempts = 0;
+    const maxAttempts = 36; // 3 minutes with 5 second intervals
+
+    const poll = async () => {
+      attempts++;
+      
+      try {
+        const { data, error } = await supabase.functions.invoke('generate-mind-movie-music', {
+          body: {
+            action: 'check-status',
+            taskId: tid,
+            scriptId,
+          },
+        });
+
+        if (error) throw error;
+
+        if (data?.status === 'SUCCESS' && data?.audioUrl) {
+          // Update the specific song
+          setSongs(prev => {
+            const updated = [...prev];
+            if (updated[songIndex]) {
+              updated[songIndex] = {
+                ...updated[songIndex],
+                soundtrackUrl: data.audioUrl,
+                generationStatus: null,
+              };
+            }
+            return updated;
+          });
+          
+          setSoundtrackUrls(prev => {
+            const updated = [...prev];
+            updated[songIndex] = data.audioUrl;
+            return updated;
+          });
+          
+          // Set first song as main soundtrack URL
+          if (songIndex === 0) {
+            setSoundtrackUrl(data.audioUrl);
+          }
+          
+          // Check if all songs are complete
+          setSongs(prev => {
+            const allComplete = prev.every(s => s.soundtrackUrl !== null);
+            if (allComplete) {
+              setIsGeneratingMusic(false);
+              setGenerationStatus(null);
+              toast({
+                title: `🎵 ${totalSongs} Soundtrack${totalSongs > 1 ? 's' : ''} Complete!`,
+                description: 'Your Mind Movie anthems are ready to play.',
+              });
+            }
+            return prev;
+          });
+          
+          // Clear this song's polling
+          const timeoutId = pollingRefs.current.get(songIndex);
+          if (timeoutId) {
+            clearTimeout(timeoutId);
+            pollingRefs.current.delete(songIndex);
+          }
+          return;
+        }
+
+        if (data?.status === 'FAILED') {
+          setSongs(prev => {
+            const updated = [...prev];
+            if (updated[songIndex]) {
+              updated[songIndex] = {
+                ...updated[songIndex],
+                generationStatus: 'Failed',
+              };
+            }
+            return updated;
+          });
+          throw new Error(`Song ${songIndex + 1} generation failed`);
+        }
+
+        // Still processing
+        if (attempts >= maxAttempts) {
+          throw new Error(`Song ${songIndex + 1} generation timed out. Please try again.`);
+        }
+
+        setSongs(prev => {
+          const updated = [...prev];
+          if (updated[songIndex]) {
+            updated[songIndex] = {
+              ...updated[songIndex],
+              generationStatus: `Creating... (${Math.round((attempts / maxAttempts) * 100)}%)`,
+            };
+          }
+          return updated;
+        });
+        
+        setGenerationStatus(`Creating ${totalSongs} soundtrack${totalSongs > 1 ? 's' : ''}... (${Math.round((attempts / maxAttempts) * 100)}%)`);
+        
+        // Continue polling
+        const timeoutId = window.setTimeout(() => poll(), 5000);
+        pollingRefs.current.set(songIndex, timeoutId);
+      } catch (error) {
+        console.error(`Polling error for song ${songIndex + 1}:`, error);
+        setSongs(prev => {
+          const updated = [...prev];
+          if (updated[songIndex]) {
+            updated[songIndex] = {
+              ...updated[songIndex],
+              generationStatus: 'Error',
+            };
+          }
+          // Check if all songs have either completed or errored
+          const allDone = updated.every(s => s.soundtrackUrl !== null || s.generationStatus === 'Error' || s.generationStatus === 'Failed');
+          if (allDone) {
+            setIsGeneratingMusic(false);
+            setGenerationStatus(null);
+          }
+          return updated;
+        });
+        
+        toast({
+          variant: 'destructive',
+          title: `Song ${songIndex + 1} Error`,
+          description: error instanceof Error ? error.message : 'Failed to check generation status',
+        });
+      }
+    };
+
+    poll();
+  }, [toast]);
+
   const generateMusic = useCallback(async (
     lyrics: string,
     title: string,
     scriptId: string,
-    customStyle?: string
+    customStyle?: string,
+    songCount: number = 1
   ) => {
     if (!musicStyle) {
       toast({
@@ -318,8 +464,19 @@ export const useMindMovieMusic = (): UseMindMovieMusicReturn => {
     const effectiveStyle = musicStyle === 'Custom' && customStyle ? customStyle : musicStyle;
 
     setIsGeneratingMusic(true);
-    setGenerationStatus('Starting generation...');
+    setGenerationStatus(`Starting generation of ${songCount} song${songCount > 1 ? 's' : ''}...`);
     setSoundtrackUrl(null);
+    setSoundtrackUrls([]);
+    setTaskIds([]);
+    
+    // Initialize songs array
+    const initialSongs: SongGeneration[] = Array.from({ length: songCount }, () => ({
+      taskId: null,
+      soundtrackUrl: null,
+      generationStatus: 'Starting...',
+      isSavedToLibrary: false,
+    }));
+    setSongs(initialSongs);
 
     try {
       const { data, error } = await supabase.functions.invoke('generate-mind-movie-music', {
@@ -330,51 +487,73 @@ export const useMindMovieMusic = (): UseMindMovieMusicReturn => {
           title,
           vocalGender,
           scriptId,
+          songCount,
           ...(personaId.trim() ? { personaId: personaId.trim() } : {}),
         },
       });
 
       if (error) throw error;
-      if (!data?.taskId) throw new Error('No task ID returned');
+      
+      // Handle both single and multiple task IDs
+      const returnedTaskIds = data?.taskIds || (data?.taskId ? [data.taskId] : []);
+      if (returnedTaskIds.length === 0) throw new Error('No task ID returned');
 
-      setTaskId(data.taskId);
-      setGenerationStatus('Creating your soundtrack... This may take 1-3 minutes.');
+      setTaskIds(returnedTaskIds);
+      setTaskId(returnedTaskIds[0]);
+      
+      // Update songs with task IDs
+      setSongs(prev => prev.map((song, idx) => ({
+        ...song,
+        taskId: returnedTaskIds[idx] || null,
+        generationStatus: 'Creating your soundtrack... This may take 1-3 minutes.',
+      })));
+      
+      setGenerationStatus(`Creating ${songCount} soundtrack${songCount > 1 ? 's' : ''}... This may take 1-3 minutes.`);
 
       toast({
         title: 'Generation Started',
-        description: 'Your soundtrack is being created. Please wait...',
+        description: `${songCount} soundtrack${songCount > 1 ? 's are' : ' is'} being created. Please wait...`,
       });
 
-      // Start polling for completion
-      pollForCompletion(data.taskId, scriptId);
+      // Start polling for each song
+      returnedTaskIds.forEach((tid: string, index: number) => {
+        pollForCompletionMulti(tid, scriptId, index, returnedTaskIds.length);
+      });
     } catch (error) {
       console.error('Error generating music:', error);
       setIsGeneratingMusic(false);
       setGenerationStatus(null);
+      setSongs([]);
       toast({
         variant: 'destructive',
         title: 'Generation Failed',
         description: error instanceof Error ? error.message : 'Failed to start music generation',
       });
     }
-  }, [musicStyle, vocalGender, personaId, toast, pollForCompletion]);
+  }, [musicStyle, vocalGender, personaId, toast]);
 
   const regenerateMusic = useCallback(async (
     lyrics: string,
     title: string,
     scriptId: string,
-    customStyle?: string
+    customStyle?: string,
+    songCount: number = 1
   ) => {
     // Clear previous soundtrack before regenerating
     setSoundtrackUrl(null);
+    setSoundtrackUrls([]);
     setIsSavedToLibrary(false);
     setTaskId(null);
+    setTaskIds([]);
+    setSongs([]);
     
-    // Clear polling
+    // Clear all polling
     if (pollingRef.current) {
       clearTimeout(pollingRef.current);
       pollingRef.current = null;
     }
+    pollingRefs.current.forEach((timeoutId) => clearTimeout(timeoutId));
+    pollingRefs.current.clear();
 
     // Call generateMusic logic
     if (!musicStyle) {
@@ -390,7 +569,16 @@ export const useMindMovieMusic = (): UseMindMovieMusicReturn => {
     const effectiveStyle = musicStyle === 'Custom' && customStyle ? customStyle : musicStyle;
 
     setIsGeneratingMusic(true);
-    setGenerationStatus('Starting regeneration...');
+    setGenerationStatus(`Starting regeneration of ${songCount} song${songCount > 1 ? 's' : ''}...`);
+    
+    // Initialize songs array
+    const initialSongs: SongGeneration[] = Array.from({ length: songCount }, () => ({
+      taskId: null,
+      soundtrackUrl: null,
+      generationStatus: 'Starting...',
+      isSavedToLibrary: false,
+    }));
+    setSongs(initialSongs);
 
     try {
       const { data, error } = await supabase.functions.invoke('generate-mind-movie-music', {
@@ -401,34 +589,50 @@ export const useMindMovieMusic = (): UseMindMovieMusicReturn => {
           title,
           vocalGender,
           scriptId,
+          songCount,
           ...(personaId.trim() ? { personaId: personaId.trim() } : {}),
         },
       });
 
       if (error) throw error;
-      if (!data?.taskId) throw new Error('No task ID returned');
+      
+      // Handle both single and multiple task IDs
+      const returnedTaskIds = data?.taskIds || (data?.taskId ? [data.taskId] : []);
+      if (returnedTaskIds.length === 0) throw new Error('No task ID returned');
 
-      setTaskId(data.taskId);
-      setGenerationStatus('Recreating your soundtrack... This may take 1-3 minutes.');
+      setTaskIds(returnedTaskIds);
+      setTaskId(returnedTaskIds[0]);
+      
+      // Update songs with task IDs
+      setSongs(prev => prev.map((song, idx) => ({
+        ...song,
+        taskId: returnedTaskIds[idx] || null,
+        generationStatus: 'Recreating your soundtrack... This may take 1-3 minutes.',
+      })));
+      
+      setGenerationStatus(`Recreating ${songCount} soundtrack${songCount > 1 ? 's' : ''}... This may take 1-3 minutes.`);
 
       toast({
         title: 'Regeneration Started',
-        description: 'Your new soundtrack is being created. Please wait...',
+        description: `${songCount} new soundtrack${songCount > 1 ? 's are' : ' is'} being created. Please wait...`,
       });
 
-      // Start polling for completion
-      pollForCompletion(data.taskId, scriptId);
+      // Start polling for each song
+      returnedTaskIds.forEach((tid: string, index: number) => {
+        pollForCompletionMulti(tid, scriptId, index, returnedTaskIds.length);
+      });
     } catch (error) {
       console.error('Error regenerating music:', error);
       setIsGeneratingMusic(false);
       setGenerationStatus(null);
+      setSongs([]);
       toast({
         variant: 'destructive',
         title: 'Regeneration Failed',
         description: error instanceof Error ? error.message : 'Failed to start music regeneration',
       });
     }
-  }, [musicStyle, vocalGender, personaId, toast, pollForCompletion]);
+  }, [musicStyle, vocalGender, personaId, toast, pollForCompletionMulti]);
 
   const checkMusicStatus = useCallback(async (scriptId: string): Promise<boolean> => {
     if (!taskId) return false;
@@ -500,8 +704,13 @@ export const useMindMovieMusic = (): UseMindMovieMusicReturn => {
     }
   }, []);
 
-  const saveToLibrary = useCallback(async (title: string, lyrics: string) => {
-    if (!user || !soundtrackUrl) {
+  const saveToLibrary = useCallback(async (title: string, lyrics: string, songIndex?: number) => {
+    // Determine which URL to save
+    const urlToSave = songIndex !== undefined && songs[songIndex]?.soundtrackUrl 
+      ? songs[songIndex].soundtrackUrl 
+      : soundtrackUrl;
+      
+    if (!user || !urlToSave) {
       toast({
         variant: 'destructive',
         title: 'Cannot Save',
@@ -511,6 +720,10 @@ export const useMindMovieMusic = (): UseMindMovieMusicReturn => {
     }
 
     try {
+      const songTitle = songIndex !== undefined && songs.length > 1 
+        ? `${title} (Version ${songIndex + 1})`
+        : title;
+        
       const { error } = await supabase
         .from('generated_media')
         .insert({
@@ -518,22 +731,38 @@ export const useMindMovieMusic = (): UseMindMovieMusicReturn => {
           media_type: 'audio',
           model_used: 'suno/v4.5',
           prompt: lyrics.substring(0, 500), // Store first 500 chars of lyrics as prompt
-          media_url: soundtrackUrl,
+          media_url: urlToSave,
           status: 'completed',
           metadata: {
-            title,
+            title: songTitle,
             music_style: musicStyle,
             vocal_gender: vocalGender,
             full_lyrics: lyrics,
+            song_index: songIndex,
           },
         });
 
       if (error) throw error;
 
-      setIsSavedToLibrary(true);
+      // Update the saved state for the specific song
+      if (songIndex !== undefined) {
+        setSongs(prev => {
+          const updated = [...prev];
+          if (updated[songIndex]) {
+            updated[songIndex] = {
+              ...updated[songIndex],
+              isSavedToLibrary: true,
+            };
+          }
+          return updated;
+        });
+      } else {
+        setIsSavedToLibrary(true);
+      }
+      
       toast({
         title: '🎵 Saved to Library!',
-        description: 'Your soundtrack has been added to your Media Library.',
+        description: `${songTitle} has been added to your Media Library.`,
       });
     } catch (error) {
       console.error('Error saving to library:', error);
@@ -543,7 +772,7 @@ export const useMindMovieMusic = (): UseMindMovieMusicReturn => {
         description: 'Failed to save to library',
       });
     }
-  }, [user, soundtrackUrl, musicStyle, vocalGender, toast]);
+  }, [user, soundtrackUrl, songs, musicStyle, vocalGender, toast]);
 
   // Cleanup polling on unmount
   const cleanup = () => {
@@ -557,6 +786,7 @@ export const useMindMovieMusic = (): UseMindMovieMusicReturn => {
     isGeneratingMusic,
     generatedLyrics,
     soundtrackUrl,
+    soundtrackUrls,
     musicStyle,
     customStyleText,
     vocalGender,
@@ -564,6 +794,7 @@ export const useMindMovieMusic = (): UseMindMovieMusicReturn => {
     taskId,
     generationStatus,
     isSavedToLibrary,
+    songs,
     setMusicStyle,
     setCustomStyleText,
     setVocalGender,
