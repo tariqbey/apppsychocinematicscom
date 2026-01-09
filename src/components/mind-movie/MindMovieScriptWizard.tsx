@@ -46,6 +46,7 @@ export function MindMovieScriptWizard({
   const [userDescription, setUserDescription] = useState("");
   const [generatedTitle, setGeneratedTitle] = useState("");
   const [generatedScenes, setGeneratedScenes] = useState<Scene[]>([]);
+  const [isAddingScenes, setIsAddingScenes] = useState(false);
   
   const { 
     isGenerating, 
@@ -96,6 +97,9 @@ export function MindMovieScriptWizard({
   }, [isOpen, fetchLatestScript, loadExistingMusic]);
 
   const handleGenerateStoryboard = async (addScenes = false) => {
+    if (addScenes) {
+      setIsAddingScenes(true);
+    }
     const existingScenes = addScenes ? generatedScenes : undefined;
     const result = await generateStoryboard(chiefAim, visualStyle, userDescription, existingScenes);
     if (result) {
@@ -114,6 +118,7 @@ export function MindMovieScriptWizard({
       }
       // Stay on step 2 to show approval controls
     }
+    setIsAddingScenes(false);
   };
 
   const handleApproveStoryboard = async () => {
@@ -329,7 +334,7 @@ export function MindMovieScriptWizard({
             {/* Step 2: Generating / Review */}
             {step === 2 && (
               <div className="space-y-6">
-                {isGenerating ? (
+                {isGenerating && !isAddingScenes ? (
                   <div className="flex flex-col items-center justify-center py-12 space-y-6">
                     <div className="relative">
                       <div className="w-24 h-24 rounded-full bg-gradient-to-br from-amber-500/20 to-orange-600/20 animate-pulse flex items-center justify-center">
@@ -365,11 +370,24 @@ export function MindMovieScriptWizard({
                       isEditable={true}
                     />
 
+                    {/* Adding Scenes Loading Indicator */}
+                    {isAddingScenes && (
+                      <div className="flex items-center justify-center gap-3 p-6 bg-primary/5 rounded-lg border border-primary/20">
+                        <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
+                          <Plus className="w-4 h-4 text-primary animate-pulse" />
+                        </div>
+                        <div>
+                          <p className="font-medium text-primary">Adding more scenes...</p>
+                          <p className="text-sm text-muted-foreground">New scenes will appear below</p>
+                        </div>
+                      </div>
+                    )}
+
                     {/* Action Buttons */}
                     <div className="flex flex-wrap gap-3 pt-4 border-t border-border/50">
                       <Button
                         onClick={handleApproveStoryboard}
-                        disabled={isLoading}
+                        disabled={isLoading || isAddingScenes}
                         className="flex-1 sm:flex-none"
                       >
                         <Check className="w-4 h-4 mr-2" />
@@ -378,7 +396,7 @@ export function MindMovieScriptWizard({
                       <Button
                         variant="outline"
                         onClick={() => handleGenerateStoryboard(false)}
-                        disabled={isGenerating}
+                        disabled={isGenerating || isAddingScenes}
                         className="flex-1 sm:flex-none"
                       >
                         <RefreshCw className="w-4 h-4 mr-2" />
@@ -387,11 +405,11 @@ export function MindMovieScriptWizard({
                       <Button
                         variant="outline"
                         onClick={() => handleGenerateStoryboard(true)}
-                        disabled={isGenerating}
+                        disabled={isGenerating || isAddingScenes}
                         className="flex-1 sm:flex-none"
                       >
                         <Plus className="w-4 h-4 mr-2" />
-                        Add More Scenes
+                        {isAddingScenes ? "Adding..." : "Add More Scenes"}
                       </Button>
                     </div>
                   </div>
