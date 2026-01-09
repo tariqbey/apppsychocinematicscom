@@ -3,6 +3,7 @@ import { X, Film, Mail, Lock, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -19,6 +20,25 @@ export const AuthModal = ({ isOpen, onClose }: AuthModalProps) => {
 
   if (!isOpen) return null;
 
+  const redirectToCheckout = async () => {
+    try {
+      const { data, error } = await supabase.functions.invoke('create-subscription');
+      
+      if (error) throw error;
+      
+      if (data?.url) {
+        window.location.href = data.url;
+      }
+    } catch (error: any) {
+      console.error('Checkout redirect error:', error);
+      toast({
+        variant: "destructive",
+        title: "Checkout Error",
+        description: "Unable to redirect to checkout. Please try again from the dashboard.",
+      });
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -30,14 +50,17 @@ export const AuthModal = ({ isOpen, onClose }: AuthModalProps) => {
           title: "Welcome back, Director!",
           description: "The set is ready. Let's continue your production.",
         });
+        onClose();
       } else {
         await signUp(email, password);
         toast({
           title: "Welcome to Psycho-Cinematics™",
-          description: "Your Director journey begins now.",
+          description: "Redirecting you to complete your subscription...",
         });
+        // After signup, redirect to Stripe checkout
+        await redirectToCheckout();
+        onClose();
       }
-      onClose();
     } catch (error: any) {
       toast({
         variant: "destructive",
