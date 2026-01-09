@@ -121,11 +121,13 @@ export function MindMovieScriptWizard({
     generatedLyrics,
     soundtrackUrl,
     musicStyle,
+    customStyleText,
     vocalGender,
     personaId,
     generationStatus,
     isSavedToLibrary,
     setMusicStyle,
+    setCustomStyleText,
     setVocalGender,
     setPersonaId,
     setGeneratedLyrics,
@@ -253,6 +255,11 @@ export function MindMovieScriptWizard({
       toast.error("Please select a music style first");
       return;
     }
+
+    if (musicStyle === 'Custom' && !customStyleText.trim()) {
+      toast.error("Please describe your custom music style");
+      return;
+    }
     
     const scenesForLyrics = generatedScenes.map(s => ({
       order: s.order,
@@ -269,7 +276,8 @@ export function MindMovieScriptWizard({
         plan: chiefAim.plan || "",
       },
       scenesForLyrics,
-      musicStyle
+      musicStyle,
+      customStyleText.trim() || undefined
     );
   };
 
@@ -278,7 +286,7 @@ export function MindMovieScriptWizard({
       toast.error("Please generate lyrics first and save your storyboard");
       return;
     }
-    await generateMusic(generatedLyrics, generatedTitle || "My Mind Movie", currentScript.id);
+    await generateMusic(generatedLyrics, generatedTitle || "My Mind Movie", currentScript.id, customStyleText.trim() || undefined);
   };
 
   const handleRegenerateMusic = async () => {
@@ -286,7 +294,7 @@ export function MindMovieScriptWizard({
       toast.error("Please generate lyrics first and save your storyboard");
       return;
     }
-    await regenerateMusic(generatedLyrics, generatedTitle || "My Mind Movie", currentScript.id);
+    await regenerateMusic(generatedLyrics, generatedTitle || "My Mind Movie", currentScript.id, customStyleText.trim() || undefined);
   };
 
   const handleSaveLyrics = async () => {
@@ -655,7 +663,48 @@ export function MindMovieScriptWizard({
                         ))}
                       </div>
                     </div>
+
+                    {/* Custom Style */}
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium text-muted-foreground">Custom</p>
+                      <div className="grid grid-cols-1 gap-2">
+                        {MUSIC_STYLES.filter(s => s.category === 'custom').map((style) => (
+                          <Label
+                            key={style.value}
+                            htmlFor={`style-${style.value}`}
+                            className={`flex flex-col p-3 rounded-lg border-2 cursor-pointer transition-all ${
+                              musicStyle === style.value
+                                ? "border-primary bg-primary/5"
+                                : "border-border hover:border-primary/50"
+                            }`}
+                          >
+                            <RadioGroupItem value={style.value} id={`style-${style.value}`} className="sr-only" />
+                            <span className="font-medium text-sm">{style.label}</span>
+                            <span className="text-xs text-muted-foreground">{style.description}</span>
+                          </Label>
+                        ))}
+                      </div>
+                    </div>
                   </RadioGroup>
+
+                  {/* Custom Style Description Input */}
+                  {musicStyle === 'Custom' && (
+                    <div className="mt-4 p-4 rounded-lg border border-primary/30 bg-primary/5 space-y-3">
+                      <Label htmlFor="custom-style" className="text-sm font-semibold">
+                        Describe Your Custom Music Style
+                      </Label>
+                      <p className="text-xs text-muted-foreground">
+                        Describe the genre, mood, instruments, tempo, and any specific artists or songs to inspire the sound.
+                      </p>
+                      <Textarea
+                        id="custom-style"
+                        placeholder="e.g., Upbeat funk with slap bass, horn section, and 80s disco vibes. Inspired by Earth, Wind & Fire. 120 BPM, major key, celebratory feel..."
+                        value={customStyleText}
+                        onChange={(e) => setCustomStyleText(e.target.value)}
+                        className="min-h-[100px]"
+                      />
+                    </div>
+                  )}
                 </div>
 
                 {/* Vocal Gender Selection */}

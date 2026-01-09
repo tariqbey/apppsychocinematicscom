@@ -115,9 +115,10 @@ export function MediaLibrary({ filter = "all", onSelect }: MediaLibraryProps) {
         setLightboxMedia(null);
       }
       
+      const mediaTypeLabel = media.media_type === "image" ? "Image" : media.media_type === "video" ? "Video" : "Audio";
       toast({
         title: "Deleted",
-        description: `${media.media_type === "image" ? "Image" : "Video"} removed from library.`,
+        description: `${mediaTypeLabel} removed. Saved ~${formatBytes(removedSize)} of storage.`,
       });
     } catch (error) {
       toast({
@@ -340,10 +341,37 @@ export function MediaLibrary({ filter = "all", onSelect }: MediaLibraryProps) {
                     </span>
                   </div>
 
-                  {/* Hover Overlay */}
+                {/* Hover Overlay with Actions */}
                   {item.status === "completed" && item.media_url && (
-                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2">
                       <span className="text-white text-sm font-medium">Click to preview</span>
+                      <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          className="h-7 px-2"
+                          onClick={(e) => handleDownload(item, e)}
+                        >
+                          <Download className="h-3 w-3 mr-1" />
+                          Save
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          className="h-7 px-2"
+                          onClick={(e) => handleDelete(item, e)}
+                          disabled={isDeleting === item.id}
+                        >
+                          {isDeleting === item.id ? (
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                          ) : (
+                            <>
+                              <Trash2 className="h-3 w-3 mr-1" />
+                              Delete
+                            </>
+                          )}
+                        </Button>
+                      </div>
                     </div>
                   )}
                 </div>
