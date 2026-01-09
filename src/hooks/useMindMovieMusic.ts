@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/useAuth';
 
 export type MusicStyle = 
   | 'Hip-Hop Motivational'
@@ -66,6 +67,7 @@ interface UseMindMovieMusicReturn {
   vocalGender: 'm' | 'f';
   taskId: string | null;
   generationStatus: string | null;
+  isSavedToLibrary: boolean;
   setMusicStyle: (style: MusicStyle) => void;
   setVocalGender: (gender: 'm' | 'f') => void;
   setGeneratedLyrics: (lyrics: string) => void;
@@ -73,6 +75,7 @@ interface UseMindMovieMusicReturn {
   generateMusic: (lyrics: string, title: string, scriptId: string) => Promise<void>;
   checkMusicStatus: (scriptId: string) => Promise<boolean>;
   saveLyrics: (scriptId: string, lyrics: string) => Promise<void>;
+  saveToLibrary: (title: string, lyrics: string) => Promise<void>;
   loadExistingMusic: (script: { 
     song_lyrics?: string | null; 
     soundtrack_url?: string | null; 
@@ -83,6 +86,7 @@ interface UseMindMovieMusicReturn {
 
 export const useMindMovieMusic = (): UseMindMovieMusicReturn => {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [isGeneratingLyrics, setIsGeneratingLyrics] = useState(false);
   const [isGeneratingMusic, setIsGeneratingMusic] = useState(false);
   const [generatedLyrics, setGeneratedLyrics] = useState<string | null>(null);
@@ -91,6 +95,7 @@ export const useMindMovieMusic = (): UseMindMovieMusicReturn => {
   const [vocalGender, setVocalGender] = useState<'m' | 'f'>('m');
   const [taskId, setTaskId] = useState<string | null>(null);
   const [generationStatus, setGenerationStatus] = useState<string | null>(null);
+  const [isSavedToLibrary, setIsSavedToLibrary] = useState(false);
   const pollingRef = useRef<number | null>(null);
 
   const generateLyrics = useCallback(async (
@@ -305,6 +310,7 @@ export const useMindMovieMusic = (): UseMindMovieMusicReturn => {
     }
     if (script.soundtrack_url) {
       setSoundtrackUrl(script.soundtrack_url);
+      setIsSavedToLibrary(false); // Reset when loading new music
     }
     if (script.music_style) {
       setMusicStyle(script.music_style as MusicStyle);
@@ -313,6 +319,51 @@ export const useMindMovieMusic = (): UseMindMovieMusicReturn => {
       setTaskId(script.suno_task_id);
     }
   }, []);
+
+  const saveToLibrary = useCallback(async (title: string, lyrics: string) => {
+    if (!user || !soundtrackUrl) {
+      toast({
+        variant: 'destructive',
+        title: 'Cannot Save',
+        description: 'No soundtrack available to save.',
+      });
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('generated_media')
+        .insert({
+          user_id: user.id,
+          media_type: 'audio',
+          model_used: 'suno/v4.5',
+          prompt: lyrics.substring(0, 500), // Store first 500 chars of lyrics as prompt
+          media_url: soundtrackUrl,
+          status: 'completed',
+          metadata: {
+            title,
+            music_style: musicStyle,
+            vocal_gender: vocalGender,
+            full_lyrics: lyrics,
+          },
+        });
+
+      if (error) throw error;
+
+      setIsSavedToLibrary(true);
+      toast({
+        title: '🎵 Saved to Library!',
+        description: 'Your soundtrack has been added to your Media Library.',
+      });
+    } catch (error) {
+      console.error('Error saving to library:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Save Failed',
+        description: 'Failed to save to library',
+      });
+    }
+  }, [user, soundtrackUrl, musicStyle, vocalGender, toast]);
 
   // Cleanup polling on unmount
   const cleanup = () => {
@@ -330,6 +381,7 @@ export const useMindMovieMusic = (): UseMindMovieMusicReturn => {
     vocalGender,
     taskId,
     generationStatus,
+    isSavedToLibrary,
     setMusicStyle,
     setVocalGender,
     setGeneratedLyrics,
@@ -337,6 +389,7 @@ export const useMindMovieMusic = (): UseMindMovieMusicReturn => {
     generateMusic,
     checkMusicStatus,
     saveLyrics,
+    saveToLibrary,
     loadExistingMusic,
   };
 };
