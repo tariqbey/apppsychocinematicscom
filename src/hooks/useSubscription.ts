@@ -8,6 +8,7 @@ export interface SubscriptionStatus {
   productId: string | null;
   subscriptionEnd: string | null;
   status?: string;
+  isTrialing?: boolean;
 }
 
 export const useSubscription = () => {
@@ -91,5 +92,6 @@ export const useSubscription = () => {
     createSubscription,
     isSubscribed: subscription?.subscribed || subscription?.isAdmin || false,
     isAdmin: subscription?.isAdmin || false,
+    isTrialing: subscription?.status === "trialing",
   };
 };

@@ -71,7 +71,7 @@ serve(async (req) => {
       }
     }
 
-    // Create checkout session for subscription - no trial
+    // Create checkout session for subscription with 3-day free trial
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
       customer_email: customerId ? undefined : user.email,
@@ -83,6 +83,7 @@ serve(async (req) => {
       ],
       mode: "subscription",
       subscription_data: {
+        trial_period_days: 3,
         metadata: {
           user_id: user.id,
         }
