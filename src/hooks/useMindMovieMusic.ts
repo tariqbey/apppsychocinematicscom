@@ -22,13 +22,15 @@ export type MusicStyle =
   // Other Genres
   | 'Acoustic Folk'
   | 'R&B Soul'
-  | 'Indie Rock Anthem';
+  | 'Indie Rock Anthem'
+  // Custom
+  | 'Custom';
 
 export interface MusicStyleOption {
   value: MusicStyle;
   label: string;
   description: string;
-  category: 'hip-hop' | 'pop-electronic' | 'orchestral' | 'other';
+  category: 'hip-hop' | 'pop-electronic' | 'orchestral' | 'other' | 'custom';
 }
 
 export const MUSIC_STYLES: MusicStyleOption[] = [
@@ -126,6 +128,13 @@ export const MUSIC_STYLES: MusicStyleOption[] = [
     description: 'Energetic, guitar-driven, inspiring',
     category: 'other',
   },
+  // Custom
+  {
+    value: 'Custom',
+    label: 'Custom Style',
+    description: 'Define your own music style',
+    category: 'custom',
+  },
 ];
 
 interface ChiefAim {
@@ -148,18 +157,20 @@ interface UseMindMovieMusicReturn {
   generatedLyrics: string | null;
   soundtrackUrl: string | null;
   musicStyle: MusicStyle | null;
+  customStyleText: string;
   vocalGender: 'm' | 'f';
   personaId: string;
   taskId: string | null;
   generationStatus: string | null;
   isSavedToLibrary: boolean;
   setMusicStyle: (style: MusicStyle) => void;
+  setCustomStyleText: (text: string) => void;
   setVocalGender: (gender: 'm' | 'f') => void;
   setPersonaId: (id: string) => void;
   setGeneratedLyrics: (lyrics: string) => void;
-  generateLyrics: (chiefAim: ChiefAim, scenes: Scene[], style: MusicStyle) => Promise<void>;
-  generateMusic: (lyrics: string, title: string, scriptId: string) => Promise<void>;
-  regenerateMusic: (lyrics: string, title: string, scriptId: string) => Promise<void>;
+  generateLyrics: (chiefAim: ChiefAim, scenes: Scene[], style: MusicStyle, customStyle?: string) => Promise<void>;
+  generateMusic: (lyrics: string, title: string, scriptId: string, customStyle?: string) => Promise<void>;
+  regenerateMusic: (lyrics: string, title: string, scriptId: string, customStyle?: string) => Promise<void>;
   checkMusicStatus: (scriptId: string) => Promise<boolean>;
   saveLyrics: (scriptId: string, lyrics: string) => Promise<void>;
   saveToLibrary: (title: string, lyrics: string) => Promise<void>;
@@ -179,6 +190,7 @@ export const useMindMovieMusic = (): UseMindMovieMusicReturn => {
   const [generatedLyrics, setGeneratedLyrics] = useState<string | null>(null);
   const [soundtrackUrl, setSoundtrackUrl] = useState<string | null>(null);
   const [musicStyle, setMusicStyle] = useState<MusicStyle | null>(null);
+  const [customStyleText, setCustomStyleText] = useState<string>('');
   const [vocalGender, setVocalGender] = useState<'m' | 'f'>('m');
   const [personaId, setPersonaId] = useState<string>('');
   const [taskId, setTaskId] = useState<string | null>(null);
@@ -189,10 +201,14 @@ export const useMindMovieMusic = (): UseMindMovieMusicReturn => {
   const generateLyrics = useCallback(async (
     chiefAim: ChiefAim,
     scenes: Scene[],
-    style: MusicStyle
+    style: MusicStyle,
+    customStyle?: string
   ) => {
     setIsGeneratingLyrics(true);
     setGeneratedLyrics(null);
+
+    // Use custom style text if style is 'Custom', otherwise use the style name
+    const effectiveStyle = style === 'Custom' && customStyle ? customStyle : style;
 
     try {
       const { data, error } = await supabase.functions.invoke('generate-mind-movie-music', {
@@ -200,7 +216,7 @@ export const useMindMovieMusic = (): UseMindMovieMusicReturn => {
           action: 'generate-lyrics',
           chiefAim,
           scenes,
-          musicStyle: style,
+          musicStyle: effectiveStyle,
         },
       });
 
@@ -286,7 +302,8 @@ export const useMindMovieMusic = (): UseMindMovieMusicReturn => {
   const generateMusic = useCallback(async (
     lyrics: string,
     title: string,
-    scriptId: string
+    scriptId: string,
+    customStyle?: string
   ) => {
     if (!musicStyle) {
       toast({
@@ -297,6 +314,9 @@ export const useMindMovieMusic = (): UseMindMovieMusicReturn => {
       return;
     }
 
+    // Use custom style text if style is 'Custom', otherwise use the style name
+    const effectiveStyle = musicStyle === 'Custom' && customStyle ? customStyle : musicStyle;
+
     setIsGeneratingMusic(true);
     setGenerationStatus('Starting generation...');
     setSoundtrackUrl(null);
@@ -306,7 +326,7 @@ export const useMindMovieMusic = (): UseMindMovieMusicReturn => {
         body: {
           action: 'generate-music',
           lyrics,
-          musicStyle,
+          musicStyle: effectiveStyle,
           title,
           vocalGender,
           scriptId,
@@ -342,7 +362,8 @@ export const useMindMovieMusic = (): UseMindMovieMusicReturn => {
   const regenerateMusic = useCallback(async (
     lyrics: string,
     title: string,
-    scriptId: string
+    scriptId: string,
+    customStyle?: string
   ) => {
     // Clear previous soundtrack before regenerating
     setSoundtrackUrl(null);
@@ -365,6 +386,9 @@ export const useMindMovieMusic = (): UseMindMovieMusicReturn => {
       return;
     }
 
+    // Use custom style text if style is 'Custom', otherwise use the style name
+    const effectiveStyle = musicStyle === 'Custom' && customStyle ? customStyle : musicStyle;
+
     setIsGeneratingMusic(true);
     setGenerationStatus('Starting regeneration...');
 
@@ -373,7 +397,7 @@ export const useMindMovieMusic = (): UseMindMovieMusicReturn => {
         body: {
           action: 'generate-music',
           lyrics,
-          musicStyle,
+          musicStyle: effectiveStyle,
           title,
           vocalGender,
           scriptId,
@@ -534,12 +558,14 @@ export const useMindMovieMusic = (): UseMindMovieMusicReturn => {
     generatedLyrics,
     soundtrackUrl,
     musicStyle,
+    customStyleText,
     vocalGender,
     personaId,
     taskId,
     generationStatus,
     isSavedToLibrary,
     setMusicStyle,
+    setCustomStyleText,
     setVocalGender,
     setPersonaId,
     setGeneratedLyrics,
