@@ -24,7 +24,7 @@ export function VideoGenerator({ onVideoGenerated }: VideoGeneratorProps) {
   const [aspectRatio, setAspectRatio] = useState<"16:9" | "9:16" | "1:1">("16:9");
   const [cameoId, setCameoId] = useState("");
 
-  const { isGeneratingVideo, generatedVideoUrl, generateVideo } = useMediaGeneration();
+  const { isGeneratingVideo, generatedVideoUrl, generateVideo, estimateDisplayCost } = useMediaGeneration();
 
   // For frames-to-video, use the selected image model
   const [selectedImageModel, setSelectedImageModel] = useState<VideoModel>("openai/sora-2/image-to-video");
@@ -235,6 +235,10 @@ export function VideoGenerator({ onVideoGenerated }: VideoGeneratorProps) {
 
       </div>
 
+      {/* Estimated Cost Display */}
+      <p className="text-xs text-muted-foreground text-center">
+        Estimated cost: ${estimateDisplayCost?.("video", duration).toFixed(2) || "0.60"}
+      </p>
 
       <Button
         onClick={handleGenerate}

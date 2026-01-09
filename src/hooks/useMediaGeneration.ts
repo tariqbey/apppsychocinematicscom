@@ -54,7 +54,7 @@ export function useMediaGeneration() {
   const [generatedVideoUrl, setGeneratedVideoUrl] = useState<string | null>(null);
   const { toast } = useToast();
   const { user, session } = useAuth();
-  const { credits, deductCredits, fetchCredits, estimateCost, canAfford } = useProductionCredits();
+  const { credits, deductCredits, fetchCredits, estimateCost, estimateDisplayCost, canAfford } = useProductionCredits();
 
   // Calculate cost for a generation (in dollars)
   const calculateCreditCost = useCallback((
@@ -235,5 +235,6 @@ export function useMediaGeneration() {
     calculateCreditCost,
     canAffordGeneration,
     refreshCredits: fetchCredits,
+    estimateDisplayCost,
   };
 }

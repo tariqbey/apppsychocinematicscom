@@ -43,6 +43,9 @@ export const API_COSTS = {
   },
 };
 
+// Markup added to display costs (user-facing price)
+export const DISPLAY_MARKUP = 0.10; // $0.10 markup per generation
+
 export const useProductionCredits = () => {
   const { user, session } = useAuth();
   const [credits, setCredits] = useState<ProductionUsage | null>(null);
@@ -179,7 +182,7 @@ export const useProductionCredits = () => {
     }
   }, [fetchCredits]);
 
-  // Calculate estimated cost for a generation
+  // Calculate actual API cost for a generation (internal billing)
   const estimateCost = useCallback((
     mediaType: "video" | "image" | "music",
     duration?: number,
@@ -196,6 +199,15 @@ export const useProductionCredits = () => {
     }
     return 0;
   }, []);
+
+  // Calculate display cost for user-facing UI (actual cost + markup)
+  const estimateDisplayCost = useCallback((
+    mediaType: "video" | "image" | "music",
+    duration?: number,
+    resolution?: string
+  ): number => {
+    return estimateCost(mediaType, duration, resolution) + DISPLAY_MARKUP;
+  }, [estimateCost]);
 
   // Check if user can afford a specific generation
   const canAfford = useCallback((
@@ -231,6 +243,7 @@ export const useProductionCredits = () => {
     confirmPurchase,
     allocateMonthlyCredits,
     estimateCost,
+    estimateDisplayCost,
     canAfford,
   };
 };
