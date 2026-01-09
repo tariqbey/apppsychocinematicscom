@@ -154,9 +154,9 @@ export default function Settings() {
                           </div>
                           <div className="text-right">
                             <p className="text-2xl font-bold text-primary">
-                              {isTrialing ? "200" : "1000"}
+                              {isTrialing ? "250" : "1000"}
                             </p>
-                            <p className="text-xs text-muted-foreground">credits/month</p>
+                            <p className="text-xs text-muted-foreground">credits</p>
                           </div>
                         </div>
                         
