@@ -31,6 +31,7 @@ export const TheaterView = ({ onClose }: TheaterViewProps) => {
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [hasRecordedViewing, setHasRecordedViewing] = useState(false);
+  const hasRecordedViewingRef = useRef(false);
   const [showThreeThings, setShowThreeThings] = useState(false);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [newTaskText, setNewTaskText] = useState("");
@@ -44,6 +45,10 @@ export const TheaterView = ({ onClose }: TheaterViewProps) => {
   const videoUrl = profile?.mind_movie_url;
 
   useEffect(() => {
+    // Reset the per-session “recorded” flag when switching videos.
+    setHasRecordedViewing(false);
+    hasRecordedViewingRef.current = false;
+
     if (videoRef.current) {
       videoRef.current.addEventListener("timeupdate", handleTimeUpdate);
       videoRef.current.addEventListener("loadedmetadata", handleLoadedMetadata);
@@ -60,18 +65,24 @@ export const TheaterView = ({ onClose }: TheaterViewProps) => {
   }, [videoUrl]);
 
   const handleTimeUpdate = () => {
-    if (videoRef.current) {
-      setCurrentTime(videoRef.current.currentTime);
-      
-      // Record viewing when 50% watched
-      if (!hasRecordedViewing && videoRef.current.currentTime > videoRef.current.duration * 0.5) {
-        recordViewing(Math.floor(videoRef.current.currentTime));
-        setHasRecordedViewing(true);
-        toast({
-          title: "Viewing Recorded! 🎬",
-          description: "Your streak has been updated.",
-        });
-      }
+    if (!videoRef.current) return;
+
+    setCurrentTime(videoRef.current.currentTime);
+
+    // Record viewing when 50% watched (guarded by a ref to avoid stale-closure spam).
+    if (
+      !hasRecordedViewingRef.current &&
+      videoRef.current.duration > 0 &&
+      videoRef.current.currentTime > videoRef.current.duration * 0.5
+    ) {
+      hasRecordedViewingRef.current = true;
+      setHasRecordedViewing(true);
+      void recordViewing(Math.floor(videoRef.current.currentTime));
+
+      toast({
+        title: "Viewing Recorded! 🎬",
+        description: "Your streak has been updated.",
+      });
     }
   };
 
@@ -83,10 +94,13 @@ export const TheaterView = ({ onClose }: TheaterViewProps) => {
 
   const handleVideoEnd = () => {
     setIsPlaying(false);
-    if (!hasRecordedViewing) {
-      recordViewing(Math.floor(duration));
+
+    if (!hasRecordedViewingRef.current) {
+      hasRecordedViewingRef.current = true;
       setHasRecordedViewing(true);
+      void recordViewing(Math.floor(videoRef.current?.duration ?? duration));
     }
+
     // Show Three Things prompt after video ends
     setShowThreeThings(true);
     loadTodaysTasks();
