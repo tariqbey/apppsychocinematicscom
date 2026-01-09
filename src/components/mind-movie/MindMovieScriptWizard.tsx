@@ -361,7 +361,7 @@ export function MindMovieScriptWizard({
         </div>
 
         {/* Content */}
-        <ScrollArea className="flex-1">
+        <ScrollArea className="flex-1 min-h-0">
           <div className="p-6 max-w-4xl mx-auto">
             {/* Step 1: Foundation */}
             {step === 1 && (
