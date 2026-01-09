@@ -178,6 +178,7 @@ async function handleGenerateMusic(body: GenerateMusicRequest, supabase: any): P
       style: sunoStyle,
       title: title.substring(0, 80), // Suno title limit
       vocalGender: vocalGender,
+      callBackUrl: 'https://example.com/callback', // Required by Kie.ai but we use polling
     }),
   });
 
