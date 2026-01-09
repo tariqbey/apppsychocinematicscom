@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
-import { X, ChevronLeft, ChevronRight, Sparkles, Save, Clapperboard, Palette, Layout, Wand2, Music, Check, RefreshCw, Plus } from "lucide-react";
+import { X, ChevronLeft, ChevronRight, Sparkles, Save, Clapperboard, Palette, Layout, Wand2, Music, Check, RefreshCw, Plus, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Progress } from "@/components/ui/progress";
@@ -64,13 +65,16 @@ export function MindMovieScriptWizard({
     soundtrackUrl,
     musicStyle,
     vocalGender,
+    personaId,
     generationStatus,
     isSavedToLibrary,
     setMusicStyle,
     setVocalGender,
+    setPersonaId,
     setGeneratedLyrics,
     generateLyrics,
     generateMusic,
+    regenerateMusic,
     saveLyrics,
     saveToLibrary,
     loadExistingMusic,
@@ -189,6 +193,14 @@ export function MindMovieScriptWizard({
       return;
     }
     await generateMusic(generatedLyrics, generatedTitle || "My Mind Movie", currentScript.id);
+  };
+
+  const handleRegenerateMusic = async () => {
+    if (!generatedLyrics || !currentScript) {
+      toast.error("Please generate lyrics first and save your storyboard");
+      return;
+    }
+    await regenerateMusic(generatedLyrics, generatedTitle || "My Mind Movie", currentScript.id);
   };
 
   const handleSaveLyrics = async () => {
@@ -593,6 +605,24 @@ export function MindMovieScriptWizard({
                   </RadioGroup>
                 </div>
 
+                {/* Custom Persona ID (Advanced) */}
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <User className="w-4 h-4 text-muted-foreground" />
+                    <Label htmlFor="persona-id" className="text-base font-semibold">Custom Voice Persona (Optional)</Label>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Enter a Suno persona ID to use your custom voice. Leave empty to use the default voice for your selected genre.
+                  </p>
+                  <Input
+                    id="persona-id"
+                    placeholder="e.g., 5b650802-2e77-4f1c-b6ad-a73401c3456d"
+                    value={personaId}
+                    onChange={(e) => setPersonaId(e.target.value)}
+                    className="font-mono text-sm"
+                  />
+                </div>
+
                 {/* Generate Lyrics Button */}
                 {!generatedLyrics && (
                   <Button
@@ -645,14 +675,30 @@ export function MindMovieScriptWizard({
 
                 {/* Music Generation Status / Player */}
                 {(isGeneratingMusic || soundtrackUrl) && (
-                  <SoundtrackPlayer
-                    audioUrl={soundtrackUrl || ""}
-                    title={generatedTitle || "Mind Movie Anthem"}
-                    isGenerating={isGeneratingMusic}
-                    generationStatus={generationStatus}
-                    onSaveToLibrary={() => saveToLibrary(generatedTitle || "Mind Movie Anthem", generatedLyrics || "")}
-                    isSavedToLibrary={isSavedToLibrary}
-                  />
+                  <div className="space-y-4">
+                    <SoundtrackPlayer
+                      audioUrl={soundtrackUrl || ""}
+                      title={generatedTitle || "Mind Movie Anthem"}
+                      isGenerating={isGeneratingMusic}
+                      generationStatus={generationStatus}
+                      onSaveToLibrary={() => saveToLibrary(generatedTitle || "Mind Movie Anthem", generatedLyrics || "")}
+                      isSavedToLibrary={isSavedToLibrary}
+                    />
+                    
+                    {/* Regenerate Button - only show when soundtrack exists and not generating */}
+                    {soundtrackUrl && !isGeneratingMusic && (
+                      <Button
+                        onClick={handleRegenerateMusic}
+                        variant="outline"
+                        size="sm"
+                        className="w-full"
+                        disabled={!currentScript}
+                      >
+                        <RefreshCw className="w-4 h-4 mr-2" />
+                        Regenerate with {personaId.trim() ? 'Custom Persona' : 'Current Settings'}
+                      </Button>
+                    )}
+                  </div>
                 )}
 
                 {!currentScript && generatedLyrics && (
