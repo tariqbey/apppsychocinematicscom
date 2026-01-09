@@ -98,7 +98,7 @@ const Subscribe = () => {
               $29<span className="text-lg font-normal text-muted-foreground">/month</span>
             </CardTitle>
             <CardDescription className="text-base">
-              3-day free trial with 200 credits • Cancel anytime
+              3-day free trial with 250 credits • Cancel anytime
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -129,7 +129,7 @@ const Subscribe = () => {
                 ))}
               </div>
               <p className="text-xs text-muted-foreground mt-3">
-                <strong>Trial:</strong> 200 credits = 5 images + 2 videos to test the platform<br/>
+                <strong>Trial:</strong> 250 credits = 5 images + 2 videos + 2 songs<br/>
                 <strong>Paid:</strong> 1000 credits/month = ~16 videos OR ~66 images (or mix & match!)
               </p>
             </div>

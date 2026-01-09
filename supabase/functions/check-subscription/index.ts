@@ -12,8 +12,8 @@ const logStep = (step: string, details?: any) => {
   console.log(`[CHECK-SUBSCRIPTION] ${step}${detailsStr}`);
 };
 
-// Trial credits: 200 (enough for 5 images at 15 credits + 2 videos at ~60 credits each)
-const TRIAL_CREDITS = 200;
+// Trial credits: 250 (5 images at 15 credits + 2 videos at ~60 credits + 2 songs at 25 credits)
+const TRIAL_CREDITS = 250;
 // Full monthly credits for paid subscribers
 const MONTHLY_CREDITS = 1000;
 
