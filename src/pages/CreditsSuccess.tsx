@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { CheckCircle, Coins, Loader2, ArrowRight } from "lucide-react";
+import { CheckCircle, Coins, Loader2, ArrowRight, DollarSign } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { useProductionCredits, CREDIT_PACKS } from "@/hooks/useProductionCredits";
+import { useProductionCredits, USAGE_PACKS } from "@/hooks/useProductionCredits";
 
 const CreditsSuccess = () => {
   const navigate = useNavigate();
@@ -12,7 +12,7 @@ const CreditsSuccess = () => {
   const packId = searchParams.get("pack");
   const { confirmPurchase, fetchCredits } = useProductionCredits();
   const [status, setStatus] = useState<"processing" | "success" | "error">("processing");
-  const [creditsAdded, setCreditsAdded] = useState<number>(0);
+  const [dollarAmount, setDollarAmount] = useState<number>(0);
 
   useEffect(() => {
     const confirm = async () => {
@@ -24,9 +24,8 @@ const CreditsSuccess = () => {
       try {
         const result = await confirmPurchase(sessionId);
         if (result.success) {
-          setCreditsAdded(result.creditsAdded || 0);
+          setDollarAmount(result.dollarAmount || 0);
           setStatus("success");
-          // Refresh credits
           await fetchCredits();
         } else {
           setStatus("error");
@@ -40,7 +39,7 @@ const CreditsSuccess = () => {
     confirm();
   }, [sessionId, confirmPurchase, fetchCredits]);
 
-  const pack = CREDIT_PACKS.find(p => p.id === packId);
+  const pack = USAGE_PACKS.find(p => p.id === packId);
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
@@ -65,7 +64,7 @@ const CreditsSuccess = () => {
               </div>
               <CardTitle className="text-green-500">Purchase Successful!</CardTitle>
               <CardDescription>
-                Your credits have been added to your account
+                Your API usage balance has been updated
               </CardDescription>
             </>
           )}
@@ -86,10 +85,10 @@ const CreditsSuccess = () => {
         <CardContent className="space-y-4">
           {status === "success" && (
             <div className="p-4 rounded-lg bg-primary/5 border border-primary/20 text-center">
-              <p className="text-sm text-muted-foreground mb-1">Credits Added</p>
+              <p className="text-sm text-muted-foreground mb-1">API Usage Added</p>
               <p className="text-3xl font-bold text-primary flex items-center justify-center gap-2">
-                <Coins className="h-6 w-6" />
-                +{creditsAdded || pack?.credits || 0}
+                <DollarSign className="h-6 w-6" />
+                +${dollarAmount || pack?.dollarAmount || 0}
               </p>
             </div>
           )}

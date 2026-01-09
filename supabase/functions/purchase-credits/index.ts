@@ -12,27 +12,27 @@ const logStep = (step: string, details?: any) => {
   console.log(`[PURCHASE-CREDITS] ${step}${detailsStr}`);
 };
 
-// Credit pack configurations
-const CREDIT_PACKS = {
+// API Usage pack configurations - selling dollar amounts now
+const USAGE_PACKS = {
+  "pack_5": {
+    dollarAmount: 5,
+    priceId: "price_1SnPcbKb1BapFa4im2AI9BLW", // $5 = $5 API usage
+    price: 5
+  },
+  "pack_10": {
+    dollarAmount: 10,
+    priceId: "price_1SnPdJKb1BapFa4iCo5KlNTO", // $10 = $10 API usage
+    price: 10
+  },
   "pack_20": {
-    credits: 20,
-    priceId: "price_1SnPcbKb1BapFa4im2AI9BLW",
-    price: 12
-  },
-  "pack_40": {
-    credits: 40,
-    priceId: "price_1SnPdJKb1BapFa4iCo5KlNTO",
-    price: 24
-  },
-  "pack_60": {
-    credits: 60,
+    dollarAmount: 22, // Bonus: Pay $20, get $22 API usage (10% bonus)
     priceId: "price_1SnPexKb1BapFa4iM8alKETd",
-    price: 36
+    price: 20
   },
-  "pack_100": {
-    credits: 100,
+  "pack_30": {
+    dollarAmount: 35, // Bonus: Pay $30, get $35 API usage (~17% bonus)
     priceId: "price_1SnPfBKb1BapFa4igfHVYycR",
-    price: 60
+    price: 30
   }
 };
 
@@ -47,7 +47,7 @@ serve(async (req) => {
     const { packId } = await req.json();
     logStep("Requested pack", { packId });
 
-    const pack = CREDIT_PACKS[packId as keyof typeof CREDIT_PACKS];
+    const pack = USAGE_PACKS[packId as keyof typeof USAGE_PACKS];
     if (!pack) {
       throw new Error(`Invalid pack ID: ${packId}`);
     }
@@ -97,7 +97,7 @@ serve(async (req) => {
       metadata: {
         user_id: user.id,
         pack_id: packId,
-        credits: pack.credits.toString()
+        dollar_amount: pack.dollarAmount.toString()
       }
     });
 

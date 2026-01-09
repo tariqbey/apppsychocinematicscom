@@ -11,6 +11,9 @@ const logStep = (step: string, details?: any) => {
   console.log(`[CHECK-CREDITS] ${step}${detailsStr}`);
 };
 
+// Default monthly allowance limit in dollars
+const MONTHLY_ALLOWANCE_LIMIT = 10.00;
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -36,7 +39,7 @@ serve(async (req) => {
     if (!user?.id) throw new Error("User not authenticated");
     logStep("User authenticated", { userId: user.id });
 
-    // Check if user is admin (unlimited credits)
+    // Check if user is admin (unlimited usage)
     const { data: roleData } = await supabaseClient
       .from("user_roles")
       .select("role")
@@ -50,10 +53,13 @@ serve(async (req) => {
     if (isAdmin) {
       return new Response(JSON.stringify({
         isAdmin: true,
-        monthlyCredits: 9999,
-        purchasedCredits: 9999,
-        totalCredits: 9999,
-        canGenerate: true
+        monthlyAllowanceUsed: 0,
+        monthlyAllowanceLimit: 9999,
+        remainingMonthlyAllowance: 9999,
+        purchasedBalance: 9999,
+        totalRemaining: 9999,
+        canGenerate: true,
+        usagePercentage: 0
       }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 200,
@@ -75,6 +81,8 @@ serve(async (req) => {
           user_id: user.id,
           monthly_credits: 0,
           purchased_credits: 0,
+          monthly_allowance_limit: MONTHLY_ALLOWANCE_LIMIT,
+          monthly_allowance_used: 0
         })
         .select()
         .single();
@@ -86,20 +94,32 @@ serve(async (req) => {
       creditsData = newCredits;
     }
 
-    const totalCredits = parseFloat(creditsData.monthly_credits) + parseFloat(creditsData.purchased_credits);
-    logStep("Credits retrieved", { 
-      monthly: creditsData.monthly_credits, 
-      purchased: creditsData.purchased_credits,
-      total: totalCredits 
+    const monthlyAllowanceUsed = parseFloat(creditsData.monthly_allowance_used || 0);
+    const monthlyAllowanceLimit = parseFloat(creditsData.monthly_allowance_limit || MONTHLY_ALLOWANCE_LIMIT);
+    const purchasedBalance = parseFloat(creditsData.purchased_credits || 0);
+    const remainingMonthlyAllowance = Math.max(0, monthlyAllowanceLimit - monthlyAllowanceUsed);
+    const totalRemaining = remainingMonthlyAllowance + purchasedBalance;
+    const usagePercentage = monthlyAllowanceLimit > 0 ? (monthlyAllowanceUsed / monthlyAllowanceLimit) * 100 : 0;
+
+    logStep("Usage retrieved", { 
+      monthlyAllowanceUsed,
+      monthlyAllowanceLimit,
+      remainingMonthlyAllowance,
+      purchasedBalance,
+      totalRemaining,
+      usagePercentage: usagePercentage.toFixed(1)
     });
 
     return new Response(JSON.stringify({
       isAdmin: false,
-      monthlyCredits: parseFloat(creditsData.monthly_credits),
-      purchasedCredits: parseFloat(creditsData.purchased_credits),
-      totalCredits,
+      monthlyAllowanceUsed,
+      monthlyAllowanceLimit,
+      remainingMonthlyAllowance,
+      purchasedBalance,
+      totalRemaining,
       monthlyCreditsResetAt: creditsData.monthly_credits_reset_at,
-      canGenerate: totalCredits > 0
+      canGenerate: totalRemaining > 0.01, // Need at least $0.01
+      usagePercentage: Math.min(100, usagePercentage)
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 200,

@@ -2,7 +2,7 @@ import { useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { useProductionCredits, CREDIT_COSTS } from "@/hooks/useProductionCredits";
+import { useProductionCredits, API_COSTS } from "@/hooks/useProductionCredits";
 
 export type VideoModel = "openai/sora-2/text-to-video-developer" | "openai/sora-2/image-to-video" | "wan-ai/wan2.1-i2v-480p" | "wan-ai/wan2.1-t2v-480p" | "kling-ai/v1-5/pro/image-to-video" | "kling-ai/v1-5/pro/text-to-video";
 
@@ -39,12 +39,12 @@ export interface GeneratedMedia {
 }
 
 export const MODEL_INFO: Record<VideoModel, { name: string; price: string; description: string }> = {
-  "openai/sora-2/text-to-video-developer": { name: "Sora 2 Developer", price: "1 credit/10s", description: "OpenAI text-to-video with Cameo support" },
-  "openai/sora-2/image-to-video": { name: "Sora 2 Image", price: "1 credit/10s", description: "Animate an image" },
-  "wan-ai/wan2.1-t2v-480p": { name: "Wan 2.1", price: "1 credit/10s", description: "Fast text-to-video" },
-  "wan-ai/wan2.1-i2v-480p": { name: "Wan 2.1 Image", price: "1 credit/10s", description: "Image animation" },
-  "kling-ai/v1-5/pro/text-to-video": { name: "Kling 1.5 Pro", price: "1 credit/10s", description: "Kling text-to-video" },
-  "kling-ai/v1-5/pro/image-to-video": { name: "Kling 1.5 Pro Image", price: "1 credit/10s", description: "Kling image animation" },
+  "openai/sora-2/text-to-video-developer": { name: "Sora 2 Developer", price: "$1/10s", description: "OpenAI text-to-video with Cameo support" },
+  "openai/sora-2/image-to-video": { name: "Sora 2 Image", price: "$1/10s", description: "Animate an image" },
+  "wan-ai/wan2.1-t2v-480p": { name: "Wan 2.1", price: "$1/10s", description: "Fast text-to-video" },
+  "wan-ai/wan2.1-i2v-480p": { name: "Wan 2.1 Image", price: "$1/10s", description: "Image animation" },
+  "kling-ai/v1-5/pro/text-to-video": { name: "Kling 1.5 Pro", price: "$1/10s", description: "Kling text-to-video" },
+  "kling-ai/v1-5/pro/image-to-video": { name: "Kling 1.5 Pro Image", price: "$1/10s", description: "Kling image animation" },
 };
 
 export function useMediaGeneration() {
@@ -54,19 +54,19 @@ export function useMediaGeneration() {
   const [generatedVideoUrl, setGeneratedVideoUrl] = useState<string | null>(null);
   const { toast } = useToast();
   const { user, session } = useAuth();
-  const { credits, deductCredits, fetchCredits } = useProductionCredits();
+  const { credits, deductCredits, fetchCredits, estimateCost, canAfford } = useProductionCredits();
 
-  // Calculate credit cost for a generation
+  // Calculate cost for a generation (in dollars)
   const calculateCreditCost = useCallback((
     mediaType: "image" | "video",
     duration?: number,
     resolution?: string
   ): number => {
     if (mediaType === "video") {
-      return CREDIT_COSTS.video.calculate(duration || 10);
+      return (duration || 10) * API_COSTS.video.perSecond;
     } else {
       const res = resolution?.toLowerCase() || "2k";
-      return res.includes("4k") ? CREDIT_COSTS.image["4k"] : CREDIT_COSTS.image["2k"];
+      return res.includes("4k") ? API_COSTS.image["4k"] : API_COSTS.image["2k"];
     }
   }, []);
 
@@ -79,7 +79,7 @@ export function useMediaGeneration() {
     if (!credits) return false;
     if (credits.isAdmin) return true;
     const cost = calculateCreditCost(mediaType, duration, resolution);
-    return credits.totalCredits >= cost;
+    return credits.totalRemaining >= cost;
   }, [credits, calculateCreditCost]);
 
   const generateImage = async (params: ImageGenerationParams): Promise<string | null> => {
@@ -88,12 +88,12 @@ export function useMediaGeneration() {
       return null;
     }
 
-    // Check credits first
+    // Check balance first
     const cost = calculateCreditCost("image", undefined, params.resolution);
-    if (credits && !credits.isAdmin && credits.totalCredits < cost) {
+    if (credits && !credits.isAdmin && credits.totalRemaining < cost) {
       toast({ 
-        title: "Insufficient credits", 
-        description: `You need ${cost.toFixed(2)} credits. You have ${credits.totalCredits.toFixed(2)}.`, 
+        title: "Insufficient balance", 
+        description: `You need $${cost.toFixed(2)}. You have $${credits.totalRemaining.toFixed(2)}.`, 
         variant: "destructive" 
       });
       return null;
@@ -103,11 +103,11 @@ export function useMediaGeneration() {
     setGeneratedImageUrl(null);
 
     try {
-      // Deduct credits before generation
+      // Deduct before generation
       if (!credits?.isAdmin) {
         const deductResult = await deductCredits("image", undefined, params.resolution);
         if (!deductResult.success) {
-          throw new Error(deductResult.error || "Failed to deduct credits");
+          throw new Error(deductResult.error || "Failed to deduct usage");
         }
       }
 
@@ -150,12 +150,12 @@ export function useMediaGeneration() {
 
     const duration = params.duration || 10;
     
-    // Check credits first
+    // Check balance first
     const cost = calculateCreditCost("video", duration);
-    if (credits && !credits.isAdmin && credits.totalCredits < cost) {
+    if (credits && !credits.isAdmin && credits.totalRemaining < cost) {
       toast({ 
-        title: "Insufficient credits", 
-        description: `You need ${cost.toFixed(2)} credits. You have ${credits.totalCredits.toFixed(2)}.`, 
+        title: "Insufficient balance", 
+        description: `You need $${cost.toFixed(2)}. You have $${credits.totalRemaining.toFixed(2)}.`, 
         variant: "destructive" 
       });
       return null;
@@ -165,11 +165,11 @@ export function useMediaGeneration() {
     setGeneratedVideoUrl(null);
 
     try {
-      // Deduct credits before generation
+      // Deduct before generation
       if (!credits?.isAdmin) {
         const deductResult = await deductCredits("video", duration);
         if (!deductResult.success) {
-          throw new Error(deductResult.error || "Failed to deduct credits");
+          throw new Error(deductResult.error || "Failed to deduct usage");
         }
       }
 
