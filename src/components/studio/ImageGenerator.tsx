@@ -55,6 +55,7 @@ export function ImageGenerator({
     generatedVideoUrl,
     generateImage,
     generateVideo,
+    estimateDisplayCost,
   } = useMediaGeneration();
 
   const handleGenerate = async () => {
@@ -228,11 +229,9 @@ export function ImageGenerator({
                 </div>
               </div>
 
-              {selectedModelInfo && (
-                <p className="text-xs text-muted-foreground">
-                  Estimated cost: {selectedModelInfo.price}
-                </p>
-              )}
+              <p className="text-xs text-muted-foreground">
+                Estimated cost: ${estimateDisplayCost?.("video", animationDuration).toFixed(2) || "0.60"}
+              </p>
 
               <Button
                 onClick={handleAnimate}
@@ -360,6 +359,11 @@ export function ImageGenerator({
           </Select>
         </div>
       </div>
+
+      {/* Estimated Cost Display */}
+      <p className="text-xs text-muted-foreground text-center">
+        Estimated cost: ${estimateDisplayCost?.("image", undefined, resolution).toFixed(2) || "0.15"}
+      </p>
 
       <Button
         onClick={handleGenerate}
