@@ -116,6 +116,42 @@ export type Database = {
         }
         Relationships: []
       }
+      daily_rituals: {
+        Row: {
+          action_execution: boolean
+          created_at: string
+          evening_review: boolean
+          id: string
+          morning_screening: boolean
+          ritual_date: string
+          script_review: boolean
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          action_execution?: boolean
+          created_at?: string
+          evening_review?: boolean
+          id?: string
+          morning_screening?: boolean
+          ritual_date?: string
+          script_review?: boolean
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          action_execution?: boolean
+          created_at?: string
+          evening_review?: boolean
+          id?: string
+          morning_screening?: boolean
+          ritual_date?: string
+          script_review?: boolean
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       daily_scorecards: {
         Row: {
           behavior_execution: number

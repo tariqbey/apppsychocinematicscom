@@ -226,34 +226,34 @@ export const TheaterView = ({ onClose }: TheaterViewProps) => {
     <>
       <div className="fixed inset-0 z-50 bg-cinematic-midnight flex flex-col animate-fade-in">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-border/50">
-          <div className="flex items-center gap-4">
-            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-gold to-amber-soft flex items-center justify-center">
-              <Film className="w-5 h-5 text-primary-foreground" />
+        <div className="flex items-center justify-between p-3 sm:p-4 border-b border-border/50">
+          <div className="flex items-center gap-2 sm:gap-4">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-gradient-to-br from-gold to-amber-soft flex items-center justify-center flex-shrink-0">
+              <Film className="w-4 h-4 sm:w-5 sm:h-5 text-primary-foreground" />
             </div>
-            <div>
-              <h2 className="text-xl font-display tracking-wide">The Theater</h2>
-              <p className="text-sm text-muted-foreground">Your Mind Movie Awaits</p>
+            <div className="min-w-0">
+              <h2 className="text-lg sm:text-xl font-display tracking-wide truncate">The Theater</h2>
+              <p className="text-xs sm:text-sm text-muted-foreground hidden sm:block">Your Mind Movie Awaits</p>
             </div>
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 sm:gap-4">
             {/* Streak Counter */}
-            <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-r from-amber-soft/20 to-cinematic-red/20 border border-amber-soft/30">
-              <Flame className={cn("w-5 h-5 text-amber-soft", streak > 0 && "streak-fire")} />
-              <span className="font-display text-xl text-foreground">{streak}</span>
-              <span className="text-sm text-muted-foreground">Day Streak</span>
+            <div className="flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-1.5 sm:py-2 rounded-lg bg-gradient-to-r from-amber-soft/20 to-cinematic-red/20 border border-amber-soft/30">
+              <Flame className={cn("w-4 h-4 sm:w-5 sm:h-5 text-amber-soft", streak > 0 && "streak-fire")} />
+              <span className="font-display text-lg sm:text-xl text-foreground">{streak}</span>
+              <span className="text-xs sm:text-sm text-muted-foreground hidden sm:inline">Day Streak</span>
             </div>
 
-            <Button variant="ghost" size="icon" onClick={onClose}>
-              <X className="w-5 h-5" />
+            <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8 sm:h-10 sm:w-10">
+              <X className="w-4 h-4 sm:w-5 sm:h-5" />
             </Button>
           </div>
         </div>
 
-        {/* Video Player Area */}
-        <div className="flex-1 flex items-center justify-center p-8 relative">
-          <div className="w-full max-w-5xl aspect-video rounded-xl bg-card border border-border overflow-hidden relative group">
+        {/* Video Player Area - Responsive with full-width on mobile */}
+        <div className="flex-1 flex items-center justify-center p-2 sm:p-4 md:p-8 relative overflow-hidden">
+          <div className="w-full h-full sm:h-auto sm:max-w-5xl sm:aspect-video rounded-lg sm:rounded-xl bg-card border border-border overflow-hidden relative group">
             {videoUrl ? (
               <>
                 <video
@@ -261,18 +261,29 @@ export const TheaterView = ({ onClose }: TheaterViewProps) => {
                   src={videoUrl}
                   className="w-full h-full object-contain bg-black"
                   playsInline
+                  webkit-playsinline="true"
+                  controls={false}
+                  onClick={togglePlay}
                 />
 
-                {/* Video Controls Overlay */}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                  <div className="absolute bottom-0 left-0 right-0 p-6">
+                {/* Video Controls Overlay - Always visible on mobile, hover on desktop */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
+                  <div className="absolute bottom-0 left-0 right-0 p-3 sm:p-6 pointer-events-auto">
                     {/* Progress bar */}
-                    <div className="h-1 bg-muted rounded-full mb-4 overflow-hidden cursor-pointer"
+                    <div 
+                      className="h-2 sm:h-1 bg-muted rounded-full mb-3 sm:mb-4 overflow-hidden cursor-pointer touch-none"
                       onClick={(e) => {
                         if (videoRef.current) {
                           const rect = e.currentTarget.getBoundingClientRect();
                           const percent = (e.clientX - rect.left) / rect.width;
                           videoRef.current.currentTime = percent * duration;
+                        }
+                      }}
+                      onTouchStart={(e) => {
+                        if (videoRef.current && e.touches[0]) {
+                          const rect = e.currentTarget.getBoundingClientRect();
+                          const percent = (e.touches[0].clientX - rect.left) / rect.width;
+                          videoRef.current.currentTime = Math.max(0, Math.min(1, percent)) * duration;
                         }
                       }}
                     >
@@ -283,33 +294,33 @@ export const TheaterView = ({ onClose }: TheaterViewProps) => {
                     </div>
 
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-4">
+                      <div className="flex items-center gap-2 sm:gap-4">
                         <Button
                           variant="gold"
                           size="icon"
                           onClick={togglePlay}
-                          className="w-12 h-12"
+                          className="w-10 h-10 sm:w-12 sm:h-12"
                         >
                           {isPlaying ? (
-                            <Pause className="w-6 h-6" />
+                            <Pause className="w-5 h-5 sm:w-6 sm:h-6" />
                           ) : (
-                            <Play className="w-6 h-6 ml-1" />
+                            <Play className="w-5 h-5 sm:w-6 sm:h-6 ml-0.5" />
                           )}
                         </Button>
-                        <Button variant="ghost" size="icon" onClick={toggleMute}>
+                        <Button variant="ghost" size="icon" onClick={toggleMute} className="h-8 w-8 sm:h-10 sm:w-10">
                           {isMuted ? (
-                            <VolumeX className="w-5 h-5" />
+                            <VolumeX className="w-4 h-4 sm:w-5 sm:h-5" />
                           ) : (
-                            <Volume2 className="w-5 h-5" />
+                            <Volume2 className="w-4 h-4 sm:w-5 sm:h-5" />
                           )}
                         </Button>
-                        <span className="text-sm text-muted-foreground">
+                        <span className="text-xs sm:text-sm text-muted-foreground">
                           {formatTime(currentTime)} / {formatTime(duration)}
                         </span>
                       </div>
 
-                      <Button variant="ghost" size="icon" onClick={toggleFullscreen}>
-                        <Maximize className="w-5 h-5" />
+                      <Button variant="ghost" size="icon" onClick={toggleFullscreen} className="h-8 w-8 sm:h-10 sm:w-10">
+                        <Maximize className="w-4 h-4 sm:w-5 sm:h-5" />
                       </Button>
                     </div>
                   </div>
@@ -317,27 +328,27 @@ export const TheaterView = ({ onClose }: TheaterViewProps) => {
 
                 {/* Viewing recorded badge */}
                 {hasRecordedViewing && (
-                  <div className="absolute top-4 right-4 flex items-center gap-2 px-3 py-2 rounded-lg bg-green-500/20 border border-green-500/30">
-                    <CheckCircle className="w-4 h-4 text-green-500" />
-                    <span className="text-sm text-green-400">Viewing Recorded</span>
+                  <div className="absolute top-2 right-2 sm:top-4 sm:right-4 flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1 sm:py-2 rounded-lg bg-green-500/20 border border-green-500/30">
+                    <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4 text-green-500" />
+                    <span className="text-xs sm:text-sm text-green-400">Recorded</span>
                   </div>
                 )}
               </>
             ) : (
               /* Placeholder for no video */
-              <div className="absolute inset-0 bg-gradient-to-br from-cinematic-charcoal to-cinematic-midnight flex items-center justify-center">
+              <div className="absolute inset-0 bg-gradient-to-br from-cinematic-charcoal to-cinematic-midnight flex items-center justify-center p-4">
                 <div className="text-center">
-                  <Film className="w-16 h-16 text-muted-foreground mx-auto mb-4 opacity-50" />
-                  <p className="text-muted-foreground mb-2">No Mind Movie Yet</p>
-                  <p className="text-sm text-muted-foreground/70 mb-6">
+                  <Film className="w-12 h-12 sm:w-16 sm:h-16 text-muted-foreground mx-auto mb-3 sm:mb-4 opacity-50" />
+                  <p className="text-muted-foreground text-sm sm:text-base mb-1 sm:mb-2">No Mind Movie Yet</p>
+                  <p className="text-xs sm:text-sm text-muted-foreground/70 mb-4 sm:mb-6">
                     Create with AI or upload your own
                   </p>
-                  <div className="flex gap-3 justify-center">
-                    <Button variant="gold" onClick={() => setShowMediaStudio(true)}>
+                  <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 justify-center">
+                    <Button variant="gold" onClick={() => setShowMediaStudio(true)} className="text-sm">
                       <Sparkles className="w-4 h-4 mr-2" />
                       Create with AI
                     </Button>
-                    <Button variant="cinematic" onClick={() => setShowUploader(true)}>
+                    <Button variant="cinematic" onClick={() => setShowUploader(true)} className="text-sm">
                       <Upload className="w-4 h-4 mr-2" />
                       Upload Video
                     </Button>
@@ -350,22 +361,22 @@ export const TheaterView = ({ onClose }: TheaterViewProps) => {
 
         {/* Three Things Panel - appears after video ends */}
         {showThreeThings && (
-          <div className="absolute inset-0 z-10 bg-cinematic-midnight/95 backdrop-blur-sm flex items-center justify-center animate-fade-in">
-            <div className="w-full max-w-xl p-8 rounded-2xl bg-card border border-gold/30 shadow-2xl">
-              <div className="text-center mb-6">
-                <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-br from-gold to-amber-soft flex items-center justify-center">
-                  <Target className="w-8 h-8 text-primary-foreground" />
+          <div className="absolute inset-0 z-10 bg-cinematic-midnight/95 backdrop-blur-sm flex items-center justify-center animate-fade-in p-4">
+            <div className="w-full max-w-xl p-4 sm:p-8 rounded-2xl bg-card border border-gold/30 shadow-2xl max-h-[90vh] overflow-y-auto">
+              <div className="text-center mb-4 sm:mb-6">
+                <div className="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-3 sm:mb-4 rounded-full bg-gradient-to-br from-gold to-amber-soft flex items-center justify-center">
+                  <Target className="w-6 h-6 sm:w-8 sm:h-8 text-primary-foreground" />
                 </div>
-                <h3 className="text-2xl font-display tracking-wide mb-2">
+                <h3 className="text-xl sm:text-2xl font-display tracking-wide mb-2">
                   Now, Your Three Things
                 </h3>
-                <p className="text-muted-foreground">
+                <p className="text-sm sm:text-base text-muted-foreground">
                   What are the 3 most important things you'll accomplish today?
                 </p>
               </div>
 
               {/* Tasks List */}
-              <div className="space-y-3 mb-4">
+              <div className="space-y-2 sm:space-y-3 mb-4">
                 {isLoadingTasks ? (
                   <div className="flex items-center justify-center py-6">
                     <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
@@ -378,27 +389,27 @@ export const TheaterView = ({ onClose }: TheaterViewProps) => {
                   tasks.map((task, index) => (
                     <div
                       key={task.id}
-                      className={`flex items-center gap-3 p-3 rounded-lg border transition-colors ${
+                      className={`flex items-center gap-2 sm:gap-3 p-2 sm:p-3 rounded-lg border transition-colors ${
                         task.is_completed
                           ? "bg-muted/30 border-border/30"
                           : "bg-muted/50 border-border/50"
                       }`}
                     >
-                      <span className="text-sm font-bold text-gold w-6">#{index + 1}</span>
+                      <span className="text-xs sm:text-sm font-bold text-gold w-5 sm:w-6">#{index + 1}</span>
                       <Checkbox
                         checked={task.is_completed}
                         onCheckedChange={() => toggleTask(task)}
                       />
-                      <span className={`flex-1 ${task.is_completed ? "line-through text-muted-foreground" : ""}`}>
+                      <span className={`flex-1 text-sm sm:text-base ${task.is_completed ? "line-through text-muted-foreground" : ""}`}>
                         {task.task_text}
                       </span>
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                        className="h-7 w-7 sm:h-8 sm:w-8 text-muted-foreground hover:text-destructive"
                         onClick={() => deleteTask(task.id)}
                       >
-                        <Trash2 className="h-4 w-4" />
+                        <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
                       </Button>
                     </div>
                   ))
@@ -407,38 +418,39 @@ export const TheaterView = ({ onClose }: TheaterViewProps) => {
 
               {/* Add Task Input */}
               {tasks.length < 3 && (
-                <div className="flex gap-2 mb-6">
+                <div className="flex gap-2 mb-4 sm:mb-6">
                   <Input
                     placeholder={`Add priority #${tasks.length + 1}...`}
                     value={newTaskText}
                     onChange={(e) => setNewTaskText(e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && addTask()}
-                    className="bg-background/50"
+                    className="bg-background/50 text-sm"
                   />
-                  <Button onClick={addTask} disabled={!newTaskText.trim()} variant="gold">
+                  <Button onClick={addTask} disabled={!newTaskText.trim()} variant="gold" size="sm">
                     <Plus className="h-4 w-4" />
                   </Button>
                 </div>
               )}
 
               {/* Progress indicator */}
-              <div className="flex items-center justify-center gap-2 mb-6">
+              <div className="flex items-center justify-center gap-2 mb-4 sm:mb-6">
                 {[1, 2, 3].map((num) => (
                   <div
                     key={num}
-                    className={`w-3 h-3 rounded-full transition-colors ${
+                    className={`w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full transition-colors ${
                       tasks.length >= num ? "bg-gold" : "bg-muted"
                     }`}
                   />
                 ))}
-                <span className="text-sm text-muted-foreground ml-2">{tasks.length}/3 set</span>
+                <span className="text-xs sm:text-sm text-muted-foreground ml-2">{tasks.length}/3 set</span>
               </div>
 
               {/* Action Buttons */}
-              <div className="flex gap-3 justify-center">
+              <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 justify-center">
                 <Button
                   variant="outline"
                   onClick={() => setShowThreeThings(false)}
+                  className="text-sm"
                 >
                   Back to Theater
                 </Button>
@@ -446,6 +458,7 @@ export const TheaterView = ({ onClose }: TheaterViewProps) => {
                   variant="gold"
                   onClick={onClose}
                   disabled={tasks.length === 0}
+                  className="text-sm"
                 >
                   <CheckCircle className="w-4 h-4 mr-2" />
                   Start My Day
@@ -455,25 +468,28 @@ export const TheaterView = ({ onClose }: TheaterViewProps) => {
           </div>
         )}
 
-        {/* Bottom Actions */}
-        <div className="p-6 border-t border-border/50">
-          <div className="max-w-5xl mx-auto flex items-center justify-between">
-            <p className="text-muted-foreground text-sm">
+        {/* Bottom Actions - Responsive */}
+        <div className="p-3 sm:p-6 border-t border-border/50">
+          <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
+            <p className="text-muted-foreground text-xs sm:text-sm text-center sm:text-left hidden sm:block">
               Watch your Mind Movie daily to reinforce your new identity
             </p>
-            <div className="flex items-center gap-3">
-              <Button variant="outline" onClick={() => setShowMediaStudio(true)}>
-                <Sparkles className="w-4 h-4 mr-2" />
-                Create with AI
+            <div className="flex items-center gap-2 sm:gap-3 flex-wrap justify-center">
+              <Button variant="outline" size="sm" onClick={() => setShowMediaStudio(true)} className="text-xs sm:text-sm">
+                <Sparkles className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                <span className="hidden sm:inline">Create with AI</span>
+                <span className="sm:hidden">AI</span>
               </Button>
-              <Button variant="cinematic" onClick={() => setShowUploader(true)}>
-                <Upload className="w-4 h-4 mr-2" />
-                {videoUrl ? "Replace Video" : "Upload Video"}
+              <Button variant="cinematic" size="sm" onClick={() => setShowUploader(true)} className="text-xs sm:text-sm">
+                <Upload className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                <span className="hidden sm:inline">{videoUrl ? "Replace Video" : "Upload Video"}</span>
+                <span className="sm:hidden">Upload</span>
               </Button>
               {videoUrl && (
-                <Button variant="gold" onClick={togglePlay}>
-                  <Play className="w-4 h-4 mr-2" />
-                  {isPlaying ? "Pause" : "Start Screening"}
+                <Button variant="gold" size="sm" onClick={togglePlay} className="text-xs sm:text-sm">
+                  <Play className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                  <span className="hidden sm:inline">{isPlaying ? "Pause" : "Start Screening"}</span>
+                  <span className="sm:hidden">{isPlaying ? "Pause" : "Play"}</span>
                 </Button>
               )}
             </div>
