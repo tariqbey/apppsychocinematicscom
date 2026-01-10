@@ -20,7 +20,8 @@ export interface VideoGenerationParams {
   resolution?: "720p" | "1080p";
   aspect_ratio?: "16:9" | "9:16" | "1:1";
   image?: string;
-  cameo_id?: string;
+  cameo_video_url?: string; // URL of 1-4 second character video for Cameo
+  cameo_prompt?: string;    // Character description for Cameo
 }
 
 export interface GeneratedMedia {
@@ -130,15 +131,20 @@ export function useMediaGeneration() {
   };
 
   const checkVideoStatus = async (
-    predictionId: string
+    predictionId: string,
+    provider: "atlas" | "kie" = "atlas"
   ): Promise<{ status: string; videoUrl?: string; error?: string }> => {
     if (!session) {
       return { status: "error", error: "Not authenticated" };
     }
 
     try {
-      const { data, error } = await supabase.functions.invoke("check-video-status", {
-        body: { predictionId },
+      // Use the appropriate status checker based on provider
+      const functionName = provider === "kie" ? "check-kie-video-status" : "check-video-status";
+      const bodyKey = provider === "kie" ? "taskId" : "predictionId";
+      
+      const { data, error } = await supabase.functions.invoke(functionName, {
+        body: { [bodyKey]: predictionId },
       });
 
       if (error) {
@@ -163,7 +169,7 @@ export function useMediaGeneration() {
     }
 
     const isSora = params.model.includes("openai/sora-2");
-    const duration = params.duration ?? (isSora ? 4 : 5);
+    const duration = params.duration ?? (isSora ? 5 : 5);
 
     // Check balance first (in credits)
     const creditCost = estimateCreditCost("video", duration);
@@ -192,10 +198,29 @@ export function useMediaGeneration() {
         });
       }
 
+      // Use Kie.ai for Sora 2, Atlas for others
+      let provider: "kie" | "atlas" = "atlas";
+      let functionName = "atlas-generate-video";
+
+      if (isSora) {
+        provider = "kie";
+        functionName = "kie-generate-video";
+      }
+
       const { data: startData, error: startError } = await supabase.functions.invoke(
-        "atlas-generate-video",
+        functionName,
         {
-          body: { ...params, duration, user_id: user.id },
+          body: {
+            prompt: params.prompt,
+            duration,
+            resolution: params.resolution,
+            aspect_ratio: params.aspect_ratio,
+            image: params.image,
+            cameo_video_url: params.cameo_video_url,
+            cameo_prompt: params.cameo_prompt,
+            user_id: user.id,
+            model: params.model,
+          },
         }
       );
 
@@ -213,13 +238,13 @@ export function useMediaGeneration() {
       toast({
         title: "Video generation started",
         description: isSora
-          ? "Sora 2 can take 10-20+ minutes depending on queue. You can leave this page and check your Media Library later."
+          ? "Sora 2 via Kie.ai typically takes 5-15 minutes. You can check your Media Library later."
           : "This may take a few minutes. Please wait...",
       });
 
-      // Poll for completion (Sora is slower + more queueing)
+      // Poll for completion
       const pollMs = isSora ? 10_000 : 4_000;
-      const maxMinutes = isSora ? 25 : 10;
+      const maxMinutes = isSora ? 20 : 10;
       const maxAttempts = Math.ceil((maxMinutes * 60 * 1000) / pollMs);
 
       let attempts = 0;
@@ -228,7 +253,7 @@ export function useMediaGeneration() {
       while (attempts < maxAttempts) {
         await new Promise((resolve) => setTimeout(resolve, pollMs));
 
-        const statusResult = await checkVideoStatus(predictionId);
+        const statusResult = await checkVideoStatus(predictionId, provider);
 
         if (statusResult.status === "completed" && statusResult.videoUrl) {
           setGeneratedVideoUrl(statusResult.videoUrl);
@@ -253,7 +278,7 @@ export function useMediaGeneration() {
         }
       }
 
-      // Don't treat this as a failure — Sora jobs often finish after the UI wait window.
+      // Don't treat this as a failure — jobs often finish after the UI wait window.
       toast({
         title: "Still processing in the background",
         description: `We waited ${maxMinutes} minutes. Your video may still finish — check the Media Library in a bit.`,

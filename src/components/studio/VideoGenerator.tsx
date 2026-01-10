@@ -19,10 +19,11 @@ export function VideoGenerator({ onVideoGenerated }: VideoGeneratorProps) {
   const [prompt, setPrompt] = useState("");
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
   const [selectedModel, setSelectedModel] = useState<VideoModel>("openai/sora-2/text-to-video-developer");
-  const [duration, setDuration] = useState<number>(4);
+  const [duration, setDuration] = useState<number>(5);
   const [resolution, setResolution] = useState<"720p" | "1080p">("720p");
   const [aspectRatio, setAspectRatio] = useState<"16:9" | "9:16" | "1:1">("16:9");
-  const [cameoId, setCameoId] = useState("");
+  const [cameoVideoUrl, setCameoVideoUrl] = useState("");
+  const [cameoPrompt, setCameoPrompt] = useState("");
 
   const { isGeneratingVideo, generatedVideoUrl, generateVideo, estimateCreditCost } = useMediaGeneration();
 
@@ -32,17 +33,17 @@ export function VideoGenerator({ onVideoGenerated }: VideoGeneratorProps) {
   const modelInfo = MODEL_INFO[effectiveModel];
 
   const isSoraDev = effectiveModel === "openai/sora-2/text-to-video-developer";
-  const durationOptions = isSoraDev ? [4, 8, 12] : [5, 10];
+  // Kie.ai Sora 2 supports 5, 10, 15, 20 second durations
+  const durationOptions = isSoraDev ? [5, 10, 15, 20] : [5, 10];
 
   useEffect(() => {
     if (isSoraDev) {
-      if (![4, 8, 12].includes(duration)) setDuration(4);
-      if (resolution !== "720p") setResolution("720p");
+      if (![5, 10, 15, 20].includes(duration)) setDuration(5);
       if (aspectRatio === "1:1") setAspectRatio("16:9");
     } else {
-      if ([4, 8, 12].includes(duration)) setDuration(5);
+      if (![5, 10].includes(duration)) setDuration(5);
     }
-  }, [isSoraDev, duration, resolution, aspectRatio]);
+  }, [isSoraDev, duration, aspectRatio]);
   const handleGenerate = async () => {
     if (!prompt.trim()) return;
     if (mode === "frames" && !uploadedImage) return;
@@ -56,7 +57,8 @@ export function VideoGenerator({ onVideoGenerated }: VideoGeneratorProps) {
       resolution: supportsResolution ? resolution : undefined,
       aspect_ratio: supportsResolution ? aspectRatio : undefined,
       image: mode === "frames" ? uploadedImage ?? undefined : undefined,
-      cameo_id: mode === "text" && cameoId.trim() ? cameoId.trim() : undefined,
+      cameo_video_url: mode === "text" && cameoVideoUrl.trim() ? cameoVideoUrl.trim() : undefined,
+      cameo_prompt: mode === "text" && cameoPrompt.trim() ? cameoPrompt.trim() : undefined,
     });
 
     if (url && onVideoGenerated) {
@@ -136,24 +138,40 @@ export function VideoGenerator({ onVideoGenerated }: VideoGeneratorProps) {
             <p className="text-xs text-muted-foreground">{modelInfo.description}</p>
           </div>
           
-          {/* Cameo ID - Only for Sora 2 Developer */}
+          {/* Cameo - Only for Sora 2 Developer */}
           {selectedModel === "openai/sora-2/text-to-video-developer" && (
-            <div className="space-y-2">
-              <Label htmlFor="cameo-id" className="flex items-center gap-2">
-                Sora Cameo ID
-                <span className="text-xs text-muted-foreground">(optional)</span>
-              </Label>
-              <input
-                id="cameo-id"
-                type="text"
-                placeholder="@Jetson_Life"
-                value={cameoId}
-                onChange={(e) => setCameoId(e.target.value)}
-                className="flex h-10 w-full rounded-md border border-input bg-background/50 px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-              />
-              <p className="text-xs text-muted-foreground">
-                Enter a shareable Sora Cameo ID to include that character in your video
-              </p>
+            <div className="space-y-4 p-4 rounded-lg border border-gold/30 bg-gold/5">
+              <div className="space-y-2">
+                <Label htmlFor="cameo-video-url" className="flex items-center gap-2">
+                  Cameo Video URL
+                  <span className="text-xs text-muted-foreground">(optional)</span>
+                </Label>
+                <input
+                  id="cameo-video-url"
+                  type="url"
+                  placeholder="https://example.com/my-character.mp4"
+                  value={cameoVideoUrl}
+                  onChange={(e) => setCameoVideoUrl(e.target.value)}
+                  className="flex h-10 w-full rounded-md border border-input bg-background/50 px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Upload a 1-4 second MP4 video of your character to Kie.ai, then paste the URL here
+                </p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="cameo-prompt">
+                  Character Description
+                  <span className="text-xs text-muted-foreground ml-2">(optional)</span>
+                </Label>
+                <input
+                  id="cameo-prompt"
+                  type="text"
+                  placeholder="A confident entrepreneur in a tailored suit"
+                  value={cameoPrompt}
+                  onChange={(e) => setCameoPrompt(e.target.value)}
+                  className="flex h-10 w-full rounded-md border border-input bg-background/50 px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                />
+              </div>
             </div>
           )}
         </div>
