@@ -208,14 +208,19 @@ export function useMediaGeneration() {
 
       // Video generation started - now poll for completion
       const predictionId = data.predictionId;
+      const isSora = params.model.includes("sora");
+      
       toast({ 
         title: "Video generation started", 
-        description: "This may take 2-5 minutes. Please wait..." 
+        description: isSora 
+          ? "Sora 2 typically takes 5-10 minutes. Please wait..." 
+          : "This may take 2-5 minutes. Please wait..." 
       });
 
-      // Poll for completion (max 6 minutes)
-      const maxAttempts = 90; // 90 * 4 seconds = 6 minutes
+      // Poll for completion (max 12 minutes for Sora, 8 for others)
+      const maxAttempts = isSora ? 180 : 120; // 180 * 4s = 12 min, 120 * 4s = 8 min
       let attempts = 0;
+      let lastProgressToast = 0;
 
       while (attempts < maxAttempts) {
         await new Promise(resolve => setTimeout(resolve, 4000)); // Wait 4 seconds
@@ -231,9 +236,19 @@ export function useMediaGeneration() {
         }
         
         attempts++;
+        
+        // Show progress toast every 2 minutes
+        const elapsedMinutes = Math.floor((attempts * 4) / 60);
+        if (elapsedMinutes > lastProgressToast && elapsedMinutes % 2 === 0) {
+          lastProgressToast = elapsedMinutes;
+          toast({
+            title: "Still generating...",
+            description: `${elapsedMinutes} minutes elapsed. ${isSora ? "Sora 2" : "Video"} is still processing.`,
+          });
+        }
       }
 
-      throw new Error("Video generation timed out. Check Media Library later.");
+      throw new Error(`Video generation timed out after ${isSora ? 12 : 8} minutes. Your video may still be processing - check Media Library.`);
     } catch (error) {
       console.error("Video generation error:", error);
       toast({
