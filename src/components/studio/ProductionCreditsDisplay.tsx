@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { Coins, Zap, TrendingUp, Crown, Loader2, AlertTriangle, Gift } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -47,33 +48,26 @@ export const ProductionCreditsDisplay = ({ compact = false, showBuyButton = true
 
   if (compact) {
     return (
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogTrigger asChild>
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            className={cn(
-              "gap-2 font-medium",
-              credits.isAdmin && "text-primary",
-              isCritical && !credits.isAdmin && "text-destructive",
-              isWarning && !credits.isAdmin && "text-yellow-600"
-            )}
-          >
-            <Coins className="h-4 w-4" />
-            <span>
-              {credits.isAdmin ? "∞" : `${credits.totalRemaining.toLocaleString()} credits`}
-            </span>
-            {isCritical && !credits.isAdmin && (
-              <AlertTriangle className="h-3 w-3" />
-            )}
-          </Button>
-        </DialogTrigger>
-        <CreditsPurchaseDialog 
-          credits={credits}
-          onPurchase={handlePurchase}
-          purchasingPack={purchasingPack}
-        />
-      </Dialog>
+      <Link to="/credits">
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          className={cn(
+            "gap-2 font-medium",
+            credits.isAdmin && "text-primary",
+            isCritical && !credits.isAdmin && "text-destructive",
+            isWarning && !credits.isAdmin && "text-yellow-600"
+          )}
+        >
+          <Coins className="h-4 w-4" />
+          <span>
+            {credits.isAdmin ? "∞" : `${credits.totalRemaining.toLocaleString()} credits`}
+          </span>
+          {isCritical && !credits.isAdmin && (
+            <AlertTriangle className="h-3 w-3" />
+          )}
+        </Button>
+      </Link>
     );
   }
 
