@@ -8,6 +8,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Loader2, Mic2, Volume2, Download, CheckCircle, Play, Square, Settings2, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { useFFmpegMerge } from "@/hooks/useFFmpegMerge";
 
 // Popular ElevenLabs voices for voice changing
 const VOICE_OPTIONS = [
@@ -33,8 +34,6 @@ export function VoiceChanger({ videoUrl, onVideoMerged }: VoiceChangerProps) {
   const [customVoiceId, setCustomVoiceId] = useState("");
   const [useCustomVoice, setUseCustomVoice] = useState(false);
   const [isChangingVoice, setIsChangingVoice] = useState(false);
-  const [isMerging, setIsMerging] = useState(false);
-  const [mergeProgress, setMergeProgress] = useState(0);
   const [changedAudioUrl, setChangedAudioUrl] = useState<string | null>(null);
   const [mergedVideoUrl, setMergedVideoUrl] = useState<string | null>(null);
   const [isPreviewPlaying, setIsPreviewPlaying] = useState(false);
@@ -42,6 +41,7 @@ export function VoiceChanger({ videoUrl, onVideoMerged }: VoiceChangerProps) {
   const [showAdvanced, setShowAdvanced] = useState(false);
   
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const { mergeAudioVideo, isProcessing: isMerging, progress } = useFFmpegMerge();
 
   const effectiveVoiceId = useCustomVoice ? customVoiceId : selectedVoice;
 
@@ -121,7 +121,6 @@ export function VoiceChanger({ videoUrl, onVideoMerged }: VoiceChangerProps) {
     setIsChangingVoice(true);
     setChangedAudioUrl(null);
     setMergedVideoUrl(null);
-    setMergeProgress(0);
     
     toast.info("Step 1/2: Changing voice with ElevenLabs...", { duration: 15000 });
 
@@ -161,50 +160,18 @@ export function VoiceChanger({ videoUrl, onVideoMerged }: VoiceChangerProps) {
       setChangedAudioUrl(data.audioUrl);
       toast.success("Voice changed! Step 2/2: Merging with video...");
       setIsChangingVoice(false);
-      setIsMerging(true);
-      setMergeProgress(25);
 
-      // Step 2: Merge audio with video using server-side FFmpeg
-      const mergeResponse = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/merge-audio-video`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${session.access_token}`,
-          },
-          body: JSON.stringify({
-            videoUrl: videoUrl,
-            audioUrl: data.audioUrl,
-          }),
-        }
-      );
-
-      setMergeProgress(75);
-
-      if (!mergeResponse.ok) {
-        const errorData = await mergeResponse.json();
-        throw new Error(errorData.error || "Merge failed");
-      }
-
-      const mergeData = await mergeResponse.json();
-      
-      if (!mergeData.mergedUrl) {
-        throw new Error("No merged video URL returned");
-      }
-
-      setMergeProgress(100);
-      setMergedVideoUrl(mergeData.mergedUrl);
-      setIsMerging(false);
+      // Step 2: Merge audio with video using browser MediaRecorder
+      const mergedUrl = await mergeAudioVideo(videoUrl, data.audioUrl);
+      setMergedVideoUrl(mergedUrl);
       
       toast.success("Video merged successfully!");
-      onVideoMerged?.(mergeData.mergedUrl);
+      onVideoMerged?.(mergedUrl);
       
     } catch (error) {
       console.error("Voice change/merge error:", error);
       toast.error(error instanceof Error ? error.message : "Failed to process");
       setIsChangingVoice(false);
-      setIsMerging(false);
     }
   };
 
@@ -212,7 +179,7 @@ export function VoiceChanger({ videoUrl, onVideoMerged }: VoiceChangerProps) {
     if (mergedVideoUrl) {
       const a = document.createElement("a");
       a.href = mergedVideoUrl;
-      a.download = `voice-changed-video-${Date.now()}.mp4`;
+      a.download = `voice-changed-video-${Date.now()}.webm`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -378,11 +345,11 @@ export function VoiceChanger({ videoUrl, onVideoMerged }: VoiceChangerProps) {
             <span className="text-muted-foreground">
               {isChangingVoice 
                 ? "Changing voice with ElevenLabs..." 
-                : `Merging video... ${mergeProgress}%`}
+                : progress?.message || "Processing..."}
             </span>
           </div>
-          {isMerging && (
-            <Progress value={mergeProgress} className="h-2" />
+          {progress && !isChangingVoice && (
+            <Progress value={progress.progress} className="h-2" />
           )}
         </div>
       )}

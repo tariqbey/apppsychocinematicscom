@@ -1,6 +1,4 @@
-import { useState, useRef, useCallback } from "react";
-import { FFmpeg } from "@ffmpeg/ffmpeg";
-import { fetchFile, toBlobURL } from "@ffmpeg/util";
+import { useState, useCallback } from "react";
 
 interface MergeProgress {
   stage: "loading" | "downloading" | "merging" | "complete" | "error";
@@ -11,46 +9,6 @@ interface MergeProgress {
 export function useFFmpegMerge() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [progress, setProgress] = useState<MergeProgress | null>(null);
-  const ffmpegRef = useRef<FFmpeg | null>(null);
-  const loadedRef = useRef(false);
-
-  const loadFFmpeg = useCallback(async () => {
-    if (loadedRef.current && ffmpegRef.current) {
-      return ffmpegRef.current;
-    }
-
-    setProgress({ stage: "loading", progress: 0, message: "Loading FFmpeg..." });
-
-    const ffmpeg = new FFmpeg();
-    ffmpegRef.current = ffmpeg;
-
-    ffmpeg.on("progress", ({ progress: p }) => {
-      setProgress({
-        stage: "merging",
-        progress: Math.round(p * 100),
-        message: `Merging: ${Math.round(p * 100)}%`,
-      });
-    });
-
-    ffmpeg.on("log", ({ message }) => {
-      console.log("[FFmpeg]", message);
-    });
-
-    const baseURL = "https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd";
-
-    try {
-      await ffmpeg.load({
-        coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, "text/javascript"),
-        wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, "application/wasm"),
-      });
-      loadedRef.current = true;
-      console.log("FFmpeg loaded successfully");
-      return ffmpeg;
-    } catch (error) {
-      console.error("Failed to load FFmpeg:", error);
-      throw new Error("Failed to load video processing engine");
-    }
-  }, []);
 
   const mergeAudioVideo = useCallback(
     async (videoUrl: string, audioUrl: string): Promise<string> => {
@@ -58,68 +16,142 @@ export function useFFmpegMerge() {
       setProgress({ stage: "loading", progress: 0, message: "Initializing..." });
 
       try {
-        const ffmpeg = await loadFFmpeg();
+        // Create video element (muted - we'll replace the audio)
+        setProgress({ stage: "downloading", progress: 10, message: "Loading video..." });
+        const video = document.createElement("video");
+        video.src = videoUrl;
+        video.muted = true;
+        video.crossOrigin = "anonymous";
+        video.playsInline = true;
 
-        // Download video
-        setProgress({ stage: "downloading", progress: 20, message: "Downloading video..." });
-        const videoData = await fetchFile(videoUrl);
-        await ffmpeg.writeFile("input.mp4", videoData);
+        // Create audio element
+        setProgress({ stage: "downloading", progress: 20, message: "Loading audio..." });
+        const audio = document.createElement("audio");
+        audio.src = audioUrl;
+        audio.crossOrigin = "anonymous";
 
-        // Download audio
-        setProgress({ stage: "downloading", progress: 40, message: "Downloading audio..." });
-        const audioData = await fetchFile(audioUrl);
-        await ffmpeg.writeFile("audio.mp3", audioData);
-
-        // Merge: Replace video audio with new audio
-        setProgress({ stage: "merging", progress: 50, message: "Merging audio and video..." });
-        
-        // -i input.mp4: Input video
-        // -i audio.mp3: Input audio
-        // -c:v copy: Copy video stream without re-encoding (fast)
-        // -c:a aac: Encode audio as AAC
-        // -map 0:v:0: Use video from first input
-        // -map 1:a:0: Use audio from second input
-        // -shortest: Match output duration to shortest input
-        await ffmpeg.exec([
-          "-i", "input.mp4",
-          "-i", "audio.mp3",
-          "-c:v", "copy",
-          "-c:a", "aac",
-          "-b:a", "192k",
-          "-map", "0:v:0",
-          "-map", "1:a:0",
-          "-shortest",
-          "output.mp4",
+        // Wait for both to load
+        await Promise.all([
+          new Promise<void>((resolve, reject) => {
+            video.onloadeddata = () => resolve();
+            video.onerror = () => reject(new Error("Failed to load video"));
+          }),
+          new Promise<void>((resolve, reject) => {
+            audio.oncanplaythrough = () => resolve();
+            audio.onerror = () => reject(new Error("Failed to load audio"));
+          }),
         ]);
 
-        // Read output
-        setProgress({ stage: "merging", progress: 90, message: "Finalizing..." });
-        const outputData = await ffmpeg.readFile("output.mp4");
-        
-        // Create blob URL - ensure we have an ArrayBuffer
-        let arrayBuffer: ArrayBuffer;
-        if (typeof outputData === "string") {
-          // If it's a string (base64), decode it
-          const binaryString = atob(outputData);
-          const bytes = new Uint8Array(binaryString.length);
-          for (let i = 0; i < binaryString.length; i++) {
-            bytes[i] = binaryString.charCodeAt(i);
-          }
-          arrayBuffer = bytes.buffer as ArrayBuffer;
-        } else {
-          // It's a Uint8Array - copy to ensure we have a proper ArrayBuffer
-          arrayBuffer = new Uint8Array(outputData).buffer as ArrayBuffer;
+        setProgress({ stage: "merging", progress: 30, message: "Setting up recording..." });
+
+        // Create canvas to capture video frames
+        const canvas = document.createElement("canvas");
+        canvas.width = video.videoWidth || 1280;
+        canvas.height = video.videoHeight || 720;
+        const ctx = canvas.getContext("2d");
+
+        if (!ctx) {
+          throw new Error("Failed to get canvas context");
         }
-        const blob = new Blob([arrayBuffer], { type: "video/mp4" });
-        const mergedUrl = URL.createObjectURL(blob);
 
-        // Cleanup
-        await ffmpeg.deleteFile("input.mp4");
-        await ffmpeg.deleteFile("audio.mp3");
-        await ffmpeg.deleteFile("output.mp4");
+        // Get video stream from canvas
+        const canvasStream = canvas.captureStream(30);
 
-        setProgress({ stage: "complete", progress: 100, message: "Complete!" });
-        return mergedUrl;
+        // Get audio stream
+        const audioContext = new AudioContext();
+        const audioSource = audioContext.createMediaElementSource(audio);
+        const audioDestination = audioContext.createMediaStreamDestination();
+        audioSource.connect(audioDestination);
+        audioSource.connect(audioContext.destination); // So we can hear it too
+
+        // Combine video and audio streams
+        const combinedStream = new MediaStream([
+          ...canvasStream.getVideoTracks(),
+          ...audioDestination.stream.getAudioTracks(),
+        ]);
+
+        // Set up MediaRecorder
+        const mimeType = MediaRecorder.isTypeSupported("video/webm;codecs=vp9,opus")
+          ? "video/webm;codecs=vp9,opus"
+          : MediaRecorder.isTypeSupported("video/webm;codecs=vp8,opus")
+          ? "video/webm;codecs=vp8,opus"
+          : "video/webm";
+
+        const recorder = new MediaRecorder(combinedStream, {
+          mimeType,
+          videoBitsPerSecond: 5000000, // 5 Mbps
+        });
+
+        const chunks: Blob[] = [];
+        recorder.ondataavailable = (e) => {
+          if (e.data.size > 0) {
+            chunks.push(e.data);
+          }
+        };
+
+        return new Promise((resolve, reject) => {
+          recorder.onstop = () => {
+            const blob = new Blob(chunks, { type: mimeType });
+            const mergedUrl = URL.createObjectURL(blob);
+            setProgress({ stage: "complete", progress: 100, message: "Complete!" });
+            setIsProcessing(false);
+            audioContext.close();
+            resolve(mergedUrl);
+          };
+
+          recorder.onerror = (e) => {
+            setProgress({ stage: "error", progress: 0, message: "Recording failed" });
+            setIsProcessing(false);
+            audioContext.close();
+            reject(new Error("MediaRecorder error"));
+          };
+
+          // Draw video frames to canvas
+          let frameCount = 0;
+          const drawFrame = () => {
+            if (video.paused || video.ended) return;
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            frameCount++;
+            
+            // Update progress based on video time
+            const progressPercent = 30 + (video.currentTime / video.duration) * 65;
+            setProgress({
+              stage: "merging",
+              progress: Math.min(95, progressPercent),
+              message: `Recording: ${Math.round((video.currentTime / video.duration) * 100)}%`,
+            });
+            
+            requestAnimationFrame(drawFrame);
+          };
+
+          // Handle video end
+          video.onended = () => {
+            setTimeout(() => {
+              audio.pause();
+              recorder.stop();
+            }, 100); // Small delay to ensure all frames are captured
+          };
+
+          // Handle errors
+          video.onerror = () => {
+            recorder.stop();
+            reject(new Error("Video playback error"));
+          };
+
+          // Start everything
+          setProgress({ stage: "merging", progress: 30, message: "Recording..." });
+          recorder.start(100); // Collect data every 100ms
+          
+          // Sync playback
+          video.currentTime = 0;
+          audio.currentTime = 0;
+          
+          video.play().then(() => {
+            audio.play();
+            drawFrame();
+          }).catch(reject);
+        });
+
       } catch (error) {
         console.error("Merge failed:", error);
         setProgress({
@@ -127,12 +159,11 @@ export function useFFmpegMerge() {
           progress: 0,
           message: error instanceof Error ? error.message : "Merge failed",
         });
-        throw error;
-      } finally {
         setIsProcessing(false);
+        throw error;
       }
     },
-    [loadFFmpeg]
+    []
   );
 
   const reset = useCallback(() => {
