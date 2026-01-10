@@ -13,6 +13,7 @@ import { ChiefAimWizard } from "@/components/chief-aim/ChiefAimWizard";
 import { MindMovieScriptWizard } from "@/components/mind-movie/MindMovieScriptWizard";
 import { ThreeThings } from "@/components/tasks/ThreeThings";
 import { AuthModal } from "@/components/auth/AuthModal";
+import { OnboardingModal, useOnboarding } from "@/components/onboarding/OnboardingModal";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { useGamification } from "@/hooks/useGamification";
@@ -33,6 +34,7 @@ const Index = () => {
   const { user, loading: authLoading } = useAuth();
   const { profile, loading: profileLoading, updateProfile } = useUserProfile();
   const { refreshData, checkAndAwardBadges } = useGamification();
+  const { showOnboarding, completeOnboarding, closeOnboarding } = useOnboarding(user?.id);
 
   const handleScorecardSuccess = useCallback(async () => {
     await refreshData();
@@ -281,6 +283,13 @@ const Index = () => {
 
       {/* Auth Modal */}
       <AuthModal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} />
+
+      {/* First-time User Onboarding */}
+      <OnboardingModal 
+        isOpen={showOnboarding} 
+        onClose={closeOnboarding}
+        onComplete={completeOnboarding}
+      />
     </div>
   );
 };
