@@ -18,17 +18,17 @@ const logStep = (step: string, details?: any) => {
 const CREDIT_PACKS = {
   "pack_10": {
     credits: 1000,     // $10 = 1000 credits
-    priceId: "price_1SnPdJKb1BapFa4iCo5KlNTO",
+    priceId: "price_1So5rfKb1BapFa4ibJH5kTOG",
     price: 10
   },
   "pack_20": {
     credits: 2200,     // $20 = 2200 credits (10% bonus)
-    priceId: "price_1SnPexKb1BapFa4iM8alKETd",
+    priceId: "price_1So5sBKb1BapFa4iiXsNXHnT",
     price: 20
   },
   "pack_30": {
     credits: 3500,     // $30 = 3500 credits (~17% bonus)
-    priceId: "price_1SnPfBKb1BapFa4igfHVYycR",
+    priceId: "price_1So5sqKb1BapFa4ipeYeCWYm",
     price: 30
   }
 };
