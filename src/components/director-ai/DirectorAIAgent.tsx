@@ -92,6 +92,8 @@ export function DirectorAIAgent({ isOpen, onClose, chiefAim }: DirectorAIAgentPr
   const lastAutoSubmitRef = useRef<string | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
   const ttsAbortControllerRef = useRef<AbortController | null>(null);
+  const ttsRequestIdRef = useRef(0);
+  const stopRequestedRef = useRef(false);
   
   // Get full coaching context
   const { context: coachingContext, loading: contextLoading } = useCoachingContext();
@@ -150,6 +152,13 @@ export function DirectorAIAgent({ isOpen, onClose, chiefAim }: DirectorAIAgentPr
     }
   }, [isListening, orbState]);
 
+  // When opening, clear any prior STOP state so TTS can run again
+  useEffect(() => {
+    if (isOpen) {
+      stopRequestedRef.current = false;
+    }
+  }, [isOpen]);
+
   // Generate proactive greeting on open
   useEffect(() => {
     if (isOpen && !hasGreeted.current && messages.length === 0 && !contextLoading) {
@@ -180,6 +189,10 @@ export function DirectorAIAgent({ isOpen, onClose, chiefAim }: DirectorAIAgentPr
   // Reset on close
   useEffect(() => {
     if (!isOpen) {
+      // Mark as stopped so any in-flight TTS cannot "resume" after the UI closes
+      stopRequestedRef.current = true;
+      ttsRequestIdRef.current += 1;
+
       hasGreeted.current = false;
       setHasInitialized(false);
       setMessages([]);
