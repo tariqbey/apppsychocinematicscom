@@ -629,7 +629,36 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      public_profiles: {
+        Row: {
+          avatar_url: string | null
+          best_streak: number | null
+          bio: string | null
+          current_streak: number | null
+          display_name: string | null
+          show_on_leaderboard: boolean | null
+          user_id: string | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          best_streak?: number | null
+          bio?: string | null
+          current_streak?: number | null
+          display_name?: string | null
+          show_on_leaderboard?: boolean | null
+          user_id?: string | null
+        }
+        Update: {
+          avatar_url?: string | null
+          best_streak?: number | null
+          bio?: string | null
+          current_streak?: number | null
+          display_name?: string | null
+          show_on_leaderboard?: boolean | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       get_leaderboard: {
