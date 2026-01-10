@@ -198,12 +198,21 @@ export function DirectorAIAgent({ isOpen, onClose, chiefAim }: DirectorAIAgentPr
       // Create abort controller for this TTS request
       ttsAbortControllerRef.current = new AbortController();
       
+      // Get user's session token for authentication
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token;
+      
+      if (!token) {
+        console.error("[DirectorAI] No auth token for TTS");
+        throw new Error("Not authenticated");
+      }
+      
       const response = await fetch(TTS_URL, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           "apikey": import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-          "Authorization": `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          "Authorization": `Bearer ${token}`,
         },
         body: JSON.stringify({
           text,
@@ -213,6 +222,8 @@ export function DirectorAIAgent({ isOpen, onClose, chiefAim }: DirectorAIAgentPr
       });
 
       if (!response.ok) {
+        const errorText = await response.text();
+        console.error("[DirectorAI] TTS error:", response.status, errorText);
         throw new Error("TTS failed");
       }
 
