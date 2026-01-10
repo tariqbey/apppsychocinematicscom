@@ -16,8 +16,9 @@ import { AuthModal } from "@/components/auth/AuthModal";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { useGamification } from "@/hooks/useGamification";
-import { Film, Loader2, Wand2, Sparkles, Bot, Clapperboard } from "lucide-react";
+import { Film, Loader2, Wand2, Sparkles, Bot, Clapperboard, HelpCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { InfoTooltip } from "@/components/ui/info-tooltip";
 
 const Index = () => {
   const [showTheater, setShowTheater] = useState(false);
@@ -131,6 +132,7 @@ const Index = () => {
                 <div className="flex items-center gap-2 mb-1">
                   <h3 className="text-xl font-display tracking-wide group-hover:text-gold transition-colors">The Edit Bay</h3>
                   <Sparkles className="w-4 h-4 text-gold/60" />
+                  <InfoTooltip content="Generate AI images of your future self and goals, then animate them into videos. Use reference photos of yourself to see YOU living your Chief Aim. Great for creating Mind Movie visuals." />
                 </div>
                 <p className="text-sm text-muted-foreground">
                   AI Media Generation Studio — Create images, animate them into videos, and build your Mind Movie.
@@ -157,6 +159,7 @@ const Index = () => {
                   <div className="flex items-center gap-2 mb-1">
                     <h3 className="text-xl font-display tracking-wide group-hover:text-amber-500 transition-colors">Mind Movie Script Writer</h3>
                     <Sparkles className="w-4 h-4 text-amber-500/60" />
+                    <InfoTooltip content="AI generates scene-by-scene prompts from your Chief Aim. Use these prompts in the Edit Bay to create visuals, then generate a custom AI soundtrack with your own lyrics." />
                   </div>
                   <p className="text-sm text-muted-foreground">
                     AI-powered storyboard generator — Create scene-by-scene prompts from your Chief Aim.
