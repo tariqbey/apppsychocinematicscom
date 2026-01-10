@@ -159,13 +159,19 @@ export const LandingPage = ({ onLogin }: LandingPageProps) => {
             </div>
             
             {/* Right Image - Director Hero */}
-            <div className="relative animate-slide-up lg:scale-110 lg:-mr-12">
-              <div className="absolute inset-0 bg-gradient-to-br from-gold/30 to-transparent rounded-2xl blur-3xl" />
-              <img 
-                src={heroImage} 
-                alt="The Director - Psycho-Cinematics" 
-                className="relative w-full max-w-2xl mx-auto rounded-2xl shadow-2xl shadow-black/50"
-              />
+            <div className="relative animate-slide-up lg:scale-110 lg:-mr-12 flex flex-col items-center">
+              {/* PSYCHO CINEMATICS Title */}
+              <h2 className="text-4xl md:text-5xl lg:text-6xl font-display tracking-[0.3em] text-gold-gradient mb-4 text-center">
+                PSYCHO CINEMATICS
+              </h2>
+              <div className="relative">
+                <div className="absolute inset-0 bg-gradient-to-br from-gold/30 to-transparent rounded-2xl blur-3xl" />
+                <img 
+                  src={heroImage} 
+                  alt="The Director - Psycho-Cinematics" 
+                  className="relative w-full max-w-2xl mx-auto shadow-2xl shadow-black/50"
+                />
+              </div>
             </div>
           </div>
         </div>
