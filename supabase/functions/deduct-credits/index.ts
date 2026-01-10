@@ -13,10 +13,10 @@ const logStep = (step: string, details?: any) => {
   console.log(`[DEDUCT-CREDITS] ${step}${detailsStr}`);
 };
 
-// API costs in dollars - these are the actual costs you pay per generation
+// API costs in dollars - actual costs you pay per generation
 const API_COSTS = {
   video: {
-    perSecond: 0.10  // $0.10 per second = $1.00 for 10-second video
+    perSecond: 0.10  // $0.10 per second
   },
   image: {
     "2k": 0.05,      // $0.05 per 2K image
@@ -25,6 +25,15 @@ const API_COSTS = {
   },
   music: {
     default: 0.15    // $0.15 per song generation
+  },
+  tts: {
+    default: 0.03    // $0.03 per TTS request
+  },
+  voiceChange: {
+    default: 0.08    // $0.08 per voice change
+  },
+  ai: {
+    default: 0.02    // $0.02 per AI chat/suggestion
   }
 };
 
@@ -119,6 +128,12 @@ serve(async (req) => {
       baseCostDollars = res.includes("4k") ? API_COSTS.image["4k"] : API_COSTS.image["2k"];
     } else if (mediaType === "music") {
       baseCostDollars = API_COSTS.music.default;
+    } else if (mediaType === "tts") {
+      baseCostDollars = API_COSTS.tts.default;
+    } else if (mediaType === "voiceChange") {
+      baseCostDollars = API_COSTS.voiceChange.default;
+    } else if (mediaType === "ai") {
+      baseCostDollars = API_COSTS.ai.default;
     }
 
     // Add markup to get total cost in dollars

@@ -14,13 +14,8 @@ const logStep = (step: string, details?: any) => {
   console.log(`[PURCHASE-CREDITS] ${step}${detailsStr}`);
 };
 
-// Credit pack configurations (1 credit = $0.01)
+// Credit pack configurations (1 credit = $0.01) - clean $10, $20, $30 blocks
 const CREDIT_PACKS = {
-  "pack_5": {
-    credits: 500,      // $5 = 500 credits
-    priceId: "price_1SnPcbKb1BapFa4im2AI9BLW",
-    price: 5
-  },
   "pack_10": {
     credits: 1000,     // $10 = 1000 credits
     priceId: "price_1SnPdJKb1BapFa4iCo5KlNTO",

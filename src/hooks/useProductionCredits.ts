@@ -21,26 +21,35 @@ export interface CreditPack {
   bonus?: string;
 }
 
-// Credit packs (1 credit = $0.01)
+// Credit packs (1 credit = $0.01) - clean $10, $20, $30 blocks
 export const CREDIT_PACKS: CreditPack[] = [
-  { id: "pack_5", credits: 500, price: 5 },
   { id: "pack_10", credits: 1000, price: 10 },
   { id: "pack_20", credits: 2200, price: 20, bonus: "+200 bonus" },
   { id: "pack_30", credits: 3500, price: 30, bonus: "+500 bonus" },
 ];
 
-// API costs for generation (in dollars - for internal calculation)
+// API costs for generation (in dollars - actual costs you pay)
 export const API_COSTS = {
   video: {
     perSecond: 0.10, // $0.10 per second
   },
   image: {
-    "2k": 0.05,
-    "4k": 0.08,
+    "2k": 0.05,      // $0.05 per 2K image
+    "4k": 0.08,      // $0.08 per 4K image
     default: 0.05,
   },
   music: {
-    default: 0.15,
+    default: 0.15,   // $0.15 per song generation
+  },
+  tts: {
+    default: 0.03,   // $0.03 per TTS request (approx 1000 chars)
+    perChar: 0.00003, // $0.03 per 1000 characters
+  },
+  voiceChange: {
+    default: 0.08,   // $0.08 per voice change (speech-to-speech)
+  },
+  ai: {
+    default: 0.02,   // $0.02 per AI chat/suggestion
   },
 };
 
@@ -115,7 +124,7 @@ export const useProductionCredits = () => {
   }, [session?.access_token, fetchCredits]);
 
   const deductCredits = useCallback(async (
-    mediaType: "video" | "image" | "music",
+    mediaType: "video" | "image" | "music" | "tts" | "voiceChange" | "ai",
     duration?: number,
     resolution?: string,
     generationId?: string,
@@ -197,7 +206,7 @@ export const useProductionCredits = () => {
 
   // Calculate actual API cost for a generation (in dollars - internal)
   const estimateCost = useCallback((
-    mediaType: "video" | "image" | "music",
+    mediaType: "video" | "image" | "music" | "tts" | "voiceChange" | "ai",
     duration?: number,
     resolution?: string
   ): number => {
@@ -209,13 +218,19 @@ export const useProductionCredits = () => {
       return res.includes("4k") ? API_COSTS.image["4k"] : API_COSTS.image["2k"];
     } else if (mediaType === "music") {
       return API_COSTS.music.default;
+    } else if (mediaType === "tts") {
+      return API_COSTS.tts.default;
+    } else if (mediaType === "voiceChange") {
+      return API_COSTS.voiceChange.default;
+    } else if (mediaType === "ai") {
+      return API_COSTS.ai.default;
     }
     return 0;
   }, []);
 
   // Calculate cost with markup (in dollars - for display conversion)
   const estimateCostWithMarkup = useCallback((
-    mediaType: "video" | "image" | "music",
+    mediaType: "video" | "image" | "music" | "tts" | "voiceChange" | "ai",
     duration?: number,
     resolution?: string
   ): number => {
@@ -224,7 +239,7 @@ export const useProductionCredits = () => {
 
   // Calculate display cost in CREDITS (what user sees and pays)
   const estimateCreditCost = useCallback((
-    mediaType: "video" | "image" | "music",
+    mediaType: "video" | "image" | "music" | "tts" | "voiceChange" | "ai",
     duration?: number,
     resolution?: string
   ): number => {
@@ -234,7 +249,7 @@ export const useProductionCredits = () => {
 
   // Legacy: estimate display cost in dollars (for backward compatibility)
   const estimateDisplayCost = useCallback((
-    mediaType: "video" | "image" | "music",
+    mediaType: "video" | "image" | "music" | "tts" | "voiceChange" | "ai",
     duration?: number,
     resolution?: string
   ): number => {
@@ -243,7 +258,7 @@ export const useProductionCredits = () => {
 
   // Check if user can afford a specific generation (in credits)
   const canAfford = useCallback((
-    mediaType: "video" | "image" | "music",
+    mediaType: "video" | "image" | "music" | "tts" | "voiceChange" | "ai",
     duration?: number,
     resolution?: string
   ): boolean => {
