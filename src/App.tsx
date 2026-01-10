@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AppLoader } from "@/components/ui/AppLoader";
 import Index from "./pages/Index";
+import Signup from "./pages/Signup";
 import DirectorCorner from "./pages/DirectorCorner";
 import Subscribe from "./pages/Subscribe";
 import SubscriptionSuccess from "./pages/SubscriptionSuccess";
@@ -27,6 +28,7 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Index />} />
+          <Route path="/signup" element={<Signup />} />
           <Route path="/community" element={<DirectorCorner />} />
           <Route path="/subscribe" element={<Subscribe />} />
           <Route path="/subscription-success" element={<SubscriptionSuccess />} />

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { 
   Film, 
   Sparkles, 
@@ -27,15 +27,13 @@ interface LandingPageProps {
 
 export const LandingPage = ({ onLogin }: LandingPageProps) => {
   const [showAuthModal, setShowAuthModal] = useState(false);
-  const [authMode, setAuthMode] = useState<"signin" | "signup">("signup");
+  const navigate = useNavigate();
 
   const handleGetStarted = () => {
-    setAuthMode("signup");
-    setShowAuthModal(true);
+    navigate("/signup");
   };
 
   const handleLogin = () => {
-    setAuthMode("signin");
     setShowAuthModal(true);
   };
 
@@ -347,11 +345,11 @@ export const LandingPage = ({ onLogin }: LandingPageProps) => {
         </div>
       </footer>
 
-      {/* Auth Modal */}
+      {/* Auth Modal - For Login Only */}
       <AuthModal 
         isOpen={showAuthModal} 
         onClose={() => setShowAuthModal(false)}
-        initialMode={authMode}
+        initialMode="signin"
       />
     </div>
   );
