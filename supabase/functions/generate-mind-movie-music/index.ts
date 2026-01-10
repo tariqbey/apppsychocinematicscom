@@ -39,15 +39,8 @@ interface GenerateMusicRequest {
   songCount?: number;
 }
 
-// Hip-hop persona for all hip-hop style songs
-const HIP_HOP_PERSONA_ID = '5b650802-2e77-4f1c-b6ad-a73401c3456d';
-const HIP_HOP_STYLES = [
-  'Hip-Hop Motivational',
-  'Cinematic Hip-Hop',
-  'Conscious Rap',
-  'Lo-Fi Hip-Hop',
-  'Trap Inspirational'
-];
+// No default persona - let the API generate random voices based on vocalGender
+// Users can provide their own persona ID if they find a voice they like
 
 interface CheckStatusRequest {
   action: 'check-status';
@@ -177,20 +170,16 @@ async function handleGenerateMusic(body: GenerateMusicRequest, supabase: any): P
   const sunoStyle = styleMap[musicStyle] || 'Pop, Inspirational, Uplifting';
   
   // Determine which persona to use (if any)
-  // Priority: 1) Custom personaId if provided, 2) Default hip-hop persona ONLY if male vocal + hip-hop style, 3) None
+  // Only use persona if user explicitly provides one - otherwise let vocalGender randomize the voice
   let effectivePersonaId: string | undefined = undefined;
   
   if (body.personaId && body.personaId.trim()) {
     // User provided a custom persona - use it (this overrides vocalGender)
     effectivePersonaId = body.personaId.trim();
     console.log('[generate-music] Using custom personaId:', effectivePersonaId);
-  } else if (HIP_HOP_STYLES.includes(musicStyle) && vocalGender === 'm') {
-    // Hip-hop style with male vocal - use default hip-hop persona
-    effectivePersonaId = HIP_HOP_PERSONA_ID;
-    console.log('[generate-music] Using default hip-hop persona for male vocal');
   } else {
-    // No persona - let vocalGender control the voice
-    console.log('[generate-music] No persona applied, using vocalGender:', vocalGender);
+    // No persona - let vocalGender control the voice (API will randomize within that gender)
+    console.log('[generate-music] No persona applied, using vocalGender:', vocalGender, '(random voice)');
   }
   
   // Generate multiple songs if requested
