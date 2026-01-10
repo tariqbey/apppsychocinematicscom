@@ -12,6 +12,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { useToast } from "@/hooks/use-toast";
 import { format, startOfWeek, addDays, isSameDay, isToday } from "date-fns";
+import { InfoTooltip } from "@/components/ui/info-tooltip";
 
 interface Task {
   id: string;
@@ -208,7 +209,10 @@ export function ThreeThings() {
             <Target className="w-5 h-5 text-primary-foreground" />
           </div>
           <div>
-            <h3 className="text-lg font-display tracking-wide">The Three Things</h3>
+            <div className="flex items-center gap-2">
+              <h3 className="text-lg font-display tracking-wide">The Three Things</h3>
+              <InfoTooltip content="Focus on just 3 priority tasks per day that move you toward your Chief Aim. Small daily actions compound into massive transformation. Use 'Director's Suggestions' for AI-powered task ideas." />
+            </div>
             <p className="text-sm text-muted-foreground">Your daily priorities</p>
           </div>
         </div>

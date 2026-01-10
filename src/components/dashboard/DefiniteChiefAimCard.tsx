@@ -1,5 +1,6 @@
 import { Scroll, Calendar, ArrowRight, Sparkles, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { InfoTooltip } from "@/components/ui/info-tooltip";
 
 interface ChiefAimData {
   what: string;
@@ -27,7 +28,10 @@ export const DefiniteChiefAimCard = ({ aim, onEdit }: DefiniteChiefAimCardProps)
             <Scroll className="w-5 h-5 text-gold" />
           </div>
           <div>
-            <h3 className="text-xl font-display tracking-wide">The Script</h3>
+            <div className="flex items-center gap-2">
+              <h3 className="text-xl font-display tracking-wide">The Script</h3>
+              <InfoTooltip content="Your Definite Chief Aim is the blueprint for your transformation. Read it aloud every morning and night. It has 4 parts: What you want, By when, What you'll give in exchange, and Your plan." />
+            </div>
             <p className="text-sm text-muted-foreground">Your Definite Chief Aim</p>
           </div>
         </div>

@@ -1,4 +1,5 @@
 import { Flame, TrendingUp } from "lucide-react";
+import { InfoTooltip } from "@/components/ui/info-tooltip";
 
 interface StreakBannerProps {
   streak: number;
@@ -13,7 +14,10 @@ export const StreakBanner = ({ streak, bestStreak }: StreakBannerProps) => {
           <Flame className={`w-6 h-6 text-amber-soft ${streak > 0 ? 'streak-fire' : ''}`} />
         </div>
         <div>
-          <p className="text-sm text-muted-foreground uppercase tracking-wider">Current Streak</p>
+          <div className="flex items-center gap-2">
+            <p className="text-sm text-muted-foreground uppercase tracking-wider">Current Streak</p>
+            <InfoTooltip content="Your streak increases each day you complete your Daily Scorecard. Consecutive days build momentum and reinforce your new identity. Aim for 90+ days!" />
+          </div>
           <p className="text-2xl font-display text-foreground">{streak} Days</p>
         </div>
       </div>
