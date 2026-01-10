@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { Clapperboard, Settings, User, LogOut, Trophy, Users, MessageSquare, Shield, BookOpen, HelpCircle } from "lucide-react";
+import { Link, useNavigate, useLocation } from "react-router-dom";
+import { Clapperboard, Settings, User, LogOut, Trophy, Users, MessageSquare, Shield, BookOpen, HelpCircle, GraduationCap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -34,6 +34,9 @@ export const Header = () => {
   const { credits } = useGamification();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const isActivePath = (path: string) => location.pathname === path;
 
   const handleSignOut = async () => {
     await signOut();
@@ -59,6 +62,30 @@ export const Header = () => {
               <p className="text-xs text-muted-foreground -mt-1">The Director's OS</p>
             </div>
           </Link>
+
+          {/* Help Navigation - Always Visible */}
+          <nav className="hidden md:flex items-center gap-1 mr-4">
+            <Link to="/tutorial">
+              <Button 
+                variant={isActivePath('/tutorial') ? 'secondary' : 'ghost'} 
+                size="sm" 
+                className={`gap-2 ${isActivePath('/tutorial') ? 'bg-gold/10 text-gold' : 'text-muted-foreground hover:text-foreground'}`}
+              >
+                <GraduationCap className="w-4 h-4" />
+                Tutorial
+              </Button>
+            </Link>
+            <Link to="/user-manual">
+              <Button 
+                variant={isActivePath('/user-manual') ? 'secondary' : 'ghost'} 
+                size="sm" 
+                className={`gap-2 ${isActivePath('/user-manual') ? 'bg-gold/10 text-gold' : 'text-muted-foreground hover:text-foreground'}`}
+              >
+                <BookOpen className="w-4 h-4" />
+                Manual
+              </Button>
+            </Link>
+          </nav>
 
           {/* Actions */}
           <div className="flex items-center gap-2">
@@ -190,18 +217,19 @@ export const Header = () => {
                 </>
               ) : (
                 <div className="flex items-center gap-2">
-                  <Link to="/tutorial">
-                    <Button variant="ghost" size="sm" className="gap-2">
-                      <HelpCircle className="w-4 h-4" />
-                      Tutorial
-                    </Button>
-                  </Link>
-                  <Link to="/user-manual">
-                    <Button variant="ghost" size="sm" className="gap-2">
-                      <BookOpen className="w-4 h-4" />
-                      Manual
-                    </Button>
-                  </Link>
+                  {/* Mobile Tutorial/Manual Links for logged out users */}
+                  <div className="flex md:hidden items-center gap-1">
+                    <Link to="/tutorial">
+                      <Button variant="ghost" size="icon" className="text-muted-foreground">
+                        <GraduationCap className="w-5 h-5" />
+                      </Button>
+                    </Link>
+                    <Link to="/user-manual">
+                      <Button variant="ghost" size="icon" className="text-muted-foreground">
+                        <BookOpen className="w-5 h-5" />
+                      </Button>
+                    </Link>
+                  </div>
                   <Button variant="gold" onClick={() => setShowAuthModal(true)}>
                     Enter Studio
                   </Button>
