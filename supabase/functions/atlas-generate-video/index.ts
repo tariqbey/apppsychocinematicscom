@@ -92,6 +92,11 @@ const MODEL_CONFIGS: Record<string, { endpoint: string; defaultParams: any }> = 
     endpoint: "https://api.atlascloud.ai/api/v1/model/generateVideo",
     defaultParams: { duration: "5" },
   },
+  // Kling 1.0 Video-to-Video (editing)
+  "kling-ai/v1.0/video-to-video": {
+    endpoint: "https://api.atlascloud.ai/api/v1/model/generateVideo",
+    defaultParams: { keep_audio: true },
+  },
   // Google Veo 3 (VO3)
   "google/veo3": {
     endpoint: "https://api.atlascloud.ai/api/v1/model/generateVideo",
@@ -112,6 +117,7 @@ const MODEL_NAME_MAP: Record<string, string> = {
   // Kling 1.0
   "kling-ai/v1.0/text-to-video": "kwaivgi/kling-v1.0/text-to-video",
   "kling-ai/v1.0/image-to-video": "kwaivgi/kling-v1.0/image-to-video",
+  "kling-ai/v1.0/video-to-video": "kwaivgi/kling-v1.0/video-to-video", // Video editing
   // Wan 2.1
   "wan-ai/wan2.1-i2v-480p": "alibaba/wan-2.1/i2v-720p",
   "wan-ai/wan2.1-t2v-480p": "alibaba/wan-2.1/t2v-720p",
@@ -170,13 +176,15 @@ serve(async (req) => {
     }
 
     const {
-      model = "openai/sora-2/text-to-video-developer",
+      model = "google/veo3-fast",
       prompt,
       duration,
       resolution,
       aspect_ratio,
       image,
-      cameo_id,
+      video_url,         // For video-to-video editing
+      keep_audio,        // For video-to-video editing
+      reference_images,  // For video-to-video editing (up to 4 images)
     } = await req.json();
 
     if (!prompt) {
@@ -261,24 +269,62 @@ serve(async (req) => {
 
     // Kling models use string duration ("5" | "10") and aspect_ratio
     const isKling = model.includes("kling-ai/");
+    const isKlingVideoEdit = model === "kling-ai/v1.0/video-to-video";
+    
     if (isKling) {
-      // Duration must be string "5" or "10"
-      const requestedDuration = Number(generateBody.duration ?? 5);
-      generateBody.duration = requestedDuration >= 10 ? "10" : "5";
+      // Video-to-video editing mode
+      if (isKlingVideoEdit) {
+        // Require video_url for editing
+        if (!video_url) {
+          return new Response(JSON.stringify({ success: false, error: "Video URL is required for video editing", code: "E1004" }), {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+        
+        generateBody.video_url = video_url;
+        generateBody.keep_audio = keep_audio ?? true;
+        
+        // Handle reference images (up to 4)
+        if (reference_images && Array.isArray(reference_images) && reference_images.length > 0) {
+          const uploadedImageUrls: string[] = [];
+          for (const img of reference_images.slice(0, 4)) {
+            if (typeof img === "string" && img.startsWith("data:")) {
+              const { publicUrl } = await dataUrlToPublicUrl({ supabaseAdmin: supabase, dataUrl: img, userId });
+              uploadedImageUrls.push(publicUrl);
+            } else if (typeof img === "string") {
+              uploadedImageUrls.push(img);
+            }
+          }
+          if (uploadedImageUrls.length > 0) {
+            generateBody.image_urls = uploadedImageUrls;
+          }
+        }
+        
+        // Remove duration/resolution/aspect_ratio for video editing
+        delete generateBody.duration;
+        delete generateBody.resolution;
+        delete generateBody.aspect_ratio;
+      } else {
+        // Standard Kling generation (text-to-video, image-to-video)
+        // Duration must be string "5" or "10"
+        const requestedDuration = Number(generateBody.duration ?? 5);
+        generateBody.duration = requestedDuration >= 10 ? "10" : "5";
 
-      // Kling supports 1:1, 9:16, 16:9
-      const requestedAspect = (aspect_ratio ?? "16:9") as "16:9" | "9:16" | "1:1";
-      generateBody.aspect_ratio = requestedAspect;
+        // Kling supports 1:1, 9:16, 16:9
+        const requestedAspect = (aspect_ratio ?? "16:9") as "16:9" | "9:16" | "1:1";
+        generateBody.aspect_ratio = requestedAspect;
 
-      // Remove resolution - Kling doesn't use it
-      delete generateBody.resolution;
+        // Remove resolution - Kling doesn't use it
+        delete generateBody.resolution;
 
-      // For image-to-video, require image
-      if (model === "kling-ai/v1.0/image-to-video" && !generateBody.image) {
-        return new Response(JSON.stringify({ success: false, error: "Image is required for this model", code: "E1004" }), {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        // For image-to-video, require image
+        if (model === "kling-ai/v1.0/image-to-video" && !generateBody.image) {
+          return new Response(JSON.stringify({ success: false, error: "Image is required for this model", code: "E1004" }), {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
       }
     }
 

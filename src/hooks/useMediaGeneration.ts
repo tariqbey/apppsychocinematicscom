@@ -11,6 +11,7 @@ export type VideoModel =
   // Kling 1.0 (with video editing)
   | "kling-ai/v1.0/text-to-video"
   | "kling-ai/v1.0/image-to-video"
+  | "kling-ai/v1.0/video-to-video" // Video editing
   // Google Veo 3 (VO3) - has audio
   | "google/veo3"
   | "google/veo3-fast"
@@ -56,6 +57,7 @@ export const MODEL_INFO: Record<VideoModel, { name: string; price: string; descr
   // Kling 1.0 (with video editing)
   "kling-ai/v1.0/text-to-video": { name: "Kling 1.0", price: "60-110 credits", description: "Kling AI with video editing features" },
   "kling-ai/v1.0/image-to-video": { name: "Kling 1.0 Image", price: "60-110 credits", description: "Animate images with Kling 1.0" },
+  "kling-ai/v1.0/video-to-video": { name: "Kling 1.0 Editor", price: "~110 credits", description: "AI video editing with effects & transitions" },
   // Google Veo 3 (VO3) - has audio
   "google/veo3": { name: "Veo 3 (VO3)", price: "80-120 credits", description: "Google DeepMind with audio generation" },
   "google/veo3-fast": { name: "Veo 3 Fast", price: "60-100 credits", description: "Faster Veo 3 with audio" },
