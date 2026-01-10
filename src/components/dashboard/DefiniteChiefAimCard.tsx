@@ -49,36 +49,46 @@ export const DefiniteChiefAimCard = ({ aim, onEdit }: DefiniteChiefAimCardProps)
       </div>
 
       <div className="space-y-4 relative">
-        <div className="p-4 rounded-lg bg-secondary/50 border-l-2 border-gold">
-          <p className="text-sm text-muted-foreground uppercase tracking-wider mb-1">What I Want</p>
-          <p className="text-foreground font-medium">{aim.what}</p>
-        </div>
-
-        <div className="flex items-center gap-4">
-          <div className="flex-1 p-4 rounded-lg bg-secondary/30">
-            <div className="flex items-center gap-2 mb-1">
-              <Calendar className="w-4 h-4 text-gold" />
-              <p className="text-sm text-muted-foreground uppercase tracking-wider">By When</p>
+        {hasAim ? (
+          <>
+            <div className="p-4 rounded-lg bg-secondary/50 border-l-2 border-gold">
+              <p className="text-sm text-muted-foreground uppercase tracking-wider mb-1">What I Want</p>
+              <p className="text-foreground font-medium">{aim.what}</p>
             </div>
-            <p className="text-foreground font-medium">{aim.byWhen}</p>
-          </div>
-        </div>
 
-        <div className="p-4 rounded-lg bg-secondary/30">
-          <div className="flex items-center gap-2 mb-1">
-            <ArrowRight className="w-4 h-4 text-amber-soft" />
-            <p className="text-sm text-muted-foreground uppercase tracking-wider">The Exchange</p>
-          </div>
-          <p className="text-foreground/80 text-sm">{aim.exchange}</p>
-        </div>
+            <div className="flex items-center gap-4">
+              <div className="flex-1 p-4 rounded-lg bg-secondary/30">
+                <div className="flex items-center gap-2 mb-1">
+                  <Calendar className="w-4 h-4 text-gold" />
+                  <p className="text-sm text-muted-foreground uppercase tracking-wider">By When</p>
+                </div>
+                <p className="text-foreground font-medium">{aim.byWhen}</p>
+              </div>
+            </div>
 
-        <div className="p-4 rounded-lg bg-gradient-to-br from-gold/5 to-transparent border border-gold/20">
-          <div className="flex items-center gap-2 mb-1">
-            <Sparkles className="w-4 h-4 text-gold" />
-            <p className="text-sm text-gold uppercase tracking-wider">The Plan</p>
+            <div className="p-4 rounded-lg bg-secondary/30">
+              <div className="flex items-center gap-2 mb-1">
+                <ArrowRight className="w-4 h-4 text-amber-soft" />
+                <p className="text-sm text-muted-foreground uppercase tracking-wider">The Exchange</p>
+              </div>
+              <p className="text-foreground/80 text-sm">{aim.exchange}</p>
+            </div>
+
+            <div className="p-4 rounded-lg bg-gradient-to-br from-gold/5 to-transparent border border-gold/20">
+              <div className="flex items-center gap-2 mb-1">
+                <Sparkles className="w-4 h-4 text-gold" />
+                <p className="text-sm text-gold uppercase tracking-wider">The Plan</p>
+              </div>
+              <p className="text-foreground/90 text-sm">{aim.plan}</p>
+            </div>
+          </>
+        ) : (
+          <div className="p-6 rounded-lg bg-secondary/30 border border-dashed border-gold/30 text-center">
+            <Sparkles className="w-8 h-8 text-gold/50 mx-auto mb-3" />
+            <p className="text-muted-foreground mb-2">Your Definite Chief Aim is not set yet.</p>
+            <p className="text-sm text-muted-foreground/70">Click "Create with AI" to define your vision and goals.</p>
           </div>
-          <p className="text-foreground/90 text-sm">{aim.plan}</p>
-        </div>
+        )}
       </div>
     </div>
   );

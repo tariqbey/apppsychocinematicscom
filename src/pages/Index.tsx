@@ -50,21 +50,13 @@ const Index = () => {
     });
   }, [updateProfile]);
 
-  // Default chief aim for demo/unauthenticated users
-  const defaultChiefAim = {
-    what: "Build a $10M annual revenue business that creates transformational impact for 100,000 people",
-    byWhen: "December 31, 2026",
-    exchange: "I will dedicate 4 focused hours daily to high-leverage activities, continuously develop my skills, and build strategic partnerships",
-    plan: "Launch the Psycho-Cinematics program, build a community of 10,000 directors, and scale through strategic content and partnerships",
+  // Use profile data - empty values for new users
+  const chiefAim = {
+    what: profile?.chief_aim_what || "",
+    byWhen: profile?.chief_aim_by_when || "",
+    exchange: profile?.chief_aim_exchange || "",
+    plan: profile?.chief_aim_plan || "",
   };
-
-  // Use profile data if available, otherwise use defaults
-  const chiefAim = profile ? {
-    what: profile.chief_aim_what || defaultChiefAim.what,
-    byWhen: profile.chief_aim_by_when || defaultChiefAim.byWhen,
-    exchange: profile.chief_aim_exchange || defaultChiefAim.exchange,
-    plan: profile.chief_aim_plan || defaultChiefAim.plan,
-  } : defaultChiefAim;
 
   const currentAct = profile?.current_act || "Act I: The Director Emerges";
   const dayNumber = profile?.day_number || 1;
