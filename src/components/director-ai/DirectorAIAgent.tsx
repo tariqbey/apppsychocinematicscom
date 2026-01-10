@@ -29,7 +29,7 @@ const TTS_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/elevenlabs-tt
 // Generate context-aware opening based on user status
 const generateProactiveOpening = (context: ReturnType<typeof useCoachingContext>["context"]) => {
   if (!context) {
-    return "Good day, Director. Let's get you set up and ready to create your masterpiece.";
+    return "Welcome to Psycho-Cinematics™, Director! I'm your personal AI coach. Together, we'll transform you into the Director of your life story. Let's start by creating your Definite Chief Aim — the foundation of everything we'll build together. What's the biggest dream you want to achieve?";
   }
 
   const { greeting, dayNumber, currentStreak, chiefAimComplete, tasksSetForToday, allTasksCompleted, 
@@ -37,7 +37,12 @@ const generateProactiveOpening = (context: ReturnType<typeof useCoachingContext>
   
   const name = directorCharacterName ? `, ${directorCharacterName}` : "";
   
-  // Priority 1: No Chief Aim
+  // Priority 0: Brand new user (Day 1, no streak, no Chief Aim)
+  if (dayNumber <= 1 && currentStreak === 0 && !chiefAimComplete) {
+    return `Welcome to the Director's Chair${name}! 🎬 I'm your personal AI coach, trained in the Psycho-Cinematics™ methodology. Think of me as your Jarvis — here to guide you every step of the way.\n\nFirst things first: Every great movie starts with a clear vision. Let's create your **Definite Chief Aim** — a crystal-clear statement of what you want to achieve, when you'll achieve it, what you'll give in exchange, and your plan.\n\nClose your eyes for a moment. Picture yourself having achieved your biggest dream. What does that look like? Tell me about it.`;
+  }
+  
+  // Priority 1: No Chief Aim (returning user)
   if (!chiefAimComplete) {
     return `${greeting}${name}. Director, I see we haven't completed your Definite Chief Aim yet. This is Phase 1 - Pre-Production. Without a clear Final Scene, we're shooting blind. Every great production starts with knowing the destination. What's the dream you're building toward? What does your ultimate success look like?`;
   }
