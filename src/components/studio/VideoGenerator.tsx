@@ -128,15 +128,13 @@ export function VideoGenerator({ onVideoGenerated }: VideoGeneratorProps) {
             />
           </div>
           
-          {/* Voice Changer - Only show for VO3/Sora 2 videos */}
-          {(effectiveModel.includes("sora-2") || effectiveModel.includes("openai")) && (
-            <VoiceChanger 
-              videoUrl={generatedVideoUrl}
-              onVideoMerged={(mergedUrl) => {
-                console.log("Merged video with new voice:", mergedUrl);
-              }}
-            />
-          )}
+          {/* Voice Changer - Available for all generated videos */}
+          <VoiceChanger 
+            videoUrl={generatedVideoUrl}
+            onVideoMerged={(mergedUrl) => {
+              console.log("Merged video with new voice:", mergedUrl);
+            }}
+          />
         </div>
       )}
 
