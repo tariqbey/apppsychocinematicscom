@@ -87,11 +87,20 @@ export default function Signup() {
       // Now redirect to Stripe checkout
       await redirectToCheckout();
     } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Sign Up Error",
-        description: error.message || "Something went wrong",
-      });
+      // Check if user already exists
+      if (error.message?.includes("already registered") || error.message?.includes("already exists")) {
+        toast({
+          variant: "destructive",
+          title: "Account Already Exists",
+          description: "This email is already registered. Please sign in instead.",
+        });
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Sign Up Error",
+          description: error.message || "Something went wrong",
+        });
+      }
       setIsLoading(false);
     }
   };
