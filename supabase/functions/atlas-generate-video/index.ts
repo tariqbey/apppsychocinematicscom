@@ -49,10 +49,11 @@ const MODEL_CONFIGS: Record<string, { endpoint: string; defaultParams: any }> = 
 // Map frontend model names to Atlas Cloud API model names
 const MODEL_NAME_MAP: Record<string, string> = {
   "openai/sora-2/text-to-video-developer": "openai/sora-2/text-to-video-developer",
+  "openai/sora-2/image-to-video": "openai/sora-2/image-to-video",
   "kling-ai/v1-5/pro/image-to-video": "kwaivgi/kling-v2.5-turbo-pro/image-to-video",
   "kling-ai/v1-5/pro/text-to-video": "kwaivgi/kling-v2.5-turbo-pro/text-to-video",
-  "wan-ai/wan2.1-i2v-480p": "wanx-ai/wanx2.1-i2v-plus",
-  "wan-ai/wan2.1-t2v-480p": "wanx-ai/wanx2.1-t2v-plus",
+  "wan-ai/wan2.1-i2v-480p": "alibaba/wan-2.1/i2v-720p",
+  "wan-ai/wan2.1-t2v-480p": "alibaba/wan-2.1/t2v-720p",
 };
 
 serve(async (req) => {
