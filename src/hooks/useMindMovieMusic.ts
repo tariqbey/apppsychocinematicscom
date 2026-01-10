@@ -10,19 +10,71 @@ export type MusicStyle =
   | 'Conscious Rap'
   | 'Lo-Fi Hip-Hop'
   | 'Trap Inspirational'
+  | 'Boom Bap'
+  | 'West Coast Rap'
+  | 'UK Drill'
+  | 'Jazz Rap'
   // Pop & Electronic
   | 'Uplifting Pop'
   | 'Cinematic Electronic'
   | 'Ambient Chill'
   | 'Synthwave Retro'
+  | 'Indie Pop'
+  | 'EDM Anthem'
+  | 'Future Bass'
+  | 'Deep House'
+  | 'Tropical House'
+  | 'Electro Swing'
+  | 'Hyperpop'
+  | 'Dream Pop'
+  | 'Synth-pop'
+  | 'Vaporwave'
+  // Rock & Alternative
+  | 'Indie Rock Anthem'
+  | 'Alternative Rock'
+  | 'Classic Rock'
+  | 'Punk Rock'
+  | 'Pop Rock'
+  | 'Progressive Rock'
+  | 'Grunge'
+  | 'Post-Rock'
   // Orchestral & Cinematic
   | 'Epic Orchestral'
   | 'Inspirational Piano'
   | 'Cinematic Drama'
-  // Other Genres
-  | 'Acoustic Folk'
+  | 'Cinematic Inspirational'
+  | 'Neoclassical'
+  | 'Movie Soundtrack'
+  // R&B & Soul
   | 'R&B Soul'
-  | 'Indie Rock Anthem'
+  | 'Contemporary R&B'
+  | 'Neo Soul'
+  | 'Motown'
+  | 'Funk'
+  // Jazz & Blues
+  | 'Smooth Jazz'
+  | 'Jazz Fusion'
+  | 'Blues'
+  | 'Delta Blues'
+  | 'Cool Jazz'
+  // Folk & Country
+  | 'Acoustic Folk'
+  | 'Indie Folk'
+  | 'Country Inspirational'
+  | 'Bluegrass'
+  | 'Americana'
+  // Gospel & Spiritual
+  | 'Gospel Inspirational'
+  | 'Contemporary Gospel'
+  | 'Spiritual'
+  // World & Latin
+  | 'Reggae'
+  | 'Afrobeat'
+  | 'Latin Pop'
+  | 'Salsa'
+  | 'Bossa Nova'
+  | 'K-pop'
+  | 'J-pop'
   // Custom
   | 'Custom';
 
@@ -30,7 +82,7 @@ export interface MusicStyleOption {
   value: MusicStyle;
   label: string;
   description: string;
-  category: 'hip-hop' | 'pop-electronic' | 'orchestral' | 'other' | 'custom';
+  category: 'hip-hop' | 'pop-electronic' | 'rock' | 'orchestral' | 'rnb-soul' | 'jazz-blues' | 'folk-country' | 'gospel' | 'world' | 'custom';
 }
 
 export const MUSIC_STYLES: MusicStyleOption[] = [
@@ -38,13 +90,13 @@ export const MUSIC_STYLES: MusicStyleOption[] = [
   {
     value: 'Hip-Hop Motivational',
     label: 'Hip-Hop Motivational',
-    description: 'Upbeat, energetic, and empowering',
+    description: 'Upbeat, energetic, empowering',
     category: 'hip-hop',
   },
   {
     value: 'Cinematic Hip-Hop',
     label: 'Cinematic Hip-Hop',
-    description: 'Epic, orchestral elements, dramatic',
+    description: 'Epic, orchestral, dramatic',
     category: 'hip-hop',
   },
   {
@@ -63,6 +115,30 @@ export const MUSIC_STYLES: MusicStyleOption[] = [
     value: 'Trap Inspirational',
     label: 'Trap Inspirational',
     description: 'Modern, hard-hitting, powerful',
+    category: 'hip-hop',
+  },
+  {
+    value: 'Boom Bap',
+    label: 'Boom Bap',
+    description: 'Classic 90s hip-hop sound',
+    category: 'hip-hop',
+  },
+  {
+    value: 'West Coast Rap',
+    label: 'West Coast Rap',
+    description: 'G-funk, laid-back, groovy',
+    category: 'hip-hop',
+  },
+  {
+    value: 'UK Drill',
+    label: 'UK Drill',
+    description: 'Dark, bass-heavy, aggressive',
+    category: 'hip-hop',
+  },
+  {
+    value: 'Jazz Rap',
+    label: 'Jazz Rap',
+    description: 'Jazz samples, smooth, sophisticated',
     category: 'hip-hop',
   },
   // Pop & Electronic
@@ -90,6 +166,115 @@ export const MUSIC_STYLES: MusicStyleOption[] = [
     description: '80s inspired, nostalgic, driving',
     category: 'pop-electronic',
   },
+  {
+    value: 'Indie Pop',
+    label: 'Indie Pop',
+    description: 'Dreamy, atmospheric, emotional',
+    category: 'pop-electronic',
+  },
+  {
+    value: 'EDM Anthem',
+    label: 'EDM Anthem',
+    description: 'High-energy, euphoric, festival',
+    category: 'pop-electronic',
+  },
+  {
+    value: 'Future Bass',
+    label: 'Future Bass',
+    description: 'Melodic, emotional drops, modern',
+    category: 'pop-electronic',
+  },
+  {
+    value: 'Deep House',
+    label: 'Deep House',
+    description: 'Groovy, soulful, rhythmic',
+    category: 'pop-electronic',
+  },
+  {
+    value: 'Tropical House',
+    label: 'Tropical House',
+    description: 'Summery, upbeat, breezy',
+    category: 'pop-electronic',
+  },
+  {
+    value: 'Electro Swing',
+    label: 'Electro Swing',
+    description: 'Vintage swing meets electronic',
+    category: 'pop-electronic',
+  },
+  {
+    value: 'Hyperpop',
+    label: 'Hyperpop',
+    description: 'Glitchy, maximalist, experimental',
+    category: 'pop-electronic',
+  },
+  {
+    value: 'Dream Pop',
+    label: 'Dream Pop',
+    description: 'Ethereal, atmospheric, hazy',
+    category: 'pop-electronic',
+  },
+  {
+    value: 'Synth-pop',
+    label: 'Synth-pop',
+    description: 'Synth-driven, catchy, retro-modern',
+    category: 'pop-electronic',
+  },
+  {
+    value: 'Vaporwave',
+    label: 'Vaporwave',
+    description: 'Nostalgic, slowed, aesthetic',
+    category: 'pop-electronic',
+  },
+  // Rock & Alternative
+  {
+    value: 'Indie Rock Anthem',
+    label: 'Indie Rock Anthem',
+    description: 'Energetic, guitar-driven, inspiring',
+    category: 'rock',
+  },
+  {
+    value: 'Alternative Rock',
+    label: 'Alternative Rock',
+    description: 'Raw, emotional, edgy',
+    category: 'rock',
+  },
+  {
+    value: 'Classic Rock',
+    label: 'Classic Rock',
+    description: 'Timeless, powerful, guitar solos',
+    category: 'rock',
+  },
+  {
+    value: 'Punk Rock',
+    label: 'Punk Rock',
+    description: 'Fast, rebellious, raw energy',
+    category: 'rock',
+  },
+  {
+    value: 'Pop Rock',
+    label: 'Pop Rock',
+    description: 'Catchy, melodic, accessible',
+    category: 'rock',
+  },
+  {
+    value: 'Progressive Rock',
+    label: 'Progressive Rock',
+    description: 'Complex, epic, experimental',
+    category: 'rock',
+  },
+  {
+    value: 'Grunge',
+    label: 'Grunge',
+    description: 'Raw, heavy, emotional depth',
+    category: 'rock',
+  },
+  {
+    value: 'Post-Rock',
+    label: 'Post-Rock',
+    description: 'Atmospheric, building, cinematic',
+    category: 'rock',
+  },
   // Orchestral & Cinematic
   {
     value: 'Epic Orchestral',
@@ -109,24 +294,178 @@ export const MUSIC_STYLES: MusicStyleOption[] = [
     description: 'Intense, building, movie score',
     category: 'orchestral',
   },
-  // Other Genres
   {
-    value: 'Acoustic Folk',
-    label: 'Acoustic Folk',
-    description: 'Warm, organic, storytelling',
-    category: 'other',
+    value: 'Cinematic Inspirational',
+    label: 'Cinematic Inspirational',
+    description: 'Uplifting, emotional, dramatic',
+    category: 'orchestral',
   },
+  {
+    value: 'Neoclassical',
+    label: 'Neoclassical',
+    description: 'Modern classical, elegant, refined',
+    category: 'orchestral',
+  },
+  {
+    value: 'Movie Soundtrack',
+    label: 'Movie Soundtrack',
+    description: 'Theatrical, emotional, sweeping',
+    category: 'orchestral',
+  },
+  // R&B & Soul
   {
     value: 'R&B Soul',
     label: 'R&B Soul',
     description: 'Smooth, soulful, emotional',
-    category: 'other',
+    category: 'rnb-soul',
   },
   {
-    value: 'Indie Rock Anthem',
-    label: 'Indie Rock Anthem',
-    description: 'Energetic, guitar-driven, inspiring',
-    category: 'other',
+    value: 'Contemporary R&B',
+    label: 'Contemporary R&B',
+    description: 'Modern, melodic, atmospheric',
+    category: 'rnb-soul',
+  },
+  {
+    value: 'Neo Soul',
+    label: 'Neo Soul',
+    description: 'Organic, jazzy, conscious',
+    category: 'rnb-soul',
+  },
+  {
+    value: 'Motown',
+    label: 'Motown',
+    description: 'Classic, groovy, soulful',
+    category: 'rnb-soul',
+  },
+  {
+    value: 'Funk',
+    label: 'Funk',
+    description: 'Groovy, bass-heavy, danceable',
+    category: 'rnb-soul',
+  },
+  // Jazz & Blues
+  {
+    value: 'Smooth Jazz',
+    label: 'Smooth Jazz',
+    description: 'Relaxing, sophisticated, melodic',
+    category: 'jazz-blues',
+  },
+  {
+    value: 'Jazz Fusion',
+    label: 'Jazz Fusion',
+    description: 'Complex, funky, experimental',
+    category: 'jazz-blues',
+  },
+  {
+    value: 'Blues',
+    label: 'Blues',
+    description: 'Soulful, raw, emotional',
+    category: 'jazz-blues',
+  },
+  {
+    value: 'Delta Blues',
+    label: 'Delta Blues',
+    description: 'Roots, acoustic, storytelling',
+    category: 'jazz-blues',
+  },
+  {
+    value: 'Cool Jazz',
+    label: 'Cool Jazz',
+    description: 'Laid-back, sophisticated, smooth',
+    category: 'jazz-blues',
+  },
+  // Folk & Country
+  {
+    value: 'Acoustic Folk',
+    label: 'Acoustic Folk',
+    description: 'Warm, organic, storytelling',
+    category: 'folk-country',
+  },
+  {
+    value: 'Indie Folk',
+    label: 'Indie Folk',
+    description: 'Intimate, heartfelt, atmospheric',
+    category: 'folk-country',
+  },
+  {
+    value: 'Country Inspirational',
+    label: 'Country Inspirational',
+    description: 'Heartfelt, Americana, uplifting',
+    category: 'folk-country',
+  },
+  {
+    value: 'Bluegrass',
+    label: 'Bluegrass',
+    description: 'Acoustic, lively, traditional',
+    category: 'folk-country',
+  },
+  {
+    value: 'Americana',
+    label: 'Americana',
+    description: 'Roots, authentic, storytelling',
+    category: 'folk-country',
+  },
+  // Gospel & Spiritual
+  {
+    value: 'Gospel Inspirational',
+    label: 'Gospel Inspirational',
+    description: 'Uplifting, spiritual, powerful',
+    category: 'gospel',
+  },
+  {
+    value: 'Contemporary Gospel',
+    label: 'Contemporary Gospel',
+    description: 'Modern, soulful, inspiring',
+    category: 'gospel',
+  },
+  {
+    value: 'Spiritual',
+    label: 'Spiritual',
+    description: 'Meditative, peaceful, transcendent',
+    category: 'gospel',
+  },
+  // World & Latin
+  {
+    value: 'Reggae',
+    label: 'Reggae',
+    description: 'Laid-back, positive, groovy',
+    category: 'world',
+  },
+  {
+    value: 'Afrobeat',
+    label: 'Afrobeat',
+    description: 'Rhythmic, energetic, danceable',
+    category: 'world',
+  },
+  {
+    value: 'Latin Pop',
+    label: 'Latin Pop',
+    description: 'Passionate, rhythmic, vibrant',
+    category: 'world',
+  },
+  {
+    value: 'Salsa',
+    label: 'Salsa',
+    description: 'Energetic, danceable, vibrant',
+    category: 'world',
+  },
+  {
+    value: 'Bossa Nova',
+    label: 'Bossa Nova',
+    description: 'Smooth, jazzy, Brazilian',
+    category: 'world',
+  },
+  {
+    value: 'K-pop',
+    label: 'K-pop',
+    description: 'Catchy, polished, dynamic',
+    category: 'world',
+  },
+  {
+    value: 'J-pop',
+    label: 'J-pop',
+    description: 'Melodic, upbeat, colorful',
+    category: 'world',
   },
   // Custom
   {
