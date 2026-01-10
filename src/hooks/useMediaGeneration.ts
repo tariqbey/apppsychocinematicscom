@@ -5,19 +5,13 @@ import { useAuth } from "@/hooks/useAuth";
 import { useProductionCredits } from "@/hooks/useProductionCredits";
 
 export type VideoModel = 
-  // Sora 2
-  | "openai/sora-2/text-to-video-developer" 
-  | "openai/sora-2/image-to-video" 
   // Wan 2.1
   | "wan-ai/wan2.1-i2v-480p" 
   | "wan-ai/wan2.1-t2v-480p" 
-  // Kling v2.5 Turbo Pro
-  | "kling-ai/v2.5-turbo-pro/text-to-video"
-  | "kling-ai/v2.5-turbo-pro/image-to-video"
-  // Legacy Kling (deprecated, maps to v2.5)
-  | "kling-ai/v1-5/pro/image-to-video" 
-  | "kling-ai/v1-5/pro/text-to-video"
-  // Google Veo 3 (VO3)
+  // Kling 1.0 (with video editing)
+  | "kling-ai/v1.0/text-to-video"
+  | "kling-ai/v1.0/image-to-video"
+  // Google Veo 3 (VO3) - has audio
   | "google/veo3"
   | "google/veo3-fast"
   | "google/veo3-fast/image-to-video";
@@ -56,22 +50,16 @@ export interface GeneratedMedia {
 }
 
 export const MODEL_INFO: Record<VideoModel, { name: string; price: string; description: string }> = {
-  // Sora 2
-  "openai/sora-2/text-to-video-developer": { name: "Sora 2 Developer", price: "60-110 credits", description: "OpenAI text-to-video with Cameo support" },
-  "openai/sora-2/image-to-video": { name: "Sora 2 Image", price: "60-110 credits", description: "Animate an image with Sora 2" },
   // Wan 2.1
-  "wan-ai/wan2.1-t2v-480p": { name: "Wan 2.1", price: "60-110 credits", description: "Fast text-to-video" },
-  "wan-ai/wan2.1-i2v-480p": { name: "Wan 2.1 Image", price: "60-110 credits", description: "Image animation" },
-  // Kling v2.5 Turbo Pro
-  "kling-ai/v2.5-turbo-pro/text-to-video": { name: "Kling 2.5 Pro", price: "60-110 credits", description: "Kling AI text-to-video" },
-  "kling-ai/v2.5-turbo-pro/image-to-video": { name: "Kling 2.5 Pro Image", price: "60-110 credits", description: "Kling AI image animation" },
-  // Legacy Kling (deprecated)
-  "kling-ai/v1-5/pro/text-to-video": { name: "Kling 1.5 Pro", price: "60-110 credits", description: "(Legacy) Kling text-to-video" },
-  "kling-ai/v1-5/pro/image-to-video": { name: "Kling 1.5 Pro Image", price: "60-110 credits", description: "(Legacy) Kling image animation" },
-  // Google Veo 3 (VO3)
-  "google/veo3": { name: "Veo 3 (VO3)", price: "80-120 credits", description: "Google DeepMind text-to-video with audio" },
-  "google/veo3-fast": { name: "Veo 3 Fast", price: "60-100 credits", description: "Faster Veo 3 generation with audio" },
-  "google/veo3-fast/image-to-video": { name: "Veo 3 Fast Image", price: "60-100 credits", description: "Animate images with Veo 3" },
+  "wan-ai/wan2.1-t2v-480p": { name: "Wan 2.1", price: "60-110 credits", description: "Fast text-to-video generation" },
+  "wan-ai/wan2.1-i2v-480p": { name: "Wan 2.1 Image", price: "60-110 credits", description: "Animate images with Wan 2.1" },
+  // Kling 1.0 (with video editing)
+  "kling-ai/v1.0/text-to-video": { name: "Kling 1.0", price: "60-110 credits", description: "Kling AI with video editing features" },
+  "kling-ai/v1.0/image-to-video": { name: "Kling 1.0 Image", price: "60-110 credits", description: "Animate images with Kling 1.0" },
+  // Google Veo 3 (VO3) - has audio
+  "google/veo3": { name: "Veo 3 (VO3)", price: "80-120 credits", description: "Google DeepMind with audio generation" },
+  "google/veo3-fast": { name: "Veo 3 Fast", price: "60-100 credits", description: "Faster Veo 3 with audio" },
+  "google/veo3-fast/image-to-video": { name: "Veo 3 Fast Image", price: "60-100 credits", description: "Animate images with audio" },
 };
 
 export function useMediaGeneration() {
@@ -194,8 +182,7 @@ export function useMediaGeneration() {
       return null;
     }
 
-    const isSora = params.model.includes("openai/sora-2");
-    const duration = params.duration ?? (isSora ? 5 : 5);
+    const duration = params.duration ?? 5;
 
     // Check balance first (in credits)
     const creditCost = estimateCreditCost("video", duration);
@@ -224,14 +211,9 @@ export function useMediaGeneration() {
         });
       }
 
-      // Use Kie.ai for Sora 2, Atlas for others
-      let provider: "kie" | "atlas" = "atlas";
-      let functionName = "atlas-generate-video";
-
-      if (isSora) {
-        provider = "kie";
-        functionName = "kie-generate-video";
-      }
+      // All models now use Atlas Cloud
+      const provider: "kie" | "atlas" = "atlas";
+      const functionName = "atlas-generate-video";
 
       const { data: startData, error: startError } = await supabase.functions.invoke(
         functionName,
@@ -263,14 +245,12 @@ export function useMediaGeneration() {
 
       toast({
         title: "Video generation started",
-        description: isSora
-          ? "Sora 2 via Kie.ai typically takes 5-15 minutes. You can check your Media Library later."
-          : "This may take a few minutes. Please wait...",
+        description: "This may take a few minutes. Please wait...",
       });
 
       // Poll for completion
-      const pollMs = isSora ? 10_000 : 4_000;
-      const maxMinutes = isSora ? 20 : 10;
+      const pollMs = 4_000;
+      const maxMinutes = 10;
       const maxAttempts = Math.ceil((maxMinutes * 60 * 1000) / pollMs);
 
       let attempts = 0;
@@ -299,7 +279,7 @@ export function useMediaGeneration() {
           lastProgressToast = elapsedMinutes;
           toast({
             title: "Still generating…",
-            description: `${elapsedMinutes} minutes elapsed. ${isSora ? "Sora 2" : "Video"} is still processing.`,
+            description: `${elapsedMinutes} minutes elapsed. Video is still processing.`,
           });
         }
       }

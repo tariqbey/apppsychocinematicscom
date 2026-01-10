@@ -74,15 +74,6 @@ async function dataUrlToPublicUrl({
 }
 
 const MODEL_CONFIGS: Record<string, { endpoint: string; defaultParams: any }> = {
-  // OpenAI Sora 2
-  "openai/sora-2/text-to-video-developer": {
-    endpoint: "https://api.atlascloud.ai/api/v1/model/generateVideo",
-    defaultParams: { duration: 4, resolution: "1080p", aspect_ratio: "16:9" },
-  },
-  "openai/sora-2/image-to-video": {
-    endpoint: "https://api.atlascloud.ai/api/v1/model/generateVideo",
-    defaultParams: { duration: 5, resolution: "1080p" },
-  },
   // Wan 2.1
   "wan-ai/wan2.1-t2v-480p": {
     endpoint: "https://api.atlascloud.ai/api/v1/model/generateVideo",
@@ -92,12 +83,12 @@ const MODEL_CONFIGS: Record<string, { endpoint: string; defaultParams: any }> = 
     endpoint: "https://api.atlascloud.ai/api/v1/model/generateVideo",
     defaultParams: { duration: 5, resolution: "480p" },
   },
-  // Kling v2.5 Turbo Pro
-  "kling-ai/v2.5-turbo-pro/text-to-video": {
+  // Kling 1.0 (with video editing)
+  "kling-ai/v1.0/text-to-video": {
     endpoint: "https://api.atlascloud.ai/api/v1/model/generateVideo",
     defaultParams: { duration: "5", aspect_ratio: "16:9" },
   },
-  "kling-ai/v2.5-turbo-pro/image-to-video": {
+  "kling-ai/v1.0/image-to-video": {
     endpoint: "https://api.atlascloud.ai/api/v1/model/generateVideo",
     defaultParams: { duration: "5" },
   },
@@ -114,27 +105,13 @@ const MODEL_CONFIGS: Record<string, { endpoint: string; defaultParams: any }> = 
     endpoint: "https://api.atlascloud.ai/api/v1/model/generateVideo",
     defaultParams: { duration: 8, resolution: "720p", generate_audio: true },
   },
-  // Legacy Kling names (for backwards compat)
-  "kling-ai/v1-5/pro/text-to-video": {
-    endpoint: "https://api.atlascloud.ai/api/v1/model/generateVideo",
-    defaultParams: { duration: "5", aspect_ratio: "16:9" },
-  },
-  "kling-ai/v1-5/pro/image-to-video": {
-    endpoint: "https://api.atlascloud.ai/api/v1/model/generateVideo",
-    defaultParams: { duration: "5" },
-  },
 };
 
 // Map frontend model names to Atlas Cloud API model names
 const MODEL_NAME_MAP: Record<string, string> = {
-  // Sora 2
-  "openai/sora-2/text-to-video-developer": "openai/sora-2/text-to-video-developer",
-  "openai/sora-2/image-to-video": "openai/sora-2/image-to-video",
-  // Kling v2.5 Turbo Pro
-  "kling-ai/v2.5-turbo-pro/text-to-video": "kwaivgi/kling-v2.5-turbo-pro/text-to-video",
-  "kling-ai/v2.5-turbo-pro/image-to-video": "kwaivgi/kling-v2.5-turbo-pro/image-to-video",
-  "kling-ai/v1-5/pro/image-to-video": "kwaivgi/kling-v2.5-turbo-pro/image-to-video",
-  "kling-ai/v1-5/pro/text-to-video": "kwaivgi/kling-v2.5-turbo-pro/text-to-video",
+  // Kling 1.0
+  "kling-ai/v1.0/text-to-video": "kwaivgi/kling-v1.0/text-to-video",
+  "kling-ai/v1.0/image-to-video": "kwaivgi/kling-v1.0/image-to-video",
   // Wan 2.1
   "wan-ai/wan2.1-i2v-480p": "alibaba/wan-2.1/i2v-720p",
   "wan-ai/wan2.1-t2v-480p": "alibaba/wan-2.1/t2v-720p",
@@ -238,45 +215,9 @@ serve(async (req) => {
       generateBody.aspect_ratio = modelConfig.defaultParams.aspect_ratio;
     }
 
-    // For Sora 2 developer model, handle Cameo ID by including it in the prompt
-    if (model === "openai/sora-2/text-to-video-developer" && cameo_id) {
-      // Ensure the cameo_id starts with @ for proper reference
-      const formattedCameoId = cameo_id.startsWith("@") ? cameo_id : `@${cameo_id}`;
-      // Prepend the cameo reference to the prompt
-      generateBody.prompt = `${formattedCameoId} ${generateBody.prompt}`;
-      console.log(`Including Sora Cameo: ${formattedCameoId}`);
-    }
-
-    // Sora 2 uses 'size' instead of 'resolution' and supports only specific durations/sizes.
-    if (model === "openai/sora-2/text-to-video-developer") {
-      // Supported durations: 4 | 8 | 12
-      const requestedDuration = duration ?? 4;
-      const soraDuration = requestedDuration <= 4 ? 4 : requestedDuration <= 8 ? 8 : 12;
-      generateBody.duration = soraDuration;
-
-      // Supported sizes (per Atlas docs): "720*1280" | "1280*720" | "1024*1792" | "1792*1024"
-      // Map UI "720p" => smaller size, "1080p" => larger size.
-      const requestedAspect = (aspect_ratio ?? generateBody.aspect_ratio ?? "16:9") as "16:9" | "9:16" | "1:1";
-      const requestedRes = (resolution ?? "720p") as "720p" | "1080p";
-
-      // Sora doesn't expose a true 1:1 size through Atlas; fall back to 16:9.
-      const normalizedAspect: "16:9" | "9:16" = requestedAspect === "9:16" ? "9:16" : "16:9";
-      generateBody.aspect_ratio = normalizedAspect;
-
-      if (normalizedAspect === "16:9") {
-        generateBody.size = requestedRes === "1080p" ? "1792*1024" : "1280*720";
-      } else {
-        generateBody.size = requestedRes === "1080p" ? "1024*1792" : "720*1280";
-      }
-
-      delete generateBody.resolution;
-    }
-
     // Handle image input for image-to-video models
-    const isImageToVideo = model === "openai/sora-2/image-to-video" || 
-                           model === "wan-ai/wan2.1-i2v-480p" || 
-                           model === "kling-ai/v1-5/pro/image-to-video" ||
-                           model === "kling-ai/v2.5-turbo-pro/image-to-video" ||
+    const isImageToVideo = model === "wan-ai/wan2.1-i2v-480p" || 
+                           model === "kling-ai/v1.0/image-to-video" ||
                            model === "google/veo3-fast/image-to-video";
     
     if (image && isImageToVideo) {
@@ -318,7 +259,7 @@ serve(async (req) => {
       delete generateBody.aspect_ratio;
     }
 
-    // Kling v2.5 Turbo Pro uses string duration ("5" | "10") and aspect_ratio
+    // Kling models use string duration ("5" | "10") and aspect_ratio
     const isKling = model.includes("kling-ai/");
     if (isKling) {
       // Duration must be string "5" or "10"
@@ -333,7 +274,7 @@ serve(async (req) => {
       delete generateBody.resolution;
 
       // For image-to-video, require image
-      if ((model === "kling-ai/v2.5-turbo-pro/image-to-video" || model === "kling-ai/v1-5/pro/image-to-video") && !generateBody.image) {
+      if (model === "kling-ai/v1.0/image-to-video" && !generateBody.image) {
         return new Response(JSON.stringify({ success: false, error: "Image is required for this model", code: "E1004" }), {
           status: 400,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
