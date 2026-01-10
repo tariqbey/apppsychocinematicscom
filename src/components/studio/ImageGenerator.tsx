@@ -32,7 +32,7 @@ export function ImageGenerator({
   const [showAnimationPanel, setShowAnimationPanel] = useState(false);
   const [animationPrompt, setAnimationPrompt] = useState("");
   const [animationDuration, setAnimationDuration] = useState<5 | 10>(5);
-  const [animationModel, setAnimationModel] = useState<VideoModel>("kling-ai/v1-5/pro/image-to-video");
+  const [animationModel, setAnimationModel] = useState<VideoModel>("kling-ai/v1.0/image-to-video");
 
   // Set initial prompt when props change
   useEffect(() => {
@@ -43,9 +43,9 @@ export function ImageGenerator({
 
   // Models that support image-to-video
   const imageToVideoModels: { model: VideoModel; name: string; price: string }[] = [
-    { model: "kling-ai/v1-5/pro/image-to-video", name: "Kling 1.5 Pro", price: "$0.08/s" },
-    { model: "openai/sora-2/image-to-video", name: "Sora 2", price: "$0.10/s" },
-    { model: "wan-ai/wan2.1-i2v-480p", name: "Wan 2.1", price: "$0.05/s" },
+    { model: "kling-ai/v1.0/image-to-video", name: "Kling 1.0", price: "60-110 credits" },
+    { model: "wan-ai/wan2.1-i2v-480p", name: "Wan 2.1", price: "60-110 credits" },
+    { model: "google/veo3-fast/image-to-video", name: "Veo 3 Fast", price: "60-100 credits" },
   ];
 
   const { 

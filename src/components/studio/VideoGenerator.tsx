@@ -19,32 +19,29 @@ export function VideoGenerator({ onVideoGenerated }: VideoGeneratorProps) {
   const [mode, setMode] = useState<VideoMode>("text");
   const [prompt, setPrompt] = useState("");
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
-  const [selectedModel, setSelectedModel] = useState<VideoModel>("openai/sora-2/text-to-video-developer");
+  const [selectedModel, setSelectedModel] = useState<VideoModel>("google/veo3-fast");
   const [duration, setDuration] = useState<number>(5);
   const [resolution, setResolution] = useState<"720p" | "1080p">("720p");
   const [aspectRatio, setAspectRatio] = useState<"16:9" | "9:16" | "1:1">("16:9");
-  const [cameoVideoUrl, setCameoVideoUrl] = useState("");
-  const [cameoPrompt, setCameoPrompt] = useState("");
 
   const { isGeneratingVideo, generatedVideoUrl, generateVideo, estimateCreditCost } = useMediaGeneration();
 
   // For frames-to-video, use the selected image model
-  const [selectedImageModel, setSelectedImageModel] = useState<VideoModel>("openai/sora-2/image-to-video");
+  const [selectedImageModel, setSelectedImageModel] = useState<VideoModel>("google/veo3-fast/image-to-video");
   const effectiveModel: VideoModel = mode === "frames" ? selectedImageModel : selectedModel;
   const modelInfo = MODEL_INFO[effectiveModel];
 
-  const isSoraDev = effectiveModel === "openai/sora-2/text-to-video-developer";
-  // Kie.ai Sora 2 supports 5, 10, 15, 20 second durations
-  const durationOptions = isSoraDev ? [5, 10, 15, 20] : [5, 10];
+  // Duration options (Veo 3 is fixed at 8 seconds)
+  const isVeo3 = effectiveModel.includes("google/veo3");
+  const durationOptions = isVeo3 ? [8] : [5, 10];
 
   useEffect(() => {
-    if (isSoraDev) {
-      if (![5, 10, 15, 20].includes(duration)) setDuration(5);
-      if (aspectRatio === "1:1") setAspectRatio("16:9");
-    } else {
-      if (![5, 10].includes(duration)) setDuration(5);
+    if (isVeo3 && duration !== 8) {
+      setDuration(8);
+    } else if (!isVeo3 && ![5, 10].includes(duration)) {
+      setDuration(5);
     }
-  }, [isSoraDev, duration, aspectRatio]);
+  }, [isVeo3, duration]);
   const handleGenerate = async () => {
     if (!prompt.trim()) return;
     if (mode === "frames" && !uploadedImage) return;
@@ -58,8 +55,6 @@ export function VideoGenerator({ onVideoGenerated }: VideoGeneratorProps) {
       resolution: supportsResolution ? resolution : undefined,
       aspect_ratio: supportsResolution ? aspectRatio : undefined,
       image: mode === "frames" ? uploadedImage ?? undefined : undefined,
-      cameo_video_url: mode === "text" && cameoVideoUrl.trim() ? cameoVideoUrl.trim() : undefined,
-      cameo_prompt: mode === "text" && cameoPrompt.trim() ? cameoPrompt.trim() : undefined,
     });
 
     if (url && onVideoGenerated) {
@@ -77,19 +72,17 @@ export function VideoGenerator({ onVideoGenerated }: VideoGeneratorProps) {
 
   // Models available for text-to-video
   const textModels: VideoModel[] = [
-    "openai/sora-2/text-to-video-developer", 
     "google/veo3",
     "google/veo3-fast",
-    "kling-ai/v2.5-turbo-pro/text-to-video",
     "wan-ai/wan2.1-t2v-480p",
+    "kling-ai/v1.0/text-to-video",
   ];
   
   // Models available for image-to-video
   const imageModels: VideoModel[] = [
-    "openai/sora-2/image-to-video", 
     "google/veo3-fast/image-to-video",
-    "kling-ai/v2.5-turbo-pro/image-to-video",
     "wan-ai/wan2.1-i2v-480p",
+    "kling-ai/v1.0/image-to-video",
   ];
 
   return (
@@ -158,42 +151,6 @@ export function VideoGenerator({ onVideoGenerated }: VideoGeneratorProps) {
             <p className="text-xs text-muted-foreground">{modelInfo.description}</p>
           </div>
           
-          {/* Cameo - Only for Sora 2 Developer */}
-          {selectedModel === "openai/sora-2/text-to-video-developer" && (
-            <div className="space-y-4 p-4 rounded-lg border border-gold/30 bg-gold/5">
-              <div className="space-y-2">
-                <Label htmlFor="cameo-video-url" className="flex items-center gap-2">
-                  Cameo Video URL
-                  <span className="text-xs text-muted-foreground">(optional)</span>
-                </Label>
-                <input
-                  id="cameo-video-url"
-                  type="url"
-                  placeholder="https://example.com/my-character.mp4"
-                  value={cameoVideoUrl}
-                  onChange={(e) => setCameoVideoUrl(e.target.value)}
-                  className="flex h-10 w-full rounded-md border border-input bg-background/50 px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                />
-                <p className="text-xs text-muted-foreground">
-                  Upload a 1-4 second MP4 video of your character to Kie.ai, then paste the URL here
-                </p>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="cameo-prompt">
-                  Character Description
-                  <span className="text-xs text-muted-foreground ml-2">(optional)</span>
-                </Label>
-                <input
-                  id="cameo-prompt"
-                  type="text"
-                  placeholder="A confident entrepreneur in a tailored suit"
-                  value={cameoPrompt}
-                  onChange={(e) => setCameoPrompt(e.target.value)}
-                  className="flex h-10 w-full rounded-md border border-input bg-background/50 px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                />
-              </div>
-            </div>
-          )}
         </div>
       )}
 
@@ -283,7 +240,7 @@ export function VideoGenerator({ onVideoGenerated }: VideoGeneratorProps) {
             <SelectContent>
               <SelectItem value="16:9">Landscape (16:9)</SelectItem>
               <SelectItem value="9:16">Portrait (9:16)</SelectItem>
-              {!isSoraDev && <SelectItem value="1:1">Square (1:1)</SelectItem>}
+              <SelectItem value="1:1">Square (1:1)</SelectItem>
             </SelectContent>
           </Select>
         </div>
