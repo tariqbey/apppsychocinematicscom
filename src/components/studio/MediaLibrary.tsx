@@ -3,12 +3,13 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Progress } from "@/components/ui/progress";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { Image, Video, Clock, AlertCircle, Loader2, Download, Trash2, HardDrive, X, ChevronLeft, ChevronRight, RefreshCw } from "lucide-react";
+import { Image, Video, Clock, AlertCircle, Loader2, Download, Trash2, HardDrive, X, ChevronLeft, ChevronRight, RefreshCw, Mic2 } from "lucide-react";
 import { useMediaGeneration, GeneratedMedia } from "@/hooks/useMediaGeneration";
 import { formatDistanceToNow } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { VoiceChanger } from "./VoiceChanger";
 
 interface MediaLibraryProps {
   filter?: "image" | "video" | "all";
@@ -31,6 +32,7 @@ export function MediaLibrary({ filter = "all", onSelect }: MediaLibraryProps) {
   const [storageUsed, setStorageUsed] = useState(0);
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
   const [lightboxMedia, setLightboxMedia] = useState<GeneratedMedia | null>(null);
+  const [showVoiceChanger, setShowVoiceChanger] = useState(false);
   const { fetchGenerationHistory } = useMediaGeneration();
   const { toast } = useToast();
   const { user, loading: authLoading } = useAuth();
@@ -208,19 +210,19 @@ export function MediaLibrary({ filter = "all", onSelect }: MediaLibraryProps) {
               )}
 
               {/* Media Display */}
-              <div className="flex items-center justify-center min-h-[400px] max-h-[70vh]">
+              <div className="flex items-center justify-center min-h-[300px] max-h-[50vh]">
                 {lightboxMedia.media_type === "image" ? (
                   <img 
                     src={lightboxMedia.media_url!} 
                     alt="" 
-                    className="max-w-full max-h-[70vh] object-contain"
+                    className="max-w-full max-h-[50vh] object-contain"
                   />
                 ) : (
                   <video 
                     src={lightboxMedia.media_url!} 
                     controls 
                     autoPlay
-                    className="max-w-full max-h-[70vh]"
+                    className="max-w-full max-h-[50vh]"
                   />
                 )}
               </div>
@@ -235,6 +237,17 @@ export function MediaLibrary({ filter = "all", onSelect }: MediaLibraryProps) {
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
+                    {/* Voice Changer Toggle for Videos */}
+                    {lightboxMedia.media_type === "video" && (
+                      <Button
+                        size="sm"
+                        variant={showVoiceChanger ? "default" : "outline"}
+                        onClick={() => setShowVoiceChanger(!showVoiceChanger)}
+                      >
+                        <Mic2 className="h-4 w-4 mr-2" />
+                        Voice
+                      </Button>
+                    )}
                     <Button
                       size="sm"
                       variant="outline"
@@ -257,6 +270,21 @@ export function MediaLibrary({ filter = "all", onSelect }: MediaLibraryProps) {
                     </Button>
                   </div>
                 </div>
+                
+                {/* Voice Changer Panel for Videos */}
+                {lightboxMedia.media_type === "video" && showVoiceChanger && lightboxMedia.media_url && (
+                  <div className="mt-4 pt-4 border-t border-border/50">
+                    <VoiceChanger 
+                      videoUrl={lightboxMedia.media_url}
+                      onVideoMerged={(mergedUrl) => {
+                        toast({
+                          title: "Voice Changed!",
+                          description: "Your video has been updated with the new voice.",
+                        });
+                      }}
+                    />
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -317,20 +345,82 @@ export function MediaLibrary({ filter = "all", onSelect }: MediaLibraryProps) {
                       <video src={item.media_url} className="w-full h-full object-cover" />
                     )
                   ) : item.status === "processing" ? (
-                    <div className="w-full h-full flex items-center justify-center">
-                      <Loader2 className="h-6 w-6 animate-spin" />
+                    <div className="w-full h-full flex flex-col items-center justify-center gap-2 group">
+                      <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                      <span className="text-xs text-muted-foreground">Processing...</span>
+                      {/* Delete button for processing items */}
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        className="opacity-0 group-hover:opacity-100 transition-opacity h-7 px-2"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDelete(item, e);
+                        }}
+                        disabled={isDeleting === item.id}
+                      >
+                        {isDeleting === item.id ? (
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                        ) : (
+                          <>
+                            <Trash2 className="h-3 w-3 mr-1" />
+                            Remove
+                          </>
+                        )}
+                      </Button>
                     </div>
                   ) : item.status === "failed" ? (
-                    <div className="w-full h-full flex items-center justify-center">
+                    <div className="w-full h-full flex flex-col items-center justify-center gap-2 group">
                       <AlertCircle className="h-6 w-6 text-destructive" />
+                      <span className="text-xs text-destructive">Failed</span>
+                      {/* Delete button for failed items */}
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        className="opacity-0 group-hover:opacity-100 transition-opacity h-7 px-2"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDelete(item, e);
+                        }}
+                        disabled={isDeleting === item.id}
+                      >
+                        {isDeleting === item.id ? (
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                        ) : (
+                          <>
+                            <Trash2 className="h-3 w-3 mr-1" />
+                            Remove
+                          </>
+                        )}
+                      </Button>
                     </div>
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center">
+                    <div className="w-full h-full flex flex-col items-center justify-center gap-2 group">
                       {item.media_type === "image" ? (
                         <Image className="h-6 w-6 text-muted-foreground" />
                       ) : (
                         <Video className="h-6 w-6 text-muted-foreground" />
                       )}
+                      {/* Delete button for pending items */}
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        className="opacity-0 group-hover:opacity-100 transition-opacity h-7 px-2"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDelete(item, e);
+                        }}
+                        disabled={isDeleting === item.id}
+                      >
+                        {isDeleting === item.id ? (
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                        ) : (
+                          <>
+                            <Trash2 className="h-3 w-3 mr-1" />
+                            Remove
+                          </>
+                        )}
+                      </Button>
                     </div>
                   )}
                   
