@@ -1,4 +1,5 @@
 import { useState, useCallback } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 interface MergeProgress {
   stage: "loading" | "downloading" | "merging" | "complete" | "error";
@@ -16,22 +17,50 @@ export function useFFmpegMerge() {
       setProgress({ stage: "loading", progress: 0, message: "Initializing..." });
 
       try {
-        // Fetch video as blob to bypass CORS issues
+        const fetchBlob = async (
+          url: string,
+          label: "video" | "audio",
+          proxyProgress: number
+        ): Promise<Blob> => {
+          try {
+            const res = await fetch(url);
+            if (!res.ok) {
+              throw new Error(`Failed to download ${label}: ${res.status}`);
+            }
+            return await res.blob();
+          } catch (err) {
+            console.warn(`Direct fetch failed for ${label}, falling back to secure proxy`, err);
+            setProgress({
+              stage: "downloading",
+              progress: proxyProgress,
+              message: `Downloading ${label} (secure mode)...`,
+            });
+
+            const { data, error } = await supabase.functions.invoke("media-proxy", {
+              body: { url },
+            });
+
+            if (error) {
+              throw new Error(error.message || `Proxy download failed for ${label}`);
+            }
+
+            if (!(data instanceof Blob)) {
+              throw new Error(`Proxy returned unexpected data for ${label}`);
+            }
+
+            return data;
+          }
+        };
+
+        // Fetch media as blobs (fallback to proxy for CORS-blocked hosts)
         setProgress({ stage: "downloading", progress: 5, message: "Downloading video..." });
-        const videoResponse = await fetch(videoUrl);
-        if (!videoResponse.ok) {
-          throw new Error(`Failed to download video: ${videoResponse.status}`);
-        }
-        const videoBlob = await videoResponse.blob();
+        const videoBlob = await fetchBlob(videoUrl, "video", 8);
         const videoBlobUrl = URL.createObjectURL(videoBlob);
-        
+
         setProgress({ stage: "downloading", progress: 15, message: "Downloading audio..." });
-        const audioResponse = await fetch(audioUrl);
-        if (!audioResponse.ok) {
-          throw new Error(`Failed to download audio: ${audioResponse.status}`);
-        }
-        const audioBlob = await audioResponse.blob();
+        const audioBlob = await fetchBlob(audioUrl, "audio", 18);
         const audioBlobUrl = URL.createObjectURL(audioBlob);
+
 
         // Create video element (muted - we'll replace the audio)
         setProgress({ stage: "downloading", progress: 20, message: "Loading media..." });
