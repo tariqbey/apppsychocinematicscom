@@ -8,15 +8,69 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-function dataUrlToInlineData(dataUrl: string) {
+const INPUT_BUCKET = "atlas-inputs";
+
+type ParsedDataUrl = { mimeType: string; base64Data: string };
+
+function parseDataUrl(dataUrl: string): ParsedDataUrl | null {
   const matches = dataUrl.match(/^data:([^;]+);base64,(.+)$/);
   if (!matches) return null;
-  return {
-    inlineData: {
-      mimeType: matches[1],
-      data: matches[2],
-    },
-  };
+  return { mimeType: matches[1], base64Data: matches[2] };
+}
+
+function mimeToExt(mimeType: string) {
+  if (mimeType === "image/png") return "png";
+  if (mimeType === "image/jpeg") return "jpg";
+  if (mimeType === "image/webp") return "webp";
+  return "bin";
+}
+
+function base64ToUint8Array(base64: string) {
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return bytes;
+}
+
+async function ensurePublicBucket(supabaseAdmin: any) {
+  const { data, error } = await supabaseAdmin.storage.getBucket(INPUT_BUCKET);
+  if (data && !error) return;
+
+  const { error: createError } = await supabaseAdmin.storage.createBucket(INPUT_BUCKET, { public: true });
+  // If it already exists, ignore
+  if (createError && !String(createError.message ?? "").toLowerCase().includes("already exists")) {
+    throw createError;
+  }
+}
+
+async function dataUrlToPublicUrl({
+  supabaseAdmin,
+  dataUrl,
+  userId,
+}: {
+  supabaseAdmin: any;
+  dataUrl: string;
+  userId: string;
+}): Promise<{ publicUrl: string; mimeType: string }> {
+  const parsed = parseDataUrl(dataUrl);
+  if (!parsed) throw new Error("Invalid data URL");
+
+  await ensurePublicBucket(supabaseAdmin);
+
+  const ext = mimeToExt(parsed.mimeType);
+  const objectPath = `${userId}/${crypto.randomUUID()}.${ext}`;
+  const bytes = base64ToUint8Array(parsed.base64Data);
+
+  const { error: uploadError } = await supabaseAdmin.storage
+    .from(INPUT_BUCKET)
+    .upload(objectPath, bytes, { contentType: parsed.mimeType, upsert: true });
+
+  if (uploadError) throw uploadError;
+
+  const { data } = supabaseAdmin.storage.from(INPUT_BUCKET).getPublicUrl(objectPath);
+  if (!data?.publicUrl) throw new Error("Failed to get public URL for uploaded image");
+
+  return { publicUrl: data.publicUrl, mimeType: parsed.mimeType };
 }
 
 const MODEL_CONFIGS: Record<string, { endpoint: string; defaultParams: any }> = {
@@ -190,13 +244,44 @@ serve(async (req) => {
                            model === "kling-ai/v1-5/pro/image-to-video";
     
     if (image && isImageToVideo) {
-      if (typeof image === "string" && image.startsWith("data:")) {
-        const inline = dataUrlToInlineData(image);
-        generateBody.image = inline ?? image;
+      if (typeof image !== "string") {
+        return new Response(JSON.stringify({ success: false, error: "Invalid image input", code: "E1004" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      if (image.startsWith("data:")) {
+        console.log("Received data URL image, uploading to storage first...");
+        const { publicUrl } = await dataUrlToPublicUrl({ supabaseAdmin: supabase, dataUrl: image, userId });
+        generateBody.image = publicUrl;
       } else {
         generateBody.image = image;
       }
     }
+
+    // Wan 2.1 models use `size` (not `resolution`/`aspect_ratio`) and require a URL image.
+    const isWan21 = model === "wan-ai/wan2.1-t2v-480p" || model === "wan-ai/wan2.1-i2v-480p";
+    if (isWan21) {
+      if (model === "wan-ai/wan2.1-i2v-480p" && !generateBody.image) {
+        return new Response(JSON.stringify({ success: false, error: "Image is required for this model", code: "E1004" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const requestedAspect = (aspect_ratio ?? "16:9") as "16:9" | "9:16" | "1:1";
+      const normalizedAspect: "16:9" | "9:16" = requestedAspect === "9:16" ? "9:16" : "16:9";
+      generateBody.size = normalizedAspect === "9:16" ? "720*1280" : "1280*720";
+
+      // Clamp to Atlas docs range for Wan 2.1 (5..10 seconds)
+      const requestedDuration = Number(generateBody.duration ?? 5);
+      generateBody.duration = Math.max(5, Math.min(10, requestedDuration));
+
+      delete generateBody.resolution;
+      delete generateBody.aspect_ratio;
+    }
+
     // Retry logic for transient failures
     let generateResponse: Response | null = null;
     let lastError = "";
