@@ -23,7 +23,7 @@ serve(async (req) => {
 
     // Authenticate user
     const authHeader = req.headers.get("Authorization");
-    if (!authHeader) {
+    if (!authHeader?.startsWith("Bearer ")) {
       return new Response(JSON.stringify({ success: false, error: "Authentication required" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -35,15 +35,24 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
     
+    // Use getClaims for ES256-signed JWTs (Lovable Cloud)
+    const userClient = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_ANON_KEY") ?? "",
+      { global: { headers: { Authorization: authHeader } } }
+    );
+
     const token = authHeader.replace("Bearer ", "");
-    const { data: userData, error: userError } = await supabase.auth.getUser(token);
+    const { data: claimsData, error: claimsError } = await userClient.auth.getClaims(token);
     
-    if (userError || !userData.user?.id) {
+    if (claimsError || !claimsData?.claims?.sub) {
       return new Response(JSON.stringify({ success: false, error: "Authentication failed" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
+    const userId = claimsData.claims.sub;
 
     const { predictionId } = await req.json();
 
@@ -59,7 +68,7 @@ serve(async (req) => {
       .from("generated_media")
       .select("*")
       .eq("prediction_id", predictionId)
-      .eq("user_id", userData.user.id)
+      .eq("user_id", userId)
       .single();
 
     if (!existingRecord) {
