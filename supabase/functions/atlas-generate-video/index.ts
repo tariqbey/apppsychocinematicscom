@@ -197,19 +197,57 @@ serve(async (req) => {
         generateBody.image = image;
       }
     }
-    const generateResponse = await fetch(modelConfig.endpoint, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${ATLASCLOUD_API_KEY}`,
-      },
-      body: JSON.stringify(generateBody),
-    });
+    // Retry logic for transient failures
+    let generateResponse: Response | null = null;
+    let lastError = "";
+    const maxRetries = 3;
+    
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        generateResponse = await fetch(modelConfig.endpoint, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${ATLASCLOUD_API_KEY}`,
+          },
+          body: JSON.stringify(generateBody),
+        });
 
-    if (!generateResponse.ok) {
-      const errorText = await generateResponse.text();
-      console.error("Atlas Cloud generate error:", errorText.substring(0, 200));
-      return new Response(JSON.stringify({ success: false, error: "Video generation service unavailable", code: "E1007" }), {
+        if (generateResponse.ok) {
+          break; // Success, exit retry loop
+        }
+
+        const errorText = await generateResponse.text();
+        lastError = errorText.substring(0, 300);
+        console.error(`Atlas Cloud attempt ${attempt}/${maxRetries} failed:`, lastError);
+
+        // Check if it's a retryable error (500-level or specific codes)
+        const isRetryable = generateResponse.status >= 500 || 
+                           lastError.includes("Internal Server Error") ||
+                           lastError.includes('"code":0');
+        
+        if (!isRetryable || attempt === maxRetries) {
+          break;
+        }
+
+        // Wait before retry (exponential backoff: 1s, 2s, 4s)
+        await new Promise(resolve => setTimeout(resolve, 1000 * Math.pow(2, attempt - 1)));
+      } catch (fetchError) {
+        lastError = String(fetchError);
+        console.error(`Atlas Cloud fetch attempt ${attempt}/${maxRetries} error:`, lastError);
+        if (attempt === maxRetries) break;
+        await new Promise(resolve => setTimeout(resolve, 1000 * Math.pow(2, attempt - 1)));
+      }
+    }
+
+    if (!generateResponse || !generateResponse.ok) {
+      console.error("Atlas Cloud all retries failed:", lastError);
+      return new Response(JSON.stringify({ 
+        success: false, 
+        error: "Video provider temporarily unavailable. Please try again in a few moments.", 
+        code: "E1007",
+        details: lastError.includes("Internal Server Error") ? "Provider experiencing issues" : undefined
+      }), {
         status: 503,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
