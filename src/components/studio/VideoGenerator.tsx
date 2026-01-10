@@ -3,11 +3,12 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { Loader2, Sparkles, Download, Video, Film, ImageIcon } from "lucide-react";
+import { Loader2, Sparkles, Download, Video, Film, ImageIcon, Wand2 } from "lucide-react";
 import { useMediaGeneration, VideoModel, MODEL_INFO } from "@/hooks/useMediaGeneration";
 import { ImageUpload } from "./ImageUpload";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { VoiceChanger } from "./VoiceChanger";
+import { VideoEditPanel } from "./VideoEditPanel";
 
 interface VideoGeneratorProps {
   onVideoGenerated?: (url: string) => void;
@@ -24,7 +25,7 @@ export function VideoGenerator({ onVideoGenerated }: VideoGeneratorProps) {
   const [resolution, setResolution] = useState<"720p" | "1080p">("720p");
   const [aspectRatio, setAspectRatio] = useState<"16:9" | "9:16" | "1:1">("16:9");
 
-  const { isGeneratingVideo, generatedVideoUrl, generateVideo, estimateCreditCost } = useMediaGeneration();
+  const { isGeneratingVideo, generatedVideoUrl, setGeneratedVideoUrl, generateVideo, estimateCreditCost } = useMediaGeneration();
 
   // For frames-to-video, use the selected image model
   const [selectedImageModel, setSelectedImageModel] = useState<VideoModel>("google/veo3-fast/image-to-video");
@@ -126,6 +127,15 @@ export function VideoGenerator({ onVideoGenerated }: VideoGeneratorProps) {
             videoUrl={generatedVideoUrl}
             onVideoMerged={(mergedUrl) => {
               console.log("Merged video with new voice:", mergedUrl);
+            }}
+          />
+          
+          {/* Video Editor - Kling 1.0 AI editing */}
+          <VideoEditPanel
+            videoUrl={generatedVideoUrl}
+            onVideoEdited={(editedUrl) => {
+              console.log("Edited video:", editedUrl);
+              setGeneratedVideoUrl(editedUrl);
             }}
           />
         </div>
