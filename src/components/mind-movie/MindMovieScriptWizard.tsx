@@ -792,8 +792,13 @@ export function MindMovieScriptWizard({
                     </TooltipProvider>
                   </div>
                   <p className="text-sm text-muted-foreground">
-                    Enter a Suno persona ID to use your custom voice, or select from your saved personas. Leave empty to use the default voice for your selected genre.
+                    Enter a Suno persona ID to use your custom voice, or select from your saved personas. Leave empty to use the selected vocal style above.
                   </p>
+                  {personaId.trim() && (
+                    <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-200 text-sm">
+                      <strong>Note:</strong> Custom persona will use its own voice, overriding the Male/Female selection above.
+                    </div>
+                  )}
                   
                   <div className="flex gap-2">
                     <div className="flex-1 relative">

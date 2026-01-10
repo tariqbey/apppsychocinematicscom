@@ -142,7 +142,8 @@ async function handleGenerateLyrics(body: GenerateLyricsRequest): Promise<Respon
 async function handleGenerateMusic(body: GenerateMusicRequest, supabase: any): Promise<Response> {
   const { lyrics, musicStyle, title, vocalGender, scriptId, songCount = 1 } = body;
   
-  console.log('[generate-music] Starting Suno generation for:', title, 'songCount:', songCount);
+  console.log('[generate-music] Starting Suno generation for:', title);
+  console.log('[generate-music] Config - vocalGender:', vocalGender, 'musicStyle:', musicStyle, 'songCount:', songCount, 'personaId:', body.personaId || 'none');
   
   const KIA_API_KEY = Deno.env.get('KIA_API_KEY');
   if (!KIA_API_KEY) {
@@ -175,11 +176,47 @@ async function handleGenerateMusic(body: GenerateMusicRequest, supabase: any): P
 
   const sunoStyle = styleMap[musicStyle] || 'Pop, Inspirational, Uplifting';
   
+  // Determine which persona to use (if any)
+  // Priority: 1) Custom personaId if provided, 2) Default hip-hop persona ONLY if male vocal + hip-hop style, 3) None
+  let effectivePersonaId: string | undefined = undefined;
+  
+  if (body.personaId && body.personaId.trim()) {
+    // User provided a custom persona - use it (this overrides vocalGender)
+    effectivePersonaId = body.personaId.trim();
+    console.log('[generate-music] Using custom personaId:', effectivePersonaId);
+  } else if (HIP_HOP_STYLES.includes(musicStyle) && vocalGender === 'm') {
+    // Hip-hop style with male vocal - use default hip-hop persona
+    effectivePersonaId = HIP_HOP_PERSONA_ID;
+    console.log('[generate-music] Using default hip-hop persona for male vocal');
+  } else {
+    // No persona - let vocalGender control the voice
+    console.log('[generate-music] No persona applied, using vocalGender:', vocalGender);
+  }
+  
   // Generate multiple songs if requested
   const taskIds: string[] = [];
   const effectiveSongCount = Math.min(songCount, 2); // Cap at 2 songs
   
   for (let i = 0; i < effectiveSongCount; i++) {
+    // Build request body
+    const requestBody: Record<string, unknown> = {
+      prompt: lyrics,
+      customMode: true,
+      instrumental: false,
+      model: 'V4_5',
+      style: sunoStyle,
+      title: effectiveSongCount > 1 ? `${title.substring(0, 70)} (v${i + 1})` : title.substring(0, 80),
+      vocalGender: vocalGender,
+      callBackUrl: 'https://example.com/callback', // Required by Kie.ai but we use polling
+    };
+    
+    // Only add personaId if we have one
+    if (effectivePersonaId) {
+      requestBody.personaId = effectivePersonaId;
+    }
+    
+    console.log(`[generate-music] Song ${i + 1} request body:`, JSON.stringify(requestBody));
+    
     // Call Kie.ai Suno API
     const sunoResponse = await fetch('https://api.kie.ai/api/v1/generate', {
       method: 'POST',
@@ -187,19 +224,7 @@ async function handleGenerateMusic(body: GenerateMusicRequest, supabase: any): P
         'Authorization': `Bearer ${KIA_API_KEY}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        prompt: lyrics,
-        customMode: true,
-        instrumental: false,
-        model: 'V4_5',
-        style: sunoStyle,
-        title: effectiveSongCount > 1 ? `${title.substring(0, 70)} (v${i + 1})` : title.substring(0, 80),
-        vocalGender: vocalGender,
-        callBackUrl: 'https://example.com/callback', // Required by Kie.ai but we use polling
-        // Use hip-hop persona for hip-hop styles, or custom personaId if provided
-        ...(body.personaId ? { personaId: body.personaId } : 
-            HIP_HOP_STYLES.includes(musicStyle) ? { personaId: HIP_HOP_PERSONA_ID } : {}),
-      }),
+      body: JSON.stringify(requestBody),
     });
 
     if (!sunoResponse.ok) {
