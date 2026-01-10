@@ -65,24 +65,14 @@ export const Header = () => {
 
           {/* Help Navigation - Always Visible */}
           <nav className="hidden md:flex items-center gap-1 mr-4">
-            <Link to="/tutorial">
+            <Link to="/guide">
               <Button 
-                variant={isActivePath('/tutorial') ? 'secondary' : 'ghost'} 
+                variant={isActivePath('/guide') || isActivePath('/tutorial') || isActivePath('/user-manual') ? 'secondary' : 'ghost'} 
                 size="sm" 
-                className={`gap-2 ${isActivePath('/tutorial') ? 'bg-gold/10 text-gold' : 'text-muted-foreground hover:text-foreground'}`}
+                className={`gap-2 ${isActivePath('/guide') || isActivePath('/tutorial') || isActivePath('/user-manual') ? 'bg-gold/10 text-gold' : 'text-muted-foreground hover:text-foreground'}`}
               >
                 <GraduationCap className="w-4 h-4" />
-                Tutorial
-              </Button>
-            </Link>
-            <Link to="/user-manual">
-              <Button 
-                variant={isActivePath('/user-manual') ? 'secondary' : 'ghost'} 
-                size="sm" 
-                className={`gap-2 ${isActivePath('/user-manual') ? 'bg-gold/10 text-gold' : 'text-muted-foreground hover:text-foreground'}`}
-              >
-                <BookOpen className="w-4 h-4" />
-                Manual
+                Director's Guide
               </Button>
             </Link>
           </nav>
@@ -195,13 +185,9 @@ export const Header = () => {
                       </button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="w-48">
-                      <DropdownMenuItem onClick={() => navigate("/user-manual")}>
-                        <BookOpen className="w-4 h-4 mr-2" />
-                        User Manual
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => navigate("/tutorial")}>
-                        <HelpCircle className="w-4 h-4 mr-2" />
-                        Quick Tutorial
+                      <DropdownMenuItem onClick={() => navigate("/guide")}>
+                        <GraduationCap className="w-4 h-4 mr-2" />
+                        Director's Guide
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => navigate("/settings")}>
                         <Settings className="w-4 h-4 mr-2" />
@@ -217,19 +203,12 @@ export const Header = () => {
                 </>
               ) : (
                 <div className="flex items-center gap-2">
-                  {/* Mobile Tutorial/Manual Links for logged out users */}
-                  <div className="flex md:hidden items-center gap-1">
-                    <Link to="/tutorial">
-                      <Button variant="ghost" size="icon" className="text-muted-foreground">
-                        <GraduationCap className="w-5 h-5" />
-                      </Button>
-                    </Link>
-                    <Link to="/user-manual">
-                      <Button variant="ghost" size="icon" className="text-muted-foreground">
-                        <BookOpen className="w-5 h-5" />
-                      </Button>
-                    </Link>
-                  </div>
+                  {/* Mobile Guide Link for logged out users */}
+                  <Link to="/guide" className="md:hidden">
+                    <Button variant="ghost" size="icon" className="text-muted-foreground">
+                      <GraduationCap className="w-5 h-5" />
+                    </Button>
+                  </Link>
                   <Button variant="gold" onClick={() => setShowAuthModal(true)}>
                     Enter Studio
                   </Button>
