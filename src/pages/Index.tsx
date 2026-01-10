@@ -237,15 +237,16 @@ const Index = () => {
 
       {/* Director AI Agent */}
       <>
-        {/* AI Agent Trigger Button */}
+        {/* AI Agent Trigger Button - Always show label */}
         {!showAIChat && (
           <button
             onClick={() => setShowAIChat(true)}
             className="fixed bottom-6 right-6 z-40 flex items-center gap-3 group"
           >
-            {/* Label */}
-            <div className="bg-card/95 backdrop-blur-sm border border-border px-4 py-2 rounded-lg shadow-lg opacity-0 group-hover:opacity-100 translate-x-2 group-hover:translate-x-0 transition-all duration-300">
-              <span className="text-sm font-medium text-foreground whitespace-nowrap">Talk to Director AI</span>
+            {/* Permanent Label */}
+            <div className="bg-card/95 backdrop-blur-sm border border-gold/30 px-4 py-2 rounded-lg shadow-lg">
+              <span className="text-sm font-semibold text-gold whitespace-nowrap">Director AI</span>
+              <p className="text-xs text-muted-foreground">Your AI Coach</p>
             </div>
             
             {/* Animated Orb Button */}

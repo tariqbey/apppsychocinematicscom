@@ -9,6 +9,12 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/useAuth";
 import { useAdminStatus } from "@/hooks/useAdminStatus";
 import { useGamification } from "@/hooks/useGamification";
@@ -56,90 +62,141 @@ export const Header = () => {
 
           {/* Actions */}
           <div className="flex items-center gap-2">
-            {user ? (
-              <>
-                {/* Production Credits Display */}
-                <ProductionCreditsDisplay compact />
-                
-                {/* Gamification Credits Display */}
-                <button
-                  onClick={() => setShowGamification(true)}
-                  className="flex items-center gap-2 hover:opacity-80 transition-opacity"
-                >
-                  <CreditsDisplay credits={credits?.credits || 0} compact />
-                </button>
+            <TooltipProvider delayDuration={300}>
+              {user ? (
+                <>
+                  {/* Production Credits Display */}
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div>
+                        <ProductionCreditsDisplay compact />
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom">
+                      <p>Production Credits</p>
+                    </TooltipContent>
+                  </Tooltip>
+                  
+                  {/* Gamification Credits Display */}
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        onClick={() => setShowGamification(true)}
+                        className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+                      >
+                        <CreditsDisplay credits={credits?.credits || 0} compact />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom">
+                      <p>Engagement Credits</p>
+                    </TooltipContent>
+                  </Tooltip>
 
-                <Link to="/community">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="text-gold hover:text-gold/80"
-                    title="Director's Corner"
-                  >
-                    <MessageSquare className="w-5 h-5" />
-                  </Button>
-                </Link>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Link to="/community">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="text-gold hover:text-gold/80"
+                        >
+                          <MessageSquare className="w-5 h-5" />
+                        </Button>
+                      </Link>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom">
+                      <p>Director's Corner</p>
+                    </TooltipContent>
+                  </Tooltip>
 
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setShowLeaderboard(true)}
-                  className="text-muted-foreground hover:text-foreground"
-                  title="Leaderboard"
-                >
-                  <Users className="w-5 h-5" />
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setShowLeaderboard(true)}
+                        className="text-muted-foreground hover:text-foreground"
+                      >
+                        <Users className="w-5 h-5" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom">
+                      <p>Leaderboard</p>
+                    </TooltipContent>
+                  </Tooltip>
+
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setShowGamification(true)}
+                        className="text-gold hover:text-gold/80"
+                      >
+                        <Trophy className="w-5 h-5" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom">
+                      <p>Awards & Progress</p>
+                    </TooltipContent>
+                  </Tooltip>
+
+                  {isAdmin && (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Link to="/admin">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="text-red-400 hover:text-red-300"
+                          >
+                            <Shield className="w-5 h-5" />
+                          </Button>
+                        </Link>
+                      </TooltipTrigger>
+                      <TooltipContent side="bottom">
+                        <p>Admin Dashboard</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  )}
+
+                  {/* User Avatar Dropdown */}
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <button className="w-10 h-10 rounded-full bg-gradient-to-br from-gold/20 to-amber-soft/20 border border-gold/30 flex items-center justify-center hover:border-gold/60 transition-colors cursor-pointer">
+                            <User className="w-5 h-5 text-gold" />
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-48">
+                          <DropdownMenuItem onClick={() => navigate("/tutorial")}>
+                            <BookOpen className="w-4 h-4 mr-2" />
+                            Tutorial & Help
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => navigate("/settings")}>
+                            <Settings className="w-4 h-4 mr-2" />
+                            Account Settings
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem onClick={handleSignOut} className="text-destructive focus:text-destructive">
+                            <LogOut className="w-4 h-4 mr-2" />
+                            Log out
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom">
+                      <p>Account Menu</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </>
+              ) : (
+                <Button variant="gold" onClick={() => setShowAuthModal(true)}>
+                  Enter Studio
                 </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setShowGamification(true)}
-                  className="text-gold hover:text-gold/80"
-                  title="Awards & Progress"
-                >
-                  <Trophy className="w-5 h-5" />
-                </Button>
-                {isAdmin && (
-                  <Link to="/admin">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="text-red-400 hover:text-red-300"
-                      title="Admin Dashboard"
-                    >
-                      <Shield className="w-5 h-5" />
-                    </Button>
-                  </Link>
-                )}
-
-                {/* User Avatar Dropdown */}
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <button className="w-10 h-10 rounded-full bg-gradient-to-br from-gold/20 to-amber-soft/20 border border-gold/30 flex items-center justify-center hover:border-gold/60 transition-colors cursor-pointer">
-                      <User className="w-5 h-5 text-gold" />
-                    </button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-48">
-                    <DropdownMenuItem onClick={() => navigate("/tutorial")}>
-                      <BookOpen className="w-4 h-4 mr-2" />
-                      Tutorial & Help
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => navigate("/settings")}>
-                      <Settings className="w-4 h-4 mr-2" />
-                      Account Settings
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={handleSignOut} className="text-destructive focus:text-destructive">
-                      <LogOut className="w-4 h-4 mr-2" />
-                      Log out
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </>
-            ) : (
-              <Button variant="gold" onClick={() => setShowAuthModal(true)}>
-                Enter Studio
-              </Button>
-            )}
+              )}
+            </TooltipProvider>
           </div>
         </div>
       </header>
