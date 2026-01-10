@@ -114,16 +114,20 @@ const tutorialSections: TutorialSection[] = [
     description: "Create and watch your personal visualization movie",
     steps: [
       {
-        title: "Upload Your Mind Movie",
-        content: "In the Theater, upload a video visualization of your ideal life. This could be a compilation of images, affirmations, and inspiring clips set to motivating music."
-      },
-      {
         title: "Use the Script Wizard",
         content: "Launch the Mind Movie Script Wizard to create an AI-generated storyboard based on your Chief Aim. It will generate scenes, visuals, and even a custom soundtrack."
       },
       {
-        title: "Generate AI Soundtrack",
-        content: "Choose from 50+ music genres or create a custom style. The AI generates lyrics from your Chief Aim and produces a personalized motivational track."
+        title: "Download Your Assets",
+        content: "Download all your generated images and video clips from the Media Library. These are the raw building blocks of your Mind Movie."
+      },
+      {
+        title: "Edit in Professional Software",
+        content: "Import your downloaded assets into a video editor like Final Cut Pro, Adobe Premiere Pro, CapCut, or DaVinci Resolve. Stitch the images and clips together, add transitions, and sync with your AI-generated soundtrack."
+      },
+      {
+        title: "Upload Your Final Mind Movie",
+        content: "Once edited, upload your completed Mind Movie to The Theater. You can watch it here on the platform or on VR headsets for an immersive experience."
       },
       {
         title: "Daily Viewing Ritual",
@@ -132,7 +136,8 @@ const tutorialSections: TutorialSection[] = [
     ],
     tips: [
       "Keep your Mind Movie under 5 minutes for maximum impact",
-      "Watch it immediately upon waking when your mind is most receptive",
+      "Use CapCut (free) if you're new to video editing",
+      "Watch on a VR headset for maximum immersion and impact",
       "Your viewing streak appears on the dashboard - aim for 90+ days"
     ]
   },
@@ -155,14 +160,18 @@ const tutorialSections: TutorialSection[] = [
         content: "Generate AI videos using Veo 3 (with audio), Wan 2.1, or Kling v1.0. Videos support image-to-video and video-to-video transformations."
       },
       {
-        title: "Manage Your Media Library",
-        content: "All generated content is automatically saved. Access your library to view, download, or delete assets. You have 5GB of storage."
+        title: "Download Your Assets",
+        content: "All generated content is saved to your Media Library (5GB limit). Download your images and video clips - you'll need them for your Mind Movie."
+      },
+      {
+        title: "Assemble in Video Editor",
+        content: "Use professional editing software (Final Cut Pro, Premiere Pro, CapCut, DaVinci Resolve) to stitch your AI-generated assets into a cohesive Mind Movie with transitions and music."
       }
     ],
     tips: [
       "Check credit costs before generating - videos use more credits than images",
-      "Use descriptive prompts for better results",
-      "Save your best prompts to reuse them later"
+      "Download assets regularly to free up storage space",
+      "CapCut is a great free option for beginners to edit their Mind Movie"
     ]
   },
   {
@@ -739,14 +748,38 @@ const DirectorsGuide = () => {
 
                     <Separator />
 
+                    <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/30">
+                      <h4 className="font-semibold mb-3 flex items-center gap-2 text-amber-400">
+                        <Film className="w-5 h-5" />
+                        Important: Assembling Your Mind Movie
+                      </h4>
+                      <p className="text-sm text-muted-foreground mb-3">
+                        Once you've generated your images, videos, and soundtrack, you'll need to <strong>download them and assemble your final Mind Movie using video editing software</strong>. This is a crucial creative step.
+                      </p>
+                      <div className="space-y-2 text-sm text-muted-foreground">
+                        <p><strong>Recommended editors:</strong></p>
+                        <ul className="list-disc list-inside space-y-1 ml-2">
+                          <li><strong>Final Cut Pro</strong> — Professional, Mac only</li>
+                          <li><strong>Adobe Premiere Pro</strong> — Industry standard</li>
+                          <li><strong>CapCut</strong> — Free, beginner-friendly</li>
+                          <li><strong>DaVinci Resolve</strong> — Free, powerful</li>
+                        </ul>
+                      </div>
+                    </div>
+
+                    <Separator />
+
                     <div>
                       <h4 className="font-semibold mb-4 flex items-center gap-2">
                         <CirclePlay className="w-5 h-5 text-amber-400" />
                         The Theater
                       </h4>
-                      <p className="text-sm text-muted-foreground">
-                        Upload your completed Mind Movie to The Theater. The system tracks your viewing streak — 
+                      <p className="text-sm text-muted-foreground mb-2">
+                        After editing, upload your completed Mind Movie to The Theater. The system tracks your viewing streak — 
                         watch daily for 90+ days to create lasting subconscious change.
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        <strong>VR Compatible:</strong> Watch your Mind Movie on VR headsets for an even more immersive visualization experience.
                       </p>
                     </div>
                   </CardContent>
