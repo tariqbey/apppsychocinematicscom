@@ -66,7 +66,7 @@ export function useMediaGeneration() {
   }, [canAfford]);
 
   const generateImage = async (params: ImageGenerationParams): Promise<string | null> => {
-    if (!user) {
+    if (!user || !session) {
       toast({ title: "Please sign in", description: "You must be signed in to generate images.", variant: "destructive" });
       return null;
     }
@@ -102,7 +102,7 @@ export function useMediaGeneration() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          Authorization: `Bearer ${session.access_token}`,
         },
         body: JSON.stringify({ ...params, user_id: user.id }),
       });
@@ -130,7 +130,7 @@ export function useMediaGeneration() {
   };
 
   const generateVideo = async (params: VideoGenerationParams): Promise<string | null> => {
-    if (!user) {
+    if (!user || !session) {
       toast({ title: "Please sign in", description: "You must be signed in to generate videos.", variant: "destructive" });
       return null;
     }
@@ -168,7 +168,7 @@ export function useMediaGeneration() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          Authorization: `Bearer ${session.access_token}`,
         },
         body: JSON.stringify({ ...params, user_id: user.id }),
       });
