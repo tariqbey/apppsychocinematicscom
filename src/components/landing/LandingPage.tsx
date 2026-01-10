@@ -350,7 +350,8 @@ export const LandingPage = ({ onLogin }: LandingPageProps) => {
       {/* Auth Modal */}
       <AuthModal 
         isOpen={showAuthModal} 
-        onClose={() => setShowAuthModal(false)} 
+        onClose={() => setShowAuthModal(false)}
+        initialMode={authMode}
       />
     </div>
   );

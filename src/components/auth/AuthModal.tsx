@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { X, Film, Mail, Lock, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
@@ -8,15 +8,23 @@ import { supabase } from "@/integrations/supabase/client";
 interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;
+  initialMode?: "signin" | "signup";
 }
 
-export const AuthModal = ({ isOpen, onClose }: AuthModalProps) => {
-  const [mode, setMode] = useState<"signin" | "signup">("signin");
+export const AuthModal = ({ isOpen, onClose, initialMode = "signup" }: AuthModalProps) => {
+  const [mode, setMode] = useState<"signin" | "signup">(initialMode);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const { signIn, signUp } = useAuth();
   const { toast } = useToast();
+
+  // Update mode when initialMode prop changes (e.g., when modal reopens)
+  useEffect(() => {
+    if (isOpen) {
+      setMode(initialMode);
+    }
+  }, [isOpen, initialMode]);
 
   if (!isOpen) return null;
 
