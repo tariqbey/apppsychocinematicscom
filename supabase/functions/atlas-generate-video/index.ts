@@ -158,18 +158,28 @@ serve(async (req) => {
       console.log(`Including Sora Cameo: ${formattedCameoId}`);
     }
 
-    // Sora 2 developer uses 'size' instead of 'resolution' and different duration values
+    // Sora 2 uses 'size' instead of 'resolution' and supports only specific durations/sizes.
     if (model === "openai/sora-2/text-to-video-developer") {
-      // Map duration to Sora 2 supported values (4, 8, 12 seconds)
-      const soraDuration = duration <= 4 ? 4 : duration <= 8 ? 8 : 12;
+      // Supported durations: 4 | 8 | 12
+      const requestedDuration = duration ?? 4;
+      const soraDuration = requestedDuration <= 4 ? 4 : requestedDuration <= 8 ? 8 : 12;
       generateBody.duration = soraDuration;
-      
-      // Map resolution to size format
-      if (aspect_ratio === "16:9" || generateBody.aspect_ratio === "16:9") {
-        generateBody.size = resolution === "720p" ? "720*1280" : "1280*720";
-      } else if (aspect_ratio === "9:16" || generateBody.aspect_ratio === "9:16") {
-        generateBody.size = resolution === "720p" ? "1280*720" : "720*1280";
+
+      // Supported sizes (per Atlas docs): "720*1280" | "1280*720" | "1024*1792" | "1792*1024"
+      // Map UI "720p" => smaller size, "1080p" => larger size.
+      const requestedAspect = (aspect_ratio ?? generateBody.aspect_ratio ?? "16:9") as "16:9" | "9:16" | "1:1";
+      const requestedRes = (resolution ?? "720p") as "720p" | "1080p";
+
+      // Sora doesn't expose a true 1:1 size through Atlas; fall back to 16:9.
+      const normalizedAspect: "16:9" | "9:16" = requestedAspect === "9:16" ? "9:16" : "16:9";
+      generateBody.aspect_ratio = normalizedAspect;
+
+      if (normalizedAspect === "16:9") {
+        generateBody.size = requestedRes === "1080p" ? "1792*1024" : "1280*720";
+      } else {
+        generateBody.size = requestedRes === "1080p" ? "1024*1792" : "720*1280";
       }
+
       delete generateBody.resolution;
     }
 
@@ -224,7 +234,7 @@ serve(async (req) => {
       prompt,
       status: "processing",
       prediction_id: predictionId,
-      metadata: { duration: generateBody.duration, resolution: generateBody.resolution, aspect_ratio: generateBody.aspect_ratio },
+      metadata: { duration: generateBody.duration, resolution: generateBody.resolution, size: generateBody.size, aspect_ratio: generateBody.aspect_ratio },
     });
 
     // Return immediately with prediction ID - client will poll for status
