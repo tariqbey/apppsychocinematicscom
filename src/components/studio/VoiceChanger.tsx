@@ -2,9 +2,11 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { Loader2, Mic2, Volume2, Download } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
+import { Loader2, Mic2, Volume2, Download, Video, CheckCircle } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { useFFmpegMerge } from "@/hooks/useFFmpegMerge";
 
 // Popular ElevenLabs voices for voice changing
 const VOICE_OPTIONS = [
@@ -22,19 +24,25 @@ const VOICE_OPTIONS = [
 
 interface VoiceChangerProps {
   videoUrl: string;
-  onVoiceChanged?: (audioUrl: string) => void;
+  onVideoMerged?: (mergedVideoUrl: string) => void;
 }
 
-export function VoiceChanger({ videoUrl, onVoiceChanged }: VoiceChangerProps) {
+export function VoiceChanger({ videoUrl, onVideoMerged }: VoiceChangerProps) {
   const [selectedVoice, setSelectedVoice] = useState<string>("");
-  const [isProcessing, setIsProcessing] = useState(false);
+  const [isChangingVoice, setIsChangingVoice] = useState(false);
   const [changedAudioUrl, setChangedAudioUrl] = useState<string | null>(null);
+  const [mergedVideoUrl, setMergedVideoUrl] = useState<string | null>(null);
+  
+  const { mergeAudioVideo, isProcessing: isMerging, progress } = useFFmpegMerge();
 
-  const handleVoiceChange = async () => {
+  const handleVoiceChangeAndMerge = async () => {
     if (!selectedVoice || !videoUrl) return;
 
-    setIsProcessing(true);
-    toast.info("Extracting audio and changing voice...", { duration: 10000 });
+    setIsChangingVoice(true);
+    setChangedAudioUrl(null);
+    setMergedVideoUrl(null);
+    
+    toast.info("Step 1/2: Changing voice with ElevenLabs...", { duration: 15000 });
 
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -42,6 +50,7 @@ export function VoiceChanger({ videoUrl, onVoiceChanged }: VoiceChangerProps) {
         throw new Error("Please sign in to use voice changer");
       }
 
+      // Step 1: Change voice using ElevenLabs
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/elevenlabs-voice-changer`,
         {
@@ -51,7 +60,7 @@ export function VoiceChanger({ videoUrl, onVoiceChanged }: VoiceChangerProps) {
             Authorization: `Bearer ${session.access_token}`,
           },
           body: JSON.stringify({
-            audioUrl: videoUrl, // Video URL - backend will extract audio
+            audioUrl: videoUrl,
             voiceId: selectedVoice,
           }),
         }
@@ -64,42 +73,63 @@ export function VoiceChanger({ videoUrl, onVoiceChanged }: VoiceChangerProps) {
 
       const data = await response.json();
       
-      if (data.audioUrl) {
-        setChangedAudioUrl(data.audioUrl);
-        toast.success("Voice changed successfully!");
-        onVoiceChanged?.(data.audioUrl);
+      if (!data.audioUrl) {
+        throw new Error("No audio URL returned");
       }
+
+      setChangedAudioUrl(data.audioUrl);
+      toast.success("Voice changed! Step 2/2: Merging with video...");
+      setIsChangingVoice(false);
+
+      // Step 2: Merge audio with video using FFmpeg WASM
+      const mergedUrl = await mergeAudioVideo(videoUrl, data.audioUrl);
+      setMergedVideoUrl(mergedUrl);
+      
+      toast.success("Video merged successfully!");
+      onVideoMerged?.(mergedUrl);
+      
     } catch (error) {
-      console.error("Voice change error:", error);
-      toast.error(error instanceof Error ? error.message : "Failed to change voice");
-    } finally {
-      setIsProcessing(false);
+      console.error("Voice change/merge error:", error);
+      toast.error(error instanceof Error ? error.message : "Failed to process");
+      setIsChangingVoice(false);
     }
   };
 
-  const handleDownload = () => {
+  const handleDownloadVideo = () => {
+    if (mergedVideoUrl) {
+      const a = document.createElement("a");
+      a.href = mergedVideoUrl;
+      a.download = `voice-changed-video-${Date.now()}.mp4`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    }
+  };
+
+  const handleDownloadAudio = () => {
     if (changedAudioUrl) {
       window.open(changedAudioUrl, "_blank");
     }
   };
 
   const selectedVoiceInfo = VOICE_OPTIONS.find(v => v.id === selectedVoice);
+  const isProcessing = isChangingVoice || isMerging;
 
   return (
     <div className="space-y-4 p-4 rounded-lg border border-primary/30 bg-primary/5">
       <div className="flex items-center gap-2">
         <Mic2 className="h-5 w-5 text-primary" />
         <h4 className="font-medium text-primary">Voice Changer</h4>
-        <span className="text-xs text-muted-foreground">(ElevenLabs)</span>
+        <span className="text-xs text-muted-foreground">(ElevenLabs + Auto-Merge)</span>
       </div>
 
       <p className="text-sm text-muted-foreground">
-        Change the voice in your video using AI. Select a target voice and we'll transform the audio.
+        Transform the voice in your video. We'll change the voice and automatically merge it back into the video.
       </p>
 
       <div className="space-y-2">
         <Label>Target Voice</Label>
-        <Select value={selectedVoice} onValueChange={setSelectedVoice}>
+        <Select value={selectedVoice} onValueChange={setSelectedVoice} disabled={isProcessing}>
           <SelectTrigger className="bg-background/50">
             <SelectValue placeholder="Select a voice..." />
           </SelectTrigger>
@@ -111,15 +141,32 @@ export function VoiceChanger({ videoUrl, onVoiceChanged }: VoiceChangerProps) {
             ))}
           </SelectContent>
         </Select>
-        {selectedVoiceInfo && (
+        {selectedVoiceInfo && !isProcessing && (
           <p className="text-xs text-muted-foreground">
             {selectedVoiceInfo.description}
           </p>
         )}
       </div>
 
+      {/* Progress indicator */}
+      {isProcessing && (
+        <div className="space-y-2">
+          <div className="flex items-center gap-2 text-sm">
+            <Loader2 className="h-4 w-4 animate-spin text-primary" />
+            <span className="text-muted-foreground">
+              {isChangingVoice 
+                ? "Changing voice with ElevenLabs..." 
+                : progress?.message || "Processing..."}
+            </span>
+          </div>
+          {progress && !isChangingVoice && (
+            <Progress value={progress.progress} className="h-2" />
+          )}
+        </div>
+      )}
+
       <Button
-        onClick={handleVoiceChange}
+        onClick={handleVoiceChangeAndMerge}
         disabled={isProcessing || !selectedVoice}
         className="w-full"
         variant="outline"
@@ -127,34 +174,49 @@ export function VoiceChanger({ videoUrl, onVoiceChanged }: VoiceChangerProps) {
         {isProcessing ? (
           <>
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            Processing Voice...
+            {isChangingVoice ? "Changing Voice..." : "Merging Video..."}
           </>
         ) : (
           <>
             <Volume2 className="mr-2 h-4 w-4" />
-            Change Voice
+            Change Voice & Merge
           </>
         )}
       </Button>
 
-      {changedAudioUrl && (
-        <div className="space-y-3 pt-2 border-t border-border/50">
+      {/* Merged Video Result */}
+      {mergedVideoUrl && (
+        <div className="space-y-3 pt-3 border-t border-border/50">
           <div className="flex items-center justify-between">
-            <span className="text-sm font-medium text-primary">Changed Audio</span>
-            <Button variant="ghost" size="sm" onClick={handleDownload}>
+            <div className="flex items-center gap-2">
+              <CheckCircle className="h-4 w-4 text-green-500" />
+              <span className="text-sm font-medium text-primary">Merged Video Ready!</span>
+            </div>
+            <Button variant="ghost" size="sm" onClick={handleDownloadVideo}>
               <Download className="h-4 w-4 mr-1" />
-              Download
+              Download MP4
             </Button>
           </div>
-          <audio
-            src={changedAudioUrl}
-            controls
-            className="w-full h-10"
-          />
-          <p className="text-xs text-muted-foreground">
-            Note: This is the audio track only. To replace the video's audio, 
-            download both files and combine them in a video editor.
-          </p>
+          <div className="relative rounded-lg overflow-hidden border border-border/50">
+            <video
+              src={mergedVideoUrl}
+              controls
+              className="w-full max-h-[300px] bg-black/50"
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Audio-only download option */}
+      {changedAudioUrl && !mergedVideoUrl && !isMerging && (
+        <div className="space-y-3 pt-2 border-t border-border/50">
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-medium text-primary">Changed Audio (backup)</span>
+            <Button variant="ghost" size="sm" onClick={handleDownloadAudio}>
+              <Download className="h-4 w-4 mr-1" />
+              Audio Only
+            </Button>
+          </div>
         </div>
       )}
     </div>
