@@ -158,13 +158,13 @@ export const LandingPage = ({ onLogin }: LandingPageProps) => {
               </div>
             </div>
             
-            {/* Right Image */}
-            <div className="relative animate-slide-up">
-              <div className="absolute inset-0 bg-gradient-to-br from-gold/20 to-transparent rounded-3xl blur-3xl" />
+            {/* Right Image - Director Hero */}
+            <div className="relative animate-slide-up lg:scale-110 lg:-mr-12">
+              <div className="absolute inset-0 bg-gradient-to-br from-gold/30 to-transparent rounded-2xl blur-3xl" />
               <img 
                 src={heroImage} 
-                alt="Psycho-Cinematics Director" 
-                className="relative rounded-3xl shadow-2xl shadow-gold/20 border border-gold/20"
+                alt="The Director - Psycho-Cinematics" 
+                className="relative w-full max-w-2xl mx-auto rounded-2xl shadow-2xl shadow-black/50"
               />
             </div>
           </div>
