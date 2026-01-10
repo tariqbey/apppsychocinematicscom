@@ -161,44 +161,51 @@ export const Header = () => {
                   )}
 
                   {/* User Avatar Dropdown */}
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <button className="w-10 h-10 rounded-full bg-gradient-to-br from-gold/20 to-amber-soft/20 border border-gold/30 flex items-center justify-center hover:border-gold/60 transition-colors cursor-pointer">
-                            <User className="w-5 h-5 text-gold" />
-                          </button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-48">
-                          <DropdownMenuItem onClick={() => navigate("/user-manual")}>
-                            <BookOpen className="w-4 h-4 mr-2" />
-                            User Manual
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => navigate("/tutorial")}>
-                            <HelpCircle className="w-4 h-4 mr-2" />
-                            Quick Tutorial
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => navigate("/settings")}>
-                            <Settings className="w-4 h-4 mr-2" />
-                            Account Settings
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem onClick={handleSignOut} className="text-destructive focus:text-destructive">
-                            <LogOut className="w-4 h-4 mr-2" />
-                            Log out
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TooltipTrigger>
-                    <TooltipContent side="bottom">
-                      <p>Account Menu</p>
-                    </TooltipContent>
-                  </Tooltip>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button className="w-10 h-10 rounded-full bg-gradient-to-br from-gold/20 to-amber-soft/20 border border-gold/30 flex items-center justify-center hover:border-gold/60 transition-colors cursor-pointer">
+                        <User className="w-5 h-5 text-gold" />
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-48">
+                      <DropdownMenuItem onClick={() => navigate("/user-manual")}>
+                        <BookOpen className="w-4 h-4 mr-2" />
+                        User Manual
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => navigate("/tutorial")}>
+                        <HelpCircle className="w-4 h-4 mr-2" />
+                        Quick Tutorial
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => navigate("/settings")}>
+                        <Settings className="w-4 h-4 mr-2" />
+                        Account Settings
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onClick={handleSignOut} className="text-destructive focus:text-destructive">
+                        <LogOut className="w-4 h-4 mr-2" />
+                        Log out
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </>
               ) : (
-                <Button variant="gold" onClick={() => setShowAuthModal(true)}>
-                  Enter Studio
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Link to="/tutorial">
+                    <Button variant="ghost" size="sm" className="gap-2">
+                      <HelpCircle className="w-4 h-4" />
+                      Tutorial
+                    </Button>
+                  </Link>
+                  <Link to="/user-manual">
+                    <Button variant="ghost" size="sm" className="gap-2">
+                      <BookOpen className="w-4 h-4" />
+                      Manual
+                    </Button>
+                  </Link>
+                  <Button variant="gold" onClick={() => setShowAuthModal(true)}>
+                    Enter Studio
+                  </Button>
+                </div>
               )}
             </TooltipProvider>
           </div>
