@@ -7,9 +7,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { User, Bell, Shield, ArrowLeft, CreditCard, Crown, Zap, Calendar, ExternalLink, Loader2 } from "lucide-react";
+import { User, Bell, Shield, ArrowLeft, CreditCard, Crown, Zap, Calendar, ExternalLink, Loader2, Plug } from "lucide-react";
 import { Link } from "react-router-dom";
 import { format } from "date-fns";
+import { IntegrationsTab } from "@/components/settings/IntegrationsTab";
 
 export default function Settings() {
   const { user, loading: authLoading } = useAuth();
@@ -86,6 +87,10 @@ export default function Settings() {
             <TabsTrigger value="preferences" className="data-[state=active]:bg-gold/20">
               <Bell className="h-4 w-4 mr-2" />
               Preferences
+            </TabsTrigger>
+            <TabsTrigger value="integrations" className="data-[state=active]:bg-gold/20">
+              <Plug className="h-4 w-4 mr-2" />
+              Integrations
             </TabsTrigger>
             {isAdmin && (
               <TabsTrigger value="admin" className="data-[state=active]:bg-red-500/20 text-red-400">
@@ -281,6 +286,10 @@ export default function Settings() {
                 <p className="text-muted-foreground">Preference settings coming soon.</p>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="integrations">
+            <IntegrationsTab />
           </TabsContent>
         </Tabs>
       </div>

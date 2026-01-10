@@ -36,10 +36,20 @@ serve(async (req) => {
     }
 
     const { audioUrl, voiceId } = await req.json();
-    const ELEVENLABS_API_KEY = Deno.env.get("ELEVENLABS_API_KEY");
+    
+    // Check for user's personal ElevenLabs API key first
+    const { data: userIntegration } = await supabaseClient
+      .from("user_integrations")
+      .select("api_key")
+      .eq("user_id", userData.user.id)
+      .eq("service_name", "elevenlabs")
+      .single();
+
+    // Use user's key if available, otherwise fall back to system key
+    const ELEVENLABS_API_KEY = userIntegration?.api_key || Deno.env.get("ELEVENLABS_API_KEY");
 
     if (!ELEVENLABS_API_KEY) {
-      throw new Error("ELEVENLABS_API_KEY not configured");
+      throw new Error("ELEVENLABS_API_KEY not configured. Please add your API key in Settings → Integrations.");
     }
 
     if (!audioUrl) {
@@ -50,7 +60,8 @@ serve(async (req) => {
       throw new Error("Voice ID is required");
     }
 
-    console.log(`Processing voice change for user ${userData.user.id}`);
+    const usingPersonalKey = !!userIntegration?.api_key;
+    console.log(`Processing voice change for user ${userData.user.id} (using ${usingPersonalKey ? "personal" : "system"} API key)`);
     console.log(`Audio URL: ${audioUrl}`);
     console.log(`Target Voice ID: ${voiceId}`);
 
