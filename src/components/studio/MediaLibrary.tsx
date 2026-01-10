@@ -174,9 +174,9 @@ export function MediaLibrary({ filter = "all", onSelect }: MediaLibraryProps) {
     <div className="space-y-4">
       {/* Lightbox Modal */}
       <Dialog open={!!lightboxMedia} onOpenChange={(open) => !open && setLightboxMedia(null)}>
-        <DialogContent className="max-w-4xl w-full p-0 bg-black/95 border-border/50 overflow-hidden">
+        <DialogContent className="max-w-4xl w-[95vw] max-h-[90vh] p-0 bg-black/95 border-border/50 overflow-hidden flex flex-col">
           {lightboxMedia && (
-            <div className="relative">
+            <div className="flex flex-col max-h-[90vh] overflow-hidden">
               {/* Close Button */}
               <Button
                 variant="ghost"
@@ -193,7 +193,7 @@ export function MediaLibrary({ filter = "all", onSelect }: MediaLibraryProps) {
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="absolute left-2 top-1/2 -translate-y-1/2 z-10 text-white hover:bg-white/20"
+                    className="absolute left-2 top-1/3 z-10 text-white hover:bg-white/20"
                     onClick={() => navigateLightbox("prev")}
                   >
                     <ChevronLeft className="h-6 w-6" />
@@ -201,7 +201,7 @@ export function MediaLibrary({ filter = "all", onSelect }: MediaLibraryProps) {
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="absolute right-2 top-1/2 -translate-y-1/2 z-10 text-white hover:bg-white/20"
+                    className="absolute right-2 top-1/3 z-10 text-white hover:bg-white/20"
                     onClick={() => navigateLightbox("next")}
                   >
                     <ChevronRight className="h-6 w-6" />
@@ -209,34 +209,29 @@ export function MediaLibrary({ filter = "all", onSelect }: MediaLibraryProps) {
                 </>
               )}
 
-              {/* Media Display */}
-              <div className="flex items-center justify-center min-h-[300px] max-h-[50vh]">
+              {/* Media Display - Fixed height */}
+              <div className="flex items-center justify-center min-h-[200px] max-h-[40vh] flex-shrink-0">
                 {lightboxMedia.media_type === "image" ? (
                   <img 
                     src={lightboxMedia.media_url!} 
                     alt="" 
-                    className="max-w-full max-h-[50vh] object-contain"
+                    className="max-w-full max-h-[40vh] object-contain"
                   />
                 ) : (
                   <video 
                     src={lightboxMedia.media_url!} 
                     controls 
                     autoPlay
-                    className="max-w-full max-h-[50vh]"
+                    className="max-w-full max-h-[40vh]"
                   />
                 )}
               </div>
 
-              {/* Info Bar */}
-              <div className="p-4 bg-background/80 backdrop-blur-sm border-t border-border/50">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">{lightboxMedia.prompt}</p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {lightboxMedia.model_used} • {formatDistanceToNow(new Date(lightboxMedia.created_at), { addSuffix: true })}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2">
+              {/* Scrollable Info/Controls Section */}
+              <div className="flex-1 overflow-y-auto min-h-0">
+                <div className="p-4 bg-background/80 backdrop-blur-sm border-t border-border/50">
+                  {/* Action Buttons Row */}
+                  <div className="flex flex-wrap items-center gap-2 mb-3">
                     {/* Voice Changer Toggle for Videos */}
                     {lightboxMedia.media_type === "video" && (
                       <Button
@@ -265,26 +260,37 @@ export function MediaLibrary({ filter = "all", onSelect }: MediaLibraryProps) {
                       {isDeleting === lightboxMedia.id ? (
                         <Loader2 className="h-4 w-4 animate-spin" />
                       ) : (
-                        <Trash2 className="h-4 w-4" />
+                        <>
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Delete
+                        </>
                       )}
                     </Button>
                   </div>
-                </div>
-                
-                {/* Voice Changer Panel for Videos */}
-                {lightboxMedia.media_type === "video" && showVoiceChanger && lightboxMedia.media_url && (
-                  <div className="mt-4 pt-4 border-t border-border/50">
-                    <VoiceChanger 
-                      videoUrl={lightboxMedia.media_url}
-                      onVideoMerged={(mergedUrl) => {
-                        toast({
-                          title: "Voice Changed!",
-                          description: "Your video has been updated with the new voice.",
-                        });
-                      }}
-                    />
+                  
+                  {/* Media Info */}
+                  <div className="mb-3">
+                    <p className="text-sm font-medium">{lightboxMedia.prompt}</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {lightboxMedia.model_used} • {formatDistanceToNow(new Date(lightboxMedia.created_at), { addSuffix: true })}
+                    </p>
                   </div>
-                )}
+                  
+                  {/* Voice Changer Panel for Videos */}
+                  {lightboxMedia.media_type === "video" && showVoiceChanger && lightboxMedia.media_url && (
+                    <div className="pt-3 border-t border-border/50">
+                      <VoiceChanger 
+                        videoUrl={lightboxMedia.media_url}
+                        onVideoMerged={(mergedUrl) => {
+                          toast({
+                            title: "Voice Changed!",
+                            description: "Your video has been updated with the new voice.",
+                          });
+                        }}
+                      />
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           )}
