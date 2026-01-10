@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -19,8 +19,8 @@ export function VideoGenerator({ onVideoGenerated }: VideoGeneratorProps) {
   const [prompt, setPrompt] = useState("");
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
   const [selectedModel, setSelectedModel] = useState<VideoModel>("openai/sora-2/text-to-video-developer");
-  const [duration, setDuration] = useState<5 | 10>(5);
-  const [resolution, setResolution] = useState<"720p" | "1080p">("1080p");
+  const [duration, setDuration] = useState<number>(4);
+  const [resolution, setResolution] = useState<"720p" | "1080p">("720p");
   const [aspectRatio, setAspectRatio] = useState<"16:9" | "9:16" | "1:1">("16:9");
   const [cameoId, setCameoId] = useState("");
 
@@ -31,16 +31,30 @@ export function VideoGenerator({ onVideoGenerated }: VideoGeneratorProps) {
   const effectiveModel: VideoModel = mode === "frames" ? selectedImageModel : selectedModel;
   const modelInfo = MODEL_INFO[effectiveModel];
 
+  const isSoraDev = effectiveModel === "openai/sora-2/text-to-video-developer";
+  const durationOptions = isSoraDev ? [4, 8, 12] : [5, 10];
+
+  useEffect(() => {
+    if (isSoraDev) {
+      if (![4, 8, 12].includes(duration)) setDuration(4);
+      if (resolution !== "720p") setResolution("720p");
+      if (aspectRatio === "1:1") setAspectRatio("16:9");
+    } else {
+      if ([4, 8, 12].includes(duration)) setDuration(5);
+    }
+  }, [isSoraDev, duration, resolution, aspectRatio]);
   const handleGenerate = async () => {
     if (!prompt.trim()) return;
     if (mode === "frames" && !uploadedImage) return;
+
+    const supportsResolution = !effectiveModel.startsWith("wan-ai/");
 
     const url = await generateVideo({
       prompt: prompt.trim(),
       model: effectiveModel,
       duration,
-      resolution,
-      aspect_ratio: aspectRatio,
+      resolution: supportsResolution ? resolution : undefined,
+      aspect_ratio: supportsResolution ? aspectRatio : undefined,
       image: mode === "frames" ? uploadedImage ?? undefined : undefined,
       cameo_id: mode === "text" && cameoId.trim() ? cameoId.trim() : undefined,
     });
@@ -195,13 +209,16 @@ export function VideoGenerator({ onVideoGenerated }: VideoGeneratorProps) {
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label>Duration</Label>
-          <Select value={String(duration)} onValueChange={(v) => setDuration(Number(v) as 5 | 10)}>
+          <Select value={String(duration)} onValueChange={(v) => setDuration(Number(v))}>
             <SelectTrigger className="bg-background/50">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="5">5 seconds</SelectItem>
-              <SelectItem value="10">10 seconds</SelectItem>
+              {durationOptions.map((d) => (
+                <SelectItem key={d} value={String(d)}>
+                  {d} seconds
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
@@ -228,7 +245,7 @@ export function VideoGenerator({ onVideoGenerated }: VideoGeneratorProps) {
             <SelectContent>
               <SelectItem value="16:9">Landscape (16:9)</SelectItem>
               <SelectItem value="9:16">Portrait (9:16)</SelectItem>
-              <SelectItem value="1:1">Square (1:1)</SelectItem>
+              {!isSoraDev && <SelectItem value="1:1">Square (1:1)</SelectItem>}
             </SelectContent>
           </Select>
         </div>

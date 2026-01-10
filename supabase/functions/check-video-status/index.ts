@@ -107,26 +107,30 @@ serve(async (req) => {
     }
 
     const pollResult = await pollResponse.json();
-    const status = pollResult.data?.status;
+    const rawStatus = String(pollResult.data?.status ?? "").toLowerCase();
 
-    console.log(`Status check for ${predictionId}: ${status}`);
+    console.log(`Status check for ${predictionId}: ${rawStatus}`);
 
-    if (status === "completed") {
-      const videoUrl = pollResult.data?.outputs?.[0];
-      
+    const isCompleted = ["completed", "succeeded", "success", "done"].includes(rawStatus);
+    const isFailed = ["failed", "canceled", "cancelled", "error"].includes(rawStatus);
+
+    const outputs = pollResult.data?.outputs ?? pollResult.outputs ?? pollResult.data?.output;
+    const videoUrl = Array.isArray(outputs) ? outputs[0] : outputs;
+
+    if (isCompleted) {
       // Update database
       await supabase
         .from("generated_media")
-        .update({ status: "completed", media_url: videoUrl })
+        .update({ status: "completed", media_url: videoUrl ?? null })
         .eq("prediction_id", predictionId);
 
       return new Response(
         JSON.stringify({ success: true, status: "completed", videoUrl }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
-    } else if (status === "failed") {
+    } else if (isFailed) {
       const errorMessage = pollResult.data?.error || "Generation failed";
-      
+
       await supabase
         .from("generated_media")
         .update({ status: "failed", error_message: errorMessage })

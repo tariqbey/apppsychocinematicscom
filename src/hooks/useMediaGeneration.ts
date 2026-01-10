@@ -98,24 +98,24 @@ export function useMediaGeneration() {
         });
       }
 
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/lovable-generate-image`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session.access_token}`,
-        },
-        body: JSON.stringify({ ...params, user_id: user.id }),
-      });
+      const { data: invokeData, error: invokeError } = await supabase.functions.invoke(
+        "lovable-generate-image",
+        {
+          body: { ...params, user_id: user.id },
+        }
+      );
 
-      const data = await response.json();
-
-      if (!response.ok || !data.success) {
-        throw new Error(data.error || "Failed to generate image");
+      if (invokeError) {
+        throw new Error(invokeError.message);
       }
 
-      setGeneratedImageUrl(data.imageUrl);
+      if (!invokeData?.success) {
+        throw new Error(invokeData?.error || "Failed to generate image");
+      }
+
+      setGeneratedImageUrl(invokeData.imageUrl);
       toast({ title: "Image generated!", description: "Your AI image is ready." });
-      return data.imageUrl;
+      return invokeData.imageUrl;
     } catch (error) {
       console.error("Image generation error:", error);
       toast({
@@ -129,26 +129,26 @@ export function useMediaGeneration() {
     }
   };
 
-  const checkVideoStatus = async (predictionId: string): Promise<{ status: string; videoUrl?: string; error?: string }> => {
+  const checkVideoStatus = async (
+    predictionId: string
+  ): Promise<{ status: string; videoUrl?: string; error?: string }> => {
     if (!session) {
       return { status: "error", error: "Not authenticated" };
     }
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/check-video-status`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session.access_token}`,
-        },
-        body: JSON.stringify({ predictionId }),
+      const { data, error } = await supabase.functions.invoke("check-video-status", {
+        body: { predictionId },
       });
 
-      const data = await response.json();
+      if (error) {
+        return { status: "error", error: error.message };
+      }
+
       return {
-        status: data.status || "error",
-        videoUrl: data.videoUrl,
-        error: data.error,
+        status: data?.status || "error",
+        videoUrl: data?.videoUrl,
+        error: data?.error,
       };
     } catch (error) {
       console.error("Status check error:", error);
@@ -162,15 +162,16 @@ export function useMediaGeneration() {
       return null;
     }
 
-    const duration = params.duration || 10;
-    
+    const isSora = params.model.includes("openai/sora-2");
+    const duration = params.duration ?? (isSora ? 4 : 5);
+
     // Check balance first (in credits)
     const creditCost = estimateCreditCost("video", duration);
     if (credits && !credits.isAdmin && credits.totalRemaining < creditCost) {
-      toast({ 
-        title: "Insufficient credits", 
-        description: `You need ${creditCost} credits. You have ${credits.totalRemaining} credits.`, 
-        variant: "destructive" 
+      toast({
+        title: "Insufficient credits",
+        description: `You need ${creditCost} credits. You have ${credits.totalRemaining} credits.`,
+        variant: "destructive",
       });
       return null;
     }
@@ -191,64 +192,73 @@ export function useMediaGeneration() {
         });
       }
 
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/atlas-generate-video`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session.access_token}`,
-        },
-        body: JSON.stringify({ ...params, user_id: user.id }),
-      });
+      const { data: startData, error: startError } = await supabase.functions.invoke(
+        "atlas-generate-video",
+        {
+          body: { ...params, duration, user_id: user.id },
+        }
+      );
 
-      const data = await response.json();
+      if (startError) {
+        throw new Error(startError.message);
+      }
 
-      if (!response.ok || !data.success) {
-        throw new Error(data.error || "Failed to start video generation");
+      if (!startData?.success) {
+        throw new Error(startData?.error || "Failed to start video generation");
       }
 
       // Video generation started - now poll for completion
-      const predictionId = data.predictionId;
-      const isSora = params.model.includes("sora");
-      
-      toast({ 
-        title: "Video generation started", 
-        description: isSora 
-          ? "Sora 2 typically takes 5-10 minutes. Please wait..." 
-          : "This may take 2-5 minutes. Please wait..." 
+      const predictionId = startData.predictionId as string;
+
+      toast({
+        title: "Video generation started",
+        description: isSora
+          ? "Sora 2 can take 10-20+ minutes depending on queue. You can leave this page and check your Media Library later."
+          : "This may take a few minutes. Please wait...",
       });
 
-      // Poll for completion (max 12 minutes for Sora, 8 for others)
-      const maxAttempts = isSora ? 180 : 120; // 180 * 4s = 12 min, 120 * 4s = 8 min
+      // Poll for completion (Sora is slower + more queueing)
+      const pollMs = isSora ? 10_000 : 4_000;
+      const maxMinutes = isSora ? 25 : 10;
+      const maxAttempts = Math.ceil((maxMinutes * 60 * 1000) / pollMs);
+
       let attempts = 0;
       let lastProgressToast = 0;
 
       while (attempts < maxAttempts) {
-        await new Promise(resolve => setTimeout(resolve, 4000)); // Wait 4 seconds
-        
+        await new Promise((resolve) => setTimeout(resolve, pollMs));
+
         const statusResult = await checkVideoStatus(predictionId);
-        
+
         if (statusResult.status === "completed" && statusResult.videoUrl) {
           setGeneratedVideoUrl(statusResult.videoUrl);
           toast({ title: "Video generated!", description: "Your AI video is ready." });
           return statusResult.videoUrl;
-        } else if (statusResult.status === "failed") {
+        }
+
+        if (statusResult.status === "failed") {
           throw new Error(statusResult.error || "Video generation failed");
         }
-        
+
         attempts++;
-        
+
         // Show progress toast every 2 minutes
-        const elapsedMinutes = Math.floor((attempts * 4) / 60);
+        const elapsedMinutes = Math.floor((attempts * pollMs) / 60_000);
         if (elapsedMinutes > lastProgressToast && elapsedMinutes % 2 === 0) {
           lastProgressToast = elapsedMinutes;
           toast({
-            title: "Still generating...",
+            title: "Still generating…",
             description: `${elapsedMinutes} minutes elapsed. ${isSora ? "Sora 2" : "Video"} is still processing.`,
           });
         }
       }
 
-      throw new Error(`Video generation timed out after ${isSora ? 12 : 8} minutes. Your video may still be processing - check Media Library.`);
+      // Don't treat this as a failure — Sora jobs often finish after the UI wait window.
+      toast({
+        title: "Still processing in the background",
+        description: `We waited ${maxMinutes} minutes. Your video may still finish — check the Media Library in a bit.`,
+      });
+      return null;
     } catch (error) {
       console.error("Video generation error:", error);
       toast({
