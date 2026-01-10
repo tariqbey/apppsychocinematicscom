@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Clapperboard, Settings, User, LogOut, Trophy, Users, MessageSquare, Shield, BookOpen } from "lucide-react";
+import { Clapperboard, Settings, User, LogOut, Trophy, Users, MessageSquare, Shield, BookOpen, HelpCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -170,9 +170,13 @@ export const Header = () => {
                           </button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-48">
-                          <DropdownMenuItem onClick={() => navigate("/tutorial")}>
+                          <DropdownMenuItem onClick={() => navigate("/user-manual")}>
                             <BookOpen className="w-4 h-4 mr-2" />
-                            Tutorial & Help
+                            User Manual
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => navigate("/tutorial")}>
+                            <HelpCircle className="w-4 h-4 mr-2" />
+                            Quick Tutorial
                           </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => navigate("/settings")}>
                             <Settings className="w-4 h-4 mr-2" />

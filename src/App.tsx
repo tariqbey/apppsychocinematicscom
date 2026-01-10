@@ -9,6 +9,7 @@ import Subscribe from "./pages/Subscribe";
 import SubscriptionSuccess from "./pages/SubscriptionSuccess";
 import CreditsSuccess from "./pages/CreditsSuccess";
 import Credits from "./pages/Credits";
+import UserManual from "./pages/UserManual";
 import AdminDashboard from "./pages/AdminDashboard";
 import Settings from "./pages/Settings";
 import Tutorial from "./pages/Tutorial";
@@ -30,6 +31,7 @@ const App = () => (
           <Route path="/subscription-success" element={<SubscriptionSuccess />} />
           <Route path="/credits-success" element={<CreditsSuccess />} />
           <Route path="/credits" element={<Credits />} />
+          <Route path="/user-manual" element={<UserManual />} />
           <Route path="/admin" element={<RequireAdmin><AdminDashboard /></RequireAdmin>} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/tutorial" element={<Tutorial />} />
