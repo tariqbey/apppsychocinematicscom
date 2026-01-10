@@ -7,6 +7,7 @@ import { Loader2, Sparkles, Download, Video, Film, ImageIcon } from "lucide-reac
 import { useMediaGeneration, VideoModel, MODEL_INFO } from "@/hooks/useMediaGeneration";
 import { ImageUpload } from "./ImageUpload";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { VoiceChanger } from "./VoiceChanger";
 
 interface VideoGeneratorProps {
   onVideoGenerated?: (url: string) => void;
@@ -115,6 +116,16 @@ export function VideoGenerator({ onVideoGenerated }: VideoGeneratorProps) {
               className="w-full max-h-[400px] bg-black/50"
             />
           </div>
+          
+          {/* Voice Changer - Only show for VO3/Sora 2 videos */}
+          {(effectiveModel.includes("sora-2") || effectiveModel.includes("openai")) && (
+            <VoiceChanger 
+              videoUrl={generatedVideoUrl}
+              onVoiceChanged={(audioUrl) => {
+                console.log("Voice changed audio:", audioUrl);
+              }}
+            />
+          )}
         </div>
       )}
 
