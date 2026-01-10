@@ -92,7 +92,7 @@ serve(async (req) => {
       });
     }
 
-    // Get or create production credits record
+    // Get or create production credits record using upsert to avoid race conditions
     let { data: creditsData, error: creditsError } = await supabaseClient
       .from("production_credits")
       .select("*")
@@ -101,26 +101,42 @@ serve(async (req) => {
 
     if (!creditsData) {
       logStep("Creating new credits record");
-      const { data: newCredits, error: insertError } = await supabaseClient
+      // Use upsert to handle race conditions gracefully
+      const { data: upsertedCredits, error: upsertError } = await supabaseClient
         .from("production_credits")
-        .insert({
+        .upsert({
           user_id: user.id,
           monthly_credits: 0,
           purchased_credits: 0,
           monthly_allowance_limit: MONTHLY_ALLOWANCE_LIMIT_CREDITS,
           monthly_allowance_used: 0
+        }, { 
+          onConflict: 'user_id',
+          ignoreDuplicates: true 
         })
         .select()
         .single();
 
-      if (insertError) {
-        logStep("Error creating credits", { error: insertError.message });
-        return new Response(JSON.stringify({ error: "Unable to initialize credits", code: "E1003" }), {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+      if (upsertError) {
+        // If upsert failed, try to fetch existing record (race condition case)
+        logStep("Upsert failed, fetching existing record", { error: upsertError.message });
+        const { data: existingCredits, error: fetchError } = await supabaseClient
+          .from("production_credits")
+          .select("*")
+          .eq("user_id", user.id)
+          .single();
+        
+        if (fetchError || !existingCredits) {
+          logStep("Error creating/fetching credits", { error: fetchError?.message || upsertError.message });
+          return new Response(JSON.stringify({ error: "Unable to initialize credits", code: "E1003" }), {
+            status: 500,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+        creditsData = existingCredits;
+      } else {
+        creditsData = upsertedCredits;
       }
-      creditsData = newCredits;
     }
 
     // All values are now in CREDITS (integers)
