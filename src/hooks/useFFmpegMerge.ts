@@ -16,29 +16,49 @@ export function useFFmpegMerge() {
       setProgress({ stage: "loading", progress: 0, message: "Initializing..." });
 
       try {
+        // Fetch video as blob to bypass CORS issues
+        setProgress({ stage: "downloading", progress: 5, message: "Downloading video..." });
+        const videoResponse = await fetch(videoUrl);
+        if (!videoResponse.ok) {
+          throw new Error(`Failed to download video: ${videoResponse.status}`);
+        }
+        const videoBlob = await videoResponse.blob();
+        const videoBlobUrl = URL.createObjectURL(videoBlob);
+        
+        setProgress({ stage: "downloading", progress: 15, message: "Downloading audio..." });
+        const audioResponse = await fetch(audioUrl);
+        if (!audioResponse.ok) {
+          throw new Error(`Failed to download audio: ${audioResponse.status}`);
+        }
+        const audioBlob = await audioResponse.blob();
+        const audioBlobUrl = URL.createObjectURL(audioBlob);
+
         // Create video element (muted - we'll replace the audio)
-        setProgress({ stage: "downloading", progress: 10, message: "Loading video..." });
+        setProgress({ stage: "downloading", progress: 20, message: "Loading media..." });
         const video = document.createElement("video");
-        video.src = videoUrl;
+        video.src = videoBlobUrl;
         video.muted = true;
-        video.crossOrigin = "anonymous";
         video.playsInline = true;
 
         // Create audio element
-        setProgress({ stage: "downloading", progress: 20, message: "Loading audio..." });
         const audio = document.createElement("audio");
-        audio.src = audioUrl;
-        audio.crossOrigin = "anonymous";
+        audio.src = audioBlobUrl;
 
         // Wait for both to load
         await Promise.all([
           new Promise<void>((resolve, reject) => {
             video.onloadeddata = () => resolve();
-            video.onerror = () => reject(new Error("Failed to load video"));
+            video.onerror = (e) => {
+              console.error("Video load error:", e);
+              reject(new Error("Failed to load video"));
+            };
           }),
           new Promise<void>((resolve, reject) => {
             audio.oncanplaythrough = () => resolve();
-            audio.onerror = () => reject(new Error("Failed to load audio"));
+            audio.onerror = (e) => {
+              console.error("Audio load error:", e);
+              reject(new Error("Failed to load audio"));
+            };
           }),
         ]);
 
@@ -96,22 +116,26 @@ export function useFFmpegMerge() {
             setProgress({ stage: "complete", progress: 100, message: "Complete!" });
             setIsProcessing(false);
             audioContext.close();
+            // Cleanup blob URLs
+            URL.revokeObjectURL(videoBlobUrl);
+            URL.revokeObjectURL(audioBlobUrl);
             resolve(mergedUrl);
           };
 
           recorder.onerror = (e) => {
+            console.error("Recorder error:", e);
             setProgress({ stage: "error", progress: 0, message: "Recording failed" });
             setIsProcessing(false);
             audioContext.close();
+            URL.revokeObjectURL(videoBlobUrl);
+            URL.revokeObjectURL(audioBlobUrl);
             reject(new Error("MediaRecorder error"));
           };
 
           // Draw video frames to canvas
-          let frameCount = 0;
           const drawFrame = () => {
             if (video.paused || video.ended) return;
             ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-            frameCount++;
             
             // Update progress based on video time
             const progressPercent = 30 + (video.currentTime / video.duration) * 65;
@@ -132,7 +156,7 @@ export function useFFmpegMerge() {
             }, 100); // Small delay to ensure all frames are captured
           };
 
-          // Handle errors
+          // Handle errors during playback
           video.onerror = () => {
             recorder.stop();
             reject(new Error("Video playback error"));
@@ -149,7 +173,10 @@ export function useFFmpegMerge() {
           video.play().then(() => {
             audio.play();
             drawFrame();
-          }).catch(reject);
+          }).catch((e) => {
+            console.error("Play error:", e);
+            reject(new Error("Failed to start playback"));
+          });
         });
 
       } catch (error) {
