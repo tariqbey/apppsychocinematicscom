@@ -302,27 +302,38 @@ export function DirectorAIAgent({ isOpen, onClose, chiefAim }: DirectorAIAgentPr
   };
 
   const stopSpeaking = useCallback(() => {
-    // Abort TTS fetch request
+    console.log("[DirectorAI] stopSpeaking called - killing all audio");
+    
+    // Abort TTS fetch request immediately
     if (ttsAbortControllerRef.current) {
       ttsAbortControllerRef.current.abort();
       ttsAbortControllerRef.current = null;
     }
-    // Stop audio playback
+    
+    // Stop audio playback - be aggressive
     if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current.src = "";
+      const audio = audioRef.current;
+      audio.pause();
+      audio.currentTime = 0;
+      audio.src = "";
+      audio.load(); // Force browser to release the audio
+      audio.onended = null;
+      audio.onerror = null;
       audioRef.current = null;
     }
-    // Revoke audio URL
+    
+    // Revoke audio URL to free memory
     if (audioUrlRef.current) {
       URL.revokeObjectURL(audioUrlRef.current);
       audioUrlRef.current = null;
     }
+    
     // Clear level animation interval
     if (audioLevelIntervalRef.current) {
       clearInterval(audioLevelIntervalRef.current);
       audioLevelIntervalRef.current = null;
     }
+    
     setOrbState("idle");
     setAudioLevel(0);
   }, []);
