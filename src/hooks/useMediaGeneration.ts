@@ -129,6 +129,33 @@ export function useMediaGeneration() {
     }
   };
 
+  const checkVideoStatus = async (predictionId: string): Promise<{ status: string; videoUrl?: string; error?: string }> => {
+    if (!session) {
+      return { status: "error", error: "Not authenticated" };
+    }
+
+    try {
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/check-video-status`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ predictionId }),
+      });
+
+      const data = await response.json();
+      return {
+        status: data.status || "error",
+        videoUrl: data.videoUrl,
+        error: data.error,
+      };
+    } catch (error) {
+      console.error("Status check error:", error);
+      return { status: "error", error: "Failed to check status" };
+    }
+  };
+
   const generateVideo = async (params: VideoGenerationParams): Promise<string | null> => {
     if (!user || !session) {
       toast({ title: "Please sign in", description: "You must be signed in to generate videos.", variant: "destructive" });
@@ -176,12 +203,37 @@ export function useMediaGeneration() {
       const data = await response.json();
 
       if (!response.ok || !data.success) {
-        throw new Error(data.error || "Failed to generate video");
+        throw new Error(data.error || "Failed to start video generation");
       }
 
-      setGeneratedVideoUrl(data.videoUrl);
-      toast({ title: "Video generated!", description: "Your AI video is ready." });
-      return data.videoUrl;
+      // Video generation started - now poll for completion
+      const predictionId = data.predictionId;
+      toast({ 
+        title: "Video generation started", 
+        description: "This may take 2-5 minutes. Please wait..." 
+      });
+
+      // Poll for completion (max 6 minutes)
+      const maxAttempts = 90; // 90 * 4 seconds = 6 minutes
+      let attempts = 0;
+
+      while (attempts < maxAttempts) {
+        await new Promise(resolve => setTimeout(resolve, 4000)); // Wait 4 seconds
+        
+        const statusResult = await checkVideoStatus(predictionId);
+        
+        if (statusResult.status === "completed" && statusResult.videoUrl) {
+          setGeneratedVideoUrl(statusResult.videoUrl);
+          toast({ title: "Video generated!", description: "Your AI video is ready." });
+          return statusResult.videoUrl;
+        } else if (statusResult.status === "failed") {
+          throw new Error(statusResult.error || "Video generation failed");
+        }
+        
+        attempts++;
+      }
+
+      throw new Error("Video generation timed out. Check Media Library later.");
     } catch (error) {
       console.error("Video generation error:", error);
       toast({

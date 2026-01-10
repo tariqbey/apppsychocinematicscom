@@ -216,7 +216,7 @@ serve(async (req) => {
 
     console.log("Generation started with prediction ID:", predictionId);
 
-    // Update database with prediction ID
+    // Insert record immediately with processing status
     await supabase.from("generated_media").insert({
       user_id: userId,
       media_type: "video",
@@ -227,66 +227,16 @@ serve(async (req) => {
       metadata: { duration: generateBody.duration, resolution: generateBody.resolution, aspect_ratio: generateBody.aspect_ratio },
     });
 
-    // Step 2: Poll for result (video takes longer)
-    const pollUrl = `https://api.atlascloud.ai/api/v1/model/prediction/${predictionId}`;
-    let attempts = 0;
-    const maxAttempts = 180; // 6 minutes max for video
-
-    while (attempts < maxAttempts) {
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-
-      const pollResponse = await fetch(pollUrl, {
-        headers: { Authorization: `Bearer ${ATLASCLOUD_API_KEY}` },
-      });
-
-      if (!pollResponse.ok) {
-        const errorText = await pollResponse.text();
-        console.error("Poll error:", errorText.substring(0, 100));
-        attempts++;
-        continue;
-      }
-
-      const pollResult = await pollResponse.json();
-      const status = pollResult.data?.status;
-
-      console.log(`Poll attempt ${attempts + 1}: status = ${status}`);
-
-      if (status === "completed") {
-        const videoUrl = pollResult.data?.outputs?.[0];
-        console.log("Video generated successfully");
-
-        // Update database with result
-        await supabase
-          .from("generated_media")
-          .update({ status: "completed", media_url: videoUrl })
-          .eq("prediction_id", predictionId);
-
-        return new Response(
-          JSON.stringify({ success: true, videoUrl, predictionId }),
-          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      } else if (status === "failed") {
-        const errorMessage = pollResult.data?.error || "Generation failed";
-        console.error("Video generation failed:", errorMessage);
-
-        await supabase
-          .from("generated_media")
-          .update({ status: "failed", error_message: errorMessage })
-          .eq("prediction_id", predictionId);
-
-        return new Response(JSON.stringify({ success: false, error: "Video generation failed. Please try again.", code: "E1007" }), {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-
-      attempts++;
-    }
-
-    return new Response(JSON.stringify({ success: false, error: "Video generation timed out. Please try again.", code: "E1007" }), {
-      status: 504,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    // Return immediately with prediction ID - client will poll for status
+    return new Response(
+      JSON.stringify({ 
+        success: true, 
+        status: "processing",
+        predictionId,
+        message: "Video generation started. Poll for status updates."
+      }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
   } catch (error) {
     return safeErrorResponse(error, corsHeaders, "ATLAS-GENERATE-VIDEO");
   }
