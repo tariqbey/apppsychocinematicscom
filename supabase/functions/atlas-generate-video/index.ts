@@ -74,6 +74,7 @@ async function dataUrlToPublicUrl({
 }
 
 const MODEL_CONFIGS: Record<string, { endpoint: string; defaultParams: any }> = {
+  // OpenAI Sora 2
   "openai/sora-2/text-to-video-developer": {
     endpoint: "https://api.atlascloud.ai/api/v1/model/generateVideo",
     defaultParams: { duration: 4, resolution: "1080p", aspect_ratio: "16:9" },
@@ -82,6 +83,7 @@ const MODEL_CONFIGS: Record<string, { endpoint: string; defaultParams: any }> = 
     endpoint: "https://api.atlascloud.ai/api/v1/model/generateVideo",
     defaultParams: { duration: 5, resolution: "1080p" },
   },
+  // Wan 2.1
   "wan-ai/wan2.1-t2v-480p": {
     endpoint: "https://api.atlascloud.ai/api/v1/model/generateVideo",
     defaultParams: { duration: 5, resolution: "480p", aspect_ratio: "16:9" },
@@ -90,24 +92,56 @@ const MODEL_CONFIGS: Record<string, { endpoint: string; defaultParams: any }> = 
     endpoint: "https://api.atlascloud.ai/api/v1/model/generateVideo",
     defaultParams: { duration: 5, resolution: "480p" },
   },
+  // Kling v2.5 Turbo Pro
+  "kling-ai/v2.5-turbo-pro/text-to-video": {
+    endpoint: "https://api.atlascloud.ai/api/v1/model/generateVideo",
+    defaultParams: { duration: "5", aspect_ratio: "16:9" },
+  },
+  "kling-ai/v2.5-turbo-pro/image-to-video": {
+    endpoint: "https://api.atlascloud.ai/api/v1/model/generateVideo",
+    defaultParams: { duration: "5" },
+  },
+  // Google Veo 3 (VO3)
+  "google/veo3": {
+    endpoint: "https://api.atlascloud.ai/api/v1/model/generateVideo",
+    defaultParams: { duration: 8, resolution: "720p", aspect_ratio: "16:9", generate_audio: true },
+  },
+  "google/veo3-fast": {
+    endpoint: "https://api.atlascloud.ai/api/v1/model/generateVideo",
+    defaultParams: { duration: 8, resolution: "720p", aspect_ratio: "16:9", generate_audio: true },
+  },
+  "google/veo3-fast/image-to-video": {
+    endpoint: "https://api.atlascloud.ai/api/v1/model/generateVideo",
+    defaultParams: { duration: 8, resolution: "720p", generate_audio: true },
+  },
+  // Legacy Kling names (for backwards compat)
   "kling-ai/v1-5/pro/text-to-video": {
     endpoint: "https://api.atlascloud.ai/api/v1/model/generateVideo",
-    defaultParams: { duration: 5, resolution: "1080p", aspect_ratio: "16:9" },
+    defaultParams: { duration: "5", aspect_ratio: "16:9" },
   },
   "kling-ai/v1-5/pro/image-to-video": {
     endpoint: "https://api.atlascloud.ai/api/v1/model/generateVideo",
-    defaultParams: { duration: 5, resolution: "1080p" },
+    defaultParams: { duration: "5" },
   },
 };
 
 // Map frontend model names to Atlas Cloud API model names
 const MODEL_NAME_MAP: Record<string, string> = {
+  // Sora 2
   "openai/sora-2/text-to-video-developer": "openai/sora-2/text-to-video-developer",
   "openai/sora-2/image-to-video": "openai/sora-2/image-to-video",
+  // Kling v2.5 Turbo Pro
+  "kling-ai/v2.5-turbo-pro/text-to-video": "kwaivgi/kling-v2.5-turbo-pro/text-to-video",
+  "kling-ai/v2.5-turbo-pro/image-to-video": "kwaivgi/kling-v2.5-turbo-pro/image-to-video",
   "kling-ai/v1-5/pro/image-to-video": "kwaivgi/kling-v2.5-turbo-pro/image-to-video",
   "kling-ai/v1-5/pro/text-to-video": "kwaivgi/kling-v2.5-turbo-pro/text-to-video",
+  // Wan 2.1
   "wan-ai/wan2.1-i2v-480p": "alibaba/wan-2.1/i2v-720p",
   "wan-ai/wan2.1-t2v-480p": "alibaba/wan-2.1/t2v-720p",
+  // Veo 3 (VO3)
+  "google/veo3": "google/veo3",
+  "google/veo3-fast": "google/veo3-fast",
+  "google/veo3-fast/image-to-video": "google/veo3-fast/image-to-video",
 };
 
 serve(async (req) => {
@@ -241,7 +275,9 @@ serve(async (req) => {
     // Handle image input for image-to-video models
     const isImageToVideo = model === "openai/sora-2/image-to-video" || 
                            model === "wan-ai/wan2.1-i2v-480p" || 
-                           model === "kling-ai/v1-5/pro/image-to-video";
+                           model === "kling-ai/v1-5/pro/image-to-video" ||
+                           model === "kling-ai/v2.5-turbo-pro/image-to-video" ||
+                           model === "google/veo3-fast/image-to-video";
     
     if (image && isImageToVideo) {
       if (typeof image !== "string") {
@@ -280,6 +316,53 @@ serve(async (req) => {
 
       delete generateBody.resolution;
       delete generateBody.aspect_ratio;
+    }
+
+    // Kling v2.5 Turbo Pro uses string duration ("5" | "10") and aspect_ratio
+    const isKling = model.includes("kling-ai/");
+    if (isKling) {
+      // Duration must be string "5" or "10"
+      const requestedDuration = Number(generateBody.duration ?? 5);
+      generateBody.duration = requestedDuration >= 10 ? "10" : "5";
+
+      // Kling supports 1:1, 9:16, 16:9
+      const requestedAspect = (aspect_ratio ?? "16:9") as "16:9" | "9:16" | "1:1";
+      generateBody.aspect_ratio = requestedAspect;
+
+      // Remove resolution - Kling doesn't use it
+      delete generateBody.resolution;
+
+      // For image-to-video, require image
+      if ((model === "kling-ai/v2.5-turbo-pro/image-to-video" || model === "kling-ai/v1-5/pro/image-to-video") && !generateBody.image) {
+        return new Response(JSON.stringify({ success: false, error: "Image is required for this model", code: "E1004" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
+
+    // Veo 3 (VO3) models
+    const isVeo3 = model.includes("google/veo3");
+    if (isVeo3) {
+      // Duration fixed at 8 seconds
+      generateBody.duration = 8;
+      
+      // Resolution: 720p or 1080p
+      generateBody.resolution = (resolution ?? "720p") as "720p" | "1080p";
+      
+      // Aspect ratio: only 16:9 supported
+      generateBody.aspect_ratio = "16:9";
+      
+      // Enable audio generation by default
+      generateBody.generate_audio = true;
+
+      // For image-to-video, require image
+      if (model === "google/veo3-fast/image-to-video" && !generateBody.image) {
+        return new Response(JSON.stringify({ success: false, error: "Image is required for this model", code: "E1004" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
     }
 
     // Retry logic for transient failures

@@ -76,10 +76,21 @@ export function VideoGenerator({ onVideoGenerated }: VideoGeneratorProps) {
   const canGenerate = prompt.trim() && (mode === "text" || uploadedImage);
 
   // Models available for text-to-video
-  const textModels: VideoModel[] = ["openai/sora-2/text-to-video-developer", "wan-ai/wan2.1-t2v-480p"];
+  const textModels: VideoModel[] = [
+    "openai/sora-2/text-to-video-developer", 
+    "google/veo3",
+    "google/veo3-fast",
+    "kling-ai/v2.5-turbo-pro/text-to-video",
+    "wan-ai/wan2.1-t2v-480p",
+  ];
   
   // Models available for image-to-video
-  const imageModels: VideoModel[] = ["openai/sora-2/image-to-video", "wan-ai/wan2.1-i2v-480p"];
+  const imageModels: VideoModel[] = [
+    "openai/sora-2/image-to-video", 
+    "google/veo3-fast/image-to-video",
+    "kling-ai/v2.5-turbo-pro/image-to-video",
+    "wan-ai/wan2.1-i2v-480p",
+  ];
 
   return (
     <div className="space-y-6">

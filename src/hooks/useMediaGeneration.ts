@@ -4,7 +4,23 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useProductionCredits } from "@/hooks/useProductionCredits";
 
-export type VideoModel = "openai/sora-2/text-to-video-developer" | "openai/sora-2/image-to-video" | "wan-ai/wan2.1-i2v-480p" | "wan-ai/wan2.1-t2v-480p" | "kling-ai/v1-5/pro/image-to-video" | "kling-ai/v1-5/pro/text-to-video";
+export type VideoModel = 
+  // Sora 2
+  | "openai/sora-2/text-to-video-developer" 
+  | "openai/sora-2/image-to-video" 
+  // Wan 2.1
+  | "wan-ai/wan2.1-i2v-480p" 
+  | "wan-ai/wan2.1-t2v-480p" 
+  // Kling v2.5 Turbo Pro
+  | "kling-ai/v2.5-turbo-pro/text-to-video"
+  | "kling-ai/v2.5-turbo-pro/image-to-video"
+  // Legacy Kling (deprecated, maps to v2.5)
+  | "kling-ai/v1-5/pro/image-to-video" 
+  | "kling-ai/v1-5/pro/text-to-video"
+  // Google Veo 3 (VO3)
+  | "google/veo3"
+  | "google/veo3-fast"
+  | "google/veo3-fast/image-to-video";
 
 export interface ImageGenerationParams {
   prompt: string;
@@ -40,12 +56,22 @@ export interface GeneratedMedia {
 }
 
 export const MODEL_INFO: Record<VideoModel, { name: string; price: string; description: string }> = {
+  // Sora 2
   "openai/sora-2/text-to-video-developer": { name: "Sora 2 Developer", price: "60-110 credits", description: "OpenAI text-to-video with Cameo support" },
-  "openai/sora-2/image-to-video": { name: "Sora 2 Image", price: "60-110 credits", description: "Animate an image" },
+  "openai/sora-2/image-to-video": { name: "Sora 2 Image", price: "60-110 credits", description: "Animate an image with Sora 2" },
+  // Wan 2.1
   "wan-ai/wan2.1-t2v-480p": { name: "Wan 2.1", price: "60-110 credits", description: "Fast text-to-video" },
   "wan-ai/wan2.1-i2v-480p": { name: "Wan 2.1 Image", price: "60-110 credits", description: "Image animation" },
-  "kling-ai/v1-5/pro/text-to-video": { name: "Kling 1.5 Pro", price: "60-110 credits", description: "Kling text-to-video" },
-  "kling-ai/v1-5/pro/image-to-video": { name: "Kling 1.5 Pro Image", price: "60-110 credits", description: "Kling image animation" },
+  // Kling v2.5 Turbo Pro
+  "kling-ai/v2.5-turbo-pro/text-to-video": { name: "Kling 2.5 Pro", price: "60-110 credits", description: "Kling AI text-to-video" },
+  "kling-ai/v2.5-turbo-pro/image-to-video": { name: "Kling 2.5 Pro Image", price: "60-110 credits", description: "Kling AI image animation" },
+  // Legacy Kling (deprecated)
+  "kling-ai/v1-5/pro/text-to-video": { name: "Kling 1.5 Pro", price: "60-110 credits", description: "(Legacy) Kling text-to-video" },
+  "kling-ai/v1-5/pro/image-to-video": { name: "Kling 1.5 Pro Image", price: "60-110 credits", description: "(Legacy) Kling image animation" },
+  // Google Veo 3 (VO3)
+  "google/veo3": { name: "Veo 3 (VO3)", price: "80-120 credits", description: "Google DeepMind text-to-video with audio" },
+  "google/veo3-fast": { name: "Veo 3 Fast", price: "60-100 credits", description: "Faster Veo 3 generation with audio" },
+  "google/veo3-fast/image-to-video": { name: "Veo 3 Fast Image", price: "60-100 credits", description: "Animate images with Veo 3" },
 };
 
 export function useMediaGeneration() {
