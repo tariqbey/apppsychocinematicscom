@@ -6,6 +6,11 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// Cost constants
+const VOICE_CHANGE_COST_DOLLARS = 0.08; // $0.08 per voice change
+const MARKUP_DOLLARS = 0.10;             // $0.10 markup
+const dollarsToCredits = (dollars: number): number => Math.round(dollars * 100);
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -35,13 +40,87 @@ serve(async (req) => {
       );
     }
 
+    const userId = userData.user.id;
+
+    // Check if user is admin (skip credit deduction)
+    const { data: roleData } = await supabaseClient
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", userId)
+      .eq("role", "admin")
+      .single();
+
+    const isAdmin = !!roleData;
+
+    // Check and deduct credits (unless admin)
+    if (!isAdmin) {
+      const { data: creditsData } = await supabaseClient
+        .from("production_credits")
+        .select("*")
+        .eq("user_id", userId)
+        .single();
+
+      if (!creditsData) {
+        return new Response(
+          JSON.stringify({ error: "No credits available. Please subscribe first." }),
+          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const creditsToDeduct = dollarsToCredits(VOICE_CHANGE_COST_DOLLARS + MARKUP_DOLLARS);
+      const monthlyAllowanceUsed = Math.round(parseFloat(creditsData.monthly_allowance_used || 0));
+      const monthlyAllowanceLimit = Math.round(parseFloat(creditsData.monthly_allowance_limit || 1000));
+      const purchasedBalance = Math.round(parseFloat(creditsData.purchased_credits || 0));
+      const remainingMonthlyAllowance = Math.max(0, monthlyAllowanceLimit - monthlyAllowanceUsed);
+      const totalRemaining = remainingMonthlyAllowance + purchasedBalance;
+
+      if (totalRemaining < creditsToDeduct) {
+        return new Response(
+          JSON.stringify({ error: "Insufficient credits", creditsRequired: creditsToDeduct, totalRemaining }),
+          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Deduct credits
+      let newMonthlyAllowanceUsed = monthlyAllowanceUsed;
+      let newPurchasedBalance = purchasedBalance;
+
+      if (remainingMonthlyAllowance >= creditsToDeduct) {
+        newMonthlyAllowanceUsed = monthlyAllowanceUsed + creditsToDeduct;
+      } else {
+        const deductFromPurchased = creditsToDeduct - remainingMonthlyAllowance;
+        newMonthlyAllowanceUsed = monthlyAllowanceLimit;
+        newPurchasedBalance = purchasedBalance - deductFromPurchased;
+      }
+
+      await supabaseClient
+        .from("production_credits")
+        .update({
+          monthly_allowance_used: newMonthlyAllowanceUsed,
+          purchased_credits: newPurchasedBalance
+        })
+        .eq("user_id", userId);
+
+      // Log transaction
+      await supabaseClient
+        .from("credit_transactions")
+        .insert({
+          user_id: userId,
+          amount: -creditsToDeduct,
+          api_cost_usd: VOICE_CHANGE_COST_DOLLARS + MARKUP_DOLLARS,
+          transaction_type: "generation",
+          description: `Voice change - ${creditsToDeduct} credits`,
+          media_type: "voiceChange"
+        });
+    }
+
     const { audioUrl, voiceId } = await req.json();
     
     // Check for user's personal ElevenLabs API key first
     const { data: userIntegration } = await supabaseClient
       .from("user_integrations")
       .select("api_key")
-      .eq("user_id", userData.user.id)
+      .eq("user_id", userId)
       .eq("service_name", "elevenlabs")
       .single();
 
@@ -61,7 +140,7 @@ serve(async (req) => {
     }
 
     const usingPersonalKey = !!userIntegration?.api_key;
-    console.log(`Processing voice change for user ${userData.user.id} (using ${usingPersonalKey ? "personal" : "system"} API key)`);
+    console.log(`Processing voice change for user ${userId} (using ${usingPersonalKey ? "personal" : "system"} API key)`);
     console.log(`Audio URL: ${audioUrl}`);
     console.log(`Target Voice ID: ${voiceId}`);
 
@@ -108,7 +187,7 @@ serve(async (req) => {
     console.log(`Voice changed audio: ${changedAudioBuffer.byteLength} bytes`);
 
     // Upload the changed audio to Supabase Storage
-    const fileName = `voice-changed/${userData.user.id}/${Date.now()}.mp3`;
+    const fileName = `voice-changed/${userId}/${Date.now()}.mp3`;
     const { data: uploadData, error: uploadError } = await supabaseClient.storage
       .from("generated-media")
       .upload(fileName, changedAudioBuffer, {
