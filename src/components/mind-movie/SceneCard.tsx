@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Copy, Check, Pencil, GripVertical, Sparkles, Clock, Film } from "lucide-react";
+import { Copy, Check, Pencil, GripVertical, Sparkles, Clock, Film, RefreshCw, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -12,6 +12,9 @@ interface SceneCardProps {
   scene: Scene;
   onUpdate?: (updates: Partial<Scene>) => void;
   onGenerateInEditBay?: (prompt: string) => void;
+  onRegenerate?: () => void;
+  onDelete?: () => void;
+  isRegenerating?: boolean;
   isEditing?: boolean;
   isDragging?: boolean;
 }
@@ -20,6 +23,9 @@ export function SceneCard({
   scene, 
   onUpdate, 
   onGenerateInEditBay,
+  onRegenerate,
+  onDelete,
+  isRegenerating = false,
   isEditing = false,
   isDragging = false,
 }: SceneCardProps) {
@@ -95,16 +101,42 @@ export function SceneCard({
             </div>
           </div>
 
-          {!isEditMode && onUpdate && (
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8"
-              onClick={() => setIsEditMode(true)}
-            >
-              <Pencil className="w-4 h-4" />
-            </Button>
-          )}
+          <div className="flex items-center gap-1">
+            {!isEditMode && onRegenerate && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={onRegenerate}
+                disabled={isRegenerating}
+                title="Regenerate this clip"
+              >
+                <RefreshCw className={`w-4 h-4 ${isRegenerating ? 'animate-spin' : ''}`} />
+              </Button>
+            )}
+            {!isEditMode && onDelete && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 text-destructive hover:text-destructive"
+                onClick={onDelete}
+                title="Delete this clip"
+              >
+                <Trash2 className="w-4 h-4" />
+              </Button>
+            )}
+            {!isEditMode && onUpdate && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => setIsEditMode(true)}
+                title="Edit this clip"
+              >
+                <Pencil className="w-4 h-4" />
+              </Button>
+            )}
+          </div>
         </div>
 
         {/* Narrative */}

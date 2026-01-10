@@ -103,6 +103,7 @@ export function MindMovieScriptWizard({
   const [generatedTitle, setGeneratedTitle] = useState("");
   const [generatedScenes, setGeneratedScenes] = useState<Scene[]>([]);
   const [isAddingScenes, setIsAddingScenes] = useState(false);
+  const [regeneratingSceneOrder, setRegeneratingSceneOrder] = useState<number | null>(null);
   const [savedPersonas, setSavedPersonas] = useState<SavedPersona[]>([]);
   const [songCount, setSongCount] = useState<1 | 2>(1);
   
@@ -249,6 +250,53 @@ export function MindMovieScriptWizard({
       navigator.clipboard.writeText(prompt);
       toast.success("Prompt copied! Open Edit Bay to generate.");
     }
+  };
+
+  const handleRegenerateScene = async (sceneOrder: number) => {
+    const sceneToRegenerate = generatedScenes.find(s => s.order === sceneOrder);
+    if (!sceneToRegenerate) return;
+
+    setRegeneratingSceneOrder(sceneOrder);
+    try {
+      // Generate a single new scene by calling the storyboard generator with context
+      const result = await generateStoryboard(
+        chiefAim, 
+        visualStyle, 
+        `Regenerate scene ${sceneOrder} with title "${sceneToRegenerate.title}". Original narrative: ${sceneToRegenerate.narrative}. Create a fresh take on this scene while keeping the same emotional journey.`,
+        undefined
+      );
+      
+      if (result && result.scenes.length > 0) {
+        // Replace the specific scene with the first generated scene, keeping the order
+        const newScene = { ...result.scenes[0], order: sceneOrder };
+        setGeneratedScenes((prev) =>
+          prev.map((scene) => (scene.order === sceneOrder ? newScene : scene))
+        );
+        toast.success(`Scene ${sceneOrder} regenerated!`);
+      }
+    } catch (error) {
+      console.error("Error regenerating scene:", error);
+      toast.error("Failed to regenerate scene");
+    } finally {
+      setRegeneratingSceneOrder(null);
+    }
+  };
+
+  const handleDeleteScene = (sceneOrder: number) => {
+    if (generatedScenes.length <= 1) {
+      toast.error("You need at least one scene in your storyboard");
+      return;
+    }
+    
+    setGeneratedScenes((prev) => {
+      const filtered = prev.filter((scene) => scene.order !== sceneOrder);
+      // Renumber remaining scenes
+      return filtered.map((scene, index) => ({
+        ...scene,
+        order: index + 1,
+      }));
+    });
+    toast.success("Scene deleted");
   };
 
   const handleGenerateLyrics = async () => {
@@ -486,6 +534,9 @@ export function MindMovieScriptWizard({
                       scenes={generatedScenes}
                       onUpdateScene={handleUpdateScene}
                       onGenerateInEditBay={handleGenerateInEditBay}
+                      onRegenerateScene={handleRegenerateScene}
+                      onDeleteScene={handleDeleteScene}
+                      regeneratingSceneOrder={regeneratingSceneOrder}
                       isEditable={true}
                     />
 
@@ -565,6 +616,9 @@ export function MindMovieScriptWizard({
                   scenes={generatedScenes}
                   onUpdateScene={handleUpdateScene}
                   onGenerateInEditBay={handleGenerateInEditBay}
+                  onRegenerateScene={handleRegenerateScene}
+                  onDeleteScene={handleDeleteScene}
+                  regeneratingSceneOrder={regeneratingSceneOrder}
                   isEditable={true}
                 />
               </div>

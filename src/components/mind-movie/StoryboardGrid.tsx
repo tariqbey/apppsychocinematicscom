@@ -5,6 +5,9 @@ interface StoryboardGridProps {
   scenes: Scene[];
   onUpdateScene?: (order: number, updates: Partial<Scene>) => void;
   onGenerateInEditBay?: (prompt: string) => void;
+  onRegenerateScene?: (order: number) => void;
+  onDeleteScene?: (order: number) => void;
+  regeneratingSceneOrder?: number | null;
   isEditable?: boolean;
 }
 
@@ -12,6 +15,9 @@ export function StoryboardGrid({
   scenes, 
   onUpdateScene, 
   onGenerateInEditBay,
+  onRegenerateScene,
+  onDeleteScene,
+  regeneratingSceneOrder,
   isEditable = true,
 }: StoryboardGridProps) {
   const sortedScenes = [...scenes].sort((a, b) => a.order - b.order);
@@ -28,6 +34,17 @@ export function StoryboardGrid({
               : undefined
           }
           onGenerateInEditBay={onGenerateInEditBay}
+          onRegenerate={
+            isEditable && onRegenerateScene
+              ? () => onRegenerateScene(scene.order)
+              : undefined
+          }
+          onDelete={
+            isEditable && onDeleteScene
+              ? () => onDeleteScene(scene.order)
+              : undefined
+          }
+          isRegenerating={regeneratingSceneOrder === scene.order}
           isEditing={isEditable}
         />
       ))}
