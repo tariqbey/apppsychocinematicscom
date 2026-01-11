@@ -13,6 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { VoiceChanger } from "./VoiceChanger";
 import { WatermarkRemover } from "./WatermarkRemover";
+import { UrlWatermarkRemover } from "./UrlWatermarkRemover";
 import { useWatermarkRemoval } from "@/hooks/useWatermarkRemoval";
 import { BulkWatermarkProgress, BulkVideoItem, VideoProgress } from "./BulkWatermarkProgress";
 
@@ -443,81 +444,94 @@ export function MediaLibrary({ filter = "all", onSelect }: MediaLibraryProps) {
           </p>
         )}
 
-        {/* Bulk Watermark Removal Section */}
-        {soraVideosEligible.length > 0 && (
-          <div className="pt-3 border-t border-border/50">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <div className="flex items-center gap-2">
-                <Droplets className="h-4 w-4 text-gold" />
-                <span className="text-sm font-medium">Sora 2 Watermark Removal</span>
-                <Badge variant="outline" className="text-xs">
-                  {soraVideosEligible.length} eligible
-                </Badge>
-              </div>
-              
-              {!selectionMode ? (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => setSelectionMode(true)}
-                  className="gap-2"
-                >
-                  <CheckSquare className="h-4 w-4" />
-                  Select Videos
-                </Button>
-              ) : (
+        {/* Sora 2 Watermark Removal Section */}
+        <div className="pt-3 border-t border-border/50 space-y-4">
+          <div className="flex items-center gap-2">
+            <Droplets className="h-4 w-4 text-gold" />
+            <span className="text-sm font-medium">Sora 2 Watermark Removal</span>
+          </div>
+
+          {/* URL Input for external Sora videos */}
+          <div className="p-3 rounded-lg bg-muted/50 border border-border/30">
+            <p className="text-xs text-muted-foreground mb-2">Paste a Sora video URL to remove its watermark:</p>
+            <UrlWatermarkRemover onComplete={loadHistory} />
+          </div>
+
+          {/* Bulk removal for gallery videos */}
+          {soraVideosEligible.length > 0 && (
+            <div className="p-3 rounded-lg bg-muted/50 border border-border/30">
+              <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
                 <div className="flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground">Or select from your gallery:</span>
+                  <Badge variant="outline" className="text-xs">
+                    {soraVideosEligible.length} eligible
+                  </Badge>
+                </div>
+                
+                {!selectionMode ? (
                   <Button
                     size="sm"
-                    variant="ghost"
-                    onClick={selectAllSora}
-                    disabled={selectedIds.size === soraVideosEligible.length}
+                    variant="outline"
+                    onClick={() => setSelectionMode(true)}
+                    className="gap-2"
                   >
-                    Select All ({soraVideosEligible.length})
+                    <CheckSquare className="h-4 w-4" />
+                    Select Videos
                   </Button>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={selectAllSora}
+                      disabled={selectedIds.size === soraVideosEligible.length}
+                    >
+                      Select All ({soraVideosEligible.length})
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={clearSelection}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                )}
+              </div>
+
+              {selectionMode && selectedSoraVideos.length > 0 && (
+                <div className="mt-3 p-3 rounded-lg bg-gold/10 border border-gold/30 flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 text-sm">
+                    <span className="font-medium">{selectedSoraVideos.length} selected</span>
+                    <Badge variant="outline" className="gap-1">
+                      <Coins className="h-3 w-3" />
+                      {getCost() * selectedSoraVideos.length} credits
+                    </Badge>
+                  </div>
                   <Button
                     size="sm"
-                    variant="ghost"
-                    onClick={clearSelection}
+                    variant="cinematic"
+                    onClick={handleBulkWatermarkRemoval}
+                    disabled={isBulkProcessing || !canAfford()}
+                    className="gap-2"
                   >
-                    Cancel
+                    {isBulkProcessing ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Processing...
+                      </>
+                    ) : (
+                      <>
+                        <Droplets className="h-4 w-4" />
+                        Remove All Watermarks
+                      </>
+                    )}
                   </Button>
                 </div>
               )}
             </div>
-
-            {selectionMode && selectedSoraVideos.length > 0 && (
-              <div className="mt-3 p-3 rounded-lg bg-gold/10 border border-gold/30 flex flex-wrap items-center justify-between gap-2">
-                <div className="flex items-center gap-2 text-sm">
-                  <span className="font-medium">{selectedSoraVideos.length} selected</span>
-                  <Badge variant="outline" className="gap-1">
-                    <Coins className="h-3 w-3" />
-                    {getCost() * selectedSoraVideos.length} credits
-                  </Badge>
-                </div>
-                <Button
-                  size="sm"
-                  variant="cinematic"
-                  onClick={handleBulkWatermarkRemoval}
-                  disabled={isBulkProcessing || !canAfford()}
-                  className="gap-2"
-                >
-                  {isBulkProcessing ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      Processing...
-                    </>
-                  ) : (
-                    <>
-                      <Droplets className="h-4 w-4" />
-                      Remove All Watermarks
-                    </>
-                  )}
-                </Button>
-              </div>
-            )}
-          </div>
-        )}
+          )}
+        </div>
 
         {/* Bulk Progress Tracker */}
         {bulkVideos.length > 0 && (
