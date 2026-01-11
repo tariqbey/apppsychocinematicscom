@@ -51,9 +51,6 @@ export const API_COSTS = {
   ai: {
     default: 0.02,   // $0.02 per AI chat/suggestion
   },
-  watermarkRemoval: {
-    default: 0.00,   // $0.00 base (only markup applies = $0.10 total)
-  },
 };
 
 // Markup added to display costs (user-facing price) in dollars
@@ -127,7 +124,7 @@ export const useProductionCredits = () => {
   }, [session?.access_token, fetchCredits]);
 
   const deductCredits = useCallback(async (
-    mediaType: "video" | "image" | "music" | "tts" | "voiceChange" | "ai" | "watermarkRemoval",
+    mediaType: "video" | "image" | "music" | "tts" | "voiceChange" | "ai",
     duration?: number,
     resolution?: string,
     generationId?: string,
@@ -209,7 +206,7 @@ export const useProductionCredits = () => {
 
   // Calculate actual API cost for a generation (in dollars - internal)
   const estimateCost = useCallback((
-    mediaType: "video" | "image" | "music" | "tts" | "voiceChange" | "ai" | "watermarkRemoval",
+    mediaType: "video" | "image" | "music" | "tts" | "voiceChange" | "ai",
     duration?: number,
     resolution?: string
   ): number => {
@@ -227,15 +224,13 @@ export const useProductionCredits = () => {
       return API_COSTS.voiceChange.default;
     } else if (mediaType === "ai") {
       return API_COSTS.ai.default;
-    } else if (mediaType === "watermarkRemoval") {
-      return API_COSTS.watermarkRemoval.default;
     }
     return 0;
   }, []);
 
   // Calculate cost with markup (in dollars - for display conversion)
   const estimateCostWithMarkup = useCallback((
-    mediaType: "video" | "image" | "music" | "tts" | "voiceChange" | "ai" | "watermarkRemoval",
+    mediaType: "video" | "image" | "music" | "tts" | "voiceChange" | "ai",
     duration?: number,
     resolution?: string
   ): number => {
@@ -244,7 +239,7 @@ export const useProductionCredits = () => {
 
   // Calculate display cost in CREDITS (what user sees and pays)
   const estimateCreditCost = useCallback((
-    mediaType: "video" | "image" | "music" | "tts" | "voiceChange" | "ai" | "watermarkRemoval",
+    mediaType: "video" | "image" | "music" | "tts" | "voiceChange" | "ai",
     duration?: number,
     resolution?: string
   ): number => {
@@ -254,7 +249,7 @@ export const useProductionCredits = () => {
 
   // Legacy: estimate display cost in dollars (for backward compatibility)
   const estimateDisplayCost = useCallback((
-    mediaType: "video" | "image" | "music" | "tts" | "voiceChange" | "ai" | "watermarkRemoval",
+    mediaType: "video" | "image" | "music" | "tts" | "voiceChange" | "ai",
     duration?: number,
     resolution?: string
   ): number => {
@@ -263,7 +258,7 @@ export const useProductionCredits = () => {
 
   // Check if user can afford a specific generation (in credits)
   const canAfford = useCallback((
-    mediaType: "video" | "image" | "music" | "tts" | "voiceChange" | "ai" | "watermarkRemoval",
+    mediaType: "video" | "image" | "music" | "tts" | "voiceChange" | "ai",
     duration?: number,
     resolution?: string
   ): boolean => {
