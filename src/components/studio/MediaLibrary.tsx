@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Progress } from "@/components/ui/progress";
@@ -14,6 +14,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { VoiceChanger } from "./VoiceChanger";
 import { WatermarkRemover } from "./WatermarkRemover";
 import { useWatermarkRemoval } from "@/hooks/useWatermarkRemoval";
+import { BulkWatermarkProgress, BulkVideoItem, VideoProgress } from "./BulkWatermarkProgress";
 
 interface MediaLibraryProps {
   filter?: "image" | "video" | "all";
@@ -40,10 +41,12 @@ export function MediaLibrary({ filter = "all", onSelect }: MediaLibraryProps) {
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [isBulkProcessing, setIsBulkProcessing] = useState(false);
+  const [bulkVideos, setBulkVideos] = useState<BulkVideoItem[]>([]);
+  const [bulkProgress, setBulkProgress] = useState<VideoProgress[]>([]);
   const { fetchGenerationHistory } = useMediaGeneration();
   const { toast } = useToast();
   const { user, loading: authLoading } = useAuth();
-  const { removeWatermark, getCost, canAfford } = useWatermarkRemoval();
+  const { getCost, canAfford } = useWatermarkRemoval();
 
   // Load history when user becomes available
   useEffect(() => {
@@ -193,42 +196,54 @@ export function MediaLibrary({ filter = "all", onSelect }: MediaLibraryProps) {
     setSelectionMode(false);
   };
 
-  const handleBulkWatermarkRemoval = async () => {
+  const handleBulkWatermarkRemoval = useCallback(() => {
     if (selectedSoraVideos.length === 0) return;
 
-    const totalCost = getCost() * selectedSoraVideos.length;
-    
+    // Prepare the video list for the progress tracker
+    const videosToProcess: BulkVideoItem[] = selectedSoraVideos
+      .filter((v) => v.media_url)
+      .map((v) => ({
+        id: v.id,
+        mediaUrl: v.media_url!,
+        prompt: v.prompt,
+      }));
+
+    setBulkVideos(videosToProcess);
     setIsBulkProcessing(true);
-    let successCount = 0;
-    let failCount = 0;
+    setSelectionMode(false);
+    setSelectedIds(new Set());
+  }, [selectedSoraVideos]);
 
-    for (const video of selectedSoraVideos) {
-      if (video.media_url) {
-        const result = await removeWatermark(video.media_url, video.id);
-        if (result.success) {
-          successCount++;
-        } else {
-          failCount++;
-        }
-      }
-    }
-
+  const handleBulkComplete = useCallback(() => {
     setIsBulkProcessing(false);
-    clearSelection();
+    
+    const completed = bulkProgress.filter((p) => p.status === "completed").length;
+    const failed = bulkProgress.filter((p) => p.status === "failed").length;
 
-    if (successCount > 0) {
+    if (completed > 0) {
       toast({
-        title: `Bulk Watermark Removal Started`,
-        description: `Processing ${successCount} video${successCount > 1 ? 's' : ''}. Check gallery for results.${failCount > 0 ? ` ${failCount} failed.` : ''}`,
+        title: "Bulk Watermark Removal Complete",
+        description: `${completed} video${completed > 1 ? "s" : ""} processed successfully.${failed > 0 ? ` ${failed} failed.` : ""}`,
       });
-    } else if (failCount > 0) {
+      loadHistory();
+    } else if (failed > 0) {
       toast({
         title: "Bulk Removal Failed",
         description: "Could not process videos. Check your credits.",
         variant: "destructive",
       });
     }
-  };
+
+    // Clear bulk state after a delay
+    setTimeout(() => {
+      setBulkVideos([]);
+      setBulkProgress([]);
+    }, 5000);
+  }, [bulkProgress, toast]);
+
+  const handleProgressUpdate = useCallback((progress: VideoProgress[]) => {
+    setBulkProgress(progress);
+  }, []);
 
   const storagePercentage = (storageUsed / MAX_STORAGE_BYTES) * 100;
 
@@ -502,6 +517,16 @@ export function MediaLibrary({ filter = "all", onSelect }: MediaLibraryProps) {
               </div>
             )}
           </div>
+        )}
+
+        {/* Bulk Progress Tracker */}
+        {bulkVideos.length > 0 && (
+          <BulkWatermarkProgress
+            videos={bulkVideos}
+            isProcessing={isBulkProcessing}
+            onComplete={handleBulkComplete}
+            onProgressUpdate={handleProgressUpdate}
+          />
         )}
       </div>
 
