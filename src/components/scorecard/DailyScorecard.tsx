@@ -187,34 +187,34 @@ export const DailyScorecard = ({ onClose, onSubmitSuccess }: DailyScorecardProps
       <div className="fixed inset-0 z-50 bg-cinematic-midnight/95 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
         <div className="w-full max-w-lg glass-card cinematic-border overflow-hidden max-h-[90vh] flex flex-col">
           {/* Header */}
-          <div className="p-6 border-b border-border flex items-center justify-between bg-gradient-to-r from-gold/10 to-transparent shrink-0">
-            <div className="flex items-center gap-3">
-              <Sparkles className="w-6 h-6 text-gold" />
+          <div className="p-4 sm:p-6 border-b border-border flex items-center justify-between bg-gradient-to-r from-gold/10 to-transparent shrink-0">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <Sparkles className="w-5 h-5 sm:w-6 sm:h-6 text-gold" />
               <div>
-                <h2 className="text-2xl font-display tracking-wide">Daily Director Scorecard</h2>
-                <p className="text-sm text-muted-foreground">Phase 6: Scoring — Rate your performance</p>
+                <h2 className="text-lg sm:text-2xl font-display tracking-wide">Daily Director Scorecard</h2>
+                <p className="text-xs sm:text-sm text-muted-foreground">Phase 6: Scoring — Rate your performance</p>
               </div>
             </div>
-            <Button variant="ghost" size="icon" onClick={onClose}>
-              <X className="w-5 h-5" />
+            <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8 sm:h-10 sm:w-10">
+              <X className="w-4 h-4 sm:w-5 sm:h-5" />
             </Button>
           </div>
 
           {!submitted ? (
             <>
               {/* Categories */}
-              <div className="p-6 space-y-6 overflow-y-auto flex-1">
+              <div className="p-4 sm:p-6 space-y-4 sm:space-y-6 overflow-y-auto flex-1">
                 {categories.map((category) => (
-                  <div key={category.id} className="space-y-3">
+                  <div key={category.id} className="space-y-2 sm:space-y-3">
                     <div className="flex items-start justify-between">
                       <div>
-                        <h3 className="font-medium text-foreground">{category.title}</h3>
-                        <p className="text-sm text-muted-foreground">{category.description}</p>
+                        <h3 className="font-medium text-sm sm:text-base text-foreground">{category.title}</h3>
+                        <p className="text-xs sm:text-sm text-muted-foreground">{category.description}</p>
                       </div>
                       <Tooltip>
                         <TooltipTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0">
-                            <Info className="w-4 h-4 text-muted-foreground" />
+                          <Button variant="ghost" size="icon" className="h-5 w-5 sm:h-6 sm:w-6 shrink-0">
+                            <Info className="w-3 h-3 sm:w-4 sm:h-4 text-muted-foreground" />
                           </Button>
                         </TooltipTrigger>
                         <TooltipContent side="left" className="max-w-xs">
@@ -230,21 +230,21 @@ export const DailyScorecard = ({ onClose, onSubmitSuccess }: DailyScorecardProps
                         </TooltipContent>
                       </Tooltip>
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex gap-1.5 sm:gap-2">
                       {category.rubric.map((rubricItem) => (
                         <Tooltip key={rubricItem.score}>
                           <TooltipTrigger asChild>
                             <button
                               onClick={() => updateScore(category.id, rubricItem.score)}
                               className={cn(
-                                "flex-1 h-14 rounded-lg border transition-all duration-300 flex flex-col items-center justify-center gap-0.5",
+                                "flex-1 h-10 sm:h-14 rounded-lg border transition-all duration-300 flex flex-col items-center justify-center gap-0",
                                 category.score === rubricItem.score
                                   ? "bg-gold border-gold text-primary-foreground shadow-lg"
                                   : "bg-secondary/50 border-border hover:border-gold/50 text-muted-foreground hover:text-foreground"
                               )}
                             >
-                              <span className="font-display text-xl">{rubricItem.score}</span>
-                              <span className="text-[10px] leading-tight opacity-80">{rubricItem.label}</span>
+                              <span className="font-display text-base sm:text-xl">{rubricItem.score}</span>
+                              <span className="text-[8px] sm:text-[10px] leading-tight opacity-80 hidden sm:inline">{rubricItem.label}</span>
                             </button>
                           </TooltipTrigger>
                           <TooltipContent>
@@ -258,23 +258,23 @@ export const DailyScorecard = ({ onClose, onSubmitSuccess }: DailyScorecardProps
               </div>
 
               {/* Total and Submit */}
-              <div className="p-6 border-t border-border shrink-0 bg-background/50">
-                <div className="flex items-center justify-between mb-4">
+              <div className="p-4 sm:p-6 border-t border-border shrink-0 bg-background/50">
+                <div className="flex items-center justify-between mb-3 sm:mb-4">
                   <div>
-                    <span className="text-muted-foreground text-sm">Total Score</span>
-                    <p className="text-xs text-muted-foreground/70">
+                    <span className="text-muted-foreground text-xs sm:text-sm">Total Score</span>
+                    <p className="text-[10px] sm:text-xs text-muted-foreground/70">
                       {totalScore >= 10 ? "🌟 Oscar-worthy!" : totalScore >= 7 ? "📝 Needs editing" : "🎬 Reset needed"}
                     </p>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-4xl font-display text-gold">{totalScore}</span>
-                    <span className="text-muted-foreground">/ 12</span>
+                  <div className="flex items-center gap-1 sm:gap-2">
+                    <span className="text-3xl sm:text-4xl font-display text-gold">{totalScore}</span>
+                    <span className="text-muted-foreground text-sm sm:text-base">/ 12</span>
                   </div>
                 </div>
                 <Button 
                   variant="gold" 
                   className="w-full" 
-                  size="lg" 
+                  size="default" 
                   onClick={handleSubmit}
                   disabled={submitting}
                 >
