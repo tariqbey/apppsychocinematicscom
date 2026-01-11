@@ -34,6 +34,9 @@ const API_COSTS = {
   },
   ai: {
     default: 0.02    // $0.02 per AI chat/suggestion
+  },
+  watermarkRemoval: {
+    default: 0.00    // $0.00 base cost (only markup applies = $0.10 total)
   }
 };
 
@@ -141,6 +144,8 @@ serve(async (req) => {
       baseCostDollars = API_COSTS.voiceChange.default;
     } else if (mediaType === "ai") {
       baseCostDollars = API_COSTS.ai.default;
+    } else if (mediaType === "watermarkRemoval") {
+      baseCostDollars = API_COSTS.watermarkRemoval.default;
     }
 
     // Add markup to get total cost in dollars
