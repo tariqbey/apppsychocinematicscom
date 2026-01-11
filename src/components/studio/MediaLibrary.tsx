@@ -1,9 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Progress } from "@/components/ui/progress";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { Image, Video, Clock, AlertCircle, Loader2, Download, Trash2, HardDrive, X, ChevronLeft, ChevronRight, RefreshCw, Mic2, Droplets } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Image, Video, Clock, AlertCircle, Loader2, Download, Trash2, HardDrive, X, ChevronLeft, ChevronRight, RefreshCw, Mic2, Droplets, Coins, CheckSquare } from "lucide-react";
 import { useMediaGeneration, GeneratedMedia } from "@/hooks/useMediaGeneration";
 import { formatDistanceToNow } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
@@ -11,6 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { VoiceChanger } from "./VoiceChanger";
 import { WatermarkRemover } from "./WatermarkRemover";
+import { useWatermarkRemoval } from "@/hooks/useWatermarkRemoval";
 
 interface MediaLibraryProps {
   filter?: "image" | "video" | "all";
@@ -34,9 +37,13 @@ export function MediaLibrary({ filter = "all", onSelect }: MediaLibraryProps) {
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
   const [lightboxMedia, setLightboxMedia] = useState<GeneratedMedia | null>(null);
   const [showVoiceChanger, setShowVoiceChanger] = useState(false);
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [isBulkProcessing, setIsBulkProcessing] = useState(false);
   const { fetchGenerationHistory } = useMediaGeneration();
   const { toast } = useToast();
   const { user, loading: authLoading } = useAuth();
+  const { removeWatermark, getCost, canAfford } = useWatermarkRemoval();
 
   // Load history when user becomes available
   useEffect(() => {
@@ -140,6 +147,20 @@ export function MediaLibrary({ filter = "all", onSelect }: MediaLibraryProps) {
 
   const completedMedia = filteredHistory.filter(item => item.status === "completed" && item.media_url);
 
+  // Get Sora 2 videos eligible for watermark removal
+  const soraVideosEligible = useMemo(() => {
+    return completedMedia.filter(item => 
+      item.media_type === "video" &&
+      item.model_used?.includes("sora") &&
+      !item.model_used?.includes("watermark-remover") &&
+      item.media_url
+    );
+  }, [completedMedia]);
+
+  const selectedSoraVideos = useMemo(() => {
+    return soraVideosEligible.filter(item => selectedIds.has(item.id));
+  }, [soraVideosEligible, selectedIds]);
+
   const currentIndex = lightboxMedia ? completedMedia.findIndex(m => m.id === lightboxMedia.id) : -1;
 
   const navigateLightbox = (direction: "prev" | "next") => {
@@ -148,6 +169,65 @@ export function MediaLibrary({ filter = "all", onSelect }: MediaLibraryProps) {
       ? (currentIndex - 1 + completedMedia.length) % completedMedia.length
       : (currentIndex + 1) % completedMedia.length;
     setLightboxMedia(completedMedia[newIndex]);
+  };
+
+  const toggleSelection = (id: string, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
+  const selectAllSora = () => {
+    setSelectedIds(new Set(soraVideosEligible.map(v => v.id)));
+  };
+
+  const clearSelection = () => {
+    setSelectedIds(new Set());
+    setSelectionMode(false);
+  };
+
+  const handleBulkWatermarkRemoval = async () => {
+    if (selectedSoraVideos.length === 0) return;
+
+    const totalCost = getCost() * selectedSoraVideos.length;
+    
+    setIsBulkProcessing(true);
+    let successCount = 0;
+    let failCount = 0;
+
+    for (const video of selectedSoraVideos) {
+      if (video.media_url) {
+        const result = await removeWatermark(video.media_url, video.id);
+        if (result.success) {
+          successCount++;
+        } else {
+          failCount++;
+        }
+      }
+    }
+
+    setIsBulkProcessing(false);
+    clearSelection();
+
+    if (successCount > 0) {
+      toast({
+        title: `Bulk Watermark Removal Started`,
+        description: `Processing ${successCount} video${successCount > 1 ? 's' : ''}. Check gallery for results.${failCount > 0 ? ` ${failCount} failed.` : ''}`,
+      });
+    } else if (failCount > 0) {
+      toast({
+        title: "Bulk Removal Failed",
+        description: "Could not process videos. Check your credits.",
+        variant: "destructive",
+      });
+    }
   };
 
   const storagePercentage = (storageUsed / MAX_STORAGE_BYTES) * 100;
@@ -319,8 +399,8 @@ export function MediaLibrary({ filter = "all", onSelect }: MediaLibraryProps) {
         </DialogContent>
       </Dialog>
 
-      {/* Storage Indicator */}
-      <div className="p-4 rounded-lg bg-muted/30 border border-border/50 space-y-2">
+      {/* Storage Indicator & Bulk Actions */}
+      <div className="p-4 rounded-lg bg-muted/30 border border-border/50 space-y-3">
         <div className="flex items-center justify-between text-sm">
           <div className="flex items-center gap-2">
             <HardDrive className="h-4 w-4 text-muted-foreground" />
@@ -347,6 +427,82 @@ export function MediaLibrary({ filter = "all", onSelect }: MediaLibraryProps) {
             Running low on storage. Consider deleting unused media.
           </p>
         )}
+
+        {/* Bulk Watermark Removal Section */}
+        {soraVideosEligible.length > 0 && (
+          <div className="pt-3 border-t border-border/50">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <Droplets className="h-4 w-4 text-gold" />
+                <span className="text-sm font-medium">Sora 2 Watermark Removal</span>
+                <Badge variant="outline" className="text-xs">
+                  {soraVideosEligible.length} eligible
+                </Badge>
+              </div>
+              
+              {!selectionMode ? (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setSelectionMode(true)}
+                  className="gap-2"
+                >
+                  <CheckSquare className="h-4 w-4" />
+                  Select Videos
+                </Button>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={selectAllSora}
+                    disabled={selectedIds.size === soraVideosEligible.length}
+                  >
+                    Select All ({soraVideosEligible.length})
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={clearSelection}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              )}
+            </div>
+
+            {selectionMode && selectedSoraVideos.length > 0 && (
+              <div className="mt-3 p-3 rounded-lg bg-gold/10 border border-gold/30 flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-2 text-sm">
+                  <span className="font-medium">{selectedSoraVideos.length} selected</span>
+                  <Badge variant="outline" className="gap-1">
+                    <Coins className="h-3 w-3" />
+                    {getCost() * selectedSoraVideos.length} credits
+                  </Badge>
+                </div>
+                <Button
+                  size="sm"
+                  variant="cinematic"
+                  onClick={handleBulkWatermarkRemoval}
+                  disabled={isBulkProcessing || !canAfford()}
+                  className="gap-2"
+                >
+                  {isBulkProcessing ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Processing...
+                    </>
+                  ) : (
+                    <>
+                      <Droplets className="h-4 w-4" />
+                      Remove All Watermarks
+                    </>
+                  )}
+                </Button>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {filteredHistory.length === 0 ? (
@@ -358,21 +514,50 @@ export function MediaLibrary({ filter = "all", onSelect }: MediaLibraryProps) {
       ) : (
         <ScrollArea className="h-[350px]">
           <div className="grid grid-cols-2 gap-3 pr-4">
-            {filteredHistory.map((item) => (
-              <div
-                key={item.id}
-                className="group relative rounded-lg border border-border/50 overflow-hidden hover:border-primary/50 transition-colors cursor-pointer"
-                onClick={() => item.status === "completed" && item.media_url && setLightboxMedia(item)}
-              >
-                {/* Thumbnail */}
-                <div className="relative aspect-video bg-muted">
-                  {item.status === "completed" && item.media_url ? (
-                    item.media_type === "image" ? (
-                      <img src={item.media_url} alt="" className="w-full h-full object-cover" />
-                    ) : (
-                      <video src={item.media_url} className="w-full h-full object-cover" />
-                    )
-                  ) : item.status === "processing" ? (
+            {filteredHistory.map((item) => {
+              const isSoraEligible = item.media_type === "video" && 
+                item.model_used?.includes("sora") && 
+                !item.model_used?.includes("watermark-remover") &&
+                item.status === "completed" &&
+                item.media_url;
+              const isSelected = selectedIds.has(item.id);
+              
+              return (
+                <div
+                  key={item.id}
+                  className={`group relative rounded-lg border overflow-hidden transition-colors cursor-pointer ${
+                    isSelected ? "border-gold ring-2 ring-gold/50" : "border-border/50 hover:border-primary/50"
+                  }`}
+                  onClick={() => {
+                    if (selectionMode && isSoraEligible) {
+                      toggleSelection(item.id);
+                    } else if (item.status === "completed" && item.media_url) {
+                      setLightboxMedia(item);
+                    }
+                  }}
+                >
+                  {/* Selection Checkbox for Sora videos */}
+                  {selectionMode && isSoraEligible && (
+                    <div 
+                      className="absolute top-2 right-2 z-10"
+                      onClick={(e) => toggleSelection(item.id, e)}
+                    >
+                      <Checkbox 
+                        checked={isSelected}
+                        className="h-5 w-5 bg-black/60 border-white data-[state=checked]:bg-gold data-[state=checked]:border-gold"
+                      />
+                    </div>
+                  )}
+                  
+                  {/* Thumbnail */}
+                  <div className="relative aspect-video bg-muted">
+                    {item.status === "completed" && item.media_url ? (
+                      item.media_type === "image" ? (
+                        <img src={item.media_url} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        <video src={item.media_url} className="w-full h-full object-cover" />
+                      )
+                    ) : item.status === "processing" ? (
                     <div className="w-full h-full flex flex-col items-center justify-center gap-2 group">
                       <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
                       <span className="text-xs text-muted-foreground">Processing...</span>
@@ -502,7 +687,8 @@ export function MediaLibrary({ filter = "all", onSelect }: MediaLibraryProps) {
                   </p>
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         </ScrollArea>
       )}
