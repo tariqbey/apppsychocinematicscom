@@ -3,13 +3,14 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Progress } from "@/components/ui/progress";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { Image, Video, Clock, AlertCircle, Loader2, Download, Trash2, HardDrive, X, ChevronLeft, ChevronRight, RefreshCw, Mic2 } from "lucide-react";
+import { Image, Video, Clock, AlertCircle, Loader2, Download, Trash2, HardDrive, X, ChevronLeft, ChevronRight, RefreshCw, Mic2, Droplets } from "lucide-react";
 import { useMediaGeneration, GeneratedMedia } from "@/hooks/useMediaGeneration";
 import { formatDistanceToNow } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { VoiceChanger } from "./VoiceChanger";
+import { WatermarkRemover } from "./WatermarkRemover";
 
 interface MediaLibraryProps {
   filter?: "image" | "video" | "all";
@@ -275,6 +276,27 @@ export function MediaLibrary({ filter = "all", onSelect }: MediaLibraryProps) {
                       {lightboxMedia.model_used} • {formatDistanceToNow(new Date(lightboxMedia.created_at), { addSuffix: true })}
                     </p>
                   </div>
+                  
+                  {/* Sora 2 Watermark Remover - Show for Sora 2 generated videos */}
+                  {lightboxMedia.media_type === "video" && 
+                   lightboxMedia.model_used?.includes("sora") && 
+                   !lightboxMedia.model_used?.includes("watermark-remover") &&
+                   lightboxMedia.media_url && (
+                    <div className="pt-3 pb-3 border-t border-border/50">
+                      <p className="text-xs text-muted-foreground mb-2">Sora 2 Watermark Remover</p>
+                      <WatermarkRemover 
+                        videoUrl={lightboxMedia.media_url}
+                        mediaId={lightboxMedia.id}
+                        onComplete={(newUrl) => {
+                          toast({
+                            title: "Watermark Removed!",
+                            description: "Your clean video is now in the gallery.",
+                          });
+                          loadHistory();
+                        }}
+                      />
+                    </div>
+                  )}
                   
                   {/* Voice Changer Panel for Videos */}
                   {lightboxMedia.media_type === "video" && showVoiceChanger && lightboxMedia.media_url && (
