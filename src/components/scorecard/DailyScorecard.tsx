@@ -291,20 +291,20 @@ export const DailyScorecard = ({ onClose, onSubmitSuccess }: DailyScorecardProps
             </>
           ) : (
             /* Result */
-            <div className="p-8 text-center space-y-6">
+            <div className="p-6 sm:p-8 text-center space-y-4 sm:space-y-6 overflow-y-auto flex-1">
               <div
                 className={cn(
-                  "w-24 h-24 rounded-full mx-auto flex items-center justify-center",
+                  "w-16 h-16 sm:w-24 sm:h-24 rounded-full mx-auto flex items-center justify-center shrink-0",
                   result.color === "gold" && "bg-gold/20 gold-glow",
                   result.color === "amber" && "bg-amber-soft/20",
                   result.color === "red" && "bg-cinematic-red/20"
                 )}
               >
-                {result.icon}
+                <div className="w-8 h-8 sm:w-12 sm:h-12">{result.icon}</div>
               </div>
               <div>
-                <h3 className="text-3xl font-display mb-2">{result.title}</h3>
-                <p className="text-muted-foreground">{result.message}</p>
+                <h3 className="text-xl sm:text-3xl font-display mb-1 sm:mb-2">{result.title}</h3>
+                <p className="text-sm sm:text-base text-muted-foreground">{result.message}</p>
               </div>
               {creditsEarned > 0 && (
                 <div className="flex items-center justify-center gap-2 p-3 rounded-lg bg-gold/20 border border-gold/30">
@@ -329,12 +329,12 @@ export const DailyScorecard = ({ onClose, onSubmitSuccess }: DailyScorecardProps
                 })}
               </div>
               
-              <div className="flex items-center justify-center gap-1">
+              <div className="flex items-center justify-center gap-1 shrink-0">
                 {[...Array(4)].map((_, i) => (
                   <Star
                     key={i}
                     className={cn(
-                      "w-8 h-8",
+                      "w-6 h-6 sm:w-8 sm:h-8",
                       i < Math.ceil(totalScore / 3)
                         ? "text-gold fill-gold"
                         : "text-muted"
@@ -342,7 +342,7 @@ export const DailyScorecard = ({ onClose, onSubmitSuccess }: DailyScorecardProps
                   />
                 ))}
               </div>
-              <Button variant="cinematic" className="w-full" onClick={onClose}>
+              <Button variant="cinematic" className="w-full shrink-0" onClick={onClose}>
                 Close
               </Button>
             </div>
