@@ -243,3 +243,15 @@
 .cursor-range {
   cursor: text;
 }
+
+/* Razor cut preview line */
+.razor-cut-line {
+  pointer-events: none;
+  z-index: 50;
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: linear-gradient(to bottom, hsl(var(--destructive)), hsl(var(--destructive) / 0.6));
+  box-shadow: 0 0 8px hsl(var(--destructive) / 0.5);
+}

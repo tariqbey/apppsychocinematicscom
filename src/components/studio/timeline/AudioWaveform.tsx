@@ -26,7 +26,15 @@ export function AudioWaveform({
 
   // Analyze audio and extract waveform data
   useEffect(() => {
-    if (!src) return;
+    if (!src) {
+      // Generate a visible placeholder if no source
+      const placeholderBars = Math.min(Math.floor(width / 6), 50);
+      setWaveformData(Array(placeholderBars).fill(0).map((_, i) => 
+        0.4 + Math.sin(i * 0.4) * 0.25 + Math.random() * 0.35
+      ));
+      setIsLoading(false);
+      return;
+    }
 
     const analyzeAudio = async () => {
       setIsLoading(true);
@@ -59,8 +67,11 @@ export function AudioWaveform({
         audioContext.close();
       } catch (error) {
         console.error("Failed to analyze audio:", error);
-        // Generate placeholder waveform on error
-        setWaveformData(Array(50).fill(0).map(() => Math.random() * 0.5 + 0.2));
+        // Generate a more visible placeholder waveform on error (CORS, etc.)
+        const placeholderBars = Math.min(Math.floor(width / 6), 50);
+        setWaveformData(Array(placeholderBars).fill(0).map((_, i) => 
+          0.4 + Math.sin(i * 0.4) * 0.25 + Math.random() * 0.35
+        ));
       }
       setIsLoading(false);
     };
