@@ -95,6 +95,7 @@ export function TimelineEditor({ onExport, importData, onImportComplete, onClose
     toggleBackgroundAudioMute,
     toggleTrackMute,
     toggleTrackLock,
+    setTrackVolume,
     clearTimeline,
     addTransition,
     updateTransition,
@@ -753,6 +754,7 @@ export function TimelineEditor({ onExport, importData, onImportComplete, onClose
           <div className="h-full aspect-video max-w-full relative bg-black rounded-lg overflow-hidden shadow-2xl ring-1 ring-white/10">
             <TimelinePreview
               clips={state.clips}
+              tracks={state.tracks}
               currentTime={state.currentTime}
               isPlaying={state.isPlaying}
               backgroundAudio={state.backgroundAudio}
@@ -957,6 +959,7 @@ export function TimelineEditor({ onExport, importData, onImportComplete, onClose
                     onUpdateClipVolume={(clipId, volume) => updateClip(clipId, { volume })}
                     onToggleTrackMute={() => toggleTrackMute(track.id)}
                     onToggleTrackLock={() => toggleTrackLock(track.id)}
+                    onSetTrackVolume={(volume) => setTrackVolume(track.id, volume)}
                     onAddTransition={addTransition}
                     onUpdateTransition={updateTransition}
                     onRemoveTransition={removeTransition}

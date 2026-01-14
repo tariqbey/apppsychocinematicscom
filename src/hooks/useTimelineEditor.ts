@@ -39,6 +39,7 @@ export interface TimelineTrack {
   name: string;
   muted: boolean;
   locked: boolean;
+  volume: number; // 0-1
 }
 
 export interface TimelineState {
@@ -72,8 +73,8 @@ const generateId = () => Math.random().toString(36).substring(2, 15);
 export function useTimelineEditor() {
   const [state, setState] = useState<TimelineState>({
     tracks: [
-      { id: "video-1", type: "video", name: "Video Track", muted: false, locked: false },
-      { id: "audio-1", type: "audio", name: "Audio Track", muted: false, locked: false },
+      { id: "video-1", type: "video", name: "Video Track", muted: false, locked: false, volume: 1 },
+      { id: "audio-1", type: "audio", name: "Audio Track", muted: false, locked: false, volume: 1 },
     ],
     clips: [],
     transitions: [],
@@ -160,6 +161,7 @@ export function useTimelineEditor() {
             name: trackType === "video" ? "Video Track" : "Audio Track",
             muted: false,
             locked: false,
+            volume: 1,
           };
         }
 
@@ -459,6 +461,15 @@ export function useTimelineEditor() {
     }));
   }, []);
 
+  const setTrackVolume = useCallback((trackId: string, volume: number) => {
+    setState((prev) => ({
+      ...prev,
+      tracks: prev.tracks.map((t) =>
+        t.id === trackId ? { ...t, volume: Math.max(0, Math.min(1, volume)) } : t
+      ),
+    }));
+  }, []);
+
   // Clear timeline
   const clearTimeline = useCallback(() => {
     pause();
@@ -600,6 +611,7 @@ export function useTimelineEditor() {
     toggleBackgroundAudioMute,
     toggleTrackMute,
     toggleTrackLock,
+    setTrackVolume,
     clearTimeline,
     getActiveClips,
     addTransition,

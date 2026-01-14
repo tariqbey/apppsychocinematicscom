@@ -1,8 +1,9 @@
 import { useRef, useEffect, useState, useCallback } from "react";
-import { TimelineClip } from "@/hooks/useTimelineEditor";
+import { TimelineClip, TimelineTrack } from "@/hooks/useTimelineEditor";
 
 interface TimelinePreviewProps {
   clips: TimelineClip[];
+  tracks: TimelineTrack[];
   currentTime: number;
   isPlaying: boolean;
   backgroundAudio: {
@@ -17,6 +18,7 @@ const SEEK_THRESHOLD = 0.3;
 
 export function TimelinePreview({
   clips,
+  tracks,
   currentTime,
   isPlaying,
   backgroundAudio,
@@ -38,6 +40,18 @@ export function TimelinePreview({
     );
     setActiveClip(active || null);
   }, [clips, currentTime]);
+
+  // Get track for a clip
+  const getTrackForClip = useCallback((clip: TimelineClip) => {
+    return tracks.find((t) => t.id === clip.trackId);
+  }, [tracks]);
+
+  // Calculate effective volume (clip volume * track volume, considering mutes)
+  const getEffectiveVolume = useCallback((clip: TimelineClip) => {
+    const track = getTrackForClip(clip);
+    if (!track || track.muted || clip.muted) return 0;
+    return clip.volume * track.volume;
+  }, [getTrackForClip]);
 
   // Calculate expected clip time
   const getExpectedClipTime = useCallback((clip: TimelineClip, timelineTime: number) => {
@@ -128,6 +142,13 @@ export function TimelinePreview({
     img.src = activeClip.sourceUrl;
   }, [activeClip]);
 
+  // Apply volume to video element
+  useEffect(() => {
+    if (!videoRef.current || !activeClip || activeClip.type !== "video") return;
+    const effectiveVolume = getEffectiveVolume(activeClip);
+    videoRef.current.volume = effectiveVolume;
+  }, [activeClip, getEffectiveVolume]);
+
   return (
     <div className="relative aspect-video bg-black rounded-lg overflow-hidden">
       {/* Video preview */}
@@ -136,7 +157,7 @@ export function TimelinePreview({
           ref={videoRef}
           src={activeClip.sourceUrl}
           className="w-full h-full object-contain"
-          muted={activeClip.muted}
+          muted={false}
           playsInline
           preload="auto"
         />
