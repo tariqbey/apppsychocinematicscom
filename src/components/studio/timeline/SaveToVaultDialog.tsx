@@ -61,6 +61,13 @@ export function SaveToVaultDialog({
       const blob = await response.blob();
       setUploadProgress(30);
 
+      const mimeType = blob.type || "video/mp4";
+      const ext = mimeType.toLowerCase().includes("mp4")
+        ? "mp4"
+        : mimeType.toLowerCase().includes("webm")
+          ? "webm"
+          : "mp4";
+
       // Determine target movie ID
       let targetMovieId = selectedMovieId;
 
@@ -75,11 +82,11 @@ export function SaveToVaultDialog({
       setUploadProgress(50);
 
       // Upload to storage
-      const fileName = `${user.id}/${targetMovieId}/mind-movie-${Date.now()}.webm`;
-      const { data: uploadData, error: uploadError } = await supabase.storage
+      const fileName = `${user.id}/${targetMovieId}/mind-movie-${Date.now()}.${ext}`;
+      const { error: uploadError } = await supabase.storage
         .from("mind-movies")
         .upload(fileName, blob, {
-          contentType: "video/webm",
+          contentType: mimeType,
           upsert: true,
         });
 
