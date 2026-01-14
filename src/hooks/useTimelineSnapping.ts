@@ -35,10 +35,10 @@ export function useTimelineSnapping({
 
   // Cache for snap calculations
   const snapCacheRef = useRef<Map<string, SnapResult>>(new Map());
-  const lastClipsRef = useRef<TimelineClip[]>([]);
+  const lastClipsRef = useRef<TimelineClip[]>(clips);
 
-  // Clear cache when clips change
-  if (clips !== lastClipsRef.current) {
+  // Clear cache when clips change - safely check if map exists
+  if (clips !== lastClipsRef.current && snapCacheRef.current) {
     snapCacheRef.current.clear();
     lastClipsRef.current = clips;
   }
