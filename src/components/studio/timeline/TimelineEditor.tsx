@@ -639,9 +639,9 @@ export function TimelineEditor({ onExport, importData, onImportComplete }: Timel
   };
 
   return (
-    <div className="flex flex-col h-full gap-4">
+    <div className="flex flex-col h-full gap-3">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-shrink-0">
         <div>
           <h3 className="text-lg font-display tracking-wide">Timeline Editor</h3>
           <p className="text-xs text-muted-foreground">
@@ -697,7 +697,7 @@ export function TimelineEditor({ onExport, importData, onImportComplete }: Timel
 
       {/* Export Progress */}
       {isExporting && exportProgress && (
-        <div className="p-3 rounded-lg bg-muted/30 border border-border/50 space-y-2">
+        <div className="p-3 rounded-lg bg-muted/30 border border-border/50 space-y-2 flex-shrink-0">
           <div className="flex items-center justify-between text-sm">
             <span>{exportProgress.message}</span>
             <Button variant="ghost" size="sm" onClick={cancelExport}>
@@ -710,7 +710,7 @@ export function TimelineEditor({ onExport, importData, onImportComplete }: Timel
 
       {/* Import Progress */}
       {isImporting && (
-        <div className="p-3 rounded-lg bg-primary/10 border border-primary/30 space-y-2">
+        <div className="p-3 rounded-lg bg-primary/10 border border-primary/30 space-y-2 flex-shrink-0">
           <div className="flex items-center justify-between text-sm">
             <span className="flex items-center gap-2">
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -722,160 +722,159 @@ export function TimelineEditor({ onExport, importData, onImportComplete }: Timel
         </div>
       )}
 
-      {/* Main Layout - Vertical: Preview on top, Timeline below */}
-      <div className="flex flex-col flex-1 min-h-0 gap-4">
-        {/* Preview Section - Larger and centered at top */}
-        <div className="flex-shrink-0 bg-card/30 rounded-lg border border-border/50 p-4">
-          <div className="flex items-start gap-6">
-            {/* Video Preview - Larger */}
-            <div className="flex-1 max-w-2xl mx-auto">
-              <div className="aspect-video">
-                <TimelinePreview
-                  clips={state.clips}
-                  currentTime={state.currentTime}
-                  isPlaying={state.isPlaying}
-                  backgroundAudio={state.backgroundAudio}
-                />
-              </div>
-
-              {/* Playback Controls */}
-              <div className="flex items-center justify-center gap-4 mt-4">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => seek(0)}
-                  title="Go to start (Home)"
-                >
-                  <SkipBack className="h-5 w-5" />
-                </Button>
-                <Button
-                  variant="default"
-                  size="icon"
-                  onClick={state.isPlaying ? pause : play}
-                  className="h-12 w-12"
-                  title="Play/Pause (Space)"
-                >
-                  {state.isPlaying ? (
-                    <Pause className="h-6 w-6" />
-                  ) : (
-                    <Play className="h-6 w-6 ml-0.5" />
-                  )}
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => seek(state.duration)}
-                  title="Go to end (End)"
-                >
-                  <SkipForward className="h-5 w-5" />
-                </Button>
-                
-                {/* Time Display */}
-                <div className="text-sm font-mono text-muted-foreground ml-4 bg-muted/50 px-3 py-1.5 rounded">
-                  {formatTime(state.currentTime)} / {formatTime(state.duration)}
-                </div>
-              </div>
+      {/* Main Layout - Horizontal split: Preview on left, Controls on right */}
+      <div className="flex-1 flex gap-4 min-h-0">
+        {/* Left Panel - Preview (40% width) */}
+        <div className="w-2/5 flex flex-col gap-3 min-h-0">
+          {/* Video Preview */}
+          <div className="flex-shrink-0 bg-card/30 rounded-lg border border-border/50 p-3">
+            <div className="aspect-video">
+              <TimelinePreview
+                clips={state.clips}
+                currentTime={state.currentTime}
+                isPlaying={state.isPlaying}
+                backgroundAudio={state.backgroundAudio}
+              />
             </div>
 
-            {/* Background Audio Panel - Side */}
-            <div className="w-64 flex-shrink-0 space-y-3">
-              <div className="p-3 rounded-lg bg-muted/30 border border-border/50 space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-medium flex items-center gap-2">
-                    <Music className="h-3 w-3" />
-                    Background Audio
-                  </span>
-                  {state.backgroundAudio.url && (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-5 w-5"
-                      onClick={() => setBackgroundAudio(null)}
-                    >
-                      <X className="h-3 w-3" />
-                    </Button>
-                  )}
-                </div>
-                {state.backgroundAudio.url ? (
-                  <div className="space-y-2">
-                    <p className="text-xs text-muted-foreground truncate">
-                      {state.backgroundAudio.name}
-                    </p>
-                    {/* Audio Waveform Visualization */}
-                    <div className="rounded bg-muted/50 overflow-hidden">
-                      <AudioWaveform
-                        src={state.backgroundAudio.url}
-                        duration={state.duration || 60}
-                        width={220}
-                        height={32}
-                        color={state.backgroundAudio.muted ? "hsl(var(--muted-foreground))" : "hsl(var(--primary))"}
-                        backgroundColor="transparent"
-                      />
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-6 w-6"
-                        onClick={toggleBackgroundAudioMute}
-                      >
-                        {state.backgroundAudio.muted ? (
-                          <VolumeX className="h-3 w-3 text-muted-foreground" />
-                        ) : (
-                          <Volume2 className="h-3 w-3 text-primary" />
-                        )}
-                      </Button>
-                      <Slider
-                        value={[state.backgroundAudio.volume * 100]}
-                        onValueChange={([v]) => setBackgroundAudioVolume(v / 100)}
-                        max={100}
-                        step={1}
-                        className="flex-1"
-                      />
-                    </div>
-                  </div>
+            {/* Playback Controls */}
+            <div className="flex items-center justify-center gap-3 mt-3">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => seek(0)}
+                title="Go to start (Home)"
+              >
+                <SkipBack className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="default"
+                size="icon"
+                onClick={state.isPlaying ? pause : play}
+                className="h-10 w-10"
+                title="Play/Pause (Space)"
+              >
+                {state.isPlaying ? (
+                  <Pause className="h-5 w-5" />
                 ) : (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="w-full"
-                    onClick={() => audioInputRef.current?.click()}
-                  >
-                    <Upload className="h-3 w-3 mr-2" />
-                    Add Audio (A)
-                  </Button>
+                  <Play className="h-5 w-5 ml-0.5" />
                 )}
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => seek(state.duration)}
+                title="Go to end (End)"
+              >
+                <SkipForward className="h-4 w-4" />
+              </Button>
+              
+              {/* Time Display */}
+              <div className="text-xs font-mono text-muted-foreground ml-2 bg-muted/50 px-2 py-1 rounded">
+                {formatTime(state.currentTime)} / {formatTime(state.duration)}
               </div>
+            </div>
+          </div>
 
-              {/* Timeline Minimap */}
-              {state.clips.length > 0 && (
-                <TimelineMinimap
-                  clips={state.clips}
-                  duration={state.duration}
-                  currentTime={state.currentTime}
-                  visibleRange={visibleRange}
-                  onSeek={seek}
-                  onScrollTo={scrollToTime}
-                />
+          {/* Background Audio Panel */}
+          <div className="p-3 rounded-lg bg-muted/30 border border-border/50 space-y-2 flex-shrink-0">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-medium flex items-center gap-2">
+                <Music className="h-3 w-3" />
+                Background Audio
+              </span>
+              {state.backgroundAudio.url && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-5 w-5"
+                  onClick={() => setBackgroundAudio(null)}
+                >
+                  <X className="h-3 w-3" />
+                </Button>
               )}
-
-              {/* Quick Shortcuts Reference */}
-              <div className="p-3 rounded-lg bg-muted/20 border border-border/30">
-                <p className="text-xs font-medium text-muted-foreground mb-2">Shortcuts</p>
-                <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-[10px] text-muted-foreground">
-                  <span>V - Select</span>
-                  <span>C - Razor</span>
-                  <span>A - Add Audio</span>
-                  <span>K - Split</span>
-                  <span>Space - Play</span>
-                  <span>Del - Delete</span>
+            </div>
+            {state.backgroundAudio.url ? (
+              <div className="space-y-2">
+                <p className="text-xs text-muted-foreground truncate">
+                  {state.backgroundAudio.name}
+                </p>
+                <div className="rounded bg-muted/50 overflow-hidden">
+                  <AudioWaveform
+                    src={state.backgroundAudio.url}
+                    duration={state.duration || 60}
+                    width={300}
+                    height={28}
+                    color={state.backgroundAudio.muted ? "hsl(var(--muted-foreground))" : "hsl(var(--primary))"}
+                    backgroundColor="transparent"
+                  />
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6"
+                    onClick={toggleBackgroundAudioMute}
+                  >
+                    {state.backgroundAudio.muted ? (
+                      <VolumeX className="h-3 w-3 text-muted-foreground" />
+                    ) : (
+                      <Volume2 className="h-3 w-3 text-primary" />
+                    )}
+                  </Button>
+                  <Slider
+                    value={[state.backgroundAudio.volume * 100]}
+                    onValueChange={([v]) => setBackgroundAudioVolume(v / 100)}
+                    max={100}
+                    step={1}
+                    className="flex-1"
+                  />
                 </div>
               </div>
+            ) : (
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full"
+                onClick={() => audioInputRef.current?.click()}
+              >
+                <Upload className="h-3 w-3 mr-2" />
+                Add Audio (A)
+              </Button>
+            )}
+          </div>
+
+          {/* Timeline Minimap */}
+          {state.clips.length > 0 && (
+            <div className="flex-shrink-0">
+              <TimelineMinimap
+                clips={state.clips}
+                duration={state.duration}
+                currentTime={state.currentTime}
+                visibleRange={visibleRange}
+                onSeek={seek}
+                onScrollTo={scrollToTime}
+              />
+            </div>
+          )}
+
+          {/* Quick Shortcuts */}
+          <div className="p-2 rounded-lg bg-muted/20 border border-border/30 flex-shrink-0">
+            <p className="text-xs font-medium text-muted-foreground mb-1">Shortcuts</p>
+            <div className="grid grid-cols-3 gap-x-2 gap-y-0.5 text-[9px] text-muted-foreground">
+              <span>V - Select</span>
+              <span>C - Razor</span>
+              <span>A - Add Audio</span>
+              <span>K - Split</span>
+              <span>Space - Play</span>
+              <span>Del - Delete</span>
             </div>
           </div>
         </div>
 
-        {/* Timeline Panel */}
+        {/* Right Panel - Timeline (60% width) */}
         <div 
           className={cn(
             "flex-1 flex flex-col min-w-0 border rounded-lg overflow-hidden transition-all",
