@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useCallback, memo } from "react";
 import { Film, Image, Music, Volume2, VolumeX, Scissors, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { TimelineClip } from "@/hooks/useTimelineEditor";
@@ -25,7 +25,33 @@ interface TimelineClipComponentProps {
   snapTime?: (time: number, excludeClipId?: string) => { snappedTime: number; didSnap: boolean; snapType: string | null };
 }
 
-export function TimelineClipComponent({
+// Throttle helper for smoother drag performance
+function throttle<T extends (...args: unknown[]) => void>(fn: T, wait: number): T {
+  let lastTime = 0;
+  let timeoutId: ReturnType<typeof setTimeout> | null = null;
+  
+  return ((...args: Parameters<T>) => {
+    const now = Date.now();
+    const remaining = wait - (now - lastTime);
+    
+    if (remaining <= 0) {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+        timeoutId = null;
+      }
+      lastTime = now;
+      fn(...args);
+    } else if (!timeoutId) {
+      timeoutId = setTimeout(() => {
+        lastTime = Date.now();
+        timeoutId = null;
+        fn(...args);
+      }, remaining);
+    }
+  }) as T;
+}
+
+export const TimelineClipComponent = memo(function TimelineClipComponent({
   clip,
   zoom,
   isSelected,
@@ -50,7 +76,7 @@ export function TimelineClipComponent({
   const width = clip.duration * zoom;
   const left = clip.startTime * zoom;
 
-  const getIcon = () => {
+  const getIcon = useCallback(() => {
     switch (clip.type) {
       case "video":
         return <Film className="h-3 w-3" />;
@@ -59,9 +85,9 @@ export function TimelineClipComponent({
       case "image":
         return <Image className="h-3 w-3" />;
     }
-  };
+  }, [clip.type]);
 
-  const handleMouseDown = (e: React.MouseEvent, action: "drag" | "resize-start" | "resize-end") => {
+  const handleMouseDown = useCallback((e: React.MouseEvent, action: "drag" | "resize-start" | "resize-end") => {
     e.stopPropagation();
     onSelect();
 
@@ -76,65 +102,78 @@ export function TimelineClipComponent({
       dragStartTrimEnd.current = clip.trimEnd;
     }
 
+    // Store refs for closure
+    const clipId = clip.id;
+    const clipDuration = clip.duration;
+    const clipSourceDuration = clip.sourceDuration;
+    const currentTrimStart = clip.trimStart;
+    const currentTrimEnd = clip.trimEnd;
+    const currentStartTime = clip.startTime;
+
+    // Throttled move handler for performance
+    const throttledMove = throttle((newStartTime: number, snapLines: SnapInfo[]) => {
+      onMove(newStartTime);
+      onSnapPreview?.(snapLines);
+    }, 16); // ~60fps
+
+    const throttledTrim = throttle((trimStart: number, trimEnd: number, snapLines: SnapInfo[]) => {
+      onTrim(trimStart, trimEnd);
+      onSnapPreview?.(snapLines);
+    }, 16);
+
     const handleMouseMove = (moveEvent: MouseEvent) => {
       const deltaX = moveEvent.clientX - dragStartX.current;
       const deltaTime = deltaX / zoom;
 
       if (action === "drag") {
         let newStartTime = Math.max(0, dragStartTime.current + deltaTime);
+        let snapLines: SnapInfo[] = [];
         
         // Apply snapping
         if (snapEnabled && snapTime) {
-          const startSnap = snapTime(newStartTime, clip.id);
-          const endSnap = snapTime(newStartTime + clip.duration, clip.id);
+          const startSnap = snapTime(newStartTime, clipId);
+          const endSnap = snapTime(newStartTime + clipDuration, clipId);
           
-          // Prefer snapping to whichever edge is closer to a snap point
-          if (startSnap.didSnap && (!endSnap.didSnap || Math.abs(startSnap.snappedTime - newStartTime) <= Math.abs(endSnap.snappedTime - (newStartTime + clip.duration)))) {
+          if (startSnap.didSnap && (!endSnap.didSnap || Math.abs(startSnap.snappedTime - newStartTime) <= Math.abs(endSnap.snappedTime - (newStartTime + clipDuration)))) {
             newStartTime = startSnap.snappedTime;
-            onSnapPreview?.([{ time: startSnap.snappedTime, type: startSnap.snapType as SnapInfo["type"] }]);
+            snapLines = [{ time: startSnap.snappedTime, type: startSnap.snapType as SnapInfo["type"] }];
           } else if (endSnap.didSnap) {
-            newStartTime = endSnap.snappedTime - clip.duration;
-            onSnapPreview?.([{ time: endSnap.snappedTime, type: endSnap.snapType as SnapInfo["type"] }]);
-          } else {
-            onSnapPreview?.([]);
+            newStartTime = endSnap.snappedTime - clipDuration;
+            snapLines = [{ time: endSnap.snappedTime, type: endSnap.snapType as SnapInfo["type"] }];
           }
         }
         
-        onMove(newStartTime);
+        throttledMove(newStartTime, snapLines);
       } else if (action === "resize-start") {
-        let newTrimStart = Math.max(0, Math.min(dragStartTrimStart.current + deltaTime, clip.trimEnd - 0.5));
-        const newStartTime = clip.startTime + (newTrimStart - clip.trimStart);
+        let newTrimStart = Math.max(0, Math.min(dragStartTrimStart.current + deltaTime, currentTrimEnd - 0.5));
+        const newStartTime = currentStartTime + (newTrimStart - currentTrimStart);
+        let snapLines: SnapInfo[] = [];
         
-        // Apply snapping to start edge
         if (snapEnabled && snapTime) {
-          const snap = snapTime(newStartTime, clip.id);
+          const snap = snapTime(newStartTime, clipId);
           if (snap.didSnap) {
             const timeDiff = snap.snappedTime - newStartTime;
-            newTrimStart = Math.max(0, Math.min(newTrimStart + timeDiff, clip.trimEnd - 0.5));
-            onSnapPreview?.([{ time: snap.snappedTime, type: snap.snapType as SnapInfo["type"] }]);
-          } else {
-            onSnapPreview?.([]);
+            newTrimStart = Math.max(0, Math.min(newTrimStart + timeDiff, currentTrimEnd - 0.5));
+            snapLines = [{ time: snap.snappedTime, type: snap.snapType as SnapInfo["type"] }];
           }
         }
         
-        onTrim(newTrimStart, clip.trimEnd);
+        throttledTrim(newTrimStart, currentTrimEnd, snapLines);
       } else {
-        let newTrimEnd = Math.max(clip.trimStart + 0.5, Math.min(dragStartTrimEnd.current + deltaTime, clip.sourceDuration));
-        const newEndTime = clip.startTime + (newTrimEnd - clip.trimStart);
+        let newTrimEnd = Math.max(currentTrimStart + 0.5, Math.min(dragStartTrimEnd.current + deltaTime, clipSourceDuration));
+        const newEndTime = currentStartTime + (newTrimEnd - currentTrimStart);
+        let snapLines: SnapInfo[] = [];
         
-        // Apply snapping to end edge
         if (snapEnabled && snapTime) {
-          const snap = snapTime(newEndTime, clip.id);
+          const snap = snapTime(newEndTime, clipId);
           if (snap.didSnap) {
             const timeDiff = snap.snappedTime - newEndTime;
-            newTrimEnd = Math.max(clip.trimStart + 0.5, Math.min(newTrimEnd + timeDiff, clip.sourceDuration));
-            onSnapPreview?.([{ time: snap.snappedTime, type: snap.snapType as SnapInfo["type"] }]);
-          } else {
-            onSnapPreview?.([]);
+            newTrimEnd = Math.max(currentTrimStart + 0.5, Math.min(newTrimEnd + timeDiff, clipSourceDuration));
+            snapLines = [{ time: snap.snappedTime, type: snap.snapType as SnapInfo["type"] }];
           }
         }
         
-        onTrim(clip.trimStart, newTrimEnd);
+        throttledTrim(currentTrimStart, newTrimEnd, snapLines);
       }
     };
 
@@ -148,16 +187,35 @@ export function TimelineClipComponent({
 
     document.addEventListener("mousemove", handleMouseMove);
     document.addEventListener("mouseup", handleMouseUp);
-  };
+  }, [clip.id, clip.startTime, clip.duration, clip.trimStart, clip.trimEnd, clip.sourceDuration, zoom, snapEnabled, snapTime, onSelect, onMove, onTrim, onSnapPreview]);
 
   // Calculate number of waveform bars based on clip width
   const waveformBars = Math.max(5, Math.floor(width / 8));
+
+  const handleDragMouseDown = useCallback((e: React.MouseEvent) => handleMouseDown(e, "drag"), [handleMouseDown]);
+  const handleResizeStartMouseDown = useCallback((e: React.MouseEvent) => handleMouseDown(e, "resize-start"), [handleMouseDown]);
+  const handleResizeEndMouseDown = useCallback((e: React.MouseEvent) => handleMouseDown(e, "resize-end"), [handleMouseDown]);
+  
+  const handleMuteClick = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    onToggleMute();
+  }, [onToggleMute]);
+  
+  const handleSplitClick = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    onSplit();
+  }, [onSplit]);
+  
+  const handleRemoveClick = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    onRemove();
+  }, [onRemove]);
 
   return (
     <div
       ref={clipRef}
       className={cn(
-        "absolute top-1 bottom-1 rounded-md border transition-all cursor-pointer group overflow-hidden",
+        "absolute top-1 bottom-1 rounded-md border transition-colors cursor-pointer group overflow-hidden",
         clip.type === "video" && "bg-primary/30 border-primary/50 hover:border-primary",
         clip.type === "audio" && "bg-accent/30 border-accent/50 hover:border-accent",
         clip.type === "image" && "bg-amber-500/30 border-amber-500/50 hover:border-amber-500",
@@ -165,7 +223,11 @@ export function TimelineClipComponent({
         isDragging && "opacity-80",
         isResizing && "z-20"
       )}
-      style={{ left: `${left}px`, width: `${Math.max(width, 20)}px` }}
+      style={{ 
+        left: `${left}px`, 
+        width: `${Math.max(width, 20)}px`,
+        transform: 'translateZ(0)', // GPU acceleration
+      }}
       onClick={onSelect}
     >
       {/* Waveform background for video/audio clips */}
@@ -183,13 +245,13 @@ export function TimelineClipComponent({
       {/* Left resize handle */}
       <div
         className="absolute left-0 top-0 bottom-0 w-2 cursor-ew-resize hover:bg-foreground/20 rounded-l-md z-10"
-        onMouseDown={(e) => handleMouseDown(e, "resize-start")}
+        onMouseDown={handleResizeStartMouseDown}
       />
 
       {/* Content */}
       <div
         className="relative flex items-center gap-1 px-2 h-full overflow-hidden z-10"
-        onMouseDown={(e) => handleMouseDown(e, "drag")}
+        onMouseDown={handleDragMouseDown}
       >
         {/* Thumbnail or icon */}
         {clip.thumbnail ? (
@@ -215,7 +277,7 @@ export function TimelineClipComponent({
       {/* Right resize handle */}
       <div
         className="absolute right-0 top-0 bottom-0 w-2 cursor-ew-resize hover:bg-foreground/20 rounded-r-md z-10"
-        onMouseDown={(e) => handleMouseDown(e, "resize-end")}
+        onMouseDown={handleResizeEndMouseDown}
       />
 
       {/* Toolbar on selection */}
@@ -226,10 +288,7 @@ export function TimelineClipComponent({
               variant="ghost"
               size="icon"
               className="h-6 w-6"
-              onClick={(e) => {
-                e.stopPropagation();
-                onToggleMute();
-              }}
+              onClick={handleMuteClick}
               title={clip.muted ? "Unmute" : "Mute"}
             >
               {clip.muted ? <VolumeX className="h-3 w-3" /> : <Volume2 className="h-3 w-3" />}
@@ -239,10 +298,7 @@ export function TimelineClipComponent({
             variant="ghost"
             size="icon"
             className="h-6 w-6"
-            onClick={(e) => {
-              e.stopPropagation();
-              onSplit();
-            }}
+            onClick={handleSplitClick}
             title="Split at playhead"
           >
             <Scissors className="h-3 w-3" />
@@ -251,10 +307,7 @@ export function TimelineClipComponent({
             variant="ghost"
             size="icon"
             className="h-6 w-6 text-destructive hover:text-destructive"
-            onClick={(e) => {
-              e.stopPropagation();
-              onRemove();
-            }}
+            onClick={handleRemoveClick}
             title="Delete clip"
           >
             <Trash2 className="h-3 w-3" />
@@ -263,4 +316,4 @@ export function TimelineClipComponent({
       )}
     </div>
   );
-}
+});
