@@ -43,6 +43,7 @@ import { AudioWaveform } from "./AudioWaveform";
 import { TimelineToolbar, EditingTool } from "./TimelineToolbar";
 import { SaveToVaultDialog } from "./SaveToVaultDialog";
 import { TimelineMinimap } from "./TimelineMinimap";
+import { FilmstripScrubber } from "./FilmstripScrubber";
 import { cn } from "@/lib/utils";
 
 interface SnapInfo {
@@ -736,6 +737,33 @@ export function TimelineEditor({ onExport, importData, onImportComplete }: Timel
                 backgroundAudio={state.backgroundAudio}
               />
             </div>
+
+            {/* Filmstrip Scrubber - shows when we have video clips */}
+            {state.clips.some(c => c.type === "video") && (
+              <div className="mt-2">
+                {(() => {
+                  const videoClip = state.clips.find(c => c.type === "video" && 
+                    state.currentTime >= c.startTime && 
+                    state.currentTime < c.startTime + c.duration
+                  ) || state.clips.find(c => c.type === "video");
+                  
+                  if (!videoClip) return null;
+                  
+                  return (
+                    <FilmstripScrubber
+                      videoUrl={videoClip.sourceUrl}
+                      duration={videoClip.duration}
+                      currentTime={Math.max(0, state.currentTime - videoClip.startTime)}
+                      width={400}
+                      height={40}
+                      frameCount={8}
+                      onSeek={(time) => seek(videoClip.startTime + time)}
+                      className="mx-auto"
+                    />
+                  );
+                })()}
+              </div>
+            )}
 
             {/* Playback Controls */}
             <div className="flex items-center justify-center gap-3 mt-3">
