@@ -21,6 +21,7 @@ export function EditBay({ onClose, initialPrompt, timelineImportData }: EditBayP
   const [activeTab, setActiveTab] = useState(timelineImportData ? "timeline" : "image");
   const [galleryKey, setGalleryKey] = useState(0);
   const [pendingTimelineMedia, setPendingTimelineMedia] = useState<GeneratedMedia | null>(null);
+  const [pendingTimelineMediaItems, setPendingTimelineMediaItems] = useState<GeneratedMedia[] | null>(null);
   const previousTab = useRef(activeTab);
 
   const refreshGallery = () => {
@@ -62,11 +63,29 @@ export function EditBay({ onClose, initialPrompt, timelineImportData }: EditBayP
   };
 
   const handleAddToTimeline = (media: GeneratedMedia) => {
+    setPendingTimelineMediaItems(null);
     setPendingTimelineMedia(media);
     setActiveTab("timeline");
+
+    const label =
+      media.media_type === "image" ? "Image" : media.media_type === "audio" ? "Audio" : "Video";
+
     toast({
       title: "Adding to Timeline",
-      description: `${media.media_type === "image" ? "Image" : "Video"} will be added to your timeline.`,
+      description: `${label} will be added to your timeline.`,
+    });
+  };
+
+  const handleAddMultipleToTimeline = (mediaItems: GeneratedMedia[]) => {
+    if (mediaItems.length === 0) return;
+
+    setPendingTimelineMedia(null);
+    setPendingTimelineMediaItems(mediaItems);
+    setActiveTab("timeline");
+
+    toast({
+      title: "Adding to Timeline",
+      description: `${mediaItems.length} item(s) will be added to your timeline.`,
     });
   };
 
@@ -130,16 +149,17 @@ export function EditBay({ onClose, initialPrompt, timelineImportData }: EditBayP
 
             <TabsContent value="gallery" className="mt-0">
               <div className="glass-card p-6 cinematic-border">
-                <MediaLibrary 
-                  key={galleryKey} 
+                <MediaLibrary
+                  key={galleryKey}
                   onAddToTimeline={handleAddToTimeline}
+                  onAddMultipleToTimeline={handleAddMultipleToTimeline}
                 />
               </div>
             </TabsContent>
 
             <TabsContent value="timeline" className="mt-0 h-[calc(100vh-220px)]">
               <div className="glass-card p-6 cinematic-border h-full">
-                <TimelineEditor 
+                <TimelineEditor
                   onExport={(url) => {
                     refreshGallery();
                   }}
@@ -149,7 +169,9 @@ export function EditBay({ onClose, initialPrompt, timelineImportData }: EditBayP
                   }}
                   onClose={onClose}
                   pendingMedia={pendingTimelineMedia}
+                  pendingMediaItems={pendingTimelineMediaItems}
                   onPendingMediaAdded={() => setPendingTimelineMedia(null)}
+                  onPendingMediaItemsAdded={() => setPendingTimelineMediaItems(null)}
                 />
               </div>
             </TabsContent>

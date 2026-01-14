@@ -85,10 +85,21 @@ interface TimelineEditorProps {
   onImportComplete?: () => void;
   onClose?: () => void;
   pendingMedia?: GeneratedMedia | null;
+  pendingMediaItems?: GeneratedMedia[] | null;
   onPendingMediaAdded?: () => void;
+  onPendingMediaItemsAdded?: () => void;
 }
 
-export function TimelineEditor({ onExport, importData, onImportComplete, onClose, pendingMedia, onPendingMediaAdded }: TimelineEditorProps) {
+export function TimelineEditor({
+  onExport,
+  importData,
+  onImportComplete,
+  onClose,
+  pendingMedia,
+  pendingMediaItems,
+  onPendingMediaAdded,
+  onPendingMediaItemsAdded,
+}: TimelineEditorProps) {
   const {
     state,
     addClip,
@@ -300,43 +311,167 @@ export function TimelineEditor({ onExport, importData, onImportComplete, onClose
     importMindMovieScenes();
   }, [importData, addClip, clearTimeline, setBackgroundAudio, toast, onImportComplete, isImporting]);
 
-  // Handle pending media from gallery
+  // Handle pending media batch from the Edit Bay gallery
+  useEffect(() => {
+    if (!pendingMediaItems || pendingMediaItems.length === 0) return;
+
+    let cancelled = false;
+
+    const addPendingMediaItems = async () => {
+      try {
+        const clipsData: Array<{
+          sourceUrl: string;
+          type: "video" | "audio" | "image";
+          name: string;
+          sourceDuration: number;
+          thumbnail?: string;
+        }> = [];
+
+        for (const media of pendingMediaItems) {
+          if (!media?.media_url) continue;
+
+          const type: "video" | "audio" | "image" =
+            media.media_type === "audio"
+              ? "audio"
+              : media.media_type === "image"
+                ? "image"
+                : "video";
+
+          // Default duration so we still add clips even if metadata fails.
+          let duration = type === "image" ? 5 : 5;
+
+          if (type === "video") {
+            const video = document.createElement("video");
+            video.preload = "metadata";
+            video.crossOrigin = "anonymous";
+            video.src = media.media_url;
+            await new Promise<void>((resolve) => {
+              video.onloadedmetadata = () => {
+                duration = Number.isFinite(video.duration) && video.duration > 0 ? video.duration : duration;
+                resolve();
+              };
+              video.onerror = () => resolve();
+              setTimeout(resolve, 2500);
+            });
+          } else if (type === "audio") {
+            const audio = document.createElement("audio");
+            audio.preload = "metadata";
+            audio.crossOrigin = "anonymous";
+            audio.src = media.media_url;
+            await new Promise<void>((resolve) => {
+              audio.onloadedmetadata = () => {
+                duration = Number.isFinite(audio.duration) && audio.duration > 0 ? audio.duration : duration;
+                resolve();
+              };
+              audio.onerror = () => resolve();
+              setTimeout(resolve, 2500);
+            });
+          }
+
+          let thumbnail: string | undefined;
+          if (type === "video") {
+            try {
+              thumbnail = await generateVideoThumbnail(media.media_url);
+            } catch {
+              thumbnail = undefined;
+            }
+          } else if (type === "image") {
+            thumbnail = media.media_url;
+          }
+
+          clipsData.push({
+            sourceUrl: media.media_url,
+            type,
+            name: media.prompt?.substring(0, 30) + "..." || "Clip",
+            sourceDuration: duration,
+            thumbnail,
+          });
+        }
+
+        if (cancelled) return;
+
+        if (clipsData.length > 0) {
+          addMultipleClips(clipsData);
+          toast({
+            title: "Clips added",
+            description: `${clipsData.length} item(s) added to timeline`,
+          });
+        }
+      } finally {
+        if (!cancelled) onPendingMediaItemsAdded?.();
+      }
+    };
+
+    addPendingMediaItems();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [pendingMediaItems, addMultipleClips, toast, onPendingMediaItemsAdded]);
+
+  // Handle pending single media from the Edit Bay gallery / lightbox
   useEffect(() => {
     if (!pendingMedia || !pendingMedia.media_url) return;
 
-    const addPendingMedia = async () => {
-      const isVideo = pendingMedia.media_type === "video";
-      const isImage = pendingMedia.media_type === "image";
-      
-      if (!isVideo && !isImage) return;
+    let cancelled = false;
 
-      let duration = 5; // Default for images
+    const addPendingMedia = async () => {
+      const type: "video" | "audio" | "image" =
+        pendingMedia.media_type === "audio"
+          ? "audio"
+          : pendingMedia.media_type === "image"
+            ? "image"
+            : "video";
+
+      let duration = type === "image" ? 5 : 5;
       let thumbnail: string | undefined;
 
-      if (isVideo) {
-        // Get video duration
+      if (type === "video") {
         const video = document.createElement("video");
-        video.src = pendingMedia.media_url!;
+        video.preload = "metadata";
         video.crossOrigin = "anonymous";
-        
+        video.src = pendingMedia.media_url!;
+
         await new Promise<void>((resolve) => {
           video.onloadedmetadata = () => {
-            duration = video.duration || 5;
+            duration = Number.isFinite(video.duration) && video.duration > 0 ? video.duration : duration;
             resolve();
           };
           video.onerror = () => resolve();
-          setTimeout(resolve, 3000);
+          setTimeout(resolve, 2500);
         });
 
-        // Generate thumbnail
-        thumbnail = await generateVideoThumbnail(pendingMedia.media_url!);
-      } else {
+        try {
+          thumbnail = await generateVideoThumbnail(pendingMedia.media_url!);
+        } catch {
+          thumbnail = undefined;
+        }
+      } else if (type === "image") {
         thumbnail = pendingMedia.media_url!;
+      } else {
+        // audio: no thumbnail
+        thumbnail = undefined;
+
+        const audio = document.createElement("audio");
+        audio.preload = "metadata";
+        audio.crossOrigin = "anonymous";
+        audio.src = pendingMedia.media_url!;
+
+        await new Promise<void>((resolve) => {
+          audio.onloadedmetadata = () => {
+            duration = Number.isFinite(audio.duration) && audio.duration > 0 ? audio.duration : duration;
+            resolve();
+          };
+          audio.onerror = () => resolve();
+          setTimeout(resolve, 2500);
+        });
       }
+
+      if (cancelled) return;
 
       await addClip(
         pendingMedia.media_url!,
-        isVideo ? "video" : "image",
+        type,
         pendingMedia.prompt?.slice(0, 30) || `${pendingMedia.media_type} clip`,
         duration,
         thumbnail
@@ -344,13 +479,17 @@ export function TimelineEditor({ onExport, importData, onImportComplete, onClose
 
       toast({
         title: "Added to Timeline",
-        description: `${isVideo ? "Video" : "Image"} has been added to your timeline.`,
+        description: `${type.charAt(0).toUpperCase() + type.slice(1)} has been added to your timeline.`,
       });
 
       onPendingMediaAdded?.();
     };
 
     addPendingMedia();
+
+    return () => {
+      cancelled = true;
+    };
   }, [pendingMedia, addClip, toast, onPendingMediaAdded]);
 
   // Snapping hook

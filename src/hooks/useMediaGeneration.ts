@@ -38,7 +38,7 @@ export interface VideoGenerationParams {
 export interface GeneratedMedia {
   id: string;
   user_id: string;
-  media_type: "image" | "video";
+  media_type: "image" | "video" | "audio";
   model_used: string;
   prompt: string;
   media_url: string | null;
