@@ -31,19 +31,19 @@ async function getFFmpeg() {
   if (ffmpegLoadPromise) return ffmpegLoadPromise;
 
   ffmpegLoadPromise = (async () => {
-    const [{ FFmpeg }, { toBlobURL, fetchFile }] = await Promise.all([
+    const [{ FFmpeg }, { fetchFile }] = await Promise.all([
       import("@ffmpeg/ffmpeg"),
       import("@ffmpeg/util"),
     ]);
 
     const ffmpeg = new FFmpeg();
 
-    // Keep versions in the 0.12 line to match @ffmpeg/ffmpeg 0.12.x
+    // Prefer direct URLs (avoids blob-import restrictions in some environments)
     const baseURL = "https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd";
 
     await ffmpeg.load({
-      coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, "text/javascript"),
-      wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, "application/wasm"),
+      coreURL: `${baseURL}/ffmpeg-core.js`,
+      wasmURL: `${baseURL}/ffmpeg-core.wasm`,
     });
 
     // Attach helper for fetchFile so we can reuse it.
@@ -52,6 +52,7 @@ async function getFFmpeg() {
     ffmpegSingleton = ffmpeg;
     return ffmpeg;
   })();
+
 
   return ffmpegLoadPromise;
 }
