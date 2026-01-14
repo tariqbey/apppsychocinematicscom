@@ -208,7 +208,139 @@ export function useTimelineEditor() {
           ? prev.tracks
           : [...prev.tracks, track];
 
-      pushHistory(newClips, prev.transitions, prev.backgroundAudio);
+        pushHistory(newClips, prev.transitions, prev.backgroundAudio);
+
+        return {
+          ...prev,
+          clips: newClips,
+          tracks: newTracks,
+          duration: calculateDuration(newClips),
+        };
+      });
+    },
+    [calculateDuration, pushHistory]
+  );
+
+  // Batch add multiple clips at once to avoid state race conditions
+  const addMultipleClips = useCallback(
+    (clipsData: Array<{
+      sourceUrl: string;
+      type: "video" | "audio" | "image";
+      name: string;
+      sourceDuration: number;
+      thumbnail?: string;
+    }>) => {
+      setState((prev) => {
+        let newClips = [...prev.clips];
+        let newTracks = [...prev.tracks];
+
+        // Group clips by track type to calculate proper start times
+        const videoClipsToAdd = clipsData.filter(c => c.type !== "audio");
+        const audioClipsToAdd = clipsData.filter(c => c.type === "audio");
+
+        // Process video/image clips
+        if (videoClipsToAdd.length > 0) {
+          let videoTrack = newTracks.find((t) => t.type === "video");
+          if (!videoTrack) {
+            videoTrack = {
+              id: generateId(),
+              type: "video",
+              name: "Video Track",
+              muted: false,
+              locked: false,
+              volume: 1,
+              solo: false,
+            };
+            newTracks = [...newTracks, videoTrack];
+          }
+
+          // Find end of existing video clips
+          let videoStartTime = newClips
+            .filter((c) => c.trackId === videoTrack!.id)
+            .reduce((max, c) => Math.max(max, c.startTime + c.duration), 0);
+
+          for (const clipData of videoClipsToAdd) {
+            const clipDuration = clipData.type === "image" ? 5 : clipData.sourceDuration;
+            if (videoStartTime + clipDuration > MAX_DURATION) {
+              console.warn("Cannot add clip: would exceed 5 minute limit");
+              continue;
+            }
+
+            const newClip: TimelineClip = {
+              id: generateId(),
+              type: clipData.type,
+              name: clipData.name,
+              sourceUrl: clipData.sourceUrl,
+              startTime: videoStartTime,
+              duration: Math.min(clipDuration, MAX_DURATION - videoStartTime),
+              sourceDuration: clipData.type === "image" ? 5 : clipData.sourceDuration,
+              trimStart: 0,
+              trimEnd: clipData.type === "image" ? 5 : clipData.sourceDuration,
+              trackId: videoTrack!.id,
+              muted: false,
+              volume: 1,
+              fadeIn: 0,
+              fadeOut: 0,
+              thumbnail: clipData.thumbnail,
+            };
+
+            newClips.push(newClip);
+            videoStartTime += newClip.duration;
+          }
+        }
+
+        // Process audio clips
+        if (audioClipsToAdd.length > 0) {
+          let audioTrack = newTracks.find((t) => t.type === "audio");
+          if (!audioTrack) {
+            audioTrack = {
+              id: generateId(),
+              type: "audio",
+              name: "Audio Track",
+              muted: false,
+              locked: false,
+              volume: 1,
+              solo: false,
+            };
+            newTracks = [...newTracks, audioTrack];
+          }
+
+          // Find end of existing audio clips
+          let audioStartTime = newClips
+            .filter((c) => c.trackId === audioTrack!.id)
+            .reduce((max, c) => Math.max(max, c.startTime + c.duration), 0);
+
+          for (const clipData of audioClipsToAdd) {
+            const clipDuration = clipData.sourceDuration;
+            if (audioStartTime + clipDuration > MAX_DURATION) {
+              console.warn("Cannot add clip: would exceed 5 minute limit");
+              continue;
+            }
+
+            const newClip: TimelineClip = {
+              id: generateId(),
+              type: "audio",
+              name: clipData.name,
+              sourceUrl: clipData.sourceUrl,
+              startTime: audioStartTime,
+              duration: Math.min(clipDuration, MAX_DURATION - audioStartTime),
+              sourceDuration: clipData.sourceDuration,
+              trimStart: 0,
+              trimEnd: clipData.sourceDuration,
+              trackId: audioTrack!.id,
+              muted: false,
+              volume: 1,
+              fadeIn: 0,
+              fadeOut: 0,
+              thumbnail: clipData.thumbnail,
+            };
+
+            newClips.push(newClip);
+            audioStartTime += newClip.duration;
+          }
+        }
+
+        pushHistory(newClips, prev.transitions, prev.backgroundAudio);
 
         return {
           ...prev,
@@ -720,6 +852,7 @@ export function useTimelineEditor() {
     state,
     addClip,
     addClips,
+    addMultipleClips,
     removeClip,
     updateClip,
     moveClip,
