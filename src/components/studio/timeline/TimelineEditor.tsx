@@ -334,6 +334,11 @@ export function TimelineEditor({ onExport, importData, onImportComplete }: Timel
     }
   }, [state.clips, state.currentTime, splitClip, toast]);
 
+  // Add audio via keyboard shortcut
+  const handleAddAudioShortcut = useCallback(() => {
+    audioInputRef.current?.click();
+  }, []);
+
   // Keyboard shortcuts
   useTimelineKeyboard({
     onToolChange: setActiveTool,
@@ -350,6 +355,7 @@ export function TimelineEditor({ onExport, importData, onImportComplete }: Timel
     onSeekEnd: () => seek(state.duration),
     onNudgeLeft: () => seek(Math.max(0, state.currentTime - (snapEnabled ? 1 : 0.1))),
     onNudgeRight: () => seek(Math.min(state.duration, state.currentTime + (snapEnabled ? 1 : 0.1))),
+    onAddAudio: handleAddAudioShortcut,
     enabled: true,
   });
 
@@ -675,120 +681,144 @@ export function TimelineEditor({ onExport, importData, onImportComplete }: Timel
         </div>
       )}
 
-      <div className="flex gap-4 flex-1 min-h-0">
-        {/* Preview Panel */}
-        <div className="w-80 flex-shrink-0 space-y-3">
-          <TimelinePreview
-            clips={state.clips}
-            currentTime={state.currentTime}
-            isPlaying={state.isPlaying}
-            backgroundAudio={state.backgroundAudio}
-          />
+      {/* Main Layout - Vertical: Preview on top, Timeline below */}
+      <div className="flex flex-col flex-1 min-h-0 gap-4">
+        {/* Preview Section - Larger and centered at top */}
+        <div className="flex-shrink-0 bg-card/30 rounded-lg border border-border/50 p-4">
+          <div className="flex items-start gap-6">
+            {/* Video Preview - Larger */}
+            <div className="flex-1 max-w-2xl mx-auto">
+              <div className="aspect-video">
+                <TimelinePreview
+                  clips={state.clips}
+                  currentTime={state.currentTime}
+                  isPlaying={state.isPlaying}
+                  backgroundAudio={state.backgroundAudio}
+                />
+              </div>
 
-          {/* Playback Controls */}
-          <div className="flex items-center justify-center gap-2">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => seek(0)}
-              title="Go to start"
-            >
-              <SkipBack className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="default"
-              size="icon"
-              onClick={state.isPlaying ? pause : play}
-              className="h-10 w-10"
-            >
-              {state.isPlaying ? (
-                <Pause className="h-5 w-5" />
-              ) : (
-                <Play className="h-5 w-5 ml-0.5" />
-              )}
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => seek(state.duration)}
-              title="Go to end"
-            >
-              <SkipForward className="h-4 w-4" />
-            </Button>
-          </div>
-
-          {/* Time Display */}
-          <div className="text-center text-sm font-mono text-muted-foreground">
-            {formatTime(state.currentTime)} / {formatTime(state.duration)}
-          </div>
-
-          {/* Background Audio */}
-          <div className="p-3 rounded-lg bg-muted/30 border border-border/50 space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-medium flex items-center gap-2">
-                <Music className="h-3 w-3" />
-                Background Audio
-              </span>
-              {state.backgroundAudio.url && (
+              {/* Playback Controls */}
+              <div className="flex items-center justify-center gap-4 mt-4">
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-5 w-5"
-                  onClick={() => setBackgroundAudio(null)}
+                  onClick={() => seek(0)}
+                  title="Go to start (Home)"
                 >
-                  <X className="h-3 w-3" />
+                  <SkipBack className="h-5 w-5" />
                 </Button>
-              )}
-            </div>
-            {state.backgroundAudio.url ? (
-              <div className="space-y-2">
-                <p className="text-xs text-muted-foreground truncate">
-                  {state.backgroundAudio.name}
-                </p>
-                {/* Audio Waveform Visualization */}
-                <div className="rounded bg-muted/50 overflow-hidden">
-                  <AudioWaveform
-                    src={state.backgroundAudio.url}
-                    duration={state.duration || 60}
-                    width={240}
-                    height={32}
-                    color={state.backgroundAudio.muted ? "hsl(var(--muted-foreground))" : "hsl(var(--primary))"}
-                    backgroundColor="transparent"
-                  />
-                </div>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-6 w-6"
-                    onClick={toggleBackgroundAudioMute}
-                  >
-                    {state.backgroundAudio.muted ? (
-                      <VolumeX className="h-3 w-3 text-muted-foreground" />
-                    ) : (
-                      <Volume2 className="h-3 w-3 text-primary" />
-                    )}
-                  </Button>
-                  <Slider
-                    value={[state.backgroundAudio.volume * 100]}
-                    onValueChange={([v]) => setBackgroundAudioVolume(v / 100)}
-                    max={100}
-                    step={1}
-                    className="flex-1"
-                  />
+                <Button
+                  variant="default"
+                  size="icon"
+                  onClick={state.isPlaying ? pause : play}
+                  className="h-12 w-12"
+                  title="Play/Pause (Space)"
+                >
+                  {state.isPlaying ? (
+                    <Pause className="h-6 w-6" />
+                  ) : (
+                    <Play className="h-6 w-6 ml-0.5" />
+                  )}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => seek(state.duration)}
+                  title="Go to end (End)"
+                >
+                  <SkipForward className="h-5 w-5" />
+                </Button>
+                
+                {/* Time Display */}
+                <div className="text-sm font-mono text-muted-foreground ml-4 bg-muted/50 px-3 py-1.5 rounded">
+                  {formatTime(state.currentTime)} / {formatTime(state.duration)}
                 </div>
               </div>
-            ) : (
-              <Button
-                variant="outline"
-                size="sm"
-                className="w-full"
-                onClick={() => audioInputRef.current?.click()}
-              >
-                <Upload className="h-3 w-3 mr-2" />
-                Add Audio Track
-              </Button>
-            )}
+            </div>
+
+            {/* Background Audio Panel - Side */}
+            <div className="w-64 flex-shrink-0 space-y-3">
+              <div className="p-3 rounded-lg bg-muted/30 border border-border/50 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-medium flex items-center gap-2">
+                    <Music className="h-3 w-3" />
+                    Background Audio
+                  </span>
+                  {state.backgroundAudio.url && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-5 w-5"
+                      onClick={() => setBackgroundAudio(null)}
+                    >
+                      <X className="h-3 w-3" />
+                    </Button>
+                  )}
+                </div>
+                {state.backgroundAudio.url ? (
+                  <div className="space-y-2">
+                    <p className="text-xs text-muted-foreground truncate">
+                      {state.backgroundAudio.name}
+                    </p>
+                    {/* Audio Waveform Visualization */}
+                    <div className="rounded bg-muted/50 overflow-hidden">
+                      <AudioWaveform
+                        src={state.backgroundAudio.url}
+                        duration={state.duration || 60}
+                        width={220}
+                        height={32}
+                        color={state.backgroundAudio.muted ? "hsl(var(--muted-foreground))" : "hsl(var(--primary))"}
+                        backgroundColor="transparent"
+                      />
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6"
+                        onClick={toggleBackgroundAudioMute}
+                      >
+                        {state.backgroundAudio.muted ? (
+                          <VolumeX className="h-3 w-3 text-muted-foreground" />
+                        ) : (
+                          <Volume2 className="h-3 w-3 text-primary" />
+                        )}
+                      </Button>
+                      <Slider
+                        value={[state.backgroundAudio.volume * 100]}
+                        onValueChange={([v]) => setBackgroundAudioVolume(v / 100)}
+                        max={100}
+                        step={1}
+                        className="flex-1"
+                      />
+                    </div>
+                  </div>
+                ) : (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full"
+                    onClick={() => audioInputRef.current?.click()}
+                  >
+                    <Upload className="h-3 w-3 mr-2" />
+                    Add Audio (A)
+                  </Button>
+                )}
+              </div>
+
+              {/* Quick Shortcuts Reference */}
+              <div className="p-3 rounded-lg bg-muted/20 border border-border/30">
+                <p className="text-xs font-medium text-muted-foreground mb-2">Shortcuts</p>
+                <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-[10px] text-muted-foreground">
+                  <span>V - Select</span>
+                  <span>C - Razor</span>
+                  <span>A - Add Audio</span>
+                  <span>K - Split</span>
+                  <span>Space - Play</span>
+                  <span>Del - Delete</span>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
