@@ -105,46 +105,59 @@ export function ClipsBin({
   }
 
   return (
-    <div className="border-t border-border bg-card/50">
-      {/* Header */}
+    <div className="border-t border-border bg-card/50 flex-shrink-0">
+      {/* Header - Compact toggle bar */}
       <button
         onClick={onToggle}
-        className="w-full flex items-center justify-between px-3 py-2 hover:bg-muted/30 transition-colors"
+        className="w-full flex items-center justify-between px-3 py-1.5 hover:bg-muted/30 transition-colors"
       >
         <div className="flex items-center gap-2">
           {isOpen ? (
-            <ChevronDown className="h-4 w-4 text-muted-foreground" />
+            <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
           ) : (
-            <ChevronRight className="h-4 w-4 text-muted-foreground" />
+            <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
           )}
-          <span className="text-sm font-medium">Clips Bin</span>
-          <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+          <span className="text-xs font-medium">Clips Bin</span>
+          <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
             {clips.length}
           </span>
+          {/* Type indicators */}
+          <div className="flex items-center gap-1 ml-2">
+            <span className="flex items-center gap-0.5 text-[10px] text-primary">
+              <Film className="h-3 w-3" />
+              {clips.filter(c => c.type === "video").length}
+            </span>
+            <span className="flex items-center gap-0.5 text-[10px] text-secondary">
+              <Image className="h-3 w-3" />
+              {clips.filter(c => c.type === "image").length}
+            </span>
+            <span className="flex items-center gap-0.5 text-[10px] text-accent">
+              <Music className="h-3 w-3" />
+              {clips.filter(c => c.type === "audio").length}
+            </span>
+          </div>
         </div>
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <span>{uniqueClips.length} unique</span>
-        </div>
+        <span className="text-[10px] text-muted-foreground">{uniqueClips.length} unique</span>
       </button>
 
-      {/* Content */}
+      {/* Content - Limited max height */}
       {isOpen && (
-        <div className="border-t border-border/50">
+        <div className="border-t border-border/50 max-h-32">
           {/* Controls */}
-          <div className="flex items-center gap-2 px-3 py-2 bg-muted/20">
+          <div className="flex items-center gap-2 px-2 py-1.5 bg-muted/20">
             <div className="relative flex-1 max-w-xs">
-              <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+              <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
               <Input
                 placeholder="Search clips..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="h-7 pl-7 text-xs"
+                className="h-6 pl-7 text-xs"
               />
             </div>
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as SortOption)}
-              className="h-7 px-2 text-xs bg-background border border-input rounded-md"
+              className="h-6 px-2 text-[10px] bg-background border border-input rounded-md"
             >
               <option value="position">By Position</option>
               <option value="name">By Name</option>
@@ -153,14 +166,14 @@ export function ClipsBin({
             </select>
           </div>
 
-          {/* Clips List */}
-          <ScrollArea className="h-32">
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-1 p-2">
+          {/* Clips List - Horizontal scroll */}
+          <div className="overflow-x-auto overflow-y-hidden">
+            <div className="flex gap-1.5 p-1.5 min-w-min">
               {filteredClips.map((clip) => (
                 <div
                   key={clip.id}
                   className={cn(
-                    "group relative rounded border bg-card hover:bg-muted/50 transition-colors cursor-pointer",
+                    "group relative rounded border bg-card hover:bg-muted/50 transition-colors cursor-pointer flex-shrink-0 w-24",
                     selectedClipIds.includes(clip.id)
                       ? "border-primary ring-1 ring-primary"
                       : "border-border/50"
@@ -181,11 +194,11 @@ export function ClipsBin({
                       </div>
                     )}
                     {/* Type badge */}
-                    <div className={cn("absolute top-1 left-1 p-0.5 rounded bg-black/60", getTypeColor(clip.type))}>
+                    <div className={cn("absolute top-0.5 left-0.5 p-0.5 rounded bg-black/60", getTypeColor(clip.type))}>
                       {getTypeIcon(clip.type)}
                     </div>
                     {/* Duration badge */}
-                    <div className="absolute bottom-1 right-1 px-1 py-0.5 text-[9px] font-mono bg-black/60 text-white rounded">
+                    <div className="absolute bottom-0.5 right-0.5 px-1 py-0.5 text-[8px] font-mono bg-black/60 text-white rounded">
                       {formatDuration(clip.duration)}
                     </div>
                     {/* Hover actions */}
@@ -193,32 +206,32 @@ export function ClipsBin({
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-6 w-6 bg-black/50 hover:bg-black/70 text-white"
+                        className="h-5 w-5 bg-black/50 hover:bg-black/70 text-white"
                         onClick={(e) => {
                           e.stopPropagation();
                           onSeekToClip(clip.startTime);
                         }}
                         title="Go to clip"
                       >
-                        <Play className="h-3 w-3" />
+                        <Play className="h-2.5 w-2.5" />
                       </Button>
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-6 w-6 bg-black/50 hover:bg-destructive text-white"
+                        className="h-5 w-5 bg-black/50 hover:bg-destructive text-white"
                         onClick={(e) => {
                           e.stopPropagation();
                           onRemoveClip(clip.id);
                         }}
                         title="Remove clip"
                       >
-                        <Trash2 className="h-3 w-3" />
+                        <Trash2 className="h-2.5 w-2.5" />
                       </Button>
                     </div>
                   </div>
                   {/* Name */}
-                  <div className="p-1">
-                    <p className="text-[10px] truncate text-muted-foreground" title={clip.name}>
+                  <div className="px-1 py-0.5">
+                    <p className="text-[9px] truncate text-muted-foreground" title={clip.name}>
                       {clip.name}
                     </p>
                   </div>
@@ -227,11 +240,11 @@ export function ClipsBin({
             </div>
             
             {filteredClips.length === 0 && searchQuery && (
-              <div className="flex items-center justify-center py-4 text-xs text-muted-foreground">
+              <div className="flex items-center justify-center py-2 text-[10px] text-muted-foreground">
                 No clips match "{searchQuery}"
               </div>
             )}
-          </ScrollArea>
+          </div>
         </div>
       )}
     </div>
