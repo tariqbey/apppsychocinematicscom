@@ -722,13 +722,13 @@ export function TimelineEditor({ onExport, importData, onImportComplete }: Timel
         </div>
       )}
 
-      {/* Main Layout - Horizontal split: Preview on left, Controls on right */}
-      <div className="flex-1 flex gap-4 min-h-0">
-        {/* Left Panel - Preview (40% width) */}
-        <div className="w-2/5 flex flex-col gap-3 min-h-0">
+      {/* Main Layout - Vertical stack: Preview on top, Timeline below */}
+      <div className="flex-1 flex flex-col gap-3 min-h-0 overflow-hidden">
+        {/* Top Section - Preview and Controls */}
+        <div className="flex gap-4 flex-shrink-0">
           {/* Video Preview */}
-          <div className="flex-shrink-0 bg-card/30 rounded-lg border border-border/50 p-3">
-            <div className="aspect-video">
+          <div className="flex-1 bg-card/30 rounded-lg border border-border/50 p-3">
+            <div className="aspect-video max-h-[280px] mx-auto">
               <TimelinePreview
                 clips={state.clips}
                 currentTime={state.currentTime}
@@ -778,77 +778,78 @@ export function TimelineEditor({ onExport, importData, onImportComplete }: Timel
             </div>
           </div>
 
-          {/* Background Audio Panel */}
-          <div className="p-3 rounded-lg bg-muted/30 border border-border/50 space-y-2 flex-shrink-0">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-medium flex items-center gap-2">
-                <Music className="h-3 w-3" />
-                Background Audio
-              </span>
-              {state.backgroundAudio.url && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-5 w-5"
-                  onClick={() => setBackgroundAudio(null)}
-                >
-                  <X className="h-3 w-3" />
-                </Button>
-              )}
-            </div>
-            {state.backgroundAudio.url ? (
-              <div className="space-y-2">
-                <p className="text-xs text-muted-foreground truncate">
-                  {state.backgroundAudio.name}
-                </p>
-                <div className="rounded bg-muted/50 overflow-hidden">
-                  <AudioWaveform
-                    src={state.backgroundAudio.url}
-                    duration={state.duration || 60}
-                    width={300}
-                    height={28}
-                    color={state.backgroundAudio.muted ? "hsl(var(--muted-foreground))" : "hsl(var(--primary))"}
-                    backgroundColor="transparent"
-                  />
-                </div>
-                <div className="flex items-center gap-2">
+          {/* Side Panel - Audio & Quick Info */}
+          <div className="w-64 flex flex-col gap-2 flex-shrink-0">
+            {/* Background Audio Panel */}
+            <div className="p-3 rounded-lg bg-muted/30 border border-border/50 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-medium flex items-center gap-2">
+                  <Music className="h-3 w-3" />
+                  Background Audio
+                </span>
+                {state.backgroundAudio.url && (
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-6 w-6"
-                    onClick={toggleBackgroundAudioMute}
+                    className="h-5 w-5"
+                    onClick={() => setBackgroundAudio(null)}
                   >
-                    {state.backgroundAudio.muted ? (
-                      <VolumeX className="h-3 w-3 text-muted-foreground" />
-                    ) : (
-                      <Volume2 className="h-3 w-3 text-primary" />
-                    )}
+                    <X className="h-3 w-3" />
                   </Button>
-                  <Slider
-                    value={[state.backgroundAudio.volume * 100]}
-                    onValueChange={([v]) => setBackgroundAudioVolume(v / 100)}
-                    max={100}
-                    step={1}
-                    className="flex-1"
-                  />
-                </div>
+                )}
               </div>
-            ) : (
-              <Button
-                variant="outline"
-                size="sm"
-                className="w-full"
-                onClick={() => audioInputRef.current?.click()}
-              >
-                <Upload className="h-3 w-3 mr-2" />
-                Add Audio (A)
-              </Button>
-            )}
-          </div>
+              {state.backgroundAudio.url ? (
+                <div className="space-y-2">
+                  <p className="text-xs text-muted-foreground truncate">
+                    {state.backgroundAudio.name}
+                  </p>
+                  <div className="rounded bg-muted/50 overflow-hidden">
+                    <AudioWaveform
+                      src={state.backgroundAudio.url}
+                      duration={state.duration || 60}
+                      width={200}
+                      height={24}
+                      color={state.backgroundAudio.muted ? "hsl(var(--muted-foreground))" : "hsl(var(--primary))"}
+                      backgroundColor="transparent"
+                    />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6"
+                      onClick={toggleBackgroundAudioMute}
+                    >
+                      {state.backgroundAudio.muted ? (
+                        <VolumeX className="h-3 w-3 text-muted-foreground" />
+                      ) : (
+                        <Volume2 className="h-3 w-3 text-primary" />
+                      )}
+                    </Button>
+                    <Slider
+                      value={[state.backgroundAudio.volume * 100]}
+                      onValueChange={([v]) => setBackgroundAudioVolume(v / 100)}
+                      max={100}
+                      step={1}
+                      className="flex-1"
+                    />
+                  </div>
+                </div>
+              ) : (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full"
+                  onClick={() => audioInputRef.current?.click()}
+                >
+                  <Upload className="h-3 w-3 mr-2" />
+                  Add Audio (A)
+                </Button>
+              )}
+            </div>
 
-          {/* Timeline Minimap */}
-          {state.clips.length > 0 && (
-            <div className="flex-shrink-0">
+            {/* Timeline Minimap */}
+            {state.clips.length > 0 && (
               <TimelineMinimap
                 clips={state.clips}
                 duration={state.duration}
@@ -857,24 +858,26 @@ export function TimelineEditor({ onExport, importData, onImportComplete }: Timel
                 onSeek={seek}
                 onScrollTo={scrollToTime}
               />
-            </div>
-          )}
+            )}
 
-          {/* Quick Shortcuts */}
-          <div className="p-2 rounded-lg bg-muted/20 border border-border/30 flex-shrink-0">
-            <p className="text-xs font-medium text-muted-foreground mb-1">Shortcuts</p>
-            <div className="grid grid-cols-3 gap-x-2 gap-y-0.5 text-[9px] text-muted-foreground">
-              <span>V - Select</span>
-              <span>C - Razor</span>
-              <span>A - Add Audio</span>
-              <span>K - Split</span>
-              <span>Space - Play</span>
-              <span>Del - Delete</span>
+            {/* Quick Shortcuts */}
+            <div className="p-2 rounded-lg bg-muted/20 border border-border/30">
+              <p className="text-[10px] font-medium text-muted-foreground mb-1">Quick Shortcuts</p>
+              <div className="grid grid-cols-2 gap-x-2 gap-y-0.5 text-[9px] text-muted-foreground">
+                <span>V - Select</span>
+                <span>C - Razor</span>
+                <span>A - Audio</span>
+                <span>K - Split</span>
+                <span>Space - Play</span>
+                <span>Del - Delete</span>
+                <span>⌘C - Copy</span>
+                <span>⌘V - Paste</span>
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Right Panel - Timeline (60% width) */}
+        {/* Bottom Section - Timeline */}
         <div 
           className={cn(
             "flex-1 flex flex-col min-w-0 border rounded-lg overflow-hidden transition-all",
