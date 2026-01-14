@@ -1047,9 +1047,18 @@ export function TimelineEditor({
             <Download className="h-4 w-4 mr-1" />
             Download
           </Button>
-          <Button size="sm" onClick={handleExportAndSave} disabled={state.clips.length === 0 || isExporting} className="bg-primary text-primary-foreground">
-            {isExporting ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Save className="h-4 w-4 mr-1" />}
-            Save to Vault
+          <Button 
+            size="sm" 
+            onClick={handleExportAndSave} 
+            disabled={state.clips.length === 0 || isExporting} 
+            className="bg-gradient-to-r from-primary to-primary/80 text-primary-foreground font-semibold shadow-lg hover:shadow-primary/25 transition-all"
+          >
+            {isExporting ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <Save className="h-4 w-4 mr-2" />
+            )}
+            Export Movie
           </Button>
         </div>
       </div>
