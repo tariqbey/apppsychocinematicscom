@@ -1,12 +1,12 @@
 import { useState, useEffect, useRef } from "react";
-import { Film, X, Image, Video, FolderOpen } from "lucide-react";
+import { Film, X, Image, Video, FolderOpen, Clapperboard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ImageGenerator } from "./ImageGenerator";
 import { VideoGenerator } from "./VideoGenerator";
 import { MediaLibrary } from "./MediaLibrary";
+import { TimelineEditor } from "./timeline/TimelineEditor";
 import { useToast } from "@/hooks/use-toast";
-
 interface EditBayProps {
   onClose: () => void;
   initialPrompt?: string;
