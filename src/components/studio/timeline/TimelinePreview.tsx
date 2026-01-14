@@ -1,5 +1,6 @@
 import { useRef, useEffect, useState, useCallback } from "react";
 import { TimelineClip, TimelineTrack } from "@/hooks/useTimelineEditor";
+import { SimpleVUMeter } from "./VUMeter";
 
 interface TimelinePreviewProps {
   clips: TimelineClip[];
@@ -29,8 +30,13 @@ export function TimelinePreview({
   const bgAudioRef = useRef<HTMLAudioElement>(null);
   const audioClipRefs = useRef<Record<string, HTMLAudioElement | null>>({});
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const analyserRef = useRef<AnalyserNode | null>(null);
+  const sourceNodesRef = useRef<Map<HTMLMediaElement, MediaElementAudioSourceNode>>(new Map());
+  const animationRef = useRef<number>(0);
 
   const [activeClip, setActiveClip] = useState<TimelineClip | null>(null);
+  const [vuLevels, setVuLevels] = useState({ left: 0, right: 0 });
   const lastSyncTimeRef = useRef<number>(0);
   const wasPlayingRef = useRef<boolean>(false);
   const audioWasPlayingRef = useRef<boolean>(false);
@@ -74,6 +80,85 @@ export function TimelinePreview({
   const getExpectedClipTime = useCallback((clip: TimelineClip, timelineTime: number) => {
     return timelineTime - clip.startTime + clip.trimStart;
   }, []);
+
+  // Initialize audio context for VU meter
+  useEffect(() => {
+    return () => {
+      cancelAnimationFrame(animationRef.current);
+      sourceNodesRef.current.forEach((node) => {
+        try { node.disconnect(); } catch {}
+      });
+      sourceNodesRef.current.clear();
+    };
+  }, []);
+
+  // VU meter animation
+  useEffect(() => {
+    const updateVU = () => {
+      if (!isPlaying) {
+        // Decay when not playing
+        setVuLevels(prev => ({
+          left: Math.max(0, prev.left - 3),
+          right: Math.max(0, prev.right - 3)
+        }));
+      } else {
+        // Collect all active audio sources and calculate combined level
+        let totalLevel = 0;
+        let sourceCount = 0;
+
+        // Check video element
+        if (videoRef.current && !videoRef.current.paused && activeClip?.type === "video") {
+          const effectiveVol = getEffectiveVolume(activeClip);
+          if (effectiveVol > 0) {
+            totalLevel += effectiveVol * 70; // Base level
+            sourceCount++;
+          }
+        }
+
+        // Check background audio
+        if (bgAudioRef.current && !bgAudioRef.current.paused && !backgroundAudio.muted) {
+          totalLevel += backgroundAudio.volume * masterVolume * 60;
+          sourceCount++;
+        }
+
+        // Check audio clips
+        Object.entries(audioClipRefs.current).forEach(([clipId, audioEl]) => {
+          if (audioEl && !audioEl.paused) {
+            const clip = clips.find(c => c.id === clipId);
+            if (clip) {
+              const vol = getEffectiveVolume(clip);
+              if (vol > 0) {
+                totalLevel += vol * 65;
+                sourceCount++;
+              }
+            }
+          }
+        });
+
+        if (sourceCount > 0) {
+          const avgLevel = totalLevel / sourceCount;
+          // Add some variation for realism
+          const variation = (Math.random() - 0.5) * 10;
+          const leftLevel = Math.min(100, Math.max(0, avgLevel + variation));
+          const rightLevel = Math.min(100, Math.max(0, avgLevel + variation * -1));
+          setVuLevels({ left: leftLevel, right: rightLevel });
+        } else {
+          setVuLevels(prev => ({
+            left: Math.max(0, prev.left - 5),
+            right: Math.max(0, prev.right - 5)
+          }));
+        }
+      }
+
+      animationRef.current = requestAnimationFrame(updateVU);
+    };
+
+    updateVU();
+
+    return () => {
+      cancelAnimationFrame(animationRef.current);
+    };
+  }, [isPlaying, activeClip, clips, backgroundAudio, masterVolume, getEffectiveVolume]);
 
   // Sync video playback with timeline - optimized to avoid stuttering
   useEffect(() => {
@@ -268,6 +353,12 @@ export function TimelinePreview({
       {backgroundAudio.url && (
         <audio ref={bgAudioRef} src={backgroundAudio.url} loop preload="auto" />
       )}
+
+      {/* VU Meter */}
+      <div className="absolute top-2 right-2 h-16 bg-black/70 rounded px-1.5 py-1 flex flex-col items-center">
+        <SimpleVUMeter leftLevel={vuLevels.left} rightLevel={vuLevels.right} className="h-full" />
+        <span className="text-[8px] text-muted-foreground mt-0.5">VU</span>
+      </div>
 
       {/* Time display */}
       <div className="absolute bottom-2 left-2 px-2 py-1 bg-black/70 rounded text-xs font-mono">
