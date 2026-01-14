@@ -12,15 +12,19 @@ interface SnapInfo {
   type: "clip-start" | "clip-end" | "playhead" | "grid";
 }
 
+type EditingTool = "select" | "razor" | "hand" | "range";
+
 interface TimelineClipComponentProps {
   clip: TimelineClip;
   zoom: number;
   isSelected: boolean;
+  activeTool?: EditingTool;
   onSelect: (e?: React.MouseEvent) => void;
   onRemove: () => void;
   onMove: (newStartTime: number) => void;
   onTrim: (trimStart: number, trimEnd: number) => void;
   onSplit: () => void;
+  onRazorClick?: (e: React.MouseEvent) => void;
   onToggleMute: () => void;
   onVolumeChange?: (volume: number) => void;
   snapEnabled?: boolean;
@@ -58,11 +62,13 @@ export const TimelineClipComponent = memo(function TimelineClipComponent({
   clip,
   zoom,
   isSelected,
+  activeTool = "select",
   onSelect,
   onRemove,
   onMove,
   onTrim,
   onSplit,
+  onRazorClick,
   onToggleMute,
   onVolumeChange,
   snapEnabled = true,
@@ -262,6 +268,16 @@ export const TimelineClipComponent = memo(function TimelineClipComponent({
   const thumbnailWidth = 48;
   const thumbnailCount = clip.thumbnail ? Math.max(1, Math.floor((width - 24) / thumbnailWidth)) : 0;
 
+  // Handle click - either select or cut with razor
+  const handleClick = useCallback((e: React.MouseEvent) => {
+    if (activeTool === "razor" && onRazorClick) {
+      e.stopPropagation();
+      onRazorClick(e);
+    } else {
+      onSelect(e);
+    }
+  }, [activeTool, onRazorClick, onSelect]);
+
   return (
     <div
       ref={clipRef}
@@ -272,14 +288,15 @@ export const TimelineClipComponent = memo(function TimelineClipComponent({
         clip.type === "image" && "bg-amber-500/30 border-amber-500/50 hover:border-amber-500",
         isSelected && "ring-2 ring-ring ring-offset-1 ring-offset-background",
         isDragging && "opacity-80",
-        isResizing && "z-20"
+        isResizing && "z-20",
+        activeTool === "razor" && "cursor-scissors"
       )}
       style={{ 
         left: `${left}px`, 
         width: `${Math.max(width, 20)}px`,
         transform: 'translateZ(0)', // GPU acceleration
       }}
-      onClick={onSelect}
+      onClick={handleClick}
     >
       {/* Filmstrip background for video clips */}
       {clip.type === "video" && width > 60 && (

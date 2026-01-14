@@ -1102,9 +1102,9 @@ export function TimelineEditor({ onExport, importData, onImportComplete, onClose
               ref={timelineRef}
               className={cn(
                 "relative min-h-full",
-                activeTool === "razor" && "cursor-crosshair",
-                activeTool === "hand" && "cursor-grab active:cursor-grabbing",
-                activeTool === "range" && "cursor-cell"
+                activeTool === "razor" && "cursor-scissors",
+                activeTool === "hand" && "cursor-grab-timeline",
+                activeTool === "range" && "cursor-range"
               )}
               style={{ width: `${Math.max(state.duration, 60) * state.zoom + 150}px` }}
               onClick={handleTimelineClick}
@@ -1133,12 +1133,17 @@ export function TimelineEditor({ onExport, importData, onImportComplete, onClose
                     zoom={state.zoom}
                     currentTime={state.currentTime}
                     selectedClipIds={selectedClipIds}
+                    activeTool={activeTool}
                     onSelectClip={handleClipSelect}
                     onClearSelection={() => setSelectedClipIds([])}
                     onRemoveClip={removeClip}
                     onMoveClip={moveClip}
                     onTrimClip={trimClip}
                     onSplitClip={(clipId) => splitClip(clipId, state.currentTime)}
+                    onSplitClipAtTime={(clipId, time) => {
+                      splitClip(clipId, time);
+                      toast({ title: "Clip cut", description: "Clip was split at click position" });
+                    }}
                     onToggleClipMute={(clipId) => updateClip(clipId, { muted: !state.clips.find((c) => c.id === clipId)?.muted })}
                     onUpdateClipVolume={(clipId, volume) => updateClip(clipId, { volume })}
                     onToggleTrackMute={() => toggleTrackMute(track.id)}

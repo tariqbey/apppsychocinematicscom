@@ -13,6 +13,8 @@ interface SnapInfo {
   type: "clip-start" | "clip-end" | "playhead" | "grid";
 }
 
+type EditingTool = "select" | "razor" | "hand" | "range";
+
 interface TimelineTrackComponentProps {
   track: TimelineTrack;
   clips: TimelineClip[];
@@ -21,12 +23,14 @@ interface TimelineTrackComponentProps {
   currentTime: number;
   selectedClipIds: string[];
   trackIndex: number;
+  activeTool: EditingTool;
   onSelectClip: (clipId: string, addToSelection?: boolean) => void;
   onClearSelection: () => void;
   onRemoveClip: (clipId: string) => void;
   onMoveClip: (clipId: string, newStartTime: number) => void;
   onTrimClip: (clipId: string, trimStart: number, trimEnd: number) => void;
   onSplitClip: (clipId: string) => void;
+  onSplitClipAtTime: (clipId: string, time: number) => void;
   onToggleClipMute: (clipId: string) => void;
   onUpdateClipVolume: (clipId: string, volume: number) => void;
   onToggleTrackMute: () => void;
@@ -59,12 +63,14 @@ export const TimelineTrackComponent = memo(function TimelineTrackComponent({
   currentTime,
   selectedClipIds,
   trackIndex,
+  activeTool,
   onSelectClip,
   onClearSelection,
   onRemoveClip,
   onMoveClip,
   onTrimClip,
   onSplitClip,
+  onSplitClipAtTime,
   onToggleClipMute,
   onUpdateClipVolume,
   onToggleTrackMute,
@@ -132,6 +138,7 @@ export const TimelineTrackComponent = memo(function TimelineTrackComponent({
       onMove: (newStartTime: number) => void;
       onTrim: (trimStart: number, trimEnd: number) => void;
       onSplit: () => void;
+      onRazorClick: (e: React.MouseEvent) => void;
       onToggleMute: () => void;
       onVolumeChange: (volume: number) => void;
     }> = {};
@@ -146,13 +153,27 @@ export const TimelineTrackComponent = memo(function TimelineTrackComponent({
         onMove: (newStartTime: number) => onMoveClip(clip.id, newStartTime),
         onTrim: (trimStart: number, trimEnd: number) => onTrimClip(clip.id, trimStart, trimEnd),
         onSplit: () => onSplitClip(clip.id),
+        onRazorClick: (e: React.MouseEvent) => {
+          // Calculate cut time from click position
+          const rect = e.currentTarget.getBoundingClientRect();
+          const clickX = e.clientX - rect.left;
+          const clickTimeOffset = clickX / zoom;
+          const cutTime = clip.startTime + clickTimeOffset;
+          
+          // Ensure cut is within clip bounds (with small buffer)
+          const minTime = clip.startTime + 0.1;
+          const maxTime = clip.startTime + clip.duration - 0.1;
+          if (cutTime > minTime && cutTime < maxTime) {
+            onSplitClipAtTime(clip.id, cutTime);
+          }
+        },
         onToggleMute: () => onToggleClipMute(clip.id),
         onVolumeChange: (volume: number) => onUpdateClipVolume(clip.id, volume),
       };
     });
     
     return handlers;
-  }, [clips, onSelectClip, onRemoveClip, onMoveClip, onTrimClip, onSplitClip, onToggleClipMute, onUpdateClipVolume]);
+  }, [clips, zoom, onSelectClip, onRemoveClip, onMoveClip, onTrimClip, onSplitClip, onSplitClipAtTime, onToggleClipMute, onUpdateClipVolume]);
 
   // Determine if track is effectively muted (muted, or another track is soloed)
   const isEffectivelyMuted = track.muted || (hasSoloedTrack && !track.solo);
@@ -285,7 +306,10 @@ export const TimelineTrackComponent = memo(function TimelineTrackComponent({
       <div
         className={cn(
           "flex-1 relative h-16 bg-muted/20 group",
-          track.locked && "opacity-50 pointer-events-none"
+          track.locked && "opacity-50 pointer-events-none",
+          activeTool === "razor" && "cursor-scissors",
+          activeTool === "hand" && "cursor-grab-timeline",
+          activeTool === "range" && "cursor-range"
         )}
         onClick={handleTrackClick}
       >
@@ -300,11 +324,13 @@ export const TimelineTrackComponent = memo(function TimelineTrackComponent({
               clip={clip}
               zoom={zoom}
               isSelected={selectedClipIds.includes(clip.id)}
+              activeTool={activeTool}
               onSelect={handlers.onSelect}
               onRemove={handlers.onRemove}
               onMove={handlers.onMove}
               onTrim={handlers.onTrim}
               onSplit={handlers.onSplit}
+              onRazorClick={handlers.onRazorClick}
               onToggleMute={handlers.onToggleMute}
               onVolumeChange={handlers.onVolumeChange}
               snapEnabled={snapEnabled}
