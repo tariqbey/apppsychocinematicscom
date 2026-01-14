@@ -2,7 +2,7 @@ import { useState, useRef, useCallback, memo } from "react";
 import { Film, Image, Music, Volume2, VolumeX, Scissors, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { TimelineClip } from "@/hooks/useTimelineEditor";
-import { SimpleWaveform } from "./AudioWaveform";
+import { AudioWaveform, SimpleWaveform } from "./AudioWaveform";
 import { cn } from "@/lib/utils";
 
 interface SnapInfo {
@@ -231,13 +231,25 @@ export const TimelineClipComponent = memo(function TimelineClipComponent({
       onClick={onSelect}
     >
       {/* Waveform background for video/audio clips */}
-      {(clip.type === "video" || clip.type === "audio") && width > 40 && (
+      {clip.type === "audio" && width > 40 && (
+        <div className="absolute inset-0 flex items-center justify-center opacity-60 pointer-events-none">
+          <AudioWaveform
+            src={clip.sourceUrl}
+            duration={clip.duration}
+            width={Math.max(width - 8, 20)}
+            height={40}
+            color="hsl(var(--accent))"
+            backgroundColor="transparent"
+          />
+        </div>
+      )}
+      {clip.type === "video" && width > 40 && (
         <div className="absolute inset-0 flex items-center justify-center opacity-40 pointer-events-none">
           <SimpleWaveform
             width={Math.max(width - 8, 20)}
             height={40}
             bars={waveformBars}
-            color={clip.type === "video" ? "hsl(var(--primary))" : "hsl(var(--accent))"}
+            color="hsl(var(--primary))"
           />
         </div>
       )}
