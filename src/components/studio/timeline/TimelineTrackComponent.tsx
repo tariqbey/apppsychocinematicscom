@@ -25,6 +25,7 @@ interface TimelineTrackComponentProps {
   onTrimClip: (clipId: string, trimStart: number, trimEnd: number) => void;
   onSplitClip: (clipId: string) => void;
   onToggleClipMute: (clipId: string) => void;
+  onUpdateClipVolume: (clipId: string, volume: number) => void;
   onToggleTrackMute: () => void;
   onToggleTrackLock: () => void;
   onAddTransition: (clipAId: string, clipBId: string) => void;
@@ -49,6 +50,7 @@ export const TimelineTrackComponent = memo(function TimelineTrackComponent({
   onTrimClip,
   onSplitClip,
   onToggleClipMute,
+  onUpdateClipVolume,
   onToggleTrackMute,
   onToggleTrackLock,
   onAddTransition,
@@ -101,6 +103,7 @@ export const TimelineTrackComponent = memo(function TimelineTrackComponent({
       onTrim: (trimStart: number, trimEnd: number) => void;
       onSplit: () => void;
       onToggleMute: () => void;
+      onVolumeChange: (volume: number) => void;
     }> = {};
     
     clips.forEach(clip => {
@@ -114,11 +117,12 @@ export const TimelineTrackComponent = memo(function TimelineTrackComponent({
         onTrim: (trimStart: number, trimEnd: number) => onTrimClip(clip.id, trimStart, trimEnd),
         onSplit: () => onSplitClip(clip.id),
         onToggleMute: () => onToggleClipMute(clip.id),
+        onVolumeChange: (volume: number) => onUpdateClipVolume(clip.id, volume),
       };
     });
     
     return handlers;
-  }, [clips, onSelectClip, onRemoveClip, onMoveClip, onTrimClip, onSplitClip, onToggleClipMute]);
+  }, [clips, onSelectClip, onRemoveClip, onMoveClip, onTrimClip, onSplitClip, onToggleClipMute, onUpdateClipVolume]);
 
   return (
     <div className="flex border-b border-border/50">
@@ -179,6 +183,7 @@ export const TimelineTrackComponent = memo(function TimelineTrackComponent({
               onTrim={handlers.onTrim}
               onSplit={handlers.onSplit}
               onToggleMute={handlers.onToggleMute}
+              onVolumeChange={handlers.onVolumeChange}
               snapEnabled={snapEnabled}
               onSnapPreview={onSnapPreview}
               snapTime={snapTime}

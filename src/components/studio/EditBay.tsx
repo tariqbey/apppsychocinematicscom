@@ -7,14 +7,17 @@ import { VideoGenerator } from "./VideoGenerator";
 import { MediaLibrary } from "./MediaLibrary";
 import { TimelineEditor } from "./timeline/TimelineEditor";
 import { useToast } from "@/hooks/use-toast";
-interface EditBayProps {
+import { TimelineExportData } from "@/components/mind-movie/MindMovieScriptWizard";
+
+export interface EditBayProps {
   onClose: () => void;
   initialPrompt?: string;
+  timelineImportData?: TimelineExportData;
 }
 
-export function EditBay({ onClose, initialPrompt }: EditBayProps) {
+export function EditBay({ onClose, initialPrompt, timelineImportData }: EditBayProps) {
   const { toast } = useToast();
-  const [activeTab, setActiveTab] = useState("image");
+  const [activeTab, setActiveTab] = useState(timelineImportData ? "timeline" : "image");
   const [galleryKey, setGalleryKey] = useState(0);
   const previousTab = useRef(activeTab);
 

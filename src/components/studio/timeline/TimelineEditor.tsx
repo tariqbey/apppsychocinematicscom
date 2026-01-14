@@ -822,6 +822,9 @@ export function TimelineEditor({ onExport }: TimelineEditorProps) {
                       muted: !state.clips.find((c) => c.id === clipId)?.muted,
                     })
                   }
+                  onUpdateClipVolume={(clipId, volume) =>
+                    updateClip(clipId, { volume })
+                  }
                   onToggleTrackMute={() => toggleTrackMute(track.id)}
                   onToggleTrackLock={() => toggleTrackLock(track.id)}
                   onAddTransition={addTransition}

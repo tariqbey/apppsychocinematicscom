@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { X, ChevronLeft, ChevronRight, Sparkles, Save, Clapperboard, Palette, Layout, Wand2, Music, Check, RefreshCw, Plus, User, ChevronDown, Trash2, HelpCircle, ExternalLink } from "lucide-react";
+import { X, ChevronLeft, ChevronRight, Sparkles, Save, Clapperboard, Palette, Layout, Wand2, Music, Check, RefreshCw, Plus, User, ChevronDown, Trash2, HelpCircle, ExternalLink, Film } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
@@ -70,6 +70,12 @@ const removePersonaFromStorage = (personaId: string) => {
   localStorage.setItem(PERSONA_STORAGE_KEY, JSON.stringify(personas));
 };
 
+export interface TimelineExportData {
+  scenes: Scene[];
+  soundtrackUrl?: string | null;
+  title?: string;
+}
+
 interface MindMovieScriptWizardProps {
   isOpen: boolean;
   onClose: () => void;
@@ -81,6 +87,7 @@ interface MindMovieScriptWizardProps {
   };
   movieId?: string;
   onOpenEditBay?: (prompt: string) => void;
+  onAddToTimeline?: (data: TimelineExportData) => void;
 }
 
 const VISUAL_STYLES = [
@@ -98,6 +105,7 @@ export function MindMovieScriptWizard({
   chiefAim,
   movieId,
   onOpenEditBay,
+  onAddToTimeline,
 }: MindMovieScriptWizardProps) {
   const [step, setStep] = useState(1);
   const [visualStyle, setVisualStyle] = useState("cinematic");
@@ -372,6 +380,30 @@ export function MindMovieScriptWizard({
     await saveLyrics(currentScript.id, generatedLyrics);
   };
 
+  const handleAddToTimeline = useCallback(() => {
+    if (generatedScenes.length === 0) {
+      toast.error("Please generate scenes first");
+      return;
+    }
+    
+    // Get the best available soundtrack URL
+    const bestSoundtrack = songs.length > 0 
+      ? songs.find(s => s.soundtrackUrl)?.soundtrackUrl 
+      : soundtrackUrl;
+    
+    if (onAddToTimeline) {
+      onAddToTimeline({
+        scenes: generatedScenes,
+        soundtrackUrl: bestSoundtrack,
+        title: generatedTitle,
+      });
+      onClose();
+      toast.success("Adding scenes to timeline...");
+    } else {
+      toast.error("Timeline feature not available");
+    }
+  }, [generatedScenes, songs, soundtrackUrl, generatedTitle, onAddToTimeline, onClose]);
+
   if (!isOpen) return null;
 
   const totalSteps = 4;
@@ -626,10 +658,22 @@ export function MindMovieScriptWizard({
                       {generatedScenes.length} scenes • Click to edit or copy prompts
                     </p>
                   </div>
-                  <Button onClick={handleSaveStoryboard} disabled={isLoading}>
-                    <Save className="w-4 h-4 mr-2" />
-                    {isLoading ? "Saving..." : "Save Storyboard"}
-                  </Button>
+                  <div className="flex gap-2">
+                    {onAddToTimeline && (
+                      <Button 
+                        onClick={handleAddToTimeline} 
+                        variant="outline"
+                        disabled={generatedScenes.length === 0}
+                      >
+                        <Film className="w-4 h-4 mr-2" />
+                        Add to Timeline
+                      </Button>
+                    )}
+                    <Button onClick={handleSaveStoryboard} disabled={isLoading}>
+                      <Save className="w-4 h-4 mr-2" />
+                      {isLoading ? "Saving..." : "Save Storyboard"}
+                    </Button>
+                  </div>
                 </div>
 
                 <StoryboardGrid
@@ -1259,10 +1303,22 @@ export function MindMovieScriptWizard({
             )}
 
             {step === 4 && (
-              <Button onClick={onClose}>
-                Done
-                <ChevronRight className="w-4 h-4 ml-1" />
-              </Button>
+              <div className="flex gap-2">
+                {onAddToTimeline && (
+                  <Button 
+                    onClick={handleAddToTimeline}
+                    variant="default"
+                    className="bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700"
+                  >
+                    <Film className="w-4 h-4 mr-2" />
+                    Add All to Timeline
+                  </Button>
+                )}
+                <Button onClick={onClose} variant="outline">
+                  Done
+                  <ChevronRight className="w-4 h-4 ml-1" />
+                </Button>
+              </div>
             )}
           </div>
         </div>
