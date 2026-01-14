@@ -27,11 +27,21 @@ export function TimelinePreview({
 }: TimelinePreviewProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const bgAudioRef = useRef<HTMLAudioElement>(null);
+  const audioClipRefs = useRef<Record<string, HTMLAudioElement | null>>({});
   const canvasRef = useRef<HTMLCanvasElement>(null);
+
   const [activeClip, setActiveClip] = useState<TimelineClip | null>(null);
   const lastSyncTimeRef = useRef<number>(0);
   const wasPlayingRef = useRef<boolean>(false);
+  const audioWasPlayingRef = useRef<boolean>(false);
   const activeClipIdRef = useRef<string | null>(null);
+
+  const setAudioClipRef = useCallback(
+    (clipId: string) => (el: HTMLAudioElement | null) => {
+      audioClipRefs.current[clipId] = el;
+    },
+    []
+  );
 
   // Find active video/image clip at current time
   useEffect(() => {
@@ -132,6 +142,65 @@ export function TimelinePreview({
     }
   }, [backgroundAudio, currentTime, isPlaying]);
 
+  // Sync timeline audio clips (audio tracks) with timeline
+  useEffect(() => {
+    const audioClips = clips.filter((c) => c.type === "audio");
+
+    // Pause/cleanup refs for removed clips
+    const audioClipIds = new Set(audioClips.map((c) => c.id));
+    Object.keys(audioClipRefs.current).forEach((id) => {
+      if (!audioClipIds.has(id)) {
+        audioClipRefs.current[id]?.pause();
+        delete audioClipRefs.current[id];
+      }
+    });
+
+    audioClips.forEach((clip) => {
+      const audio = audioClipRefs.current[clip.id];
+      if (!audio) return;
+
+      const isActive =
+        currentTime >= clip.startTime &&
+        currentTime < clip.startTime + clip.duration;
+
+      const effectiveVolume = getEffectiveVolume(clip);
+      audio.volume = effectiveVolume;
+      audio.muted = effectiveVolume === 0;
+
+      if (!isActive) {
+        audio.pause();
+        try {
+          if (audio.currentTime !== 0) audio.currentTime = 0;
+        } catch {
+          // ignore
+        }
+        return;
+      }
+
+      const expectedTime = getExpectedClipTime(clip, currentTime);
+      const clampedExpected = Math.max(0, expectedTime);
+
+      if (isPlaying) {
+        const drift = Math.abs(audio.currentTime - clampedExpected);
+        if (!audioWasPlayingRef.current || drift > SEEK_THRESHOLD) {
+          audio.currentTime = clampedExpected;
+        }
+
+        if (effectiveVolume > 0 && audio.paused) {
+          audio.play().catch(() => {});
+        }
+      } else {
+        audio.pause();
+        const drift = Math.abs(audio.currentTime - clampedExpected);
+        if (drift > 0.05) {
+          audio.currentTime = clampedExpected;
+        }
+      }
+    });
+
+    audioWasPlayingRef.current = isPlaying;
+  }, [clips, currentTime, isPlaying, getExpectedClipTime, getEffectiveVolume]);
+
   // Render image to canvas if active clip is image
   useEffect(() => {
     if (!canvasRef.current || !activeClip || activeClip.type !== "image") return;
@@ -181,6 +250,19 @@ export function TimelinePreview({
           <p className="text-sm">No clip at current time</p>
         </div>
       )}
+
+      {/* Timeline audio clips */}
+      {clips
+        .filter((c) => c.type === "audio")
+        .map((clip) => (
+          <audio
+            key={clip.id}
+            ref={setAudioClipRef(clip.id)}
+            src={clip.sourceUrl}
+            preload="auto"
+            crossOrigin="anonymous"
+          />
+        ))}
 
       {/* Background audio */}
       {backgroundAudio.url && (
