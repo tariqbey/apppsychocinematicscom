@@ -906,40 +906,40 @@ export function TimelineEditor({
 
   // Handle export (download)
   const handleExport = useCallback(async () => {
-    const url = await exportTimeline(
+    const result = await exportTimeline(
       state.clips,
       state.duration,
       state.backgroundAudio,
       { resolution: exportQuality, fps: 30, tracks: state.tracks, masterVolume: state.masterVolume }
     );
 
-    if (url) {
-      setLastExportedUrl(url);
+    if (result) {
+      setLastExportedUrl(result.url);
       toast({
         title: "Export complete!",
         description: `Your ${exportQuality} video is ready to download.`,
       });
-      onExport?.(url);
+      onExport?.(result.url);
 
       // Trigger download
       const a = document.createElement("a");
-      a.href = url;
-      a.download = `timeline-export-${exportQuality}-${Date.now()}.webm`;
+      a.href = result.url;
+      a.download = `timeline-export-${exportQuality}-${Date.now()}.${result.fileExt}`;
       a.click();
     }
   }, [state.clips, state.duration, state.backgroundAudio, state.tracks, state.masterVolume, exportTimeline, onExport, toast, exportQuality]);
 
   // Handle export and save to vault
   const handleExportAndSave = useCallback(async () => {
-    const url = await exportTimeline(
+    const result = await exportTimeline(
       state.clips,
       state.duration,
       state.backgroundAudio,
       { resolution: exportQuality, fps: 30, tracks: state.tracks, masterVolume: state.masterVolume }
     );
 
-    if (url) {
-      setLastExportedUrl(url);
+    if (result) {
+      setLastExportedUrl(result.url);
       setShowSaveToVault(true);
     }
   }, [state.clips, state.duration, state.backgroundAudio, state.tracks, state.masterVolume, exportTimeline, exportQuality]);
