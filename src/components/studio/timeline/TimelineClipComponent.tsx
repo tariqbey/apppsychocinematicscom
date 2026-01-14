@@ -323,17 +323,16 @@ export const TimelineClipComponent = memo(function TimelineClipComponent({
         </div>
       )}
 
-      {/* Waveform background for audio clips */}
+      {/* Waveform background for audio clips - always visible */}
       {clip.type === "audio" && (
-        <div className="absolute inset-0 z-0 flex items-center justify-center pointer-events-none px-2">
-          <AudioWaveform
-            src={clip.sourceUrl}
-            duration={clip.duration}
-            width={Math.max(width - 16, 20)}
-            height={44}
+        <div className="absolute inset-0 z-0 flex items-center justify-center pointer-events-none px-1">
+          {/* Use SimpleWaveform as a reliable always-visible fallback */}
+          <SimpleWaveform
+            width={Math.max(width - 8, 20)}
+            height={48}
+            bars={Math.max(8, Math.floor(width / 6))}
             color="hsl(var(--primary))"
-            backgroundColor="transparent"
-            className="opacity-80"
+            className="opacity-90"
           />
         </div>
       )}

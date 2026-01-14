@@ -19,6 +19,7 @@ import {
   Save,
   FileDown,
   GripHorizontal,
+  Scissors,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
@@ -148,6 +149,7 @@ export function TimelineEditor({ onExport, importData, onImportComplete, onClose
   const [rangeSelection, setRangeSelection] = useState<{ start: number; end: number } | null>(null);
   const [snapPreviewLines, setSnapPreviewLines] = useState<SnapInfo[]>([]);
   const [showSaveToVault, setShowSaveToVault] = useState(false);
+  const [razorPreviewX, setRazorPreviewX] = useState<number | null>(null);
   const [lastExportedUrl, setLastExportedUrl] = useState<string | null>(null);
   const [isImporting, setIsImporting] = useState(false);
   const [importProgress, setImportProgress] = useState(0);
@@ -1108,7 +1110,23 @@ export function TimelineEditor({ onExport, importData, onImportComplete, onClose
               )}
               style={{ width: `${Math.max(state.duration, 60) * state.zoom + 150}px` }}
               onClick={handleTimelineClick}
+              onMouseMove={(e) => {
+                if (activeTool === "razor" && timelineRef.current) {
+                  const rect = timelineRef.current.getBoundingClientRect();
+                  setRazorPreviewX(e.clientX - rect.left);
+                }
+              }}
+              onMouseLeave={() => setRazorPreviewX(null)}
             >
+              {/* Razor cut preview line */}
+              {activeTool === "razor" && razorPreviewX !== null && (
+                <div 
+                  className="razor-cut-line"
+                  style={{ left: `${razorPreviewX}px` }}
+                >
+                  <Scissors className="absolute -top-1 -left-2.5 h-5 w-5 text-destructive drop-shadow-lg" />
+                </div>
+              )}
               {/* Ruler */}
               <div className="sticky top-0 z-10 bg-card/95 backdrop-blur-sm border-b border-border/50">
                 <div className="ml-20">
