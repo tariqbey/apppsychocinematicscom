@@ -26,33 +26,80 @@ interface AudioClipState {
 let ffmpegSingleton: any | null = null;
 let ffmpegLoadPromise: Promise<any> | null = null;
 
+function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(`${label} timed out`)), ms);
+    promise.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (err) => {
+        clearTimeout(timer);
+        reject(err);
+      }
+    );
+  });
+}
+
 async function getFFmpeg() {
   if (ffmpegSingleton) return ffmpegSingleton;
   if (ffmpegLoadPromise) return ffmpegLoadPromise;
 
   ffmpegLoadPromise = (async () => {
-    const [{ FFmpeg }, { fetchFile }] = await Promise.all([
-      import("@ffmpeg/ffmpeg"),
-      import("@ffmpeg/util"),
-    ]);
+    try {
+      const [{ FFmpeg }, { fetchFile, toBlobURL }] = await Promise.all([
+        import("@ffmpeg/ffmpeg"),
+        import("@ffmpeg/util"),
+      ]);
 
-    const ffmpeg = new FFmpeg();
+      const ffmpeg = new FFmpeg();
 
-    // Prefer direct URLs (avoids blob-import restrictions in some environments)
-    const baseURL = "https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd";
+      // Keep versions in the 0.12 line to match @ffmpeg/ffmpeg 0.12.x
+      const baseURL = "https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd";
 
-    await ffmpeg.load({
-      coreURL: `${baseURL}/ffmpeg-core.js`,
-      wasmURL: `${baseURL}/ffmpeg-core.wasm`,
-    });
+      // Try direct URLs first; if blocked in the environment, fall back to blob URLs.
+      try {
+        await withTimeout(
+          ffmpeg.load({
+            coreURL: `${baseURL}/ffmpeg-core.js`,
+            wasmURL: `${baseURL}/ffmpeg-core.wasm`,
+          }),
+          20_000,
+          "FFmpeg load"
+        );
+      } catch {
+        await withTimeout(
+          (async () => {
+            const coreURL = await withTimeout(
+              toBlobURL(`${baseURL}/ffmpeg-core.js`, "text/javascript"),
+              20_000,
+              "FFmpeg core fetch"
+            );
+            const wasmURL = await withTimeout(
+              toBlobURL(`${baseURL}/ffmpeg-core.wasm`, "application/wasm"),
+              20_000,
+              "FFmpeg wasm fetch"
+            );
+            await ffmpeg.load({ coreURL, wasmURL });
+          })(),
+          25_000,
+          "FFmpeg load (fallback)"
+        );
+      }
 
-    // Attach helper for fetchFile so we can reuse it.
-    (ffmpeg as any).__fetchFile = fetchFile;
+      // Attach helper for fetchFile so we can reuse it.
+      (ffmpeg as any).__fetchFile = fetchFile;
 
-    ffmpegSingleton = ffmpeg;
-    return ffmpeg;
+      ffmpegSingleton = ffmpeg;
+      return ffmpeg;
+    } catch (e) {
+      // If load fails (or hangs), allow retries on next attempt.
+      ffmpegSingleton = null;
+      ffmpegLoadPromise = null;
+      throw e;
+    }
   })();
-
 
   return ffmpegLoadPromise;
 }
@@ -173,7 +220,7 @@ async function transcodeToMp4Cfr(
   let lastErr: unknown = null;
   for (const args of commandVariants) {
     try {
-      await ffmpeg.exec(args);
+      await withTimeout(ffmpeg.exec(args), 240_000, "FFmpeg transcode");
       const out = await ffmpeg.readFile(outputName);
       // Cleanup files
       await Promise.allSettled([
