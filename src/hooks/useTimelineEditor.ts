@@ -29,6 +29,9 @@ export interface TimelineClip {
   // Audio settings
   muted: boolean;
   volume: number;
+  // Fade settings (in seconds)
+  fadeIn: number;
+  fadeOut: number;
   // Thumbnail for display
   thumbnail?: string;
 }
@@ -195,6 +198,8 @@ export function useTimelineEditor() {
           trackId: track.id,
           muted: false,
           volume: 1,
+          fadeIn: 0,
+          fadeOut: 0,
           thumbnail,
         };
 
