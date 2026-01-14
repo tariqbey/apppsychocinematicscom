@@ -63,13 +63,13 @@ export function useTimelineExport() {
           throw new Error("Failed to create canvas context");
         }
 
-        // Create audio context for mixing
+        // Create audio context for mixing (NOT connected to speakers - silent export)
         const audioContext = new AudioContext();
         const audioDestination = audioContext.createMediaStreamDestination();
         const masterGain = audioContext.createGain();
         masterGain.gain.value = masterVolume;
         masterGain.connect(audioDestination);
-        masterGain.connect(audioContext.destination); // So we can hear during export
+        // DO NOT connect to audioContext.destination - we want silent rendering
 
         // Check if any track is soloed
         const hasSoloedTrack = tracks.some((t) => t.solo);
@@ -196,14 +196,25 @@ export function useTimelineExport() {
           ...audioDestination.stream.getAudioTracks(),
         ]);
 
-        // Set up MediaRecorder
-        const mimeType = MediaRecorder.isTypeSupported("video/webm;codecs=vp9,opus")
+        // Set up MediaRecorder with compatible codecs
+        const mimeType = MediaRecorder.isTypeSupported("video/webm;codecs=vp8,opus")
+          ? "video/webm;codecs=vp8,opus"  // VP8 has better playback compatibility
+          : MediaRecorder.isTypeSupported("video/webm;codecs=vp9,opus")
           ? "video/webm;codecs=vp9,opus"
-          : "video/webm";
+          : MediaRecorder.isTypeSupported("video/webm")
+          ? "video/webm"
+          : "video/mp4";
+
+        // Bitrate settings per resolution
+        const bitrates = {
+          "720p": 5000000,   // 5 Mbps
+          "1080p": 8000000,  // 8 Mbps
+          "4K": 25000000     // 25 Mbps
+        };
 
         const recorder = new MediaRecorder(combinedStream, {
           mimeType,
-          videoBitsPerSecond: resolution === "1080p" ? 8000000 : 5000000,
+          videoBitsPerSecond: bitrates[resolution] || 8000000,
         });
 
         const chunks: Blob[] = [];
