@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback, memo } from "react";
 import { Film, Image, Music, Volume2, VolumeX, Scissors, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Slider } from "@/components/ui/slider";
 import { TimelineClip } from "@/hooks/useTimelineEditor";
 import { AudioWaveform, SimpleWaveform } from "./AudioWaveform";
 import { cn } from "@/lib/utils";
@@ -20,6 +21,7 @@ interface TimelineClipComponentProps {
   onTrim: (trimStart: number, trimEnd: number) => void;
   onSplit: () => void;
   onToggleMute: () => void;
+  onVolumeChange?: (volume: number) => void;
   snapEnabled?: boolean;
   onSnapPreview?: (lines: SnapInfo[]) => void;
   snapTime?: (time: number, excludeClipId?: string) => { snappedTime: number; didSnap: boolean; snapType: string | null };
@@ -61,6 +63,7 @@ export const TimelineClipComponent = memo(function TimelineClipComponent({
   onTrim,
   onSplit,
   onToggleMute,
+  onVolumeChange,
   snapEnabled = true,
   onSnapPreview,
   snapTime,
@@ -211,6 +214,10 @@ export const TimelineClipComponent = memo(function TimelineClipComponent({
     onRemove();
   }, [onRemove]);
 
+  const handleVolumeChange = useCallback((value: number[]) => {
+    onVolumeChange?.(value[0]);
+  }, [onVolumeChange]);
+
   return (
     <div
       ref={clipRef}
@@ -296,15 +303,38 @@ export const TimelineClipComponent = memo(function TimelineClipComponent({
       {isSelected && (
         <div className="absolute -top-8 left-0 flex items-center gap-1 bg-card border border-border rounded-md p-1 shadow-lg z-30">
           {clip.type !== "image" && (
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-6 w-6"
-              onClick={handleMuteClick}
-              title={clip.muted ? "Unmute" : "Mute"}
-            >
-              {clip.muted ? <VolumeX className="h-3 w-3" /> : <Volume2 className="h-3 w-3" />}
-            </Button>
+            <>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6"
+                onClick={handleMuteClick}
+                title={clip.muted ? "Unmute" : "Mute"}
+              >
+                {clip.muted ? <VolumeX className="h-3 w-3" /> : <Volume2 className="h-3 w-3" />}
+              </Button>
+              {/* Volume slider for audio/video clips */}
+              {onVolumeChange && (
+                <div 
+                  className="flex items-center gap-1 px-1"
+                  onClick={(e) => e.stopPropagation()}
+                  onMouseDown={(e) => e.stopPropagation()}
+                >
+                  <Slider
+                    value={[clip.volume]}
+                    onValueChange={handleVolumeChange}
+                    min={0}
+                    max={1}
+                    step={0.05}
+                    className="w-16"
+                    disabled={clip.muted}
+                  />
+                  <span className="text-xs text-muted-foreground w-6">
+                    {Math.round(clip.volume * 100)}%
+                  </span>
+                </div>
+              )}
+            </>
           )}
           <Button
             variant="ghost"

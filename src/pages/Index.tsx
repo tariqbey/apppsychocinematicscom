@@ -10,7 +10,7 @@ import { EditBay } from "@/components/studio/EditBay";
 import { DirectorAIAgent } from "@/components/director-ai/DirectorAIAgent";
 import { DailyScorecard } from "@/components/scorecard/DailyScorecard";
 import { ChiefAimWizard } from "@/components/chief-aim/ChiefAimWizard";
-import { MindMovieScriptWizard } from "@/components/mind-movie/MindMovieScriptWizard";
+import { MindMovieScriptWizard, TimelineExportData } from "@/components/mind-movie/MindMovieScriptWizard";
 import { MovieVault } from "@/components/mind-movie/MovieVault";
 import { ThreeThings } from "@/components/tasks/ThreeThings";
 import { AuthModal } from "@/components/auth/AuthModal";
@@ -34,6 +34,7 @@ const Index = () => {
   const [showMovieVault, setShowMovieVault] = useState(false);
   const [selectedMovieId, setSelectedMovieId] = useState<string | undefined>();
   const [editBayInitialPrompt, setEditBayInitialPrompt] = useState<string | undefined>();
+  const [timelineExportData, setTimelineExportData] = useState<TimelineExportData | undefined>();
 
   const { user, loading: authLoading } = useAuth();
   const { profile, loading: profileLoading, updateProfile } = useUserProfile();
@@ -60,6 +61,12 @@ const Index = () => {
     await refreshData();
     await checkAndAwardBadges();
   }, [refreshData, checkAndAwardBadges]);
+
+  const handleAddToTimeline = useCallback((data: TimelineExportData) => {
+    setTimelineExportData(data);
+    setShowMindMovieWizard(false);
+    setShowEditBay(true);
+  }, []);
 
   const handleSaveChiefAim = useCallback(async (aim: { what: string; byWhen: string; exchange: string; plan: string }) => {
     await updateProfile({
@@ -227,8 +234,10 @@ const Index = () => {
           onClose={() => {
             setShowEditBay(false);
             setEditBayInitialPrompt(undefined);
+            setTimelineExportData(undefined);
           }}
           initialPrompt={editBayInitialPrompt}
+          timelineImportData={timelineExportData}
         />
       )}
 
@@ -263,6 +272,7 @@ const Index = () => {
             setShowEditBay(true);
             setShowMindMovieWizard(false);
           }}
+          onAddToTimeline={handleAddToTimeline}
         />
       )}
 
