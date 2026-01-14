@@ -40,6 +40,7 @@ export function MediaLibrary({ filter = "all", onSelect, onAddToTimeline, onAddM
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [sortBy, setSortBy] = useState<"date" | "type">("date");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
+  const [filterType, setFilterType] = useState<"all" | "video" | "image" | "audio">("all");
   const { fetchGenerationHistory } = useMediaGeneration();
   const { toast } = useToast();
   const { user, loading: authLoading } = useAuth();
@@ -140,9 +141,14 @@ export function MediaLibrary({ filter = "all", onSelect, onAddToTimeline, onAddM
     }
   };
 
-  const filteredHistory = filter === "all" 
+  // Apply both prop filter and local filterType
+  const baseFiltered = filter === "all" 
     ? history 
     : history.filter(item => item.media_type === filter);
+  
+  const filteredHistory = filterType === "all" 
+    ? baseFiltered 
+    : baseFiltered.filter(item => item.media_type === filterType);
 
   // Sort the filtered history
   const sortedHistory = useMemo(() => {
@@ -458,8 +464,21 @@ export function MediaLibrary({ filter = "all", onSelect, onAddToTimeline, onAddM
             )}
           </div>
           <div className="flex items-center gap-1">
+            {/* Filter by type */}
+            <Select value={filterType} onValueChange={(v) => setFilterType(v as "all" | "video" | "image" | "audio")}>
+              <SelectTrigger className="h-7 w-20 text-xs">
+                <SelectValue placeholder="Filter" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All</SelectItem>
+                <SelectItem value="video">Video</SelectItem>
+                <SelectItem value="image">Image</SelectItem>
+                <SelectItem value="audio">Audio</SelectItem>
+              </SelectContent>
+            </Select>
+            {/* Sort by */}
             <Select value={sortBy} onValueChange={(v) => setSortBy(v as "date" | "type")}>
-              <SelectTrigger className="h-7 w-24 text-xs">
+              <SelectTrigger className="h-7 w-20 text-xs">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
