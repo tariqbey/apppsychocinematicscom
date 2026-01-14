@@ -1,4 +1,4 @@
-import { useRef, useEffect, useState } from "react";
+import { useRef, useEffect, useState, useCallback } from "react";
 import { TimelineClip } from "@/hooks/useTimelineEditor";
 
 interface TimelinePreviewProps {
@@ -12,6 +12,9 @@ interface TimelinePreviewProps {
   };
 }
 
+// Threshold for determining if we need to seek (in seconds)
+const SEEK_THRESHOLD = 0.3;
+
 export function TimelinePreview({
   clips,
   currentTime,
@@ -19,10 +22,12 @@ export function TimelinePreview({
   backgroundAudio,
 }: TimelinePreviewProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const audioRef = useRef<HTMLAudioElement>(null);
   const bgAudioRef = useRef<HTMLAudioElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [activeClip, setActiveClip] = useState<TimelineClip | null>(null);
+  const lastSyncTimeRef = useRef<number>(0);
+  const wasPlayingRef = useRef<boolean>(false);
+  const activeClipIdRef = useRef<string | null>(null);
 
   // Find active video/image clip at current time
   useEffect(() => {
@@ -34,32 +39,75 @@ export function TimelinePreview({
     setActiveClip(active || null);
   }, [clips, currentTime]);
 
-  // Sync video playback with timeline
+  // Calculate expected clip time
+  const getExpectedClipTime = useCallback((clip: TimelineClip, timelineTime: number) => {
+    return timelineTime - clip.startTime + clip.trimStart;
+  }, []);
+
+  // Sync video playback with timeline - optimized to avoid stuttering
   useEffect(() => {
     if (!videoRef.current || !activeClip || activeClip.type !== "video") return;
 
-    const clipTime = currentTime - activeClip.startTime + activeClip.trimStart;
+    const video = videoRef.current;
+    const expectedClipTime = getExpectedClipTime(activeClip, currentTime);
+    
+    // Check if we switched to a different clip
+    const clipChanged = activeClipIdRef.current !== activeClip.id;
+    activeClipIdRef.current = activeClip.id;
 
     if (isPlaying) {
-      videoRef.current.currentTime = clipTime;
-      videoRef.current.play().catch(() => {});
+      // If we just started playing, switched clips, or drifted too far, seek
+      const currentVideoTime = video.currentTime;
+      const drift = Math.abs(currentVideoTime - expectedClipTime);
+      
+      if (!wasPlayingRef.current || clipChanged || drift > SEEK_THRESHOLD) {
+        video.currentTime = expectedClipTime;
+        lastSyncTimeRef.current = currentTime;
+      }
+      
+      // Start playing if not already
+      if (video.paused) {
+        video.play().catch(() => {});
+      }
     } else {
-      videoRef.current.pause();
-      videoRef.current.currentTime = clipTime;
+      // When paused, always seek to exact position
+      video.pause();
+      
+      // Only seek if position changed significantly (prevents micro-stutters)
+      const drift = Math.abs(video.currentTime - expectedClipTime);
+      if (drift > 0.05 || clipChanged) {
+        video.currentTime = expectedClipTime;
+      }
     }
-  }, [activeClip, currentTime, isPlaying]);
 
-  // Sync background audio
+    wasPlayingRef.current = isPlaying;
+  }, [activeClip, currentTime, isPlaying, getExpectedClipTime]);
+
+  // Sync background audio - optimized similarly
   useEffect(() => {
     if (!bgAudioRef.current || !backgroundAudio.url) return;
 
-    bgAudioRef.current.volume = backgroundAudio.muted ? 0 : backgroundAudio.volume;
+    const audio = bgAudioRef.current;
+    audio.volume = backgroundAudio.muted ? 0 : backgroundAudio.volume;
 
     if (isPlaying) {
-      bgAudioRef.current.currentTime = currentTime;
-      bgAudioRef.current.play().catch(() => {});
+      const drift = Math.abs(audio.currentTime - currentTime);
+      
+      // Only seek if drifted too far
+      if (drift > SEEK_THRESHOLD) {
+        audio.currentTime = currentTime;
+      }
+      
+      if (audio.paused) {
+        audio.play().catch(() => {});
+      }
     } else {
-      bgAudioRef.current.pause();
+      audio.pause();
+      // Seek to exact position when paused
+      const drift = Math.abs(audio.currentTime - currentTime);
+      if (drift > 0.05) {
+        audio.currentTime = currentTime;
+      }
     }
   }, [backgroundAudio, currentTime, isPlaying]);
 
@@ -90,6 +138,7 @@ export function TimelinePreview({
           className="w-full h-full object-contain"
           muted={activeClip.muted}
           playsInline
+          preload="auto"
         />
       )}
 
@@ -107,7 +156,7 @@ export function TimelinePreview({
 
       {/* Background audio */}
       {backgroundAudio.url && (
-        <audio ref={bgAudioRef} src={backgroundAudio.url} loop />
+        <audio ref={bgAudioRef} src={backgroundAudio.url} loop preload="auto" />
       )}
 
       {/* Time display */}
