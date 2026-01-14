@@ -48,13 +48,17 @@ export function TimelinePreview({
     return tracks.find((t) => t.id === clip.trackId);
   }, [tracks]);
 
-  // Calculate effective volume (clip volume * track volume, considering mutes)
-  // Calculate effective volume (clip volume * track volume * master volume, considering mutes)
+  // Check if any track is soloed
+  const hasSoloedTrack = tracks.some((t) => t.solo);
+
+  // Calculate effective volume (clip volume * track volume * master volume, considering mutes and solo)
   const getEffectiveVolume = useCallback((clip: TimelineClip) => {
     const track = getTrackForClip(clip);
     if (!track || track.muted || clip.muted) return 0;
+    // If any track is soloed, only soloed tracks are heard
+    if (hasSoloedTrack && !track.solo) return 0;
     return clip.volume * track.volume * masterVolume;
-  }, [getTrackForClip, masterVolume]);
+  }, [getTrackForClip, masterVolume, hasSoloedTrack]);
 
   // Calculate expected clip time
   const getExpectedClipTime = useCallback((clip: TimelineClip, timelineTime: number) => {

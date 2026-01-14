@@ -40,6 +40,7 @@ import { TimelineTrackComponent } from "./TimelineTrackComponent";
 import { TimelineRuler } from "./TimelineRuler";
 import { TimelinePreview } from "./TimelinePreview";
 import { AudioWaveform } from "./AudioWaveform";
+import { MediaLibrary } from "@/components/studio/MediaLibrary";
 import { TimelineToolbar, EditingTool } from "./TimelineToolbar";
 import { SaveToVaultDialog } from "./SaveToVaultDialog";
 import { TimelineMinimap } from "./TimelineMinimap";
@@ -95,9 +96,11 @@ export function TimelineEditor({ onExport, importData, onImportComplete, onClose
     toggleBackgroundAudioMute,
     toggleTrackMute,
     toggleTrackLock,
+    toggleTrackSolo,
     setTrackVolume,
     addTrack,
     removeTrack,
+    reorderTrack,
     setMasterVolume,
     clearTimeline,
     addTransition,
@@ -119,8 +122,6 @@ export function TimelineEditor({ onExport, importData, onImportComplete, onClose
   const [activeTool, setActiveTool] = useState<EditingTool>("select");
   const [snapEnabled, setSnapEnabled] = useState(true);
   const [showMediaBrowser, setShowMediaBrowser] = useState(false);
-  const [mediaLibrary, setMediaLibrary] = useState<GeneratedMedia[]>([]);
-  const [isLoadingLibrary, setIsLoadingLibrary] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
   const [rangeSelection, setRangeSelection] = useState<{ start: number; end: number } | null>(null);
   const [snapPreviewLines, setSnapPreviewLines] = useState<SnapInfo[]>([]);
@@ -129,6 +130,8 @@ export function TimelineEditor({ onExport, importData, onImportComplete, onClose
   const [isImporting, setIsImporting] = useState(false);
   const [importProgress, setImportProgress] = useState(0);
   const [visibleRange, setVisibleRange] = useState({ start: 0, end: 60 });
+  const [draggingTrackId, setDraggingTrackId] = useState<string | null>(null);
+  const [dragOverTrackIndex, setDragOverTrackIndex] = useState<number | null>(null);
   const hasImportedRef = useRef(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const audioInputRef = useRef<HTMLInputElement>(null);
@@ -544,17 +547,6 @@ export function TimelineEditor({ onExport, importData, onImportComplete, onClose
       });
     }
   }, [addClip, setBackgroundAudio, toast]);
-
-  // Load media library
-  const loadMediaLibrary = useCallback(async () => {
-    setIsLoadingLibrary(true);
-    const history = await fetchGenerationHistory();
-    setMediaLibrary(
-      history.filter((m) => m.status === "completed" && m.media_url)
-    );
-    setIsLoadingLibrary(false);
-  }, [fetchGenerationHistory]);
-
   // Handle file upload
   const handleFileUpload = useCallback(
     async (files: FileList | null, isAudio: boolean = false) => {
@@ -634,6 +626,48 @@ export function TimelineEditor({ onExport, importData, onImportComplete, onClose
       toast({
         title: "Clip added",
         description: "Added to timeline",
+      });
+    },
+    [addClip, toast]
+  );
+
+  // Add multiple clips from media library
+  const handleAddMultipleFromLibrary = useCallback(
+    async (mediaItems: GeneratedMedia[]) => {
+      setShowMediaBrowser(false);
+      
+      for (const media of mediaItems) {
+        if (!media.media_url) continue;
+
+        const type = media.media_type === "image" ? "image" : "video";
+        let duration = 5;
+
+        if (type === "video") {
+          const video = document.createElement("video");
+          video.src = media.media_url;
+          await new Promise<void>((resolve) => {
+            video.onloadedmetadata = () => {
+              duration = video.duration;
+              resolve();
+            };
+            video.onerror = () => resolve();
+            setTimeout(resolve, 2000);
+          });
+        }
+
+        let thumbnail: string | undefined;
+        if (type === "video") {
+          thumbnail = await generateVideoThumbnail(media.media_url);
+        } else {
+          thumbnail = media.media_url;
+        }
+
+        await addClip(media.media_url, type, media.prompt?.substring(0, 30) + "..." || "Clip", duration, thumbnail);
+      }
+
+      toast({
+        title: "Clips added",
+        description: `${mediaItems.length} item(s) added to timeline`,
       });
     },
     [addClip, toast]
@@ -814,46 +848,20 @@ export function TimelineEditor({ onExport, importData, onImportComplete, onClose
 
           <Dialog open={showMediaBrowser} onOpenChange={setShowMediaBrowser}>
             <DialogTrigger asChild>
-              <Button variant="ghost" size="sm" className="h-8" onClick={() => { loadMediaLibrary(); setShowMediaBrowser(true); }}>
+              <Button variant="ghost" size="sm" className="h-8" onClick={() => setShowMediaBrowser(true)}>
                 <FolderOpen className="h-3.5 w-3.5 mr-1" />
                 Gallery
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-2xl max-h-[70vh]">
+            <DialogContent className="max-w-3xl max-h-[80vh]">
               <DialogHeader>
                 <DialogTitle>Add from Gallery</DialogTitle>
               </DialogHeader>
-              <ScrollArea className="h-[50vh]">
-                {isLoadingLibrary ? (
-                  <div className="flex items-center justify-center py-8">
-                    <Loader2 className="h-6 w-6 animate-spin" />
-                  </div>
-                ) : mediaLibrary.length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <p>No media in gallery</p>
-                    <p className="text-sm">Generate some images or videos first</p>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-3 gap-3 p-1">
-                    {mediaLibrary.map((media) => (
-                      <button
-                        key={media.id}
-                        className="group relative aspect-video rounded-lg overflow-hidden border border-border/50 hover:border-primary transition-colors"
-                        onClick={() => handleAddFromLibrary(media)}
-                      >
-                        {media.media_type === "image" ? (
-                          <img src={media.media_url!} alt="" className="w-full h-full object-cover" />
-                        ) : (
-                          <video src={media.media_url!} className="w-full h-full object-cover" />
-                        )}
-                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                          <Plus className="h-6 w-6 text-white" />
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </ScrollArea>
+              <MediaLibrary
+                filter="all"
+                onAddToTimeline={handleAddFromLibrary}
+                onAddMultipleToTimeline={handleAddMultipleFromLibrary}
+              />
             </DialogContent>
           </Dialog>
 
@@ -980,6 +988,7 @@ export function TimelineEditor({ onExport, importData, onImportComplete, onClose
                     onUpdateClipVolume={(clipId, volume) => updateClip(clipId, { volume })}
                     onToggleTrackMute={() => toggleTrackMute(track.id)}
                     onToggleTrackLock={() => toggleTrackLock(track.id)}
+                    onToggleTrackSolo={() => toggleTrackSolo(track.id)}
                     onSetTrackVolume={(volume) => setTrackVolume(track.id, volume)}
                     onRemoveTrack={() => removeTrack(track.id)}
                     canRemoveTrack={state.tracks.filter((t) => t.type === track.type).length > 1 && !state.clips.some((c) => c.trackId === track.id)}
@@ -989,6 +998,22 @@ export function TimelineEditor({ onExport, importData, onImportComplete, onClose
                     snapEnabled={snapEnabled}
                     onSnapPreview={handleSnapPreview}
                     snapTime={snapTime}
+                    hasSoloedTrack={state.tracks.some((t) => t.solo)}
+                    isDragging={draggingTrackId === track.id}
+                    isDragOver={dragOverTrackIndex === index}
+                    onDragStart={() => setDraggingTrackId(track.id)}
+                    onDragEnd={() => {
+                      setDraggingTrackId(null);
+                      setDragOverTrackIndex(null);
+                    }}
+                    onDragOver={() => setDragOverTrackIndex(index)}
+                    onDrop={() => {
+                      if (draggingTrackId && draggingTrackId !== track.id) {
+                        reorderTrack(draggingTrackId, index);
+                      }
+                      setDraggingTrackId(null);
+                      setDragOverTrackIndex(null);
+                    }}
                   />
                 ))}
 

@@ -40,6 +40,7 @@ export interface TimelineTrack {
   muted: boolean;
   locked: boolean;
   volume: number; // 0-1
+  solo: boolean; // When true, only this track is heard
 }
 
 export interface TimelineState {
@@ -74,8 +75,8 @@ const generateId = () => Math.random().toString(36).substring(2, 15);
 export function useTimelineEditor() {
   const [state, setState] = useState<TimelineState>({
     tracks: [
-      { id: "video-1", type: "video", name: "Video Track", muted: false, locked: false, volume: 1 },
-      { id: "audio-1", type: "audio", name: "Audio Track", muted: false, locked: false, volume: 1 },
+      { id: "video-1", type: "video", name: "Video Track", muted: false, locked: false, volume: 1, solo: false },
+      { id: "audio-1", type: "audio", name: "Audio Track", muted: false, locked: false, volume: 1, solo: false },
     ],
     clips: [],
     transitions: [],
@@ -164,6 +165,7 @@ export function useTimelineEditor() {
             muted: false,
             locked: false,
             volume: 1,
+            solo: false,
           };
         }
 
@@ -484,6 +486,7 @@ export function useTimelineEditor() {
         muted: false,
         locked: false,
         volume: 1,
+        solo: false,
       };
       return {
         ...prev,
@@ -518,6 +521,35 @@ export function useTimelineEditor() {
       ...prev,
       masterVolume: Math.max(0, Math.min(1, volume)),
     }));
+  }, []);
+
+  // Toggle track solo
+  const toggleTrackSolo = useCallback((trackId: string) => {
+    setState((prev) => ({
+      ...prev,
+      tracks: prev.tracks.map((t) =>
+        t.id === trackId ? { ...t, solo: !t.solo } : t
+      ),
+    }));
+  }, []);
+
+  // Reorder tracks by moving a track to a new index
+  const reorderTrack = useCallback((trackId: string, newIndex: number) => {
+    setState((prev) => {
+      const trackIndex = prev.tracks.findIndex((t) => t.id === trackId);
+      if (trackIndex === -1 || newIndex < 0 || newIndex >= prev.tracks.length) {
+        return prev;
+      }
+      
+      const newTracks = [...prev.tracks];
+      const [movedTrack] = newTracks.splice(trackIndex, 1);
+      newTracks.splice(newIndex, 0, movedTrack);
+      
+      return {
+        ...prev,
+        tracks: newTracks,
+      };
+    });
   }, []);
 
   // Clear timeline
@@ -661,9 +693,11 @@ export function useTimelineEditor() {
     toggleBackgroundAudioMute,
     toggleTrackMute,
     toggleTrackLock,
+    toggleTrackSolo,
     setTrackVolume,
     addTrack,
     removeTrack,
+    reorderTrack,
     setMasterVolume,
     clearTimeline,
     getActiveClips,
