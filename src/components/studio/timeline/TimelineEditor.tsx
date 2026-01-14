@@ -42,6 +42,7 @@ import { TimelinePreview } from "./TimelinePreview";
 import { AudioWaveform } from "./AudioWaveform";
 import { TimelineToolbar, EditingTool } from "./TimelineToolbar";
 import { SaveToVaultDialog } from "./SaveToVaultDialog";
+import { TimelineMinimap } from "./TimelineMinimap";
 import { cn } from "@/lib/utils";
 
 interface SnapInfo {
@@ -119,11 +120,35 @@ export function TimelineEditor({ onExport, importData, onImportComplete }: Timel
   const [lastExportedUrl, setLastExportedUrl] = useState<string | null>(null);
   const [isImporting, setIsImporting] = useState(false);
   const [importProgress, setImportProgress] = useState(0);
+  const [visibleRange, setVisibleRange] = useState({ start: 0, end: 60 });
   const hasImportedRef = useRef(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const audioInputRef = useRef<HTMLInputElement>(null);
   const timelineRef = useRef<HTMLDivElement>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
+
+  // Update visible range when scrolling
+  const updateVisibleRange = useCallback(() => {
+    const scrollEl = scrollAreaRef.current?.querySelector('[data-radix-scroll-area-viewport]');
+    if (scrollEl && state.duration > 0) {
+      const scrollLeft = scrollEl.scrollLeft;
+      const containerWidth = scrollEl.clientWidth;
+      const pixelsPerSecond = state.zoom * 10;
+      const start = scrollLeft / pixelsPerSecond;
+      const end = start + containerWidth / pixelsPerSecond;
+      setVisibleRange({ start, end: Math.min(end, state.duration) });
+    }
+  }, [state.zoom, state.duration]);
+
+  // Scroll to a specific time in the timeline
+  const scrollToTime = useCallback((time: number) => {
+    const scrollEl = scrollAreaRef.current?.querySelector('[data-radix-scroll-area-viewport]');
+    if (scrollEl) {
+      const pixelsPerSecond = state.zoom * 10;
+      const scrollLeft = time * pixelsPerSecond - scrollEl.clientWidth / 2;
+      scrollEl.scrollTo({ left: Math.max(0, scrollLeft), behavior: 'smooth' });
+    }
+  }, [state.zoom]);
 
   // Auto-import Mind Movie scenes when importData is provided
   useEffect(() => {
@@ -243,6 +268,22 @@ export function TimelineEditor({ onExport, importData, onImportComplete }: Timel
     zoom: state.zoom,
     enabled: snapEnabled,
   });
+
+  // Update visible range on scroll and zoom
+  useEffect(() => {
+    const scrollEl = scrollAreaRef.current?.querySelector('[data-radix-scroll-area-viewport]');
+    if (scrollEl) {
+      const handleScroll = () => updateVisibleRange();
+      scrollEl.addEventListener('scroll', handleScroll);
+      updateVisibleRange(); // Initial update
+      return () => scrollEl.removeEventListener('scroll', handleScroll);
+    }
+  }, [updateVisibleRange]);
+
+  // Update visible range when zoom changes
+  useEffect(() => {
+    updateVisibleRange();
+  }, [state.zoom, updateVisibleRange]);
 
   // Handle snap preview lines
   const handleSnapPreview = useCallback((lines: SnapInfo[]) => {
@@ -805,6 +846,18 @@ export function TimelineEditor({ onExport, importData, onImportComplete }: Timel
                   </Button>
                 )}
               </div>
+
+              {/* Timeline Minimap */}
+              {state.clips.length > 0 && (
+                <TimelineMinimap
+                  clips={state.clips}
+                  duration={state.duration}
+                  currentTime={state.currentTime}
+                  visibleRange={visibleRange}
+                  onSeek={seek}
+                  onScrollTo={scrollToTime}
+                />
+              )}
 
               {/* Quick Shortcuts Reference */}
               <div className="p-3 rounded-lg bg-muted/20 border border-border/30">
