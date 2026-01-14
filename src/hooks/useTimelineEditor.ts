@@ -534,16 +534,44 @@ export function useTimelineEditor() {
   }, []);
 
   const togglePlayback = useCallback(() => {
+    // Read current state directly to avoid race conditions
     setState((prev) => {
       if (prev.isPlaying) {
-        pause();
-        return prev;
+        // Stop the animation frame
+        if (playbackRef.current) {
+          cancelAnimationFrame(playbackRef.current);
+          playbackRef.current = null;
+        }
+        return { ...prev, isPlaying: false };
       } else {
-        play();
-        return prev;
+        // Start playback
+        lastTimeRef.current = performance.now();
+        
+        const animate = () => {
+          const now = performance.now();
+          const delta = (now - lastTimeRef.current) / 1000;
+          lastTimeRef.current = now;
+
+          setState((prevState) => {
+            const newTime = prevState.currentTime + delta;
+            if (newTime >= prevState.duration) {
+              if (playbackRef.current) {
+                cancelAnimationFrame(playbackRef.current);
+                playbackRef.current = null;
+              }
+              return { ...prevState, currentTime: 0, isPlaying: false };
+            }
+            return { ...prevState, currentTime: newTime };
+          });
+
+          playbackRef.current = requestAnimationFrame(animate);
+        };
+
+        playbackRef.current = requestAnimationFrame(animate);
+        return { ...prev, isPlaying: true };
       }
     });
-  }, [play, pause]);
+  }, []);
 
   const seek = useCallback((time: number) => {
     setState((prev) => ({
