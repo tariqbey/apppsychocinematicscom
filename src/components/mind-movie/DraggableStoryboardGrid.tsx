@@ -11,6 +11,9 @@ interface DraggableStoryboardGridProps {
   onDeleteScene?: (order: number) => void;
   regeneratingSceneOrder?: number | null;
   isEditable?: boolean;
+  selectedScenes?: number[];
+  onSelectScene?: (order: number) => void;
+  showSelection?: boolean;
 }
 
 export function DraggableStoryboardGrid({ 
@@ -22,6 +25,9 @@ export function DraggableStoryboardGrid({
   onDeleteScene,
   regeneratingSceneOrder,
   isEditable = true,
+  selectedScenes = [],
+  onSelectScene,
+  showSelection = false,
 }: DraggableStoryboardGridProps) {
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
@@ -117,6 +123,9 @@ export function DraggableStoryboardGrid({
             isRegenerating={regeneratingSceneOrder === scene.order}
             isEditing={isEditable}
             isDragging={draggedIndex === index}
+            isSelected={selectedScenes.includes(scene.order)}
+            onSelectToggle={onSelectScene}
+            showSelection={showSelection}
           />
         </div>
       ))}

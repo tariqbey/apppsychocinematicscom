@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { X, ChevronLeft, ChevronRight, Sparkles, Save, Clapperboard, Palette, Layout, Wand2, Music, Check, RefreshCw, Plus, User, ChevronDown, Trash2, HelpCircle, ExternalLink, Film, Zap, Loader2 } from "lucide-react";
+import { X, ChevronLeft, ChevronRight, Sparkles, Save, Clapperboard, Palette, Layout, Wand2, Music, Check, RefreshCw, Plus, User, ChevronDown, Trash2, HelpCircle, ExternalLink, Film, Zap, Loader2, CheckSquare, Square } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
@@ -120,6 +120,9 @@ export function MindMovieScriptWizard({
   const [songCount, setSongCount] = useState<1 | 2>(1);
   const [isAutoGenerating, setIsAutoGenerating] = useState(false);
   const [autoGenerateProgress, setAutoGenerateProgress] = useState({ current: 0, total: 0, stage: "" });
+  const [selectedScenes, setSelectedScenes] = useState<number[]>([]);
+  const [isBatchRegenerating, setIsBatchRegenerating] = useState(false);
+  const [lastAutoSave, setLastAutoSave] = useState<Date | null>(null);
   
   const { 
     isGenerating, 
@@ -343,6 +346,85 @@ export function MindMovieScriptWizard({
     setGeneratedScenes(newScenes);
     toast.success("Scenes reordered");
   };
+
+  // Toggle scene selection for batch operations
+  const handleToggleSceneSelection = useCallback((order: number) => {
+    setSelectedScenes(prev => 
+      prev.includes(order) 
+        ? prev.filter(o => o !== order)
+        : [...prev, order]
+    );
+  }, []);
+
+  // Select/Deselect all scenes
+  const handleSelectAllScenes = useCallback(() => {
+    if (selectedScenes.length === generatedScenes.length) {
+      setSelectedScenes([]);
+    } else {
+      setSelectedScenes(generatedScenes.map(s => s.order));
+    }
+  }, [selectedScenes.length, generatedScenes]);
+
+  // Batch regenerate selected scenes
+  const handleBatchRegenerate = async () => {
+    if (selectedScenes.length === 0) {
+      toast.error("Please select scenes to regenerate");
+      return;
+    }
+
+    setIsBatchRegenerating(true);
+    const scenesToRegenerate = generatedScenes.filter(s => selectedScenes.includes(s.order));
+    
+    try {
+      for (let i = 0; i < scenesToRegenerate.length; i++) {
+        const scene = scenesToRegenerate[i];
+        toast.info(`Regenerating image for Scene ${scene.order} (${i + 1}/${scenesToRegenerate.length})...`);
+        
+        const imageUrl = await generateImage({
+          prompt: scene.prompt,
+          aspect_ratio: "16:9",
+          resolution: "2k"
+        });
+
+        if (imageUrl) {
+          setGeneratedScenes(prev => prev.map(s => 
+            s.order === scene.order ? { ...s, generatedImageUrl: imageUrl } : s
+          ));
+        }
+      }
+      
+      toast.success(`Regenerated images for ${scenesToRegenerate.length} scene(s)!`);
+      setSelectedScenes([]);
+    } catch (error) {
+      console.error("Batch regeneration error:", error);
+      toast.error("Some regenerations failed. Check your credits.");
+    } finally {
+      setIsBatchRegenerating(false);
+    }
+  };
+
+  // Auto-save storyboard every 30 seconds
+  useEffect(() => {
+    if (!isOpen || generatedScenes.length === 0 || isLoading || isAutoGenerating) return;
+    
+    const autoSaveInterval = setInterval(async () => {
+      try {
+        await saveScript(
+          generatedTitle,
+          generatedScenes,
+          chiefAim,
+          visualStyle,
+          currentScript?.id
+        );
+        setLastAutoSave(new Date());
+        console.log("Auto-saved storyboard");
+      } catch (error) {
+        console.error("Auto-save failed:", error);
+      }
+    }, 30000); // 30 seconds
+
+    return () => clearInterval(autoSaveInterval);
+  }, [isOpen, generatedScenes, generatedTitle, chiefAim, visualStyle, currentScript?.id, isLoading, isAutoGenerating, saveScript]);
 
   const handleGenerateLyrics = async () => {
     if (!musicStyle) {
@@ -784,11 +866,16 @@ export function MindMovieScriptWizard({
                     <h2 className="text-2xl font-bold">{generatedTitle || "Your Storyboard"}</h2>
                     <p className="text-muted-foreground">
                       {generatedScenes.length} scenes • Click to edit or copy prompts
+                      {lastAutoSave && (
+                        <span className="ml-2 text-xs text-muted-foreground/70">
+                          • Auto-saved {lastAutoSave.toLocaleTimeString()}
+                        </span>
+                      )}
                     </p>
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
                     {/* Credit Cost Estimate */}
-                    {onAddToTimeline && !isAutoGenerating && (
+                    {onAddToTimeline && !isAutoGenerating && !isBatchRegenerating && (
                       <CreditCostEstimate scenes={generatedScenes} />
                     )}
                     
@@ -796,7 +883,7 @@ export function MindMovieScriptWizard({
                     {onAddToTimeline && (
                       <Button 
                         onClick={handleAutoGenerateAll}
-                        disabled={generatedScenes.length === 0 || isAutoGenerating}
+                        disabled={generatedScenes.length === 0 || isAutoGenerating || isBatchRegenerating}
                         className="bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white"
                       >
                         {isAutoGenerating ? (
@@ -816,13 +903,13 @@ export function MindMovieScriptWizard({
                       <Button 
                         onClick={handleAddToTimeline} 
                         variant="outline"
-                        disabled={generatedScenes.length === 0 || isAutoGenerating}
+                        disabled={generatedScenes.length === 0 || isAutoGenerating || isBatchRegenerating}
                       >
                         <Film className="w-4 h-4 mr-2" />
                         Add to Timeline
                       </Button>
                     )}
-                    <Button onClick={handleSaveStoryboard} disabled={isLoading || isAutoGenerating}>
+                    <Button onClick={handleSaveStoryboard} disabled={isLoading || isAutoGenerating || isBatchRegenerating}>
                       <Save className="w-4 h-4 mr-2" />
                       {isLoading ? "Saving..." : "Save Storyboard"}
                     </Button>
@@ -851,6 +938,55 @@ export function MindMovieScriptWizard({
                   </div>
                 )}
 
+                {/* Batch Selection Controls */}
+                <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/30 border border-border/50">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleSelectAllScenes}
+                    disabled={isAutoGenerating || isBatchRegenerating}
+                  >
+                    {selectedScenes.length === generatedScenes.length ? (
+                      <>
+                        <Square className="w-4 h-4 mr-2" />
+                        Deselect All
+                      </>
+                    ) : (
+                      <>
+                        <CheckSquare className="w-4 h-4 mr-2" />
+                        Select All
+                      </>
+                    )}
+                  </Button>
+                  
+                  {selectedScenes.length > 0 && (
+                    <>
+                      <span className="text-sm text-muted-foreground">
+                        {selectedScenes.length} scene{selectedScenes.length > 1 ? 's' : ''} selected
+                      </span>
+                      <Button
+                        variant="default"
+                        size="sm"
+                        onClick={handleBatchRegenerate}
+                        disabled={isBatchRegenerating || isAutoGenerating}
+                        className="bg-primary"
+                      >
+                        {isBatchRegenerating ? (
+                          <>
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            Regenerating...
+                          </>
+                        ) : (
+                          <>
+                            <RefreshCw className="w-4 h-4 mr-2" />
+                            Regenerate Selected Images
+                          </>
+                        )}
+                      </Button>
+                    </>
+                  )}
+                </div>
+
                 <DraggableStoryboardGrid
                   scenes={generatedScenes}
                   onUpdateScene={handleUpdateScene}
@@ -859,7 +995,10 @@ export function MindMovieScriptWizard({
                   onRegenerateScene={handleRegenerateScene}
                   onDeleteScene={handleDeleteScene}
                   regeneratingSceneOrder={regeneratingSceneOrder}
-                  isEditable={!isAutoGenerating}
+                  isEditable={!isAutoGenerating && !isBatchRegenerating}
+                  selectedScenes={selectedScenes}
+                  onSelectScene={handleToggleSceneSelection}
+                  showSelection={true}
                 />
               </div>
             )}

@@ -5,6 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import type { Scene } from "@/hooks/useMindMovieScript";
 
@@ -17,6 +18,9 @@ interface SceneCardProps {
   isRegenerating?: boolean;
   isEditing?: boolean;
   isDragging?: boolean;
+  isSelected?: boolean;
+  onSelectToggle?: (order: number) => void;
+  showSelection?: boolean;
 }
 
 export function SceneCard({ 
@@ -28,6 +32,9 @@ export function SceneCard({
   isRegenerating = false,
   isEditing = false,
   isDragging = false,
+  isSelected = false,
+  onSelectToggle,
+  showSelection = false,
 }: SceneCardProps) {
   const [copied, setCopied] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
@@ -74,6 +81,13 @@ export function SceneCard({
         {/* Header */}
         <div className="flex items-start gap-3 mb-3">
           <div className="flex items-center gap-2">
+            {showSelection && onSelectToggle && (
+              <Checkbox
+                checked={isSelected}
+                onCheckedChange={() => onSelectToggle(scene.order)}
+                className="mr-1"
+              />
+            )}
             <GripVertical className="w-4 h-4 text-muted-foreground cursor-grab" />
             <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
               <span className="text-sm font-bold text-primary">{scene.order}</span>
