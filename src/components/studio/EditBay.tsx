@@ -77,9 +77,9 @@ export function EditBay({ onClose, initialPrompt }: EditBayProps) {
 
       {/* Main Content */}
       <div className="flex-1 overflow-y-auto p-6">
-        <div className="max-w-3xl mx-auto">
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-3 mb-6">
+        <div className="max-w-5xl mx-auto">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full h-full">
+            <TabsList className="grid w-full grid-cols-4 mb-6">
               <TabsTrigger value="image" className="gap-2">
                 <Image className="h-4 w-4" />
                 Image
@@ -92,25 +92,41 @@ export function EditBay({ onClose, initialPrompt }: EditBayProps) {
                 <FolderOpen className="h-4 w-4" />
                 My Gallery
               </TabsTrigger>
+              <TabsTrigger value="timeline" className="gap-2">
+                <Clapperboard className="h-4 w-4" />
+                Timeline
+              </TabsTrigger>
             </TabsList>
 
-            <div className="glass-card p-6 cinematic-border">
-              <TabsContent value="image" className="mt-0">
+            <TabsContent value="image" className="mt-0">
+              <div className="glass-card p-6 cinematic-border">
                 <ImageGenerator 
                   onImageGenerated={handleImageGenerated}
                   onVideoGenerated={handleVideoGenerated}
                   initialPrompt={initialPrompt}
                 />
-              </TabsContent>
+              </div>
+            </TabsContent>
 
-              <TabsContent value="video" className="mt-0">
+            <TabsContent value="video" className="mt-0">
+              <div className="glass-card p-6 cinematic-border">
                 <VideoGenerator onVideoGenerated={handleVideoGenerated} />
-              </TabsContent>
+              </div>
+            </TabsContent>
 
-              <TabsContent value="gallery" className="mt-0">
+            <TabsContent value="gallery" className="mt-0">
+              <div className="glass-card p-6 cinematic-border">
                 <MediaLibrary key={galleryKey} />
-              </TabsContent>
-            </div>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="timeline" className="mt-0 h-[calc(100vh-220px)]">
+              <div className="glass-card p-6 cinematic-border h-full">
+                <TimelineEditor onExport={(url) => {
+                  refreshGallery();
+                }} />
+              </div>
+            </TabsContent>
           </Tabs>
         </div>
       </div>
