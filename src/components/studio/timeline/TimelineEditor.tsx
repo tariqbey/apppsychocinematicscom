@@ -278,42 +278,33 @@ export function TimelineEditor({ onExport }: TimelineEditorProps) {
 
       const url = URL.createObjectURL(file);
 
-      if (isAudio) {
-        // Set as background audio
-        setBackgroundAudio(url, file.name);
-        toast({
-          title: "Background audio added",
-          description: file.name,
-        });
-      } else {
-        // Determine type and duration
-        const type = isVideo ? "video" : "image";
-        let duration = 5; // Default for images
+      // Determine type and duration
+      const type = isAudio ? "audio" : isVideo ? "video" : "image";
+      let duration = 5; // Default for images
 
-        if (isVideo) {
-          const mediaEl = document.createElement("video");
-          mediaEl.src = url;
-          await new Promise<void>((resolve) => {
-            mediaEl.onloadedmetadata = () => {
-              duration = mediaEl.duration;
-              resolve();
-            };
-            mediaEl.onerror = () => resolve();
-          });
-        }
-
-        // Generate thumbnail for video
-        let thumbnail: string | undefined;
-        if (type === "video") {
-          thumbnail = await generateVideoThumbnail(url);
-        }
-
-        addClip(url, type, file.name, duration, thumbnail);
-        toast({
-          title: "Clip added",
-          description: `${file.name} added to timeline`,
+      if (isVideo || isAudio) {
+        const mediaEl = document.createElement(isVideo ? "video" : "audio");
+        mediaEl.src = url;
+        await new Promise<void>((resolve) => {
+          mediaEl.onloadedmetadata = () => {
+            duration = mediaEl.duration;
+            resolve();
+          };
+          mediaEl.onerror = () => resolve();
         });
       }
+
+      // Generate thumbnail for video
+      let thumbnail: string | undefined;
+      if (type === "video") {
+        thumbnail = await generateVideoThumbnail(url);
+      }
+
+      addClip(url, type, file.name, duration, thumbnail);
+      toast({
+        title: "Clip added",
+        description: `${file.name} added to timeline`,
+      });
     }
   }, [addClip, setBackgroundAudio, toast]);
 
@@ -335,43 +326,38 @@ export function TimelineEditor({ onExport }: TimelineEditorProps) {
       for (const file of Array.from(files)) {
         const url = URL.createObjectURL(file);
 
-        if (isAudio) {
-          // Set as background audio
-          setBackgroundAudio(url, file.name);
-          toast({
-            title: "Background audio added",
-            description: file.name,
+        // Determine type and duration - always add as timeline clip
+        const type = file.type.startsWith("video/")
+          ? "video"
+          : file.type.startsWith("audio/")
+          ? "audio"
+          : "image";
+
+        let duration = 5; // Default for images
+
+        if (type === "video" || type === "audio") {
+          const mediaEl = document.createElement(type === "video" ? "video" : "audio");
+          mediaEl.src = url;
+          await new Promise<void>((resolve) => {
+            mediaEl.onloadedmetadata = () => {
+              duration = mediaEl.duration;
+              resolve();
+            };
+            mediaEl.onerror = () => resolve();
           });
-        } else {
-          // Determine type and duration
-          const type = file.type.startsWith("video/")
-            ? "video"
-            : file.type.startsWith("audio/")
-            ? "audio"
-            : "image";
-
-          let duration = 5; // Default for images
-
-          if (type === "video" || type === "audio") {
-            const mediaEl = document.createElement(type);
-            mediaEl.src = url;
-            await new Promise<void>((resolve) => {
-              mediaEl.onloadedmetadata = () => {
-                duration = mediaEl.duration;
-                resolve();
-              };
-              mediaEl.onerror = () => resolve();
-            });
-          }
-
-          // Generate thumbnail for video
-          let thumbnail: string | undefined;
-          if (type === "video") {
-            thumbnail = await generateVideoThumbnail(url);
-          }
-
-          addClip(url, type, file.name, duration, thumbnail);
         }
+
+        // Generate thumbnail for video
+        let thumbnail: string | undefined;
+        if (type === "video") {
+          thumbnail = await generateVideoThumbnail(url);
+        }
+
+        addClip(url, type, file.name, duration, thumbnail);
+        toast({
+          title: "Clip added",
+          description: `${file.name} added to timeline`,
+        });
       }
     },
     [addClip, setBackgroundAudio, toast]
