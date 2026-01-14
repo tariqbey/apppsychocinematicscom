@@ -50,6 +50,7 @@ export interface TimelineState {
   duration: number;
   isPlaying: boolean;
   zoom: number; // pixels per second
+  masterVolume: number; // 0-1
   backgroundAudio: {
     url: string | null;
     name: string;
@@ -82,6 +83,7 @@ export function useTimelineEditor() {
     duration: 0,
     isPlaying: false,
     zoom: DEFAULT_ZOOM,
+    masterVolume: 1,
     backgroundAudio: {
       url: null,
       name: "",
@@ -470,6 +472,54 @@ export function useTimelineEditor() {
     }));
   }, []);
 
+  // Add new track
+  const addTrack = useCallback((type: "video" | "audio") => {
+    setState((prev) => {
+      const existingOfType = prev.tracks.filter((t) => t.type === type);
+      const trackNumber = existingOfType.length + 1;
+      const newTrack: TimelineTrack = {
+        id: generateId(),
+        type,
+        name: `${type === "video" ? "Video" : "Audio"} Track ${trackNumber}`,
+        muted: false,
+        locked: false,
+        volume: 1,
+      };
+      return {
+        ...prev,
+        tracks: [...prev.tracks, newTrack],
+      };
+    });
+  }, []);
+
+  // Remove track (only if empty)
+  const removeTrack = useCallback((trackId: string) => {
+    setState((prev) => {
+      // Don't allow removing if there are clips on the track
+      const hasClips = prev.clips.some((c) => c.trackId === trackId);
+      if (hasClips) return prev;
+      
+      // Don't allow removing the last track of each type
+      const track = prev.tracks.find((t) => t.id === trackId);
+      if (!track) return prev;
+      const tracksOfType = prev.tracks.filter((t) => t.type === track.type);
+      if (tracksOfType.length <= 1) return prev;
+      
+      return {
+        ...prev,
+        tracks: prev.tracks.filter((t) => t.id !== trackId),
+      };
+    });
+  }, []);
+
+  // Master volume
+  const setMasterVolume = useCallback((volume: number) => {
+    setState((prev) => ({
+      ...prev,
+      masterVolume: Math.max(0, Math.min(1, volume)),
+    }));
+  }, []);
+
   // Clear timeline
   const clearTimeline = useCallback(() => {
     pause();
@@ -612,6 +662,9 @@ export function useTimelineEditor() {
     toggleTrackMute,
     toggleTrackLock,
     setTrackVolume,
+    addTrack,
+    removeTrack,
+    setMasterVolume,
     clearTimeline,
     getActiveClips,
     addTransition,

@@ -6,6 +6,7 @@ interface TimelinePreviewProps {
   tracks: TimelineTrack[];
   currentTime: number;
   isPlaying: boolean;
+  masterVolume: number;
   backgroundAudio: {
     url: string | null;
     volume: number;
@@ -21,6 +22,7 @@ export function TimelinePreview({
   tracks,
   currentTime,
   isPlaying,
+  masterVolume,
   backgroundAudio,
 }: TimelinePreviewProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -47,11 +49,12 @@ export function TimelinePreview({
   }, [tracks]);
 
   // Calculate effective volume (clip volume * track volume, considering mutes)
+  // Calculate effective volume (clip volume * track volume * master volume, considering mutes)
   const getEffectiveVolume = useCallback((clip: TimelineClip) => {
     const track = getTrackForClip(clip);
     if (!track || track.muted || clip.muted) return 0;
-    return clip.volume * track.volume;
-  }, [getTrackForClip]);
+    return clip.volume * track.volume * masterVolume;
+  }, [getTrackForClip, masterVolume]);
 
   // Calculate expected clip time
   const getExpectedClipTime = useCallback((clip: TimelineClip, timelineTime: number) => {
@@ -102,7 +105,7 @@ export function TimelinePreview({
     if (!bgAudioRef.current || !backgroundAudio.url) return;
 
     const audio = bgAudioRef.current;
-    audio.volume = backgroundAudio.muted ? 0 : backgroundAudio.volume;
+    audio.volume = backgroundAudio.muted ? 0 : backgroundAudio.volume * masterVolume;
 
     if (isPlaying) {
       const drift = Math.abs(audio.currentTime - currentTime);
