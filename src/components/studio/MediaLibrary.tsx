@@ -603,15 +603,21 @@ export function MediaLibrary({ filter = "all", onSelect, onAddToTimeline, onAddM
                   )}
                   
                   {/* Selection Checkbox & Type Badge */}
-                  <div className="absolute top-2 left-2 flex items-center gap-1.5">
+                  <div className="absolute top-2 left-2 flex items-center gap-1.5 z-10">
                     {item.status === "completed" && item.media_url && (
                       <div 
-                        className="bg-black/60 rounded p-0.5"
-                        onClick={(e) => toggleSelection(item.id, e)}
+                        className="bg-black/60 rounded p-1 cursor-pointer"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          toggleSelection(item.id);
+                        }}
                       >
                         <Checkbox
                           checked={selectedIds.has(item.id)}
-                          className="h-4 w-4 border-white/70 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+                          onCheckedChange={() => toggleSelection(item.id)}
+                          onClick={(e) => e.stopPropagation()}
+                          className="h-5 w-5 border-white/70 data-[state=checked]:bg-primary data-[state=checked]:border-primary pointer-events-auto cursor-pointer"
                         />
                       </div>
                     )}
