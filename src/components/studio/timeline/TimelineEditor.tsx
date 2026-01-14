@@ -1052,17 +1052,32 @@ export function TimelineEditor({
             Clear
           </Button>
 
-          {/* Export Quality Selector */}
-          <Select value={exportQuality} onValueChange={(v) => setExportQuality(v as "720p" | "1080p" | "4K")}>
-            <SelectTrigger className="w-24 h-8 text-xs">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="720p">720p HD</SelectItem>
-              <SelectItem value="1080p">1080p FHD</SelectItem>
-              <SelectItem value="4K">4K Ultra</SelectItem>
-            </SelectContent>
-          </Select>
+          {/* Export Quality Selector with Size Estimate */}
+          <div className="flex items-center gap-1.5">
+            <Select value={exportQuality} onValueChange={(v) => setExportQuality(v as "720p" | "1080p" | "4K")}>
+              <SelectTrigger className="w-24 h-8 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="720p">720p HD</SelectItem>
+                <SelectItem value="1080p">1080p FHD</SelectItem>
+                <SelectItem value="4K">4K Ultra</SelectItem>
+              </SelectContent>
+            </Select>
+            {state.duration > 0 && (
+              <span className="text-[10px] text-muted-foreground tabular-nums whitespace-nowrap">
+                ~{(() => {
+                  // Estimate bitrates: 720p ~4Mbps, 1080p ~8Mbps, 4K ~25Mbps
+                  const bitrates = { "720p": 4, "1080p": 8, "4K": 25 };
+                  const bitrateMbps = bitrates[exportQuality];
+                  const sizeMB = (bitrateMbps * state.duration) / 8;
+                  return sizeMB >= 1000 
+                    ? `${(sizeMB / 1000).toFixed(1)} GB` 
+                    : `${Math.round(sizeMB)} MB`;
+                })()}
+              </span>
+            )}
+          </div>
 
           <Button variant="outline" size="sm" onClick={handleExport} disabled={state.clips.length === 0 || isExporting}>
             <Download className="h-4 w-4 mr-1" />
