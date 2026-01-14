@@ -152,7 +152,7 @@ export function TimelineEditor({ onExport, importData, onImportComplete, onClose
   const [showLoadProjectDialog, setShowLoadProjectDialog] = useState(false);
   const [currentProjectId, setCurrentProjectId] = useState<string | null>(null);
   const [currentProjectTitle, setCurrentProjectTitle] = useState<string>("");
-  const [showClipsBin, setShowClipsBin] = useState(true);
+  const [showClipsBin, setShowClipsBin] = useState(false);
   const hasImportedRef = useRef(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const audioInputRef = useRef<HTMLInputElement>(null);
@@ -909,9 +909,9 @@ export function TimelineEditor({ onExport, importData, onImportComplete, onClose
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
-        {/* Preview Section - 40% height */}
-        <div className="h-[40%] min-h-[180px] border-b border-border bg-black/50 flex items-center justify-center p-4">
-          <div className="h-full aspect-video max-w-full relative bg-black rounded-lg overflow-hidden shadow-2xl ring-1 ring-white/10">
+        {/* Preview Section - Compact */}
+        <div className="h-[28%] min-h-[140px] max-h-[200px] border-b border-border bg-black/50 flex items-center justify-center p-2 flex-shrink-0">
+          <div className="h-full aspect-video max-w-full relative bg-black rounded-lg overflow-hidden shadow-xl ring-1 ring-white/10">
             <TimelinePreview
               clips={state.clips}
               tracks={state.tracks}
@@ -922,24 +922,24 @@ export function TimelineEditor({ onExport, importData, onImportComplete, onClose
             />
             
             {/* Playback Controls Overlay */}
-            <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent p-4">
-              <div className="flex items-center justify-center gap-4">
-                <Button variant="ghost" size="icon" className="h-9 w-9 text-white hover:bg-white/20" onClick={() => seek(0)}>
-                  <SkipBack className="h-4 w-4" />
+            <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent p-2">
+              <div className="flex items-center justify-center gap-3">
+                <Button variant="ghost" size="icon" className="h-7 w-7 text-white hover:bg-white/20" onClick={() => seek(0)}>
+                  <SkipBack className="h-3.5 w-3.5" />
                 </Button>
-                <Button size="icon" onClick={state.isPlaying ? pause : play} className="h-12 w-12 rounded-full bg-primary hover:bg-primary/90">
-                  {state.isPlaying ? <Pause className="h-6 w-6" /> : <Play className="h-6 w-6 ml-0.5" />}
+                <Button size="icon" onClick={state.isPlaying ? pause : play} className="h-10 w-10 rounded-full bg-primary hover:bg-primary/90">
+                  {state.isPlaying ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5 ml-0.5" />}
                 </Button>
-                <Button variant="ghost" size="icon" className="h-9 w-9 text-white hover:bg-white/20" onClick={() => seek(state.duration)}>
-                  <SkipForward className="h-4 w-4" />
+                <Button variant="ghost" size="icon" className="h-7 w-7 text-white hover:bg-white/20" onClick={() => seek(state.duration)}>
+                  <SkipForward className="h-3.5 w-3.5" />
                 </Button>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Tools Bar */}
-        <div className="h-11 border-b border-border bg-card/50 flex items-center gap-2 px-3 flex-shrink-0 overflow-x-auto">
+        {/* Tools Bar - Compact */}
+        <div className="h-9 border-b border-border bg-card/50 flex items-center gap-1.5 px-2 flex-shrink-0 overflow-x-auto">
           <TimelineToolbar
             activeTool={activeTool}
             onToolChange={setActiveTool}
@@ -1050,9 +1050,9 @@ export function TimelineEditor({ onExport, importData, onImportComplete, onClose
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
         >
-          {/* Minimap */}
+          {/* Minimap - Compact */}
           {state.clips.length > 0 && (
-            <div className="h-7 border-b border-border/50 bg-card/30 px-2 flex-shrink-0">
+            <div className="h-5 border-b border-border/50 bg-card/30 px-2 flex-shrink-0">
               <TimelineMinimap
                 clips={state.clips}
                 duration={state.duration}
