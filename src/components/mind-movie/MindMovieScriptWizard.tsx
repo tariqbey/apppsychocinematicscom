@@ -79,6 +79,7 @@ interface MindMovieScriptWizardProps {
     exchange?: string;
     plan?: string;
   };
+  movieId?: string;
   onOpenEditBay?: (prompt: string) => void;
 }
 
@@ -95,6 +96,7 @@ export function MindMovieScriptWizard({
   isOpen, 
   onClose, 
   chiefAim,
+  movieId,
   onOpenEditBay,
 }: MindMovieScriptWizardProps) {
   const [step, setStep] = useState(1);
@@ -114,6 +116,7 @@ export function MindMovieScriptWizard({
     generateStoryboard, 
     saveScript,
     fetchLatestScript,
+    fetchScriptById,
   } = useMindMovieScript();
 
   const {
@@ -146,9 +149,18 @@ export function MindMovieScriptWizard({
     setSavedPersonas(loadSavedPersonas());
   }, []);
 
+  // Load script based on movieId or fetch latest
   useEffect(() => {
     if (isOpen) {
-      fetchLatestScript().then((script) => {
+      const loadScript = async () => {
+        let script = null;
+        
+        if (movieId) {
+          script = await fetchScriptById(movieId);
+        } else {
+          script = await fetchLatestScript();
+        }
+        
         if (script && script.scenes.length > 0) {
           setGeneratedTitle(script.title || "");
           setGeneratedScenes(script.scenes);
@@ -161,10 +173,18 @@ export function MindMovieScriptWizard({
             suno_task_id: script.suno_task_id,
           });
           setStep(3);
+        } else {
+          // Reset to step 1 for new movies
+          setStep(1);
+          setGeneratedTitle("");
+          setGeneratedScenes([]);
+          setVisualStyle("cinematic");
+          setUserDescription("");
         }
-      });
+      };
+      loadScript();
     }
-  }, [isOpen, fetchLatestScript, loadExistingMusic]);
+  }, [isOpen, movieId, fetchLatestScript, fetchScriptById, loadExistingMusic]);
 
   const handleSelectPersona = useCallback((persona: SavedPersona) => {
     setPersonaId(persona.id);
