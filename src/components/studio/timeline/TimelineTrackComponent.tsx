@@ -33,6 +33,7 @@ interface TimelineTrackComponentProps {
   onSplitClipAtTime: (clipId: string, time: number) => void;
   onToggleClipMute: (clipId: string) => void;
   onUpdateClipVolume: (clipId: string, volume: number) => void;
+  onUpdateClipFade: (clipId: string, fadeIn: number, fadeOut: number) => void;
   onToggleTrackMute: () => void;
   onToggleTrackLock: () => void;
   onToggleTrackSolo: () => void;
@@ -73,6 +74,7 @@ export const TimelineTrackComponent = memo(function TimelineTrackComponent({
   onSplitClipAtTime,
   onToggleClipMute,
   onUpdateClipVolume,
+  onUpdateClipFade,
   onToggleTrackMute,
   onToggleTrackLock,
   onToggleTrackSolo,
@@ -141,6 +143,7 @@ export const TimelineTrackComponent = memo(function TimelineTrackComponent({
       onRazorClick: (e: React.MouseEvent) => void;
       onToggleMute: () => void;
       onVolumeChange: (volume: number) => void;
+      onFadeChange: (fadeIn: number, fadeOut: number) => void;
     }> = {};
     
     clips.forEach(clip => {
@@ -169,11 +172,12 @@ export const TimelineTrackComponent = memo(function TimelineTrackComponent({
         },
         onToggleMute: () => onToggleClipMute(clip.id),
         onVolumeChange: (volume: number) => onUpdateClipVolume(clip.id, volume),
+        onFadeChange: (fadeIn: number, fadeOut: number) => onUpdateClipFade(clip.id, fadeIn, fadeOut),
       };
     });
     
     return handlers;
-  }, [clips, zoom, onSelectClip, onRemoveClip, onMoveClip, onTrimClip, onSplitClip, onSplitClipAtTime, onToggleClipMute, onUpdateClipVolume]);
+  }, [clips, zoom, onSelectClip, onRemoveClip, onMoveClip, onTrimClip, onSplitClip, onSplitClipAtTime, onToggleClipMute, onUpdateClipVolume, onUpdateClipFade]);
 
   // Determine if track is effectively muted (muted, or another track is soloed)
   const isEffectivelyMuted = track.muted || (hasSoloedTrack && !track.solo);
@@ -333,6 +337,7 @@ export const TimelineTrackComponent = memo(function TimelineTrackComponent({
               onRazorClick={handlers.onRazorClick}
               onToggleMute={handlers.onToggleMute}
               onVolumeChange={handlers.onVolumeChange}
+              onFadeChange={handlers.onFadeChange}
               snapEnabled={snapEnabled}
               onSnapPreview={onSnapPreview}
               snapTime={snapTime}

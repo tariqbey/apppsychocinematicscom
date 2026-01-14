@@ -1,7 +1,9 @@
 import { useState, useRef, useCallback, memo, useEffect } from "react";
-import { Film, Image, Music, Volume2, VolumeX, Scissors, Trash2 } from "lucide-react";
+import { Film, Image, Music, Volume2, VolumeX, Scissors, Trash2, ArrowRightFromLine, ArrowLeftFromLine } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Label } from "@/components/ui/label";
 import { TimelineClip } from "@/hooks/useTimelineEditor";
 import { AudioWaveform, SimpleWaveform } from "./AudioWaveform";
 import { InlineFilmstrip } from "./FilmstripScrubber";
@@ -27,6 +29,7 @@ interface TimelineClipComponentProps {
   onRazorClick?: (e: React.MouseEvent) => void;
   onToggleMute: () => void;
   onVolumeChange?: (volume: number) => void;
+  onFadeChange?: (fadeIn: number, fadeOut: number) => void;
   snapEnabled?: boolean;
   onSnapPreview?: (lines: SnapInfo[]) => void;
   snapTime?: (time: number, excludeClipId?: string) => { snappedTime: number; didSnap: boolean; snapType: string | null };
@@ -71,6 +74,7 @@ export const TimelineClipComponent = memo(function TimelineClipComponent({
   onRazorClick,
   onToggleMute,
   onVolumeChange,
+  onFadeChange,
   snapEnabled = true,
   onSnapPreview,
   snapTime,
@@ -278,6 +282,10 @@ export const TimelineClipComponent = memo(function TimelineClipComponent({
     }
   }, [activeTool, onRazorClick, onSelect]);
 
+  // Calculate fade widths in pixels
+  const fadeInWidth = (clip.fadeIn || 0) * zoom;
+  const fadeOutWidth = (clip.fadeOut || 0) * zoom;
+
   return (
     <div
       ref={clipRef}
@@ -298,6 +306,31 @@ export const TimelineClipComponent = memo(function TimelineClipComponent({
       }}
       onClick={handleClick}
     >
+      {/* Fade In overlay */}
+      {fadeInWidth > 0 && (
+        <div 
+          className="absolute top-0 bottom-0 left-0 pointer-events-none z-20"
+          style={{ 
+            width: `${fadeInWidth}px`,
+            background: 'linear-gradient(to right, rgba(0,0,0,0.7), transparent)',
+          }}
+        >
+          <ArrowRightFromLine className="absolute top-1 left-1 h-3 w-3 text-white/70" />
+        </div>
+      )}
+      
+      {/* Fade Out overlay */}
+      {fadeOutWidth > 0 && (
+        <div 
+          className="absolute top-0 bottom-0 right-0 pointer-events-none z-20"
+          style={{ 
+            width: `${fadeOutWidth}px`,
+            background: 'linear-gradient(to left, rgba(0,0,0,0.7), transparent)',
+          }}
+        >
+          <ArrowLeftFromLine className="absolute top-1 right-1 h-3 w-3 text-white/70" />
+        </div>
+      )}
       {/* Filmstrip background for video clips */}
       {clip.type === "video" && width > 60 && (
         <InlineFilmstrip
@@ -445,6 +478,72 @@ export const TimelineClipComponent = memo(function TimelineClipComponent({
                     {Math.round(clip.volume * 100)}%
                   </span>
                 </div>
+              )}
+              
+              {/* Fade controls popover */}
+              {onFadeChange && (
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6"
+                      title="Fade controls"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <ArrowRightFromLine className="h-3 w-3" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent 
+                    className="w-56 p-3" 
+                    onClick={(e) => e.stopPropagation()}
+                    onMouseDown={(e) => e.stopPropagation()}
+                  >
+                    <div className="space-y-3">
+                      <h4 className="font-medium text-sm">Audio Fade</h4>
+                      
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <Label className="text-xs flex items-center gap-1">
+                            <ArrowRightFromLine className="h-3 w-3" />
+                            Fade In
+                          </Label>
+                          <span className="text-xs text-muted-foreground">
+                            {(clip.fadeIn || 0).toFixed(1)}s
+                          </span>
+                        </div>
+                        <Slider
+                          value={[clip.fadeIn || 0]}
+                          onValueChange={(v) => onFadeChange(v[0], clip.fadeOut || 0)}
+                          min={0}
+                          max={Math.min(clip.duration / 2, 5)}
+                          step={0.1}
+                          className="w-full"
+                        />
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <Label className="text-xs flex items-center gap-1">
+                            <ArrowLeftFromLine className="h-3 w-3" />
+                            Fade Out
+                          </Label>
+                          <span className="text-xs text-muted-foreground">
+                            {(clip.fadeOut || 0).toFixed(1)}s
+                          </span>
+                        </div>
+                        <Slider
+                          value={[clip.fadeOut || 0]}
+                          onValueChange={(v) => onFadeChange(clip.fadeIn || 0, v[0])}
+                          min={0}
+                          max={Math.min(clip.duration / 2, 5)}
+                          step={0.1}
+                          className="w-full"
+                        />
+                      </div>
+                    </div>
+                  </PopoverContent>
+                </Popover>
               )}
             </>
           )}
