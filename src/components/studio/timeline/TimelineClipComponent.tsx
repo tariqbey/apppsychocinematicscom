@@ -1,9 +1,10 @@
-import { useState, useRef, useCallback, memo } from "react";
+import { useState, useRef, useCallback, memo, useEffect } from "react";
 import { Film, Image, Music, Volume2, VolumeX, Scissors, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { TimelineClip } from "@/hooks/useTimelineEditor";
 import { AudioWaveform, SimpleWaveform } from "./AudioWaveform";
+import { InlineFilmstrip } from "./FilmstripScrubber";
 import { cn } from "@/lib/utils";
 
 interface SnapInfo {
@@ -70,6 +71,7 @@ export const TimelineClipComponent = memo(function TimelineClipComponent({
 }: TimelineClipComponentProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [isResizing, setIsResizing] = useState<"start" | "end" | null>(null);
+  const [videoWaveformData, setVideoWaveformData] = useState<number[]>([]);
   const clipRef = useRef<HTMLDivElement>(null);
   const dragStartX = useRef(0);
   const dragStartTime = useRef(0);
@@ -192,6 +194,44 @@ export const TimelineClipComponent = memo(function TimelineClipComponent({
     document.addEventListener("mouseup", handleMouseUp);
   }, [clip.id, clip.startTime, clip.duration, clip.trimStart, clip.trimEnd, clip.sourceDuration, zoom, snapEnabled, snapTime, onSelect, onMove, onTrim, onSnapPreview]);
 
+  // Extract audio waveform from video
+  useEffect(() => {
+    if (clip.type !== "video" || !clip.sourceUrl) return;
+
+    const analyzeVideoAudio = async () => {
+      try {
+        const audioContext = new AudioContext();
+        const response = await fetch(clip.sourceUrl);
+        const arrayBuffer = await response.arrayBuffer();
+        const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+
+        const rawData = audioBuffer.getChannelData(0);
+        const samples = Math.min(Math.floor(width / 4), 100);
+        const blockSize = Math.floor(rawData.length / samples);
+        const filteredData: number[] = [];
+
+        for (let i = 0; i < samples; i++) {
+          const blockStart = blockSize * i;
+          let sum = 0;
+          for (let j = 0; j < blockSize; j++) {
+            sum += Math.abs(rawData[blockStart + j] || 0);
+          }
+          filteredData.push(sum / blockSize);
+        }
+
+        const max = Math.max(...filteredData);
+        const normalizedData = filteredData.map((n) => (max > 0 ? n / max : 0));
+        setVideoWaveformData(normalizedData);
+        audioContext.close();
+      } catch (error) {
+        // Silently fail - video might not have audio or CORS issues
+        console.debug("Could not extract audio from video:", error);
+      }
+    };
+
+    analyzeVideoAudio();
+  }, [clip.type, clip.sourceUrl, width]);
+
   // Calculate number of waveform bars based on clip width
   const waveformBars = Math.max(5, Math.floor(width / 8));
 
@@ -241,8 +281,18 @@ export const TimelineClipComponent = memo(function TimelineClipComponent({
       }}
       onClick={onSelect}
     >
-      {/* Thumbnail strip background for video/image clips */}
-      {clip.thumbnail && (clip.type === "video" || clip.type === "image") && width > 40 && (
+      {/* Filmstrip background for video clips */}
+      {clip.type === "video" && width > 60 && (
+        <InlineFilmstrip
+          videoUrl={clip.sourceUrl}
+          duration={clip.duration}
+          width={width}
+          height={56}
+        />
+      )}
+      
+      {/* Fallback thumbnail strip for video/image clips without filmstrip */}
+      {clip.thumbnail && clip.type === "image" && width > 40 && (
         <div className="absolute inset-0 flex items-center pointer-events-none overflow-hidden">
           {Array.from({ length: thumbnailCount }).map((_, i) => (
             <img
@@ -270,12 +320,41 @@ export const TimelineClipComponent = memo(function TimelineClipComponent({
         </div>
       )}
       
-      {/* Waveform overlay for video clips (on top of thumbnails) */}
-      {clip.type === "video" && width > 40 && (
-        <div className="absolute inset-0 flex items-end justify-center opacity-50 pointer-events-none">
+      {/* Real audio waveform overlay for video clips */}
+      {clip.type === "video" && width > 40 && videoWaveformData.length > 0 && (
+        <div className="absolute bottom-0 left-0 right-0 h-4 pointer-events-none bg-gradient-to-t from-black/40 to-transparent">
+          <svg
+            width={width}
+            height={16}
+            className="absolute bottom-0"
+            viewBox={`0 0 ${width} 16`}
+            preserveAspectRatio="none"
+          >
+            {videoWaveformData.map((value, i) => {
+              const barWidth = width / videoWaveformData.length;
+              const barHeight = Math.max(2, value * 14);
+              return (
+                <rect
+                  key={i}
+                  x={i * barWidth}
+                  y={16 - barHeight}
+                  width={Math.max(1, barWidth - 1)}
+                  height={barHeight}
+                  fill="hsl(var(--primary))"
+                  opacity={0.7}
+                />
+              );
+            })}
+          </svg>
+        </div>
+      )}
+      
+      {/* Fallback simple waveform if no audio data extracted */}
+      {clip.type === "video" && width > 40 && videoWaveformData.length === 0 && (
+        <div className="absolute bottom-0 left-0 right-0 flex items-end justify-center opacity-40 pointer-events-none">
           <SimpleWaveform
             width={Math.max(width - 8, 20)}
-            height={16}
+            height={14}
             bars={waveformBars}
             color="hsl(var(--primary))"
           />
