@@ -49,11 +49,28 @@ interface SnapInfo {
   type: "clip-start" | "clip-end" | "playhead" | "grid";
 }
 
-interface TimelineEditorProps {
-  onExport?: (url: string) => void;
+interface TimelineImportData {
+  scenes: Array<{
+    order: number;
+    title: string;
+    narrative: string;
+    prompt: string;
+    duration: number;
+    emotionalTone: string;
+    generatedImageUrl?: string | null;
+    generatedVideoUrl?: string | null;
+  }>;
+  soundtrackUrl?: string | null;
+  title?: string;
 }
 
-export function TimelineEditor({ onExport }: TimelineEditorProps) {
+interface TimelineEditorProps {
+  onExport?: (url: string) => void;
+  importData?: TimelineImportData;
+  onImportComplete?: () => void;
+}
+
+export function TimelineEditor({ onExport, importData, onImportComplete }: TimelineEditorProps) {
   const {
     state,
     addClip,
@@ -100,10 +117,122 @@ export function TimelineEditor({ onExport }: TimelineEditorProps) {
   const [snapPreviewLines, setSnapPreviewLines] = useState<SnapInfo[]>([]);
   const [showSaveToVault, setShowSaveToVault] = useState(false);
   const [lastExportedUrl, setLastExportedUrl] = useState<string | null>(null);
+  const [isImporting, setIsImporting] = useState(false);
+  const [importProgress, setImportProgress] = useState(0);
+  const hasImportedRef = useRef(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const audioInputRef = useRef<HTMLInputElement>(null);
   const timelineRef = useRef<HTMLDivElement>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
+
+  // Auto-import Mind Movie scenes when importData is provided
+  useEffect(() => {
+    if (!importData || hasImportedRef.current || isImporting) return;
+    
+    const importMindMovieScenes = async () => {
+      hasImportedRef.current = true;
+      setIsImporting(true);
+      setImportProgress(0);
+      
+      // Clear existing timeline first
+      clearTimeline();
+      
+      const { scenes, soundtrackUrl, title } = importData;
+      const validScenes = scenes.filter(scene => 
+        scene.generatedVideoUrl || scene.generatedImageUrl
+      );
+      
+      if (validScenes.length === 0) {
+        toast({
+          title: "No media to import",
+          description: "Generate images or videos for your scenes first",
+          variant: "destructive",
+        });
+        setIsImporting(false);
+        onImportComplete?.();
+        return;
+      }
+
+      toast({
+        title: "Importing Mind Movie",
+        description: `Adding ${validScenes.length} scene(s) to timeline...`,
+      });
+
+      // Sort scenes by order
+      const sortedScenes = [...validScenes].sort((a, b) => a.order - b.order);
+      
+      for (let i = 0; i < sortedScenes.length; i++) {
+        const scene = sortedScenes[i];
+        const mediaUrl = scene.generatedVideoUrl || scene.generatedImageUrl;
+        const isVideo = !!scene.generatedVideoUrl;
+        
+        if (!mediaUrl) continue;
+
+        try {
+          // Determine duration
+          let duration = scene.duration || 5;
+          let thumbnail: string | undefined;
+
+          if (isVideo) {
+            // Load video to get actual duration and thumbnail
+            const video = document.createElement("video");
+            video.crossOrigin = "anonymous";
+            video.src = mediaUrl;
+            
+            await new Promise<void>((resolve) => {
+              video.onloadedmetadata = () => {
+                duration = video.duration || scene.duration || 5;
+                resolve();
+              };
+              video.onerror = () => resolve();
+              setTimeout(resolve, 3000); // Timeout after 3s
+            });
+
+            // Generate thumbnail
+            thumbnail = await generateVideoThumbnail(mediaUrl);
+          } else {
+            // For images, use the image itself as thumbnail
+            thumbnail = mediaUrl;
+            duration = scene.duration || 5;
+          }
+
+          // Add clip to timeline
+          await addClip(
+            mediaUrl,
+            isVideo ? "video" : "image",
+            scene.title || `Scene ${scene.order}`,
+            duration,
+            thumbnail
+          );
+
+          setImportProgress(((i + 1) / sortedScenes.length) * 100);
+        } catch (error) {
+          console.error(`Error importing scene ${scene.order}:`, error);
+        }
+      }
+
+      // Add soundtrack as background audio if available
+      if (soundtrackUrl) {
+        setBackgroundAudio(soundtrackUrl, title ? `${title} Soundtrack` : "Mind Movie Soundtrack");
+        toast({
+          title: "Soundtrack added",
+          description: "Background audio has been added to the timeline",
+        });
+      }
+
+      setIsImporting(false);
+      setImportProgress(100);
+      
+      toast({
+        title: "Import complete!",
+        description: `${sortedScenes.length} scene(s) added to timeline${soundtrackUrl ? " with soundtrack" : ""}`,
+      });
+      
+      onImportComplete?.();
+    };
+
+    importMindMovieScenes();
+  }, [importData, addClip, clearTimeline, setBackgroundAudio, toast, onImportComplete, isImporting]);
 
   // Snapping hook
   const { snapTime } = useTimelineSnapping({
@@ -529,6 +658,20 @@ export function TimelineEditor({ onExport }: TimelineEditorProps) {
             </Button>
           </div>
           <Progress value={exportProgress.progress} className="h-2" />
+        </div>
+      )}
+
+      {/* Import Progress */}
+      {isImporting && (
+        <div className="p-3 rounded-lg bg-primary/10 border border-primary/30 space-y-2">
+          <div className="flex items-center justify-between text-sm">
+            <span className="flex items-center gap-2">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Importing Mind Movie scenes...
+            </span>
+            <span className="text-muted-foreground">{Math.round(importProgress)}%</span>
+          </div>
+          <Progress value={importProgress} className="h-2" />
         </div>
       )}
 
