@@ -45,24 +45,27 @@ interface ToolButtonProps {
   activeTool: EditingTool;
   onToolChange: (tool: EditingTool) => void;
   icon: React.ReactNode;
+  activeIcon?: React.ReactNode;
   label: string;
   shortcut: string;
 }
 
-function ToolButton({ tool, activeTool, onToolChange, icon, label, shortcut }: ToolButtonProps) {
+function ToolButton({ tool, activeTool, onToolChange, icon, activeIcon, label, shortcut }: ToolButtonProps) {
+  const isActive = activeTool === tool;
+  
   return (
     <Tooltip>
       <TooltipTrigger asChild>
         <Button
-          variant={activeTool === tool ? "secondary" : "ghost"}
+          variant={isActive ? "default" : "ghost"}
           size="icon"
           className={cn(
-            "h-8 w-8",
-            activeTool === tool && "bg-primary/20 text-primary border border-primary/30"
+            "h-9 w-9 transition-all",
+            isActive && "bg-primary text-primary-foreground shadow-md ring-2 ring-primary/30"
           )}
           onClick={() => onToolChange(tool)}
         >
-          {icon}
+          {isActive && activeIcon ? activeIcon : icon}
         </Button>
       </TooltipTrigger>
       <TooltipContent side="bottom" className="flex items-center gap-2">
@@ -91,9 +94,9 @@ export function TimelineToolbar({
 }: TimelineToolbarProps) {
   return (
     <TooltipProvider delayDuration={300}>
-      <div className="flex items-center gap-1 p-1 bg-card/80 border border-border/50 rounded-lg">
+      <div className="flex items-center gap-1 p-1.5 bg-card/80 border border-border/50 rounded-lg shadow-sm">
         {/* Tool Selection */}
-        <div className="flex items-center gap-0.5">
+        <div className="flex items-center gap-1 px-1">
           <ToolButton
             tool="select"
             activeTool={activeTool}
@@ -107,6 +110,7 @@ export function TimelineToolbar({
             activeTool={activeTool}
             onToolChange={onToolChange}
             icon={<Scissors className="h-4 w-4" />}
+            activeIcon={<Scissors className="h-5 w-5" />}
             label="Razor Tool (Cut)"
             shortcut="C"
           />
@@ -138,8 +142,8 @@ export function TimelineToolbar({
               pressed={snapEnabled}
               onPressedChange={onSnapToggle}
               className={cn(
-                "h-8 w-8",
-                snapEnabled && "bg-accent/50 text-accent-foreground"
+                "h-9 w-9",
+                snapEnabled && "bg-accent text-accent-foreground"
               )}
             >
               <Magnet className="h-4 w-4" />
@@ -160,7 +164,7 @@ export function TimelineToolbar({
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8"
+                className="h-9 w-9"
                 onClick={onUndo}
                 disabled={!canUndo}
               >
@@ -177,7 +181,7 @@ export function TimelineToolbar({
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8"
+                className="h-9 w-9"
                 onClick={onRedo}
                 disabled={!canRedo}
               >
@@ -200,7 +204,7 @@ export function TimelineToolbar({
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8"
+                className="h-9 w-9"
                 onClick={onCopy}
                 disabled={!hasSelection}
               >
@@ -217,7 +221,7 @@ export function TimelineToolbar({
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8"
+                className="h-9 w-9"
                 onClick={onPaste}
                 disabled={!hasClipboard}
               >
@@ -234,7 +238,10 @@ export function TimelineToolbar({
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8 text-destructive hover:text-destructive"
+                className={cn(
+                  "h-9 w-9",
+                  hasSelection && "text-destructive hover:text-destructive hover:bg-destructive/10"
+                )}
                 onClick={onDelete}
                 disabled={!hasSelection}
               >
@@ -246,6 +253,15 @@ export function TimelineToolbar({
               <kbd className="px-1.5 py-0.5 text-[10px] bg-muted rounded">⌫</kbd>
             </TooltipContent>
           </Tooltip>
+        </div>
+
+        {/* Active Tool Indicator */}
+        <div className="ml-2 px-2 py-1 rounded bg-muted/50 text-xs text-muted-foreground flex items-center gap-1.5">
+          {activeTool === "select" && <MousePointer2 className="h-3 w-3" />}
+          {activeTool === "razor" && <Scissors className="h-3 w-3 text-primary" />}
+          {activeTool === "hand" && <Hand className="h-3 w-3" />}
+          {activeTool === "range" && <SquareDashedMousePointer className="h-3 w-3" />}
+          <span className="capitalize">{activeTool}</span>
         </div>
       </div>
     </TooltipProvider>

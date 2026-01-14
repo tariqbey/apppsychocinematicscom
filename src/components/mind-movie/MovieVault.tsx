@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
-import { Film, Plus, Play, Star, Trash2, Copy, Edit3, Check, Loader2, X, Clapperboard } from "lucide-react";
+import { Film, Plus, Play, Star, Trash2, Copy, Edit3, Check, Loader2, X, Clapperboard, Eye, HardDrive } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Progress } from "@/components/ui/progress";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -16,6 +17,8 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useMindMovies, MindMovie } from "@/hooks/useMindMovies";
+import { useStorageUsage } from "@/hooks/useStorageUsage";
+import { MoviePreviewModal } from "./MoviePreviewModal";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 
@@ -29,14 +32,17 @@ interface MovieVaultProps {
 export function MovieVault({ isOpen, onClose, onSelectMovie, onCreateNew }: MovieVaultProps) {
   const { movies, isLoading, fetchAllMovies, setMovieAsActive, deleteMovie, duplicateMovie } =
     useMindMovies();
+  const { usage, isLoading: isLoadingUsage, calculateUsage, formatUsage, STORAGE_LIMIT_GB } = useStorageUsage();
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [settingActiveId, setSettingActiveId] = useState<string | null>(null);
+  const [previewMovie, setPreviewMovie] = useState<MindMovie | null>(null);
 
   useEffect(() => {
     if (isOpen) {
       fetchAllMovies();
+      calculateUsage();
     }
-  }, [isOpen, fetchAllMovies]);
+  }, [isOpen, fetchAllMovies, calculateUsage]);
 
   const handleSetActive = async (movieId: string) => {
     setSettingActiveId(movieId);
@@ -48,6 +54,14 @@ export function MovieVault({ isOpen, onClose, onSelectMovie, onCreateNew }: Movi
     setDeletingId(movieId);
     await deleteMovie(movieId);
     setDeletingId(null);
+    // Recalculate storage after delete
+    calculateUsage();
+  };
+
+  const handlePreview = (movie: MindMovie) => {
+    if (movie.movie_url) {
+      setPreviewMovie(movie);
+    }
   };
 
   if (!isOpen) return null;
@@ -68,7 +82,30 @@ export function MovieVault({ isOpen, onClose, onSelectMovie, onCreateNew }: Movi
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-4">
+          {/* Storage Usage Indicator */}
+          <div className="flex items-center gap-3 px-4 py-2 rounded-lg bg-muted/50 border border-border">
+            <HardDrive className="w-4 h-4 text-muted-foreground" />
+            <div className="flex flex-col gap-1">
+              <div className="flex items-center justify-between gap-4">
+                <span className="text-xs text-muted-foreground">Storage</span>
+                <span className="text-xs font-medium">
+                  {isLoadingUsage ? (
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                  ) : usage ? (
+                    `${formatUsage(usage.totalBytes)} / ${STORAGE_LIMIT_GB} GB`
+                  ) : (
+                    "Calculating..."
+                  )}
+                </span>
+              </div>
+              <Progress 
+                value={usage?.percentUsed || 0} 
+                className="h-1.5 w-32"
+              />
+            </div>
+          </div>
+
           <Button variant="gold" onClick={onCreateNew}>
             <Plus className="w-4 h-4 mr-2" />
             Start New Movie
@@ -109,11 +146,20 @@ export function MovieVault({ isOpen, onClose, onSelectMovie, onCreateNew }: Movi
                 onSetActive={() => handleSetActive(movie.id)}
                 onDelete={() => handleDelete(movie.id)}
                 onDuplicate={() => duplicateMovie(movie.id)}
+                onPreview={() => handlePreview(movie)}
               />
             ))}
           </div>
         )}
       </ScrollArea>
+
+      {/* Preview Modal */}
+      <MoviePreviewModal
+        open={!!previewMovie}
+        onOpenChange={(open) => !open && setPreviewMovie(null)}
+        movieUrl={previewMovie?.movie_url || null}
+        movieTitle={previewMovie?.title || "Mind Movie Preview"}
+      />
     </div>
   );
 }
@@ -126,6 +172,7 @@ interface MovieCardProps {
   onSetActive: () => void;
   onDelete: () => void;
   onDuplicate: () => void;
+  onPreview: () => void;
 }
 
 function MovieCard({
@@ -136,6 +183,7 @@ function MovieCard({
   onSetActive,
   onDelete,
   onDuplicate,
+  onPreview,
 }: MovieCardProps) {
   const hasVideo = !!movie.movie_url;
   const hasScenes = movie.scenes && movie.scenes.length > 0;
@@ -184,10 +232,10 @@ function MovieCard({
           {movie.status === "complete" ? "Complete" : "Draft"}
         </Badge>
 
-        {/* Play overlay */}
+        {/* Play/Preview overlay */}
         {hasVideo && (
           <button
-            onClick={onSelect}
+            onClick={onPreview}
             className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity"
           >
             <div className="w-14 h-14 rounded-full bg-gold/90 flex items-center justify-center">
@@ -218,6 +266,18 @@ function MovieCard({
             <Edit3 className="w-3 h-3 mr-1" />
             Edit
           </Button>
+
+          {hasVideo && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              onClick={onPreview}
+              title="Preview movie"
+            >
+              <Eye className="w-4 h-4" />
+            </Button>
+          )}
 
           {!movie.is_active && hasVideo && (
             <Button
