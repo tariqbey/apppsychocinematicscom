@@ -18,6 +18,7 @@ interface TimelineTrackComponentProps {
   zoom: number;
   currentTime: number;
   selectedClipIds: string[];
+  trackIndex: number;
   onSelectClip: (clipId: string, addToSelection?: boolean) => void;
   onClearSelection: () => void;
   onRemoveClip: (clipId: string) => void;
@@ -43,6 +44,7 @@ export const TimelineTrackComponent = memo(function TimelineTrackComponent({
   zoom,
   currentTime,
   selectedClipIds,
+  trackIndex,
   onSelectClip,
   onClearSelection,
   onRemoveClip,
@@ -60,6 +62,8 @@ export const TimelineTrackComponent = memo(function TimelineTrackComponent({
   onSnapPreview,
   snapTime,
 }: TimelineTrackComponentProps) {
+  // Generate track label like "Video 1", "Audio 1"
+  const trackLabel = track.type === "video" ? `Video ${trackIndex + 1}` : `Audio ${trackIndex + 1}`;
   const handleTrackClick = useCallback((e: React.MouseEvent) => {
     if (e.target === e.currentTarget) {
       onClearSelection();
@@ -126,34 +130,40 @@ export const TimelineTrackComponent = memo(function TimelineTrackComponent({
 
   return (
     <div className="flex border-b border-border/50">
-      {/* Track header */}
-      <div className="w-32 flex-shrink-0 p-2 border-r border-border/50 bg-card/50 flex flex-col justify-center gap-1">
-        <div className="flex items-center gap-2">
+      {/* Track header with label */}
+      <div className="w-28 flex-shrink-0 border-r border-border/50 bg-card/50 flex flex-col">
+        {/* Track label */}
+        <div className={cn(
+          "px-2 py-1.5 border-b border-border/30 flex items-center gap-2",
+          track.type === "video" ? "bg-primary/10" : "bg-accent/10"
+        )}>
           {track.type === "video" ? (
-            <Film className="h-4 w-4 text-primary" />
+            <Film className="h-3.5 w-3.5 text-primary" />
           ) : (
-            <Music className="h-4 w-4 text-accent" />
+            <Music className="h-3.5 w-3.5 text-accent" />
           )}
-          <span className="text-xs font-medium truncate">{track.name}</span>
+          <span className="text-xs font-semibold tracking-wide">{trackLabel}</span>
         </div>
-        <div className="flex items-center gap-1">
+        
+        {/* Controls */}
+        <div className="flex-1 flex items-center justify-center gap-1 px-2">
           <Button
             variant="ghost"
             size="icon"
-            className={cn("h-5 w-5", track.muted && "text-muted-foreground")}
+            className={cn("h-6 w-6", track.muted && "text-muted-foreground")}
             onClick={onToggleTrackMute}
             title={track.muted ? "Unmute track" : "Mute track"}
           >
-            {track.muted ? <VolumeX className="h-3 w-3" /> : <Volume2 className="h-3 w-3" />}
+            {track.muted ? <VolumeX className="h-3.5 w-3.5" /> : <Volume2 className="h-3.5 w-3.5" />}
           </Button>
           <Button
             variant="ghost"
             size="icon"
-            className={cn("h-5 w-5", track.locked && "text-amber-500")}
+            className={cn("h-6 w-6", track.locked && "text-amber-500")}
             onClick={onToggleTrackLock}
             title={track.locked ? "Unlock track" : "Lock track"}
           >
-            {track.locked ? <Lock className="h-3 w-3" /> : <Unlock className="h-3 w-3" />}
+            {track.locked ? <Lock className="h-3.5 w-3.5" /> : <Unlock className="h-3.5 w-3.5" />}
           </Button>
         </div>
       </div>

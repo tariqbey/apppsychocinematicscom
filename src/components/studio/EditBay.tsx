@@ -133,6 +133,7 @@ export function EditBay({ onClose, initialPrompt, timelineImportData }: EditBayP
                   onImportComplete={() => {
                     // Clear the import data after import is complete
                   }}
+                  onClose={onClose}
                 />
               </div>
             </TabsContent>
