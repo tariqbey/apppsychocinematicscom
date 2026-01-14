@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState, useRef, useCallback, useEffect } from "react";
 
 interface TimelineRulerProps {
   duration: number;
@@ -8,6 +8,9 @@ interface TimelineRulerProps {
 }
 
 export function TimelineRuler({ duration, zoom, currentTime, onSeek }: TimelineRulerProps) {
+  const [isDragging, setIsDragging] = useState(false);
+  const rulerRef = useRef<HTMLDivElement>(null);
+
   // Generate time markers based on zoom level
   const markers = useMemo(() => {
     const result: { time: number; label: string; major: boolean }[] = [];
@@ -39,23 +42,64 @@ export function TimelineRuler({ duration, zoom, currentTime, onSeek }: TimelineR
     return result;
   }, [duration, zoom]);
 
-  const handleClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    const x = e.clientX - rect.left;
+  // Calculate time from mouse position
+  const getTimeFromPosition = useCallback((clientX: number) => {
+    if (!rulerRef.current) return 0;
+    const rect = rulerRef.current.getBoundingClientRect();
+    const x = clientX - rect.left;
     const time = x / zoom;
-    onSeek(Math.max(0, Math.min(time, duration)));
-  };
+    return Math.max(0, Math.min(time, duration));
+  }, [zoom, duration]);
+
+  // Handle mouse down - start dragging
+  const handleMouseDown = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDragging(true);
+    const time = getTimeFromPosition(e.clientX);
+    onSeek(time);
+  }, [getTimeFromPosition, onSeek]);
+
+  // Handle mouse move while dragging
+  useEffect(() => {
+    if (!isDragging) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const time = getTimeFromPosition(e.clientX);
+      onSeek(time);
+    };
+
+    const handleMouseUp = () => {
+      setIsDragging(false);
+    };
+
+    // Use requestAnimationFrame for smoother updates
+    let animationFrame: number;
+    const throttledMouseMove = (e: MouseEvent) => {
+      if (animationFrame) cancelAnimationFrame(animationFrame);
+      animationFrame = requestAnimationFrame(() => handleMouseMove(e));
+    };
+
+    document.addEventListener("mousemove", throttledMouseMove);
+    document.addEventListener("mouseup", handleMouseUp);
+
+    return () => {
+      document.removeEventListener("mousemove", throttledMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
+      if (animationFrame) cancelAnimationFrame(animationFrame);
+    };
+  }, [isDragging, getTimeFromPosition, onSeek]);
 
   return (
     <div
+      ref={rulerRef}
       className="relative h-6 bg-card border-b border-border/50 cursor-pointer select-none"
-      onClick={handleClick}
+      onMouseDown={handleMouseDown}
     >
       {/* Markers */}
       {markers.map(({ time, label, major }) => (
         <div
           key={time}
-          className="absolute top-0 bottom-0 flex flex-col items-center"
+          className="absolute top-0 bottom-0 flex flex-col items-center pointer-events-none"
           style={{ left: `${time * zoom}px` }}
         >
           <div
@@ -69,10 +113,13 @@ export function TimelineRuler({ duration, zoom, currentTime, onSeek }: TimelineR
         </div>
       ))}
 
-      {/* Playhead indicator */}
+      {/* Playhead indicator - use transform for smooth GPU-accelerated movement */}
       <div
         className="absolute top-0 w-0.5 h-full bg-primary z-10 pointer-events-none"
-        style={{ left: `${currentTime * zoom}px` }}
+        style={{ 
+          transform: `translateX(${currentTime * zoom}px)`,
+          willChange: isDragging ? "transform" : "auto",
+        }}
       >
         <div className="absolute -top-0.5 -left-1.5 w-3 h-3 bg-primary rotate-45" />
       </div>

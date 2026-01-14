@@ -797,7 +797,14 @@ export function TimelineEditor({ onExport }: TimelineEditorProps) {
 
           {/* Timeline Content */}
           <ScrollArea className="flex-1" ref={timelineRef}>
-            <div style={{ width: `${Math.max(state.duration, 60) * state.zoom + 200}px` }}>
+            <div 
+              className={cn(
+                activeTool === "razor" && "cursor-crosshair",
+                activeTool === "hand" && "cursor-grab active:cursor-grabbing",
+                activeTool === "range" && "cursor-cell"
+              )}
+              style={{ width: `${Math.max(state.duration, 60) * state.zoom + 200}px` }}
+            >
               {/* Ruler */}
               <div className="ml-32">
                 <TimelineRuler
