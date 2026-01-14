@@ -21,7 +21,8 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { StoryboardGrid } from "./StoryboardGrid";
+import { DraggableStoryboardGrid } from "./DraggableStoryboardGrid";
+import { CreditCostEstimate } from "./CreditCostEstimate";
 import { LyricsEditor } from "./LyricsEditor";
 import { SoundtrackPlayer } from "./SoundtrackPlayer";
 import { useMindMovieScript, type Scene } from "@/hooks/useMindMovieScript";
@@ -336,6 +337,11 @@ export function MindMovieScriptWizard({
       }));
     });
     toast.success("Scene deleted");
+  };
+
+  const handleReorderScenes = (newScenes: Scene[]) => {
+    setGeneratedScenes(newScenes);
+    toast.success("Scenes reordered");
   };
 
   const handleGenerateLyrics = async () => {
@@ -703,9 +709,10 @@ export function MindMovieScriptWizard({
                     </div>
 
                     {/* Storyboard Preview */}
-                    <StoryboardGrid
+                    <DraggableStoryboardGrid
                       scenes={generatedScenes}
                       onUpdateScene={handleUpdateScene}
+                      onReorderScenes={handleReorderScenes}
                       onGenerateInEditBay={handleGenerateInEditBay}
                       onRegenerateScene={handleRegenerateScene}
                       onDeleteScene={handleDeleteScene}
@@ -779,7 +786,12 @@ export function MindMovieScriptWizard({
                       {generatedScenes.length} scenes • Click to edit or copy prompts
                     </p>
                   </div>
-                  <div className="flex flex-wrap gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    {/* Credit Cost Estimate */}
+                    {onAddToTimeline && !isAutoGenerating && (
+                      <CreditCostEstimate scenes={generatedScenes} />
+                    )}
+                    
                     {/* Auto-Generate All Button */}
                     {onAddToTimeline && (
                       <Button 
@@ -839,9 +851,10 @@ export function MindMovieScriptWizard({
                   </div>
                 )}
 
-                <StoryboardGrid
+                <DraggableStoryboardGrid
                   scenes={generatedScenes}
                   onUpdateScene={handleUpdateScene}
+                  onReorderScenes={handleReorderScenes}
                   onGenerateInEditBay={handleGenerateInEditBay}
                   onRegenerateScene={handleRegenerateScene}
                   onDeleteScene={handleDeleteScene}
