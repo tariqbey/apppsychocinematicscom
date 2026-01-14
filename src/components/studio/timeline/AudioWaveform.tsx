@@ -96,10 +96,26 @@ export function AudioWaveform({
       const x = index * barWidth + barGap / 2;
       const y = (height - barHeight) / 2;
 
-      // Draw rounded rectangle
+      // Draw rounded rectangle (with fallback for browsers without ctx.roundRect)
       const radius = Math.min(effectiveBarWidth / 2, 2);
+      const r = Math.min(radius, effectiveBarWidth / 2, barHeight / 2);
+
       ctx.beginPath();
-      ctx.roundRect(x, y, effectiveBarWidth, barHeight, radius);
+      const anyCtx = ctx as any;
+      if (typeof anyCtx.roundRect === "function") {
+        anyCtx.roundRect(x, y, effectiveBarWidth, barHeight, r);
+      } else {
+        ctx.moveTo(x + r, y);
+        ctx.lineTo(x + effectiveBarWidth - r, y);
+        ctx.quadraticCurveTo(x + effectiveBarWidth, y, x + effectiveBarWidth, y + r);
+        ctx.lineTo(x + effectiveBarWidth, y + barHeight - r);
+        ctx.quadraticCurveTo(x + effectiveBarWidth, y + barHeight, x + effectiveBarWidth - r, y + barHeight);
+        ctx.lineTo(x + r, y + barHeight);
+        ctx.quadraticCurveTo(x, y + barHeight, x, y + barHeight - r);
+        ctx.lineTo(x, y + r);
+        ctx.quadraticCurveTo(x, y, x + r, y);
+        ctx.closePath();
+      }
       ctx.fill();
     });
   }, [waveformData, width, height, color, backgroundColor]);

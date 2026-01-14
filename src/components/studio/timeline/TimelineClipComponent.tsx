@@ -308,13 +308,13 @@ export const TimelineClipComponent = memo(function TimelineClipComponent({
 
       {/* Waveform background for audio clips */}
       {clip.type === "audio" && (
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none px-2">
+        <div className="absolute inset-0 z-0 flex items-center justify-center pointer-events-none px-2">
           <AudioWaveform
             src={clip.sourceUrl}
             duration={clip.duration}
             width={Math.max(width - 16, 20)}
             height={44}
-            color="hsl(var(--accent-foreground))"
+            color="hsl(var(--primary))"
             backgroundColor="transparent"
             className="opacity-80"
           />
