@@ -1,6 +1,7 @@
-import { useMemo, memo, useCallback } from "react";
+import { useMemo, memo, useCallback, useState } from "react";
 import { Film, Music, Volume2, VolumeX, Lock, Unlock } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Slider } from "@/components/ui/slider";
 import { TimelineTrack, TimelineClip, TimelineTransition } from "@/hooks/useTimelineEditor";
 import { TimelineClipComponent } from "./TimelineClipComponent";
 import { TransitionIndicator, AddTransitionButton } from "./TransitionIndicator";
@@ -29,6 +30,7 @@ interface TimelineTrackComponentProps {
   onUpdateClipVolume: (clipId: string, volume: number) => void;
   onToggleTrackMute: () => void;
   onToggleTrackLock: () => void;
+  onSetTrackVolume: (volume: number) => void;
   onAddTransition: (clipAId: string, clipBId: string) => void;
   onUpdateTransition: (transitionId: string, updates: Partial<TimelineTransition>) => void;
   onRemoveTransition: (transitionId: string) => void;
@@ -55,6 +57,7 @@ export const TimelineTrackComponent = memo(function TimelineTrackComponent({
   onUpdateClipVolume,
   onToggleTrackMute,
   onToggleTrackLock,
+  onSetTrackVolume,
   onAddTransition,
   onUpdateTransition,
   onRemoveTransition,
@@ -62,6 +65,7 @@ export const TimelineTrackComponent = memo(function TimelineTrackComponent({
   onSnapPreview,
   snapTime,
 }: TimelineTrackComponentProps) {
+  const [showVolumeSlider, setShowVolumeSlider] = useState(false);
   // Generate track label like "Video 1", "Audio 1"
   const trackLabel = track.type === "video" ? `Video ${trackIndex + 1}` : `Audio ${trackIndex + 1}`;
   const handleTrackClick = useCallback((e: React.MouseEvent) => {
@@ -146,25 +150,49 @@ export const TimelineTrackComponent = memo(function TimelineTrackComponent({
         </div>
         
         {/* Controls */}
-        <div className="flex-1 flex items-center justify-center gap-1 px-2">
-          <Button
-            variant="ghost"
-            size="icon"
-            className={cn("h-6 w-6", track.muted && "text-muted-foreground")}
-            onClick={onToggleTrackMute}
-            title={track.muted ? "Unmute track" : "Mute track"}
+        <div className="flex-1 flex flex-col justify-center gap-1 px-2 py-1">
+          <div className="flex items-center justify-center gap-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              className={cn("h-6 w-6", track.muted && "text-muted-foreground")}
+              onClick={onToggleTrackMute}
+              title={track.muted ? "Unmute track" : "Mute track"}
+            >
+              {track.muted ? <VolumeX className="h-3.5 w-3.5" /> : <Volume2 className="h-3.5 w-3.5" />}
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className={cn("h-6 w-6", track.locked && "text-amber-500")}
+              onClick={onToggleTrackLock}
+              title={track.locked ? "Unlock track" : "Lock track"}
+            >
+              {track.locked ? <Lock className="h-3.5 w-3.5" /> : <Unlock className="h-3.5 w-3.5" />}
+            </Button>
+          </div>
+          
+          {/* Volume slider */}
+          <div 
+            className="flex items-center gap-1 px-0.5"
+            onMouseEnter={() => setShowVolumeSlider(true)}
+            onMouseLeave={() => setShowVolumeSlider(false)}
           >
-            {track.muted ? <VolumeX className="h-3.5 w-3.5" /> : <Volume2 className="h-3.5 w-3.5" />}
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className={cn("h-6 w-6", track.locked && "text-amber-500")}
-            onClick={onToggleTrackLock}
-            title={track.locked ? "Unlock track" : "Lock track"}
-          >
-            {track.locked ? <Lock className="h-3.5 w-3.5" /> : <Unlock className="h-3.5 w-3.5" />}
-          </Button>
+            <Slider
+              value={[track.volume * 100]}
+              max={100}
+              step={1}
+              className={cn(
+                "h-4 cursor-pointer transition-opacity",
+                showVolumeSlider || track.volume < 1 ? "opacity-100" : "opacity-50"
+              )}
+              onValueChange={([val]) => onSetTrackVolume(val / 100)}
+              disabled={track.muted}
+            />
+            <span className="text-[10px] text-muted-foreground w-6 text-right tabular-nums">
+              {Math.round(track.volume * 100)}
+            </span>
+          </div>
         </div>
       </div>
 
