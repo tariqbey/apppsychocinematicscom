@@ -46,8 +46,14 @@ export interface TimelineState {
   };
 }
 
+interface HistoryState {
+  clips: TimelineClip[];
+  backgroundAudio: TimelineState["backgroundAudio"];
+}
+
 const MAX_DURATION = 5 * 60; // 5 minutes in seconds
 const DEFAULT_ZOOM = 50; // 50 pixels per second
+const MAX_HISTORY_SIZE = 50;
 
 const generateId = () => Math.random().toString(36).substring(2, 15);
 
@@ -72,6 +78,41 @@ export function useTimelineEditor() {
 
   const playbackRef = useRef<number | null>(null);
   const lastTimeRef = useRef<number>(0);
+  
+  // History for undo/redo
+  const [history, setHistory] = useState<HistoryState[]>([{
+    clips: [],
+    backgroundAudio: { url: null, name: "", volume: 1, muted: false },
+  }]);
+  const [historyIndex, setHistoryIndex] = useState(0);
+  const isUndoingRef = useRef(false);
+
+  const canUndo = historyIndex > 0;
+  const canRedo = historyIndex < history.length - 1;
+
+  // Push state to history
+  const pushHistory = useCallback((clips: TimelineClip[], backgroundAudio: TimelineState["backgroundAudio"]) => {
+    if (isUndoingRef.current) {
+      isUndoingRef.current = false;
+      return;
+    }
+
+    setHistory(prev => {
+      const newHistory = prev.slice(0, historyIndex + 1);
+      newHistory.push({
+        clips: JSON.parse(JSON.stringify(clips)),
+        backgroundAudio: JSON.parse(JSON.stringify(backgroundAudio)),
+      });
+      
+      if (newHistory.length > MAX_HISTORY_SIZE) {
+        newHistory.shift();
+      }
+      
+      return newHistory;
+    });
+    
+    setHistoryIndex(prev => Math.min(prev + 1, MAX_HISTORY_SIZE - 1));
+  }, [historyIndex]);
 
   // Calculate total timeline duration based on clips
   const calculateDuration = useCallback((clips: TimelineClip[]): number => {
@@ -141,6 +182,8 @@ export function useTimelineEditor() {
           ? prev.tracks
           : [...prev.tracks, track];
 
+      pushHistory(newClips, prev.backgroundAudio);
+
         return {
           ...prev,
           clips: newClips,
@@ -149,20 +192,34 @@ export function useTimelineEditor() {
         };
       });
     },
-    [calculateDuration]
+    [calculateDuration, pushHistory]
   );
+
+  // Add multiple clips at once (for paste/duplicate)
+  const addClips = useCallback((newClips: TimelineClip[]) => {
+    setState(prev => {
+      const updatedClips = [...prev.clips, ...newClips];
+      pushHistory(updatedClips, prev.backgroundAudio);
+      return {
+        ...prev,
+        clips: updatedClips,
+        duration: calculateDuration(updatedClips),
+      };
+    });
+  }, [calculateDuration, pushHistory]);
 
   // Remove a clip
   const removeClip = useCallback((clipId: string) => {
     setState((prev) => {
       const newClips = prev.clips.filter((c) => c.id !== clipId);
+      pushHistory(newClips, prev.backgroundAudio);
       return {
         ...prev,
         clips: newClips,
         duration: calculateDuration(newClips),
       };
     });
-  }, [calculateDuration]);
+  }, [calculateDuration, pushHistory]);
 
   // Update clip properties
   const updateClip = useCallback((clipId: string, updates: Partial<TimelineClip>) => {
@@ -385,19 +442,55 @@ export function useTimelineEditor() {
   // Clear timeline
   const clearTimeline = useCallback(() => {
     pause();
+    const emptyBackgroundAudio = {
+      url: null,
+      name: "",
+      volume: 1,
+      muted: false,
+    };
+    pushHistory([], emptyBackgroundAudio);
     setState((prev) => ({
       ...prev,
       clips: [],
       currentTime: 0,
       duration: 0,
-      backgroundAudio: {
-        url: null,
-        name: "",
-        volume: 1,
-        muted: false,
-      },
+      backgroundAudio: emptyBackgroundAudio,
     }));
-  }, [pause]);
+  }, [pause, pushHistory]);
+
+  // Undo
+  const undo = useCallback(() => {
+    if (!canUndo) return;
+    
+    isUndoingRef.current = true;
+    const newIndex = historyIndex - 1;
+    setHistoryIndex(newIndex);
+    
+    const prevState = history[newIndex];
+    setState(state => ({
+      ...state,
+      clips: JSON.parse(JSON.stringify(prevState.clips)),
+      backgroundAudio: JSON.parse(JSON.stringify(prevState.backgroundAudio)),
+      duration: calculateDuration(prevState.clips),
+    }));
+  }, [canUndo, historyIndex, history, calculateDuration]);
+
+  // Redo
+  const redo = useCallback(() => {
+    if (!canRedo) return;
+    
+    isUndoingRef.current = true;
+    const newIndex = historyIndex + 1;
+    setHistoryIndex(newIndex);
+    
+    const nextState = history[newIndex];
+    setState(state => ({
+      ...state,
+      clips: JSON.parse(JSON.stringify(nextState.clips)),
+      backgroundAudio: JSON.parse(JSON.stringify(nextState.backgroundAudio)),
+      duration: calculateDuration(nextState.clips),
+    }));
+  }, [canRedo, historyIndex, history, calculateDuration]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -420,6 +513,7 @@ export function useTimelineEditor() {
   return {
     state,
     addClip,
+    addClips,
     removeClip,
     updateClip,
     moveClip,
@@ -437,6 +531,10 @@ export function useTimelineEditor() {
     toggleTrackLock,
     clearTimeline,
     getActiveClips,
+    undo,
+    redo,
+    canUndo,
+    canRedo,
     MAX_DURATION,
   };
 }

@@ -9,7 +9,7 @@ interface TimelineClipComponentProps {
   clip: TimelineClip;
   zoom: number;
   isSelected: boolean;
-  onSelect: () => void;
+  onSelect: (e?: React.MouseEvent) => void;
   onRemove: () => void;
   onMove: (newStartTime: number) => void;
   onTrim: (trimStart: number, trimEnd: number) => void;

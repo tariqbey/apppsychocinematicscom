@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import {
   Play,
   Pause,
@@ -31,11 +31,14 @@ import {
 import { useTimelineEditor, TimelineClip } from "@/hooks/useTimelineEditor";
 import { useTimelineExport } from "@/hooks/useTimelineExport";
 import { useMediaGeneration, GeneratedMedia } from "@/hooks/useMediaGeneration";
+import { useTimelineClipboard } from "@/hooks/useTimelineClipboard";
+import { useTimelineKeyboard } from "@/hooks/useTimelineKeyboard";
 import { useToast } from "@/hooks/use-toast";
 import { TimelineTrackComponent } from "./TimelineTrackComponent";
 import { TimelineRuler } from "./TimelineRuler";
 import { TimelinePreview } from "./TimelinePreview";
 import { AudioWaveform } from "./AudioWaveform";
+import { TimelineToolbar, EditingTool } from "./TimelineToolbar";
 import { cn } from "@/lib/utils";
 
 interface TimelineEditorProps {
@@ -51,6 +54,7 @@ export function TimelineEditor({ onExport }: TimelineEditorProps) {
     moveClip,
     trimClip,
     splitClip,
+    addClips,
     play,
     pause,
     togglePlayback,
@@ -62,21 +66,134 @@ export function TimelineEditor({ onExport }: TimelineEditorProps) {
     toggleTrackMute,
     toggleTrackLock,
     clearTimeline,
+    undo,
+    redo,
+    canUndo,
+    canRedo,
     MAX_DURATION,
   } = useTimelineEditor();
 
   const { exportTimeline, isExporting, progress: exportProgress, cancelExport } = useTimelineExport();
   const { fetchGenerationHistory } = useMediaGeneration();
+  const { copy, paste, duplicate, hasClipboard } = useTimelineClipboard();
   const { toast } = useToast();
 
-  const [selectedClipId, setSelectedClipId] = useState<string | null>(null);
+  const [selectedClipIds, setSelectedClipIds] = useState<string[]>([]);
+  const [activeTool, setActiveTool] = useState<EditingTool>("select");
+  const [snapEnabled, setSnapEnabled] = useState(true);
   const [showMediaBrowser, setShowMediaBrowser] = useState(false);
   const [mediaLibrary, setMediaLibrary] = useState<GeneratedMedia[]>([]);
   const [isLoadingLibrary, setIsLoadingLibrary] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
+  const [rangeSelection, setRangeSelection] = useState<{ start: number; end: number } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const audioInputRef = useRef<HTMLInputElement>(null);
   const timelineRef = useRef<HTMLDivElement>(null);
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
+
+  // Get selected clips
+  const selectedClips = state.clips.filter(c => selectedClipIds.includes(c.id));
+  const hasSelection = selectedClipIds.length > 0;
+
+  // Handle clip selection (supports multi-select with shift/cmd)
+  const handleClipSelect = useCallback((clipId: string, addToSelection: boolean = false) => {
+    if (activeTool === "razor") {
+      // In razor mode, split the clip at the current time
+      const clip = state.clips.find(c => c.id === clipId);
+      if (clip && state.currentTime > clip.startTime && state.currentTime < clip.startTime + clip.duration) {
+        splitClip(clipId, state.currentTime);
+        toast({ title: "Clip split", description: "Clip was cut at playhead" });
+      }
+      return;
+    }
+
+    if (addToSelection) {
+      setSelectedClipIds(prev => 
+        prev.includes(clipId) 
+          ? prev.filter(id => id !== clipId)
+          : [...prev, clipId]
+      );
+    } else {
+      setSelectedClipIds([clipId]);
+    }
+  }, [activeTool, state.clips, state.currentTime, splitClip, toast]);
+
+  // Clear selection when clicking empty area
+  const handleTimelineClick = useCallback((e: React.MouseEvent) => {
+    if (e.target === e.currentTarget) {
+      setSelectedClipIds([]);
+      setRangeSelection(null);
+    }
+  }, []);
+
+  // Copy selected clips
+  const handleCopy = useCallback(() => {
+    if (selectedClips.length > 0) {
+      copy(selectedClips);
+      toast({ title: "Copied", description: `${selectedClips.length} clip(s) copied` });
+    }
+  }, [selectedClips, copy, toast]);
+
+  // Paste clips
+  const handlePaste = useCallback(() => {
+    const newClips = paste(state.currentTime);
+    if (newClips.length > 0) {
+      addClips(newClips);
+      setSelectedClipIds(newClips.map(c => c.id));
+      toast({ title: "Pasted", description: `${newClips.length} clip(s) pasted` });
+    }
+  }, [paste, state.currentTime, addClips, toast]);
+
+  // Delete selected clips
+  const handleDelete = useCallback(() => {
+    if (selectedClipIds.length > 0) {
+      selectedClipIds.forEach(id => removeClip(id));
+      setSelectedClipIds([]);
+      toast({ title: "Deleted", description: `${selectedClipIds.length} clip(s) deleted` });
+    }
+  }, [selectedClipIds, removeClip, toast]);
+
+  // Duplicate selected clips
+  const handleDuplicate = useCallback(() => {
+    if (selectedClips.length > 0) {
+      const newClips = duplicate(selectedClips);
+      addClips(newClips);
+      setSelectedClipIds(newClips.map(c => c.id));
+      toast({ title: "Duplicated", description: `${selectedClips.length} clip(s) duplicated` });
+    }
+  }, [selectedClips, duplicate, addClips, toast]);
+
+  // Split at playhead
+  const handleSplitAtPlayhead = useCallback(() => {
+    // Find clips that span the current time
+    const clipsAtPlayhead = state.clips.filter(
+      c => state.currentTime > c.startTime && state.currentTime < c.startTime + c.duration
+    );
+    
+    if (clipsAtPlayhead.length > 0) {
+      clipsAtPlayhead.forEach(c => splitClip(c.id, state.currentTime));
+      toast({ title: "Split", description: `${clipsAtPlayhead.length} clip(s) split at playhead` });
+    }
+  }, [state.clips, state.currentTime, splitClip, toast]);
+
+  // Keyboard shortcuts
+  useTimelineKeyboard({
+    onToolChange: setActiveTool,
+    onSnapToggle: () => setSnapEnabled(prev => !prev),
+    onPlayPause: togglePlayback,
+    onUndo: undo,
+    onRedo: redo,
+    onCopy: handleCopy,
+    onPaste: handlePaste,
+    onDelete: handleDelete,
+    onDuplicate: handleDuplicate,
+    onSplit: handleSplitAtPlayhead,
+    onSeekStart: () => seek(0),
+    onSeekEnd: () => seek(state.duration),
+    onNudgeLeft: () => seek(Math.max(0, state.currentTime - (snapEnabled ? 1 : 0.1))),
+    onNudgeRight: () => seek(Math.min(state.duration, state.currentTime + (snapEnabled ? 1 : 0.1))),
+    enabled: true,
+  });
 
   // Drag and drop handlers
   const handleDragEnter = useCallback((e: React.DragEvent) => {
@@ -484,8 +601,27 @@ export function TimelineEditor({ onExport }: TimelineEditorProps) {
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
         >
-          {/* Timeline Toolbar */}
+          {/* Editing Tools Toolbar */}
           <div className="flex items-center gap-2 p-2 border-b border-border/50 bg-card/50">
+            <TimelineToolbar
+              activeTool={activeTool}
+              onToolChange={setActiveTool}
+              snapEnabled={snapEnabled}
+              onSnapToggle={() => setSnapEnabled(prev => !prev)}
+              canUndo={canUndo}
+              canRedo={canRedo}
+              onUndo={undo}
+              onRedo={redo}
+              hasSelection={hasSelection}
+              hasClipboard={hasClipboard}
+              onCopy={handleCopy}
+              onPaste={handlePaste}
+              onDelete={handleDelete}
+              onDuplicate={handleDuplicate}
+            />
+
+            <div className="flex-1" />
+
             <Button
               variant="outline"
               size="sm"
@@ -605,8 +741,9 @@ export function TimelineEditor({ onExport }: TimelineEditorProps) {
                   clips={state.clips.filter((c) => c.trackId === track.id)}
                   zoom={state.zoom}
                   currentTime={state.currentTime}
-                  selectedClipId={selectedClipId}
-                  onSelectClip={setSelectedClipId}
+                  selectedClipIds={selectedClipIds}
+                  onSelectClip={handleClipSelect}
+                  onClearSelection={() => setSelectedClipIds([])}
                   onRemoveClip={removeClip}
                   onMoveClip={moveClip}
                   onTrimClip={trimClip}
