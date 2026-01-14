@@ -640,244 +640,204 @@ export function TimelineEditor({ onExport, importData, onImportComplete }: Timel
   };
 
   return (
-    <div className="flex flex-col h-full gap-3">
-      {/* Header */}
-      <div className="flex items-center justify-between flex-shrink-0">
-        <div>
-          <h3 className="text-lg font-display tracking-wide">Timeline Editor</h3>
-          <p className="text-xs text-muted-foreground">
-            Create videos up to 5 minutes • {formatTime(state.duration)} / {formatTime(MAX_DURATION)}
-          </p>
+    <div className="fixed inset-0 z-50 bg-background flex flex-col">
+      {/* Top Bar - Header */}
+      <div className="h-12 border-b border-border bg-card/80 backdrop-blur flex items-center justify-between px-4 flex-shrink-0">
+        <div className="flex items-center gap-4">
+          <h3 className="text-sm font-display tracking-wide text-primary">Timeline Editor</h3>
+          <span className="text-xs text-muted-foreground font-mono">
+            {formatTime(state.currentTime)} / {formatTime(state.duration)} • Max {formatTime(MAX_DURATION)}
+          </span>
         </div>
         <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={clearTimeline}
-            disabled={state.clips.length === 0}
-          >
-            <Trash2 className="h-4 w-4 mr-2" />
+          <Button variant="ghost" size="sm" onClick={clearTimeline} disabled={state.clips.length === 0}>
+            <Trash2 className="h-4 w-4 mr-1" />
             Clear
           </Button>
-          <Button
-            variant="outline"
-            onClick={handleExport}
-            disabled={state.clips.length === 0 || isExporting}
-          >
-            {isExporting ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Exporting...
-              </>
-            ) : (
-              <>
-                <Download className="h-4 w-4 mr-2" />
-                Download
-              </>
-            )}
+          <Button variant="outline" size="sm" onClick={handleExport} disabled={state.clips.length === 0 || isExporting}>
+            <Download className="h-4 w-4 mr-1" />
+            Download
           </Button>
-          <Button
-            onClick={handleExportAndSave}
-            disabled={state.clips.length === 0 || isExporting}
-            className="bg-primary text-primary-foreground"
-          >
-            {isExporting ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Processing...
-              </>
-            ) : (
-              <>
-                <Save className="h-4 w-4 mr-2" />
-                Save to Vault
-              </>
-            )}
+          <Button size="sm" onClick={handleExportAndSave} disabled={state.clips.length === 0 || isExporting} className="bg-primary text-primary-foreground">
+            {isExporting ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Save className="h-4 w-4 mr-1" />}
+            Save to Vault
           </Button>
         </div>
       </div>
 
-      {/* Export Progress */}
-      {isExporting && exportProgress && (
-        <div className="p-3 rounded-lg bg-muted/30 border border-border/50 space-y-2 flex-shrink-0">
-          <div className="flex items-center justify-between text-sm">
-            <span>{exportProgress.message}</span>
-            <Button variant="ghost" size="sm" onClick={cancelExport}>
-              Cancel
+      {/* Progress Bars */}
+      {(isExporting || isImporting) && (
+        <div className="px-4 py-2 bg-muted/30 border-b border-border flex-shrink-0">
+          {isExporting && exportProgress && (
+            <div className="flex items-center gap-3">
+              <span className="text-xs text-muted-foreground">{exportProgress.message}</span>
+              <Progress value={exportProgress.progress} className="flex-1 h-2" />
+              <Button variant="ghost" size="sm" onClick={cancelExport}>Cancel</Button>
+            </div>
+          )}
+          {isImporting && (
+            <div className="flex items-center gap-3">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              <span className="text-xs">Importing scenes...</span>
+              <Progress value={importProgress} className="flex-1 h-2" />
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+        {/* Preview Section - 40% height */}
+        <div className="h-[40%] min-h-[180px] border-b border-border bg-black/50 flex items-center justify-center p-4">
+          <div className="h-full aspect-video max-w-full relative bg-black rounded-lg overflow-hidden shadow-2xl ring-1 ring-white/10">
+            <TimelinePreview
+              clips={state.clips}
+              currentTime={state.currentTime}
+              isPlaying={state.isPlaying}
+              backgroundAudio={state.backgroundAudio}
+            />
+            
+            {/* Playback Controls Overlay */}
+            <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent p-4">
+              <div className="flex items-center justify-center gap-4">
+                <Button variant="ghost" size="icon" className="h-9 w-9 text-white hover:bg-white/20" onClick={() => seek(0)}>
+                  <SkipBack className="h-4 w-4" />
+                </Button>
+                <Button size="icon" onClick={state.isPlaying ? pause : play} className="h-12 w-12 rounded-full bg-primary hover:bg-primary/90">
+                  {state.isPlaying ? <Pause className="h-6 w-6" /> : <Play className="h-6 w-6 ml-0.5" />}
+                </Button>
+                <Button variant="ghost" size="icon" className="h-9 w-9 text-white hover:bg-white/20" onClick={() => seek(state.duration)}>
+                  <SkipForward className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Tools Bar */}
+        <div className="h-11 border-b border-border bg-card/50 flex items-center gap-2 px-3 flex-shrink-0 overflow-x-auto">
+          <TimelineToolbar
+            activeTool={activeTool}
+            onToolChange={setActiveTool}
+            snapEnabled={snapEnabled}
+            onSnapToggle={() => setSnapEnabled(prev => !prev)}
+            canUndo={canUndo}
+            canRedo={canRedo}
+            onUndo={undo}
+            onRedo={redo}
+            hasSelection={hasSelection}
+            hasClipboard={hasClipboard}
+            onCopy={handleCopy}
+            onPaste={handlePaste}
+            onDelete={handleDelete}
+            onDuplicate={handleDuplicate}
+          />
+
+          <div className="h-5 w-px bg-border mx-1" />
+
+          <Button variant="ghost" size="sm" className="h-8" onClick={() => fileInputRef.current?.click()}>
+            <Upload className="h-3.5 w-3.5 mr-1" />
+            Import
+          </Button>
+          
+          <Button variant="ghost" size="sm" className="h-8" onClick={() => audioInputRef.current?.click()}>
+            <Music className="h-3.5 w-3.5 mr-1" />
+            Audio
+          </Button>
+
+          <Dialog open={showMediaBrowser} onOpenChange={setShowMediaBrowser}>
+            <DialogTrigger asChild>
+              <Button variant="ghost" size="sm" className="h-8" onClick={() => { loadMediaLibrary(); setShowMediaBrowser(true); }}>
+                <FolderOpen className="h-3.5 w-3.5 mr-1" />
+                Gallery
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-2xl max-h-[70vh]">
+              <DialogHeader>
+                <DialogTitle>Add from Gallery</DialogTitle>
+              </DialogHeader>
+              <ScrollArea className="h-[50vh]">
+                {isLoadingLibrary ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="h-6 w-6 animate-spin" />
+                  </div>
+                ) : mediaLibrary.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <p>No media in gallery</p>
+                    <p className="text-sm">Generate some images or videos first</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-3 gap-3 p-1">
+                    {mediaLibrary.map((media) => (
+                      <button
+                        key={media.id}
+                        className="group relative aspect-video rounded-lg overflow-hidden border border-border/50 hover:border-primary transition-colors"
+                        onClick={() => handleAddFromLibrary(media)}
+                      >
+                        {media.media_type === "image" ? (
+                          <img src={media.media_url!} alt="" className="w-full h-full object-cover" />
+                        ) : (
+                          <video src={media.media_url!} className="w-full h-full object-cover" />
+                        )}
+                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                          <Plus className="h-6 w-6 text-white" />
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </ScrollArea>
+            </DialogContent>
+          </Dialog>
+
+          <div className="flex-1" />
+
+          {/* Background Audio */}
+          {state.backgroundAudio.url && (
+            <div className="flex items-center gap-1.5 px-2 py-1 bg-muted/50 rounded text-xs">
+              <Button variant="ghost" size="icon" className="h-5 w-5" onClick={toggleBackgroundAudioMute}>
+                {state.backgroundAudio.muted ? <VolumeX className="h-3 w-3" /> : <Volume2 className="h-3 w-3 text-primary" />}
+              </Button>
+              <span className="truncate max-w-20 text-muted-foreground">{state.backgroundAudio.name}</span>
+              <Button variant="ghost" size="icon" className="h-4 w-4" onClick={() => setBackgroundAudio(null)}>
+                <X className="h-2.5 w-2.5" />
+              </Button>
+            </div>
+          )}
+
+          <div className="h-5 w-px bg-border mx-1" />
+
+          {/* Zoom */}
+          <div className="flex items-center gap-1">
+            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setZoom(state.zoom - 10)} disabled={state.zoom <= 10}>
+              <ZoomOut className="h-3.5 w-3.5" />
+            </Button>
+            <span className="text-[10px] text-muted-foreground w-8 text-center font-mono">{Math.round(state.zoom)}%</span>
+            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setZoom(state.zoom + 10)} disabled={state.zoom >= 200}>
+              <ZoomIn className="h-3.5 w-3.5" />
             </Button>
           </div>
-          <Progress value={exportProgress.progress} className="h-2" />
-        </div>
-      )}
 
-      {/* Import Progress */}
-      {isImporting && (
-        <div className="p-3 rounded-lg bg-primary/10 border border-primary/30 space-y-2 flex-shrink-0">
-          <div className="flex items-center justify-between text-sm">
-            <span className="flex items-center gap-2">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              Importing Mind Movie scenes...
-            </span>
-            <span className="text-muted-foreground">{Math.round(importProgress)}%</span>
+          <div className="h-5 w-px bg-border mx-1" />
+
+          <div className="text-[9px] text-muted-foreground flex gap-2 whitespace-nowrap">
+            <span>V Select</span>
+            <span>C Cut</span>
+            <span>Space Play</span>
           </div>
-          <Progress value={importProgress} className="h-2" />
         </div>
-      )}
 
-      {/* Main Layout - Vertical stack: Preview on top, Timeline below */}
-      <div className="flex-1 flex flex-col gap-3 min-h-0 overflow-hidden">
-        {/* Top Section - Preview and Controls */}
-        <div className="flex gap-4 flex-shrink-0">
-          {/* Video Preview */}
-          <div className="flex-1 bg-card/30 rounded-lg border border-border/50 p-3">
-            <div className="aspect-video max-h-[280px] mx-auto">
-              <TimelinePreview
-                clips={state.clips}
-                currentTime={state.currentTime}
-                isPlaying={state.isPlaying}
-                backgroundAudio={state.backgroundAudio}
-              />
-            </div>
-
-            {/* Filmstrip Scrubber - shows when we have video clips */}
-            {state.clips.some(c => c.type === "video") && (
-              <div className="mt-2">
-                {(() => {
-                  const videoClip = state.clips.find(c => c.type === "video" && 
-                    state.currentTime >= c.startTime && 
-                    state.currentTime < c.startTime + c.duration
-                  ) || state.clips.find(c => c.type === "video");
-                  
-                  if (!videoClip) return null;
-                  
-                  return (
-                    <FilmstripScrubber
-                      videoUrl={videoClip.sourceUrl}
-                      duration={videoClip.duration}
-                      currentTime={Math.max(0, state.currentTime - videoClip.startTime)}
-                      width={400}
-                      height={40}
-                      frameCount={8}
-                      onSeek={(time) => seek(videoClip.startTime + time)}
-                      className="mx-auto"
-                    />
-                  );
-                })()}
-              </div>
-            )}
-
-            {/* Playback Controls */}
-            <div className="flex items-center justify-center gap-3 mt-3">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8"
-                onClick={() => seek(0)}
-                title="Go to start (Home)"
-              >
-                <SkipBack className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="default"
-                size="icon"
-                onClick={state.isPlaying ? pause : play}
-                className="h-10 w-10"
-                title="Play/Pause (Space)"
-              >
-                {state.isPlaying ? (
-                  <Pause className="h-5 w-5" />
-                ) : (
-                  <Play className="h-5 w-5 ml-0.5" />
-                )}
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8"
-                onClick={() => seek(state.duration)}
-                title="Go to end (End)"
-              >
-                <SkipForward className="h-4 w-4" />
-              </Button>
-              
-              {/* Time Display */}
-              <div className="text-xs font-mono text-muted-foreground ml-2 bg-muted/50 px-2 py-1 rounded">
-                {formatTime(state.currentTime)} / {formatTime(state.duration)}
-              </div>
-            </div>
-          </div>
-
-          {/* Side Panel - Audio & Quick Info */}
-          <div className="w-64 flex flex-col gap-2 flex-shrink-0">
-            {/* Background Audio Panel */}
-            <div className="p-3 rounded-lg bg-muted/30 border border-border/50 space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-medium flex items-center gap-2">
-                  <Music className="h-3 w-3" />
-                  Background Audio
-                </span>
-                {state.backgroundAudio.url && (
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-5 w-5"
-                    onClick={() => setBackgroundAudio(null)}
-                  >
-                    <X className="h-3 w-3" />
-                  </Button>
-                )}
-              </div>
-              {state.backgroundAudio.url ? (
-                <div className="space-y-2">
-                  <p className="text-xs text-muted-foreground truncate">
-                    {state.backgroundAudio.name}
-                  </p>
-                  <div className="rounded bg-muted/50 overflow-hidden">
-                    <AudioWaveform
-                      src={state.backgroundAudio.url}
-                      duration={state.duration || 60}
-                      width={200}
-                      height={24}
-                      color={state.backgroundAudio.muted ? "hsl(var(--muted-foreground))" : "hsl(var(--primary))"}
-                      backgroundColor="transparent"
-                    />
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-6 w-6"
-                      onClick={toggleBackgroundAudioMute}
-                    >
-                      {state.backgroundAudio.muted ? (
-                        <VolumeX className="h-3 w-3 text-muted-foreground" />
-                      ) : (
-                        <Volume2 className="h-3 w-3 text-primary" />
-                      )}
-                    </Button>
-                    <Slider
-                      value={[state.backgroundAudio.volume * 100]}
-                      onValueChange={([v]) => setBackgroundAudioVolume(v / 100)}
-                      max={100}
-                      step={1}
-                      className="flex-1"
-                    />
-                  </div>
-                </div>
-              ) : (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="w-full"
-                  onClick={() => audioInputRef.current?.click()}
-                >
-                  <Upload className="h-3 w-3 mr-2" />
-                  Add Audio (A)
-                </Button>
-              )}
-            </div>
-
-            {/* Timeline Minimap */}
-            {state.clips.length > 0 && (
+        {/* Timeline Section - fills remaining space */}
+        <div 
+          className={cn("flex-1 flex flex-col min-h-0", isDragOver && "bg-primary/5")}
+          onDragEnter={handleDragEnter}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+        >
+          {/* Minimap */}
+          {state.clips.length > 0 && (
+            <div className="h-7 border-b border-border/50 bg-card/30 px-2 flex-shrink-0">
               <TimelineMinimap
                 clips={state.clips}
                 duration={state.duration}
@@ -886,262 +846,104 @@ export function TimelineEditor({ onExport, importData, onImportComplete }: Timel
                 onSeek={seek}
                 onScrollTo={scrollToTime}
               />
-            )}
-
-            {/* Quick Shortcuts */}
-            <div className="p-2 rounded-lg bg-muted/20 border border-border/30">
-              <p className="text-[10px] font-medium text-muted-foreground mb-1">Quick Shortcuts</p>
-              <div className="grid grid-cols-2 gap-x-2 gap-y-0.5 text-[9px] text-muted-foreground">
-                <span>V - Select</span>
-                <span>C - Razor</span>
-                <span>A - Audio</span>
-                <span>K - Split</span>
-                <span>Space - Play</span>
-                <span>Del - Delete</span>
-                <span>⌘C - Copy</span>
-                <span>⌘V - Paste</span>
-              </div>
             </div>
-          </div>
-        </div>
-
-        {/* Bottom Section - Timeline */}
-        <div 
-          className={cn(
-            "flex-1 flex flex-col min-w-0 border rounded-lg overflow-hidden transition-all",
-            isDragOver 
-              ? "border-primary border-2 bg-primary/5" 
-              : "border-border/50"
           )}
-          onDragEnter={handleDragEnter}
-          onDragOver={handleDragOver}
-          onDragLeave={handleDragLeave}
-          onDrop={handleDrop}
-        >
-          {/* Editing Tools Toolbar */}
-          <div className="flex items-center gap-2 p-2 border-b border-border/50 bg-card/50">
-            <TimelineToolbar
-              activeTool={activeTool}
-              onToolChange={setActiveTool}
-              snapEnabled={snapEnabled}
-              onSnapToggle={() => setSnapEnabled(prev => !prev)}
-              canUndo={canUndo}
-              canRedo={canRedo}
-              onUndo={undo}
-              onRedo={redo}
-              hasSelection={hasSelection}
-              hasClipboard={hasClipboard}
-              onCopy={handleCopy}
-              onPaste={handlePaste}
-              onDelete={handleDelete}
-              onDuplicate={handleDuplicate}
-            />
 
-            <div className="flex-1" />
-
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => fileInputRef.current?.click()}
-            >
-              <Upload className="h-4 w-4 mr-2" />
-              Upload
-            </Button>
-            <Dialog open={showMediaBrowser} onOpenChange={setShowMediaBrowser}>
-              <DialogTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    loadMediaLibrary();
-                    setShowMediaBrowser(true);
-                  }}
-                >
-                  <FolderOpen className="h-4 w-4 mr-2" />
-                  Gallery
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-2xl max-h-[70vh]">
-                <DialogHeader>
-                  <DialogTitle>Add from Gallery</DialogTitle>
-                </DialogHeader>
-                <ScrollArea className="h-[50vh]">
-                  {isLoadingLibrary ? (
-                    <div className="flex items-center justify-center py-8">
-                      <Loader2 className="h-6 w-6 animate-spin" />
-                    </div>
-                  ) : mediaLibrary.length === 0 ? (
-                    <div className="text-center py-8 text-muted-foreground">
-                      <p>No media in gallery</p>
-                      <p className="text-sm">Generate some images or videos first</p>
-                    </div>
-                  ) : (
-                    <div className="grid grid-cols-3 gap-3 p-1">
-                      {mediaLibrary.map((media) => (
-                        <button
-                          key={media.id}
-                          className="group relative aspect-video rounded-lg overflow-hidden border border-border/50 hover:border-primary transition-colors"
-                          onClick={() => handleAddFromLibrary(media)}
-                        >
-                          {media.media_type === "image" ? (
-                            <img
-                              src={media.media_url!}
-                              alt=""
-                              className="w-full h-full object-cover"
-                            />
-                          ) : (
-                            <video
-                              src={media.media_url!}
-                              className="w-full h-full object-cover"
-                            />
-                          )}
-                          <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                            <Plus className="h-6 w-6 text-white" />
-                          </div>
-                          <span className="absolute bottom-1 left-1 px-1.5 py-0.5 text-[10px] bg-black/70 rounded text-white capitalize">
-                            {media.media_type}
-                          </span>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </ScrollArea>
-              </DialogContent>
-            </Dialog>
-
-            <div className="flex-1" />
-
-            {/* Zoom Controls */}
-            <div className="flex items-center gap-2">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-7 w-7"
-                onClick={() => setZoom(state.zoom - 10)}
-                disabled={state.zoom <= 10}
-              >
-                <ZoomOut className="h-4 w-4" />
-              </Button>
-              <span className="text-xs text-muted-foreground w-12 text-center">
-                {Math.round(state.zoom)}%
-              </span>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-7 w-7"
-                onClick={() => setZoom(state.zoom + 10)}
-                disabled={state.zoom >= 200}
-              >
-                <ZoomIn className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-
-          {/* Timeline Content */}
-          <ScrollArea className="flex-1" ref={timelineRef}>
+          {/* Timeline Tracks */}
+          <ScrollArea className="flex-1" ref={scrollAreaRef}>
             <div 
+              ref={timelineRef}
               className={cn(
+                "relative min-h-full",
                 activeTool === "razor" && "cursor-crosshair",
                 activeTool === "hand" && "cursor-grab active:cursor-grabbing",
                 activeTool === "range" && "cursor-cell"
               )}
-              style={{ width: `${Math.max(state.duration, 60) * state.zoom + 200}px` }}
+              style={{ width: `${Math.max(state.duration, 60) * state.zoom + 150}px` }}
+              onClick={handleTimelineClick}
             >
               {/* Ruler */}
-              <div className="ml-32">
-                <TimelineRuler
-                  duration={state.duration}
-                  zoom={state.zoom}
-                  currentTime={state.currentTime}
-                  onSeek={seek}
-                />
+              <div className="sticky top-0 z-10 bg-card/95 backdrop-blur-sm border-b border-border/50">
+                <div className="ml-20">
+                  <TimelineRuler
+                    duration={state.duration}
+                    zoom={state.zoom}
+                    currentTime={state.currentTime}
+                    onSeek={seek}
+                  />
+                </div>
               </div>
 
               {/* Tracks */}
-              {state.tracks.map((track) => (
-                <TimelineTrackComponent
-                  key={track.id}
-                  track={track}
-                  clips={state.clips.filter((c) => c.trackId === track.id)}
-                  transitions={state.transitions}
-                  zoom={state.zoom}
-                  currentTime={state.currentTime}
-                  selectedClipIds={selectedClipIds}
-                  onSelectClip={handleClipSelect}
-                  onClearSelection={() => setSelectedClipIds([])}
-                  onRemoveClip={removeClip}
-                  onMoveClip={moveClip}
-                  onTrimClip={trimClip}
-                  onSplitClip={(clipId) => splitClip(clipId, state.currentTime)}
-                  onToggleClipMute={(clipId) =>
-                    updateClip(clipId, {
-                      muted: !state.clips.find((c) => c.id === clipId)?.muted,
-                    })
-                  }
-                  onUpdateClipVolume={(clipId, volume) =>
-                    updateClip(clipId, { volume })
-                  }
-                  onToggleTrackMute={() => toggleTrackMute(track.id)}
-                  onToggleTrackLock={() => toggleTrackLock(track.id)}
-                  onAddTransition={addTransition}
-                  onUpdateTransition={updateTransition}
-                  onRemoveTransition={removeTransition}
-                  snapEnabled={snapEnabled}
-                  onSnapPreview={handleSnapPreview}
-                  snapTime={snapTime}
-                />
-              ))}
+              <div className="relative">
+                {state.tracks.map((track) => (
+                  <TimelineTrackComponent
+                    key={track.id}
+                    track={track}
+                    clips={state.clips.filter((c) => c.trackId === track.id)}
+                    transitions={state.transitions}
+                    zoom={state.zoom}
+                    currentTime={state.currentTime}
+                    selectedClipIds={selectedClipIds}
+                    onSelectClip={handleClipSelect}
+                    onClearSelection={() => setSelectedClipIds([])}
+                    onRemoveClip={removeClip}
+                    onMoveClip={moveClip}
+                    onTrimClip={trimClip}
+                    onSplitClip={(clipId) => splitClip(clipId, state.currentTime)}
+                    onToggleClipMute={(clipId) => updateClip(clipId, { muted: !state.clips.find((c) => c.id === clipId)?.muted })}
+                    onUpdateClipVolume={(clipId, volume) => updateClip(clipId, { volume })}
+                    onToggleTrackMute={() => toggleTrackMute(track.id)}
+                    onToggleTrackLock={() => toggleTrackLock(track.id)}
+                    onAddTransition={addTransition}
+                    onUpdateTransition={updateTransition}
+                    onRemoveTransition={removeTransition}
+                    snapEnabled={snapEnabled}
+                    onSnapPreview={handleSnapPreview}
+                    snapTime={snapTime}
+                  />
+                ))}
 
-              {/* Snap indicator lines */}
-              {snapPreviewLines.map((line, index) => (
-                <div
-                  key={`snap-${index}-${line.time}`}
-                  className={cn(
-                    "absolute top-6 bottom-0 w-0.5 pointer-events-none z-20 transition-opacity",
-                    line.type === "playhead" && "bg-primary",
-                    line.type === "clip-start" && "bg-amber-400",
-                    line.type === "clip-end" && "bg-amber-400",
-                    line.type === "grid" && "bg-muted-foreground/50"
-                  )}
-                  style={{ left: `${line.time * state.zoom + 128}px` }}
-                >
-                  {/* Snap indicator dot at top */}
+                {/* Snap lines */}
+                {snapPreviewLines.map((line, index) => (
                   <div
+                    key={`snap-${index}-${line.time}`}
                     className={cn(
-                      "absolute -top-1 left-1/2 -translate-x-1/2 w-2 h-2 rounded-full",
+                      "absolute top-0 bottom-0 w-0.5 pointer-events-none z-20",
                       line.type === "playhead" && "bg-primary",
-                      line.type === "clip-start" && "bg-amber-400",
-                      line.type === "clip-end" && "bg-amber-400",
+                      (line.type === "clip-start" || line.type === "clip-end") && "bg-amber-400",
                       line.type === "grid" && "bg-muted-foreground/50"
                     )}
+                    style={{ left: `${line.time * state.zoom + 80}px` }}
                   />
+                ))}
+
+                {/* Playhead */}
+                <div
+                  className="absolute top-0 bottom-0 w-0.5 bg-primary z-10 pointer-events-none"
+                  style={{ left: `${state.currentTime * state.zoom + 80}px` }}
+                >
+                  <div className="absolute -top-0.5 left-1/2 -translate-x-1/2 w-2.5 h-2.5 bg-primary rotate-45" />
                 </div>
-              ))}
+              </div>
 
-              {/* Playhead */}
-              <div
-                className="absolute top-6 bottom-0 w-0.5 bg-primary z-10 pointer-events-none"
-                style={{ left: `${state.currentTime * state.zoom + 128}px` }}
-              />
-
-              {/* Empty state / Drop zone indicator */}
+              {/* Empty state */}
               {state.clips.length === 0 && !isDragOver && (
-                <div className="absolute inset-0 flex items-center justify-center ml-32 mt-6">
+                <div className="absolute inset-0 flex items-center justify-center mt-8">
                   <div className="text-center text-muted-foreground p-8">
-                    <Upload className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                    <p className="font-medium">Drop clips here to start</p>
-                    <p className="text-sm">Or use the Upload/Gallery buttons above</p>
+                    <Upload className="h-10 w-10 mx-auto mb-3 opacity-30" />
+                    <p className="font-medium">Drop media here to start editing</p>
+                    <p className="text-sm">Import video, images, or audio</p>
                   </div>
                 </div>
               )}
 
-              {/* Active drag overlay */}
+              {/* Drop overlay */}
               {isDragOver && (
-                <div className="absolute inset-0 flex items-center justify-center ml-32 mt-6 bg-primary/10 border-2 border-dashed border-primary rounded-lg z-20">
+                <div className="absolute inset-0 flex items-center justify-center bg-primary/10 border-2 border-dashed border-primary z-30 mt-8">
                   <div className="text-center p-8">
                     <Upload className="h-12 w-12 mx-auto mb-3 text-primary animate-bounce" />
                     <p className="font-medium text-primary text-lg">Drop files here</p>
-                    <p className="text-sm text-muted-foreground">Video, image, or audio files</p>
                   </div>
                 </div>
               )}
@@ -1151,24 +953,11 @@ export function TimelineEditor({ onExport, importData, onImportComplete }: Timel
         </div>
       </div>
 
-      {/* Hidden file inputs */}
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="video/*,image/*"
-        multiple
-        className="hidden"
-        onChange={(e) => handleFileUpload(e.target.files)}
-      />
-      <input
-        ref={audioInputRef}
-        type="file"
-        accept="audio/*"
-        className="hidden"
-        onChange={(e) => handleFileUpload(e.target.files, true)}
-      />
+      {/* Hidden inputs */}
+      <input ref={fileInputRef} type="file" accept="video/*,image/*" multiple className="hidden" onChange={(e) => handleFileUpload(e.target.files)} />
+      <input ref={audioInputRef} type="file" accept="audio/*" className="hidden" onChange={(e) => handleFileUpload(e.target.files, true)} />
 
-      {/* Save to Vault Dialog */}
+      {/* Save Dialog */}
       <SaveToVaultDialog
         open={showSaveToVault}
         onOpenChange={setShowSaveToVault}
@@ -1186,7 +975,6 @@ async function generateVideoThumbnail(videoUrl: string): Promise<string> {
     video.src = videoUrl;
     video.crossOrigin = "anonymous";
     video.currentTime = 0.5;
-
     video.onloadeddata = () => {
       const canvas = document.createElement("canvas");
       canvas.width = 160;
@@ -1199,7 +987,6 @@ async function generateVideoThumbnail(videoUrl: string): Promise<string> {
         resolve("");
       }
     };
-
     video.onerror = () => resolve("");
   });
 }
