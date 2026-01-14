@@ -16,6 +16,7 @@ import {
   X,
   Volume2,
   VolumeX,
+  Save,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
@@ -40,6 +41,7 @@ import { TimelineRuler } from "./TimelineRuler";
 import { TimelinePreview } from "./TimelinePreview";
 import { AudioWaveform } from "./AudioWaveform";
 import { TimelineToolbar, EditingTool } from "./TimelineToolbar";
+import { SaveToVaultDialog } from "./SaveToVaultDialog";
 import { cn } from "@/lib/utils";
 
 interface SnapInfo {
@@ -96,6 +98,8 @@ export function TimelineEditor({ onExport }: TimelineEditorProps) {
   const [isDragOver, setIsDragOver] = useState(false);
   const [rangeSelection, setRangeSelection] = useState<{ start: number; end: number } | null>(null);
   const [snapPreviewLines, setSnapPreviewLines] = useState<SnapInfo[]>([]);
+  const [showSaveToVault, setShowSaveToVault] = useState(false);
+  const [lastExportedUrl, setLastExportedUrl] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const audioInputRef = useRef<HTMLInputElement>(null);
   const timelineRef = useRef<HTMLDivElement>(null);
@@ -412,7 +416,7 @@ export function TimelineEditor({ onExport }: TimelineEditorProps) {
     [addClip, toast]
   );
 
-  // Handle export
+  // Handle export (download)
   const handleExport = useCallback(async () => {
     const url = await exportTimeline(
       state.clips,
@@ -422,6 +426,7 @@ export function TimelineEditor({ onExport }: TimelineEditorProps) {
     );
 
     if (url) {
+      setLastExportedUrl(url);
       toast({
         title: "Export complete!",
         description: "Your video is ready to download.",
@@ -435,6 +440,34 @@ export function TimelineEditor({ onExport }: TimelineEditorProps) {
       a.click();
     }
   }, [state.clips, state.duration, state.backgroundAudio, exportTimeline, onExport, toast]);
+
+  // Handle export and save to vault
+  const handleExportAndSave = useCallback(async () => {
+    const url = await exportTimeline(
+      state.clips,
+      state.duration,
+      state.backgroundAudio,
+      { resolution: "1080p", fps: 30 }
+    );
+
+    if (url) {
+      setLastExportedUrl(url);
+      setShowSaveToVault(true);
+    }
+  }, [state.clips, state.duration, state.backgroundAudio, exportTimeline]);
+
+  // Handle save to vault complete
+  const handleSaveToVaultComplete = useCallback((movieId: string, savedUrl: string) => {
+    toast({
+      title: "Saved to Vault!",
+      description: "Your Mind Movie has been saved successfully.",
+    });
+    // Cleanup the blob URL
+    if (lastExportedUrl) {
+      URL.revokeObjectURL(lastExportedUrl);
+      setLastExportedUrl(null);
+    }
+  }, [lastExportedUrl, toast]);
 
   // Format time display
   const formatTime = (seconds: number): string => {
@@ -464,9 +497,9 @@ export function TimelineEditor({ onExport }: TimelineEditorProps) {
             Clear
           </Button>
           <Button
+            variant="outline"
             onClick={handleExport}
             disabled={state.clips.length === 0 || isExporting}
-            className="bg-primary text-primary-foreground"
           >
             {isExporting ? (
               <>
@@ -476,7 +509,24 @@ export function TimelineEditor({ onExport }: TimelineEditorProps) {
             ) : (
               <>
                 <Download className="h-4 w-4 mr-2" />
-                Export
+                Download
+              </>
+            )}
+          </Button>
+          <Button
+            onClick={handleExportAndSave}
+            disabled={state.clips.length === 0 || isExporting}
+            className="bg-primary text-primary-foreground"
+          >
+            {isExporting ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Processing...
+              </>
+            ) : (
+              <>
+                <Save className="h-4 w-4 mr-2" />
+                Save to Vault
               </>
             )}
           </Button>
@@ -864,6 +914,14 @@ export function TimelineEditor({ onExport }: TimelineEditorProps) {
         accept="audio/*"
         className="hidden"
         onChange={(e) => handleFileUpload(e.target.files, true)}
+      />
+
+      {/* Save to Vault Dialog */}
+      <SaveToVaultDialog
+        open={showSaveToVault}
+        onOpenChange={setShowSaveToVault}
+        exportedBlobUrl={lastExportedUrl}
+        onSaveComplete={handleSaveToVaultComplete}
       />
     </div>
   );
