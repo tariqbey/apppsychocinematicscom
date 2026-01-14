@@ -731,7 +731,7 @@ export function TimelineEditor({ onExport, importData, onImportComplete, onClose
       state.clips,
       state.duration,
       state.backgroundAudio,
-      { resolution: "1080p", fps: 30 }
+      { resolution: "1080p", fps: 30, tracks: state.tracks, masterVolume: state.masterVolume }
     );
 
     if (url) {
@@ -748,7 +748,7 @@ export function TimelineEditor({ onExport, importData, onImportComplete, onClose
       a.download = `timeline-export-${Date.now()}.webm`;
       a.click();
     }
-  }, [state.clips, state.duration, state.backgroundAudio, exportTimeline, onExport, toast]);
+  }, [state.clips, state.duration, state.backgroundAudio, state.tracks, state.masterVolume, exportTimeline, onExport, toast]);
 
   // Handle export and save to vault
   const handleExportAndSave = useCallback(async () => {
@@ -756,14 +756,14 @@ export function TimelineEditor({ onExport, importData, onImportComplete, onClose
       state.clips,
       state.duration,
       state.backgroundAudio,
-      { resolution: "1080p", fps: 30 }
+      { resolution: "1080p", fps: 30, tracks: state.tracks, masterVolume: state.masterVolume }
     );
 
     if (url) {
       setLastExportedUrl(url);
       setShowSaveToVault(true);
     }
-  }, [state.clips, state.duration, state.backgroundAudio, exportTimeline]);
+  }, [state.clips, state.duration, state.backgroundAudio, state.tracks, state.masterVolume, exportTimeline]);
 
   // Handle save to vault complete
   const handleSaveToVaultComplete = useCallback((movieId: string, savedUrl: string) => {
