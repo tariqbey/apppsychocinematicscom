@@ -572,6 +572,34 @@ export function useTimelineEditor() {
     }));
   }, [pause, pushHistory]);
 
+  // Load timeline state from a saved project
+  const loadTimelineState = useCallback((
+    tracks: TimelineTrack[],
+    clips: TimelineClip[],
+    transitions: TimelineTransition[],
+    masterVolume: number,
+    backgroundAudio: TimelineState["backgroundAudio"]
+  ) => {
+    pause();
+    setState((prev) => ({
+      ...prev,
+      tracks: tracks.length > 0 ? tracks : prev.tracks,
+      clips,
+      transitions,
+      masterVolume,
+      backgroundAudio,
+      currentTime: 0,
+      duration: calculateDuration(clips),
+    }));
+    // Reset history with the loaded state
+    setHistory([{
+      clips: JSON.parse(JSON.stringify(clips)),
+      transitions: JSON.parse(JSON.stringify(transitions)),
+      backgroundAudio: JSON.parse(JSON.stringify(backgroundAudio)),
+    }]);
+    setHistoryIndex(0);
+  }, [pause, calculateDuration]);
+
   // Transition management
   const addTransition = useCallback((clipAId: string, clipBId: string, type: TransitionType = "fade", duration: number = 1) => {
     setState((prev) => {
@@ -700,6 +728,7 @@ export function useTimelineEditor() {
     reorderTrack,
     setMasterVolume,
     clearTimeline,
+    loadTimelineState,
     getActiveClips,
     addTransition,
     updateTransition,

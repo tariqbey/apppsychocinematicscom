@@ -456,6 +456,39 @@ export type Database = {
         }
         Relationships: []
       }
+      timeline_projects: {
+        Row: {
+          created_at: string
+          duration_seconds: number | null
+          id: string
+          thumbnail_url: string | null
+          timeline_data: Json
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          duration_seconds?: number | null
+          id?: string
+          thumbnail_url?: string | null
+          timeline_data: Json
+          title?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          duration_seconds?: number | null
+          id?: string
+          thumbnail_url?: string | null
+          timeline_data?: Json
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_awards: {
         Row: {
           award_name: string
