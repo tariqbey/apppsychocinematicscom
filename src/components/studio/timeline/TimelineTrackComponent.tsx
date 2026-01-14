@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, memo, useCallback } from "react";
 import { Film, Music, Volume2, VolumeX, Lock, Unlock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { TimelineTrack, TimelineClip, TimelineTransition } from "@/hooks/useTimelineEditor";
@@ -35,7 +35,7 @@ interface TimelineTrackComponentProps {
   snapTime?: (time: number, excludeClipId?: string) => { snappedTime: number; didSnap: boolean; snapType: string | null };
 }
 
-export function TimelineTrackComponent({
+export const TimelineTrackComponent = memo(function TimelineTrackComponent({
   track,
   clips,
   transitions,
@@ -58,12 +58,11 @@ export function TimelineTrackComponent({
   onSnapPreview,
   snapTime,
 }: TimelineTrackComponentProps) {
-  const handleTrackClick = (e: React.MouseEvent) => {
-    // Only clear if clicking the track background, not a clip
+  const handleTrackClick = useCallback((e: React.MouseEvent) => {
     if (e.target === e.currentTarget) {
       onClearSelection();
     }
-  };
+  }, [onClearSelection]);
 
   // Find adjacent clip pairs for potential transitions
   const adjacentPairs = useMemo(() => {
@@ -75,7 +74,6 @@ export function TimelineTrackComponent({
       const clipB = sortedClips[i + 1];
       const clipAEnd = clipA.startTime + clipA.duration;
       
-      // Check if clips are adjacent (within 0.1s tolerance)
       if (Math.abs(clipAEnd - clipB.startTime) < 0.1) {
         pairs.push({
           clipA,
@@ -93,6 +91,34 @@ export function TimelineTrackComponent({
     const clipIds = new Set(clips.map(c => c.id));
     return transitions.filter(t => clipIds.has(t.clipAId) && clipIds.has(t.clipBId));
   }, [clips, transitions]);
+
+  // Memoized clip handlers to prevent re-renders
+  const clipHandlers = useMemo(() => {
+    const handlers: Record<string, {
+      onSelect: (e?: React.MouseEvent) => void;
+      onRemove: () => void;
+      onMove: (newStartTime: number) => void;
+      onTrim: (trimStart: number, trimEnd: number) => void;
+      onSplit: () => void;
+      onToggleMute: () => void;
+    }> = {};
+    
+    clips.forEach(clip => {
+      handlers[clip.id] = {
+        onSelect: (e?: React.MouseEvent) => {
+          const addToSelection = e?.shiftKey || e?.metaKey || e?.ctrlKey;
+          onSelectClip(clip.id, addToSelection);
+        },
+        onRemove: () => onRemoveClip(clip.id),
+        onMove: (newStartTime: number) => onMoveClip(clip.id, newStartTime),
+        onTrim: (trimStart: number, trimEnd: number) => onTrimClip(clip.id, trimStart, trimEnd),
+        onSplit: () => onSplitClip(clip.id),
+        onToggleMute: () => onToggleClipMute(clip.id),
+      };
+    });
+    
+    return handlers;
+  }, [clips, onSelectClip, onRemoveClip, onMoveClip, onTrimClip, onSplitClip, onToggleClipMute]);
 
   return (
     <div className="flex border-b border-border/50">
@@ -137,26 +163,28 @@ export function TimelineTrackComponent({
         onClick={handleTrackClick}
       >
         {/* Clips */}
-        {clips.map((clip) => (
-          <TimelineClipComponent
-            key={clip.id}
-            clip={clip}
-            zoom={zoom}
-            isSelected={selectedClipIds.includes(clip.id)}
-            onSelect={(e?: React.MouseEvent) => {
-              const addToSelection = e?.shiftKey || e?.metaKey || e?.ctrlKey;
-              onSelectClip(clip.id, addToSelection);
-            }}
-            onRemove={() => onRemoveClip(clip.id)}
-            onMove={(newStartTime) => onMoveClip(clip.id, newStartTime)}
-            onTrim={(trimStart, trimEnd) => onTrimClip(clip.id, trimStart, trimEnd)}
-            onSplit={() => onSplitClip(clip.id)}
-            onToggleMute={() => onToggleClipMute(clip.id)}
-            snapEnabled={snapEnabled}
-            onSnapPreview={onSnapPreview}
-            snapTime={snapTime}
-          />
-        ))}
+        {clips.map((clip) => {
+          const handlers = clipHandlers[clip.id];
+          if (!handlers) return null;
+          
+          return (
+            <TimelineClipComponent
+              key={clip.id}
+              clip={clip}
+              zoom={zoom}
+              isSelected={selectedClipIds.includes(clip.id)}
+              onSelect={handlers.onSelect}
+              onRemove={handlers.onRemove}
+              onMove={handlers.onMove}
+              onTrim={handlers.onTrim}
+              onSplit={handlers.onSplit}
+              onToggleMute={handlers.onToggleMute}
+              snapEnabled={snapEnabled}
+              onSnapPreview={onSnapPreview}
+              snapTime={snapTime}
+            />
+          );
+        })}
 
         {/* Transition indicators */}
         {trackTransitions.map((transition) => {
@@ -178,7 +206,6 @@ export function TimelineTrackComponent({
 
         {/* Add transition buttons between adjacent clips */}
         {adjacentPairs.map(({ clipA, clipB, position }) => {
-          // Don't show button if transition already exists
           const hasTransition = trackTransitions.some(
             t => t.clipAId === clipA.id && t.clipBId === clipB.id
           );
@@ -195,4 +222,4 @@ export function TimelineTrackComponent({
       </div>
     </div>
   );
-}
+});
