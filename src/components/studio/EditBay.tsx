@@ -125,9 +125,15 @@ export function EditBay({ onClose, initialPrompt, timelineImportData }: EditBayP
 
             <TabsContent value="timeline" className="mt-0 h-[calc(100vh-220px)]">
               <div className="glass-card p-6 cinematic-border h-full">
-                <TimelineEditor onExport={(url) => {
-                  refreshGallery();
-                }} />
+                <TimelineEditor 
+                  onExport={(url) => {
+                    refreshGallery();
+                  }}
+                  importData={timelineImportData}
+                  onImportComplete={() => {
+                    // Clear the import data after import is complete
+                  }}
+                />
               </div>
             </TabsContent>
           </Tabs>
