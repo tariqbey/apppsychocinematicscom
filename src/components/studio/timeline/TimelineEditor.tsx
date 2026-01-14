@@ -18,6 +18,7 @@ import {
   VolumeX,
   Save,
   FileDown,
+  GripHorizontal,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
@@ -30,6 +31,11 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  ResizablePanelGroup,
+  ResizablePanel,
+  ResizableHandle,
+} from "@/components/ui/resizable";
 import { useTimelineEditor, TimelineClip } from "@/hooks/useTimelineEditor";
 import { useTimelineExport } from "@/hooks/useTimelineExport";
 import { useMediaGeneration, GeneratedMedia } from "@/hooks/useMediaGeneration";
@@ -907,149 +913,161 @@ export function TimelineEditor({ onExport, importData, onImportComplete, onClose
         </div>
       )}
 
-      {/* Main Content Area */}
-      <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
-        {/* Preview Section - Compact */}
-        <div className="h-[28%] min-h-[140px] max-h-[200px] border-b border-border bg-black/50 flex items-center justify-center p-2 flex-shrink-0">
-          <div className="h-full aspect-video max-w-full relative bg-black rounded-lg overflow-hidden shadow-xl ring-1 ring-white/10">
-            <TimelinePreview
-              clips={state.clips}
-              tracks={state.tracks}
-              currentTime={state.currentTime}
-              isPlaying={state.isPlaying}
-              masterVolume={state.masterVolume}
-              backgroundAudio={state.backgroundAudio}
-            />
-            
-            {/* Playback Controls Overlay */}
-            <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent p-2">
-              <div className="flex items-center justify-center gap-3">
-                <Button variant="ghost" size="icon" className="h-7 w-7 text-white hover:bg-white/20" onClick={() => seek(0)}>
-                  <SkipBack className="h-3.5 w-3.5" />
-                </Button>
-                <Button size="icon" onClick={state.isPlaying ? pause : play} className="h-10 w-10 rounded-full bg-primary hover:bg-primary/90">
-                  {state.isPlaying ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5 ml-0.5" />}
-                </Button>
-                <Button variant="ghost" size="icon" className="h-7 w-7 text-white hover:bg-white/20" onClick={() => seek(state.duration)}>
-                  <SkipForward className="h-3.5 w-3.5" />
-                </Button>
+      {/* Main Content Area - Resizable */}
+      <ResizablePanelGroup direction="vertical" className="flex-1 min-h-0">
+        {/* Preview Panel */}
+        <ResizablePanel defaultSize={30} minSize={15} maxSize={50}>
+          <div className="h-full border-b border-border bg-black/50 flex items-center justify-center p-2">
+            <div className="h-full aspect-video max-w-full relative bg-black rounded-lg overflow-hidden shadow-xl ring-1 ring-white/10">
+              <TimelinePreview
+                clips={state.clips}
+                tracks={state.tracks}
+                currentTime={state.currentTime}
+                isPlaying={state.isPlaying}
+                masterVolume={state.masterVolume}
+                backgroundAudio={state.backgroundAudio}
+              />
+              
+              {/* Playback Controls Overlay */}
+              <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent p-2">
+                <div className="flex items-center justify-center gap-3">
+                  <Button variant="ghost" size="icon" className="h-7 w-7 text-white hover:bg-white/20" onClick={() => seek(0)}>
+                    <SkipBack className="h-3.5 w-3.5" />
+                  </Button>
+                  <Button size="icon" onClick={state.isPlaying ? pause : play} className="h-10 w-10 rounded-full bg-primary hover:bg-primary/90">
+                    {state.isPlaying ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5 ml-0.5" />}
+                  </Button>
+                  <Button variant="ghost" size="icon" className="h-7 w-7 text-white hover:bg-white/20" onClick={() => seek(state.duration)}>
+                    <SkipForward className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
               </div>
             </div>
           </div>
-        </div>
+        </ResizablePanel>
 
-        {/* Tools Bar - Compact */}
-        <div className="h-9 border-b border-border bg-card/50 flex items-center gap-1.5 px-2 flex-shrink-0 overflow-x-auto">
-          <TimelineToolbar
-            activeTool={activeTool}
-            onToolChange={setActiveTool}
-            snapEnabled={snapEnabled}
-            onSnapToggle={() => setSnapEnabled(prev => !prev)}
-            canUndo={canUndo}
-            canRedo={canRedo}
-            onUndo={undo}
-            onRedo={redo}
-            hasSelection={hasSelection}
-            hasClipboard={hasClipboard}
-            onCopy={handleCopy}
-            onPaste={handlePaste}
-            onDelete={handleDelete}
-            onDuplicate={handleDuplicate}
-          />
+        {/* Resize Handle */}
+        <ResizableHandle className="bg-border hover:bg-primary/50 transition-colors data-[panel-group-direction=vertical]:h-1.5">
+          <div className="absolute left-1/2 -translate-x-1/2 flex items-center justify-center">
+            <GripHorizontal className="h-3 w-3 text-muted-foreground" />
+          </div>
+        </ResizableHandle>
 
-          <div className="h-5 w-px bg-border mx-1" />
-
-          <Button variant="ghost" size="sm" className="h-8" onClick={() => fileInputRef.current?.click()}>
-            <Upload className="h-3.5 w-3.5 mr-1" />
-            Import
-          </Button>
-          
-          <Button variant="ghost" size="sm" className="h-8" onClick={() => audioInputRef.current?.click()}>
-            <Music className="h-3.5 w-3.5 mr-1" />
-            Audio
-          </Button>
-
-          <Dialog open={showMediaBrowser} onOpenChange={setShowMediaBrowser}>
-            <DialogTrigger asChild>
-              <Button variant="ghost" size="sm" className="h-8" onClick={() => setShowMediaBrowser(true)}>
-                <FolderOpen className="h-3.5 w-3.5 mr-1" />
-                Gallery
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-3xl max-h-[80vh]">
-              <DialogHeader>
-                <DialogTitle>Add from Gallery</DialogTitle>
-              </DialogHeader>
-              <MediaLibrary
-                filter="all"
-                onAddToTimeline={handleAddFromLibrary}
-                onAddMultipleToTimeline={handleAddMultipleFromLibrary}
+        {/* Timeline Panel */}
+        <ResizablePanel defaultSize={70} minSize={40}>
+          <div className="h-full flex flex-col min-h-0">
+            {/* Tools Bar - Compact */}
+            <div className="h-9 border-b border-border bg-card/50 flex items-center gap-1.5 px-2 flex-shrink-0 overflow-x-auto">
+              <TimelineToolbar
+                activeTool={activeTool}
+                onToolChange={setActiveTool}
+                snapEnabled={snapEnabled}
+                onSnapToggle={() => setSnapEnabled(prev => !prev)}
+                canUndo={canUndo}
+                canRedo={canRedo}
+                onUndo={undo}
+                onRedo={redo}
+                hasSelection={hasSelection}
+                hasClipboard={hasClipboard}
+                onCopy={handleCopy}
+                onPaste={handlePaste}
+                onDelete={handleDelete}
+                onDuplicate={handleDuplicate}
               />
-            </DialogContent>
-          </Dialog>
 
-          <div className="flex-1" />
+              <div className="h-5 w-px bg-border mx-1" />
 
-          {/* Background Audio */}
-          {state.backgroundAudio.url && (
-            <div className="flex items-center gap-1.5 px-2 py-1 bg-muted/50 rounded text-xs">
-              <Button variant="ghost" size="icon" className="h-5 w-5" onClick={toggleBackgroundAudioMute}>
-                {state.backgroundAudio.muted ? <VolumeX className="h-3 w-3" /> : <Volume2 className="h-3 w-3 text-primary" />}
+              <Button variant="ghost" size="sm" className="h-8" onClick={() => fileInputRef.current?.click()}>
+                <Upload className="h-3.5 w-3.5 mr-1" />
+                Import
               </Button>
-              <span className="truncate max-w-20 text-muted-foreground">{state.backgroundAudio.name}</span>
-              <Button variant="ghost" size="icon" className="h-4 w-4" onClick={() => setBackgroundAudio(null)}>
-                <X className="h-2.5 w-2.5" />
+              
+              <Button variant="ghost" size="sm" className="h-8" onClick={() => audioInputRef.current?.click()}>
+                <Music className="h-3.5 w-3.5 mr-1" />
+                Audio
               </Button>
+
+              <Dialog open={showMediaBrowser} onOpenChange={setShowMediaBrowser}>
+                <DialogTrigger asChild>
+                  <Button variant="ghost" size="sm" className="h-8" onClick={() => setShowMediaBrowser(true)}>
+                    <FolderOpen className="h-3.5 w-3.5 mr-1" />
+                    Gallery
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-3xl max-h-[80vh]">
+                  <DialogHeader>
+                    <DialogTitle>Add from Gallery</DialogTitle>
+                  </DialogHeader>
+                  <MediaLibrary
+                    filter="all"
+                    onAddToTimeline={handleAddFromLibrary}
+                    onAddMultipleToTimeline={handleAddMultipleFromLibrary}
+                  />
+                </DialogContent>
+              </Dialog>
+
+              <div className="flex-1" />
+
+              {/* Background Audio */}
+              {state.backgroundAudio.url && (
+                <div className="flex items-center gap-1.5 px-2 py-1 bg-muted/50 rounded text-xs">
+                  <Button variant="ghost" size="icon" className="h-5 w-5" onClick={toggleBackgroundAudioMute}>
+                    {state.backgroundAudio.muted ? <VolumeX className="h-3 w-3" /> : <Volume2 className="h-3 w-3 text-primary" />}
+                  </Button>
+                  <span className="truncate max-w-20 text-muted-foreground">{state.backgroundAudio.name}</span>
+                  <Button variant="ghost" size="icon" className="h-4 w-4" onClick={() => setBackgroundAudio(null)}>
+                    <X className="h-2.5 w-2.5" />
+                  </Button>
+                </div>
+              )}
+
+              <div className="h-5 w-px bg-border mx-1" />
+
+              {/* Master Volume */}
+              <div className="flex items-center gap-1.5 px-2">
+                <Volume2 className="h-3.5 w-3.5 text-muted-foreground" />
+                <span className="text-[10px] text-muted-foreground">Master</span>
+                <input
+                  type="range"
+                  min="0"
+                  max="100"
+                  value={state.masterVolume * 100}
+                  onChange={(e) => setMasterVolume(Number(e.target.value) / 100)}
+                  className="w-16 h-1.5 accent-primary cursor-pointer"
+                />
+                <span className="text-[10px] text-muted-foreground w-6 tabular-nums">{Math.round(state.masterVolume * 100)}</span>
+              </div>
+
+              <div className="h-5 w-px bg-border mx-1" />
+
+              {/* Zoom */}
+              <div className="flex items-center gap-1">
+                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setZoom(state.zoom - 10)} disabled={state.zoom <= 10}>
+                  <ZoomOut className="h-3.5 w-3.5" />
+                </Button>
+                <span className="text-[10px] text-muted-foreground w-8 text-center font-mono">{Math.round(state.zoom)}%</span>
+                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setZoom(state.zoom + 10)} disabled={state.zoom >= 200}>
+                  <ZoomIn className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+
+              <div className="h-5 w-px bg-border mx-1" />
+
+              <div className="text-[9px] text-muted-foreground flex gap-2 whitespace-nowrap">
+                <span>V Select</span>
+                <span>C Cut</span>
+                <span>Space Play</span>
+              </div>
             </div>
-          )}
 
-          <div className="h-5 w-px bg-border mx-1" />
-
-          {/* Master Volume */}
-          <div className="flex items-center gap-1.5 px-2">
-            <Volume2 className="h-3.5 w-3.5 text-muted-foreground" />
-            <span className="text-[10px] text-muted-foreground">Master</span>
-            <input
-              type="range"
-              min="0"
-              max="100"
-              value={state.masterVolume * 100}
-              onChange={(e) => setMasterVolume(Number(e.target.value) / 100)}
-              className="w-16 h-1.5 accent-primary cursor-pointer"
-            />
-            <span className="text-[10px] text-muted-foreground w-6 tabular-nums">{Math.round(state.masterVolume * 100)}</span>
-          </div>
-
-          <div className="h-5 w-px bg-border mx-1" />
-
-          {/* Zoom */}
-          <div className="flex items-center gap-1">
-            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setZoom(state.zoom - 10)} disabled={state.zoom <= 10}>
-              <ZoomOut className="h-3.5 w-3.5" />
-            </Button>
-            <span className="text-[10px] text-muted-foreground w-8 text-center font-mono">{Math.round(state.zoom)}%</span>
-            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setZoom(state.zoom + 10)} disabled={state.zoom >= 200}>
-              <ZoomIn className="h-3.5 w-3.5" />
-            </Button>
-          </div>
-
-          <div className="h-5 w-px bg-border mx-1" />
-
-          <div className="text-[9px] text-muted-foreground flex gap-2 whitespace-nowrap">
-            <span>V Select</span>
-            <span>C Cut</span>
-            <span>Space Play</span>
-          </div>
-        </div>
-
-        {/* Timeline Section - fills remaining space */}
-        <div 
-          className={cn("flex-1 flex flex-col min-h-0", isDragOver && "bg-primary/5")}
-          onDragEnter={handleDragEnter}
-          onDragOver={handleDragOver}
-          onDragLeave={handleDragLeave}
-          onDrop={handleDrop}
-        >
+            {/* Timeline Section - fills remaining space */}
+            <div 
+              className={cn("flex-1 flex flex-col min-h-0", isDragOver && "bg-primary/5")}
+              onDragEnter={handleDragEnter}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+            >
           {/* Minimap - Compact */}
           {state.clips.length > 0 && (
             <div className="h-5 border-b border-border/50 bg-card/30 px-2 flex-shrink-0">
@@ -1225,8 +1243,10 @@ export function TimelineEditor({ onExport, importData, onImportComplete, onClose
             </div>
             <ScrollBar orientation="horizontal" />
           </ScrollArea>
-        </div>
-      </div>
+            </div>
+          </div>
+        </ResizablePanel>
+      </ResizablePanelGroup>
 
       {/* Hidden inputs */}
       <input ref={fileInputRef} type="file" accept="video/*,image/*" multiple className="hidden" onChange={(e) => handleFileUpload(e.target.files)} />
