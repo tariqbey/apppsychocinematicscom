@@ -72,6 +72,9 @@ export function TimelineEditor({ onExport }: TimelineEditorProps) {
     toggleTrackMute,
     toggleTrackLock,
     clearTimeline,
+    addTransition,
+    updateTransition,
+    removeTransition,
     undo,
     redo,
     canUndo,
@@ -761,6 +764,7 @@ export function TimelineEditor({ onExport }: TimelineEditorProps) {
                   key={track.id}
                   track={track}
                   clips={state.clips.filter((c) => c.trackId === track.id)}
+                  transitions={state.transitions}
                   zoom={state.zoom}
                   currentTime={state.currentTime}
                   selectedClipIds={selectedClipIds}
@@ -777,6 +781,9 @@ export function TimelineEditor({ onExport }: TimelineEditorProps) {
                   }
                   onToggleTrackMute={() => toggleTrackMute(track.id)}
                   onToggleTrackLock={() => toggleTrackLock(track.id)}
+                  onAddTransition={addTransition}
+                  onUpdateTransition={updateTransition}
+                  onRemoveTransition={removeTransition}
                   snapEnabled={snapEnabled}
                   onSnapPreview={handleSnapPreview}
                   snapTime={snapTime}

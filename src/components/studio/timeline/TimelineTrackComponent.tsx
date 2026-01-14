@@ -1,7 +1,9 @@
+import { useMemo } from "react";
 import { Film, Music, Volume2, VolumeX, Lock, Unlock } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { TimelineTrack, TimelineClip } from "@/hooks/useTimelineEditor";
+import { TimelineTrack, TimelineClip, TimelineTransition } from "@/hooks/useTimelineEditor";
 import { TimelineClipComponent } from "./TimelineClipComponent";
+import { TransitionIndicator, AddTransitionButton } from "./TransitionIndicator";
 import { cn } from "@/lib/utils";
 
 interface SnapInfo {
@@ -12,6 +14,7 @@ interface SnapInfo {
 interface TimelineTrackComponentProps {
   track: TimelineTrack;
   clips: TimelineClip[];
+  transitions: TimelineTransition[];
   zoom: number;
   currentTime: number;
   selectedClipIds: string[];
@@ -24,6 +27,9 @@ interface TimelineTrackComponentProps {
   onToggleClipMute: (clipId: string) => void;
   onToggleTrackMute: () => void;
   onToggleTrackLock: () => void;
+  onAddTransition: (clipAId: string, clipBId: string) => void;
+  onUpdateTransition: (transitionId: string, updates: Partial<TimelineTransition>) => void;
+  onRemoveTransition: (transitionId: string) => void;
   snapEnabled?: boolean;
   onSnapPreview?: (lines: SnapInfo[]) => void;
   snapTime?: (time: number, excludeClipId?: string) => { snappedTime: number; didSnap: boolean; snapType: string | null };
@@ -32,6 +38,7 @@ interface TimelineTrackComponentProps {
 export function TimelineTrackComponent({
   track,
   clips,
+  transitions,
   zoom,
   currentTime,
   selectedClipIds,
@@ -44,6 +51,9 @@ export function TimelineTrackComponent({
   onToggleClipMute,
   onToggleTrackMute,
   onToggleTrackLock,
+  onAddTransition,
+  onUpdateTransition,
+  onRemoveTransition,
   snapEnabled = true,
   onSnapPreview,
   snapTime,
@@ -54,6 +64,35 @@ export function TimelineTrackComponent({
       onClearSelection();
     }
   };
+
+  // Find adjacent clip pairs for potential transitions
+  const adjacentPairs = useMemo(() => {
+    const sortedClips = [...clips].sort((a, b) => a.startTime - b.startTime);
+    const pairs: { clipA: TimelineClip; clipB: TimelineClip; position: number }[] = [];
+    
+    for (let i = 0; i < sortedClips.length - 1; i++) {
+      const clipA = sortedClips[i];
+      const clipB = sortedClips[i + 1];
+      const clipAEnd = clipA.startTime + clipA.duration;
+      
+      // Check if clips are adjacent (within 0.1s tolerance)
+      if (Math.abs(clipAEnd - clipB.startTime) < 0.1) {
+        pairs.push({
+          clipA,
+          clipB,
+          position: clipAEnd * zoom,
+        });
+      }
+    }
+    
+    return pairs;
+  }, [clips, zoom]);
+
+  // Get transitions for this track's clips
+  const trackTransitions = useMemo(() => {
+    const clipIds = new Set(clips.map(c => c.id));
+    return transitions.filter(t => clipIds.has(t.clipAId) && clipIds.has(t.clipBId));
+  }, [clips, transitions]);
 
   return (
     <div className="flex border-b border-border/50">
@@ -92,7 +131,7 @@ export function TimelineTrackComponent({
       {/* Track content */}
       <div
         className={cn(
-          "flex-1 relative h-16 bg-muted/20",
+          "flex-1 relative h-16 bg-muted/20 group",
           track.locked && "opacity-50 pointer-events-none"
         )}
         onClick={handleTrackClick}
@@ -118,6 +157,41 @@ export function TimelineTrackComponent({
             snapTime={snapTime}
           />
         ))}
+
+        {/* Transition indicators */}
+        {trackTransitions.map((transition) => {
+          const clipA = clips.find(c => c.id === transition.clipAId);
+          if (!clipA) return null;
+          const position = (clipA.startTime + clipA.duration - transition.duration / 2) * zoom;
+          
+          return (
+            <TransitionIndicator
+              key={transition.id}
+              transition={transition}
+              zoom={zoom}
+              position={position}
+              onUpdate={(updates) => onUpdateTransition(transition.id, updates)}
+              onRemove={() => onRemoveTransition(transition.id)}
+            />
+          );
+        })}
+
+        {/* Add transition buttons between adjacent clips */}
+        {adjacentPairs.map(({ clipA, clipB, position }) => {
+          // Don't show button if transition already exists
+          const hasTransition = trackTransitions.some(
+            t => t.clipAId === clipA.id && t.clipBId === clipB.id
+          );
+          if (hasTransition) return null;
+          
+          return (
+            <AddTransitionButton
+              key={`add-${clipA.id}-${clipB.id}`}
+              position={position}
+              onAdd={() => onAddTransition(clipA.id, clipB.id)}
+            />
+          );
+        })}
       </div>
     </div>
   );
