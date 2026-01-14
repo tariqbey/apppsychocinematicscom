@@ -29,7 +29,7 @@ export function useTimelineExport() {
       duration: number,
       backgroundAudio: { url: string | null; volume: number; muted: boolean },
       options: {
-        resolution?: "720p" | "1080p";
+        resolution?: "720p" | "1080p" | "4K";
         fps?: number;
         tracks?: TimelineTrack[];
         masterVolume?: number;
@@ -49,8 +49,8 @@ export function useTimelineExport() {
       abortRef.current = false;
 
       const { resolution = "1080p", fps = 30, tracks = [], masterVolume = 1 } = options;
-      const width = resolution === "1080p" ? 1920 : 1280;
-      const height = resolution === "1080p" ? 1080 : 720;
+      const width = resolution === "4K" ? 3840 : resolution === "1080p" ? 1920 : 1280;
+      const height = resolution === "4K" ? 2160 : resolution === "1080p" ? 1080 : 720;
 
       try {
         // Create canvas for rendering

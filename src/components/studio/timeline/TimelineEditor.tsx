@@ -33,6 +33,13 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   ResizablePanelGroup,
   ResizablePanel,
   ResizableHandle,
@@ -173,6 +180,7 @@ export function TimelineEditor({
   const [currentProjectId, setCurrentProjectId] = useState<string | null>(null);
   const [currentProjectTitle, setCurrentProjectTitle] = useState<string>("");
   const [showClipsBin, setShowClipsBin] = useState(false);
+  const [exportQuality, setExportQuality] = useState<"720p" | "1080p" | "4K">("1080p");
   const hasImportedRef = useRef(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const audioInputRef = useRef<HTMLInputElement>(null);
@@ -900,24 +908,24 @@ export function TimelineEditor({
       state.clips,
       state.duration,
       state.backgroundAudio,
-      { resolution: "1080p", fps: 30, tracks: state.tracks, masterVolume: state.masterVolume }
+      { resolution: exportQuality, fps: 30, tracks: state.tracks, masterVolume: state.masterVolume }
     );
 
     if (url) {
       setLastExportedUrl(url);
       toast({
         title: "Export complete!",
-        description: "Your video is ready to download.",
+        description: `Your ${exportQuality} video is ready to download.`,
       });
       onExport?.(url);
 
       // Trigger download
       const a = document.createElement("a");
       a.href = url;
-      a.download = `timeline-export-${Date.now()}.webm`;
+      a.download = `timeline-export-${exportQuality}-${Date.now()}.webm`;
       a.click();
     }
-  }, [state.clips, state.duration, state.backgroundAudio, state.tracks, state.masterVolume, exportTimeline, onExport, toast]);
+  }, [state.clips, state.duration, state.backgroundAudio, state.tracks, state.masterVolume, exportTimeline, onExport, toast, exportQuality]);
 
   // Handle export and save to vault
   const handleExportAndSave = useCallback(async () => {
@@ -925,14 +933,14 @@ export function TimelineEditor({
       state.clips,
       state.duration,
       state.backgroundAudio,
-      { resolution: "1080p", fps: 30, tracks: state.tracks, masterVolume: state.masterVolume }
+      { resolution: exportQuality, fps: 30, tracks: state.tracks, masterVolume: state.masterVolume }
     );
 
     if (url) {
       setLastExportedUrl(url);
       setShowSaveToVault(true);
     }
-  }, [state.clips, state.duration, state.backgroundAudio, state.tracks, state.masterVolume, exportTimeline]);
+  }, [state.clips, state.duration, state.backgroundAudio, state.tracks, state.masterVolume, exportTimeline, exportQuality]);
 
   // Handle save to vault complete
   const handleSaveToVaultComplete = useCallback((movieId: string, savedUrl: string) => {
@@ -1043,6 +1051,19 @@ export function TimelineEditor({
             <Trash2 className="h-4 w-4 mr-1" />
             Clear
           </Button>
+
+          {/* Export Quality Selector */}
+          <Select value={exportQuality} onValueChange={(v) => setExportQuality(v as "720p" | "1080p" | "4K")}>
+            <SelectTrigger className="w-24 h-8 text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="720p">720p HD</SelectItem>
+              <SelectItem value="1080p">1080p FHD</SelectItem>
+              <SelectItem value="4K">4K Ultra</SelectItem>
+            </SelectContent>
+          </Select>
+
           <Button variant="outline" size="sm" onClick={handleExport} disabled={state.clips.length === 0 || isExporting}>
             <Download className="h-4 w-4 mr-1" />
             Download
