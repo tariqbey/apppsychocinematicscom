@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Play, Pause, Volume2, VolumeX, X, Maximize2 } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 import { cn } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
 
 interface MoviePreviewModalProps {
   open: boolean;
@@ -26,6 +27,7 @@ export function MoviePreviewModal({
   const [volume, setVolume] = useState(1);
   const [showControls, setShowControls] = useState(true);
   const controlsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const { toast } = useToast();
 
   // Reset state when modal opens
   useEffect(() => {
@@ -44,17 +46,27 @@ export function MoviePreviewModal({
     const handleTimeUpdate = () => setCurrentTime(video.currentTime);
     const handleLoadedMetadata = () => setDuration(video.duration);
     const handleEnded = () => setIsPlaying(false);
+    const handleError = () => {
+      console.error("Video playback error:", video.error);
+      toast({
+        title: "Playback Error",
+        description: "Could not play video. The format may not be supported.",
+        variant: "destructive",
+      });
+    };
 
     video.addEventListener("timeupdate", handleTimeUpdate);
     video.addEventListener("loadedmetadata", handleLoadedMetadata);
     video.addEventListener("ended", handleEnded);
+    video.addEventListener("error", handleError);
 
     return () => {
       video.removeEventListener("timeupdate", handleTimeUpdate);
       video.removeEventListener("loadedmetadata", handleLoadedMetadata);
       video.removeEventListener("ended", handleEnded);
+      video.removeEventListener("error", handleError);
     };
-  }, []);
+  }, [toast]);
 
   // Auto-hide controls
   const resetControlsTimeout = () => {
@@ -139,6 +151,8 @@ export function MoviePreviewModal({
             src={movieUrl}
             className="w-full h-full object-contain"
             playsInline
+            preload="auto"
+            crossOrigin="anonymous"
             onClick={(e) => e.stopPropagation()}
           />
 
