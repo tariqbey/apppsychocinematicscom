@@ -49,6 +49,7 @@ import { SaveProjectDialog } from "./SaveProjectDialog";
 import { LoadProjectDialog } from "./LoadProjectDialog";
 import { TimelineMinimap } from "./TimelineMinimap";
 import { FilmstripScrubber } from "./FilmstripScrubber";
+import { ClipsBin } from "./ClipsBin";
 import { cn } from "@/lib/utils";
 
 interface SnapInfo {
@@ -151,6 +152,7 @@ export function TimelineEditor({ onExport, importData, onImportComplete, onClose
   const [showLoadProjectDialog, setShowLoadProjectDialog] = useState(false);
   const [currentProjectId, setCurrentProjectId] = useState<string | null>(null);
   const [currentProjectTitle, setCurrentProjectTitle] = useState<string>("");
+  const [showClipsBin, setShowClipsBin] = useState(true);
   const hasImportedRef = useRef(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const audioInputRef = useRef<HTMLInputElement>(null);
@@ -1061,6 +1063,20 @@ export function TimelineEditor({ onExport, importData, onImportComplete, onClose
               />
             </div>
           )}
+
+          {/* Clips Bin */}
+          <ClipsBin
+            clips={state.clips}
+            selectedClipIds={selectedClipIds}
+            onSelectClip={handleClipSelect}
+            onRemoveClip={removeClip}
+            onSeekToClip={(time) => {
+              seek(time);
+              scrollToTime(time);
+            }}
+            isOpen={showClipsBin}
+            onToggle={() => setShowClipsBin(prev => !prev)}
+          />
 
           {/* Timeline Tracks */}
           <ScrollArea className="flex-1" ref={scrollAreaRef}>

@@ -279,13 +279,16 @@ export function useTimelineEditor() {
           : c
       );
 
+      // Push history for move operations
+      pushHistory(newClips, prev.transitions, prev.backgroundAudio);
+
       return {
         ...prev,
         clips: newClips,
         duration: calculateDuration(newClips),
       };
     });
-  }, [calculateDuration]);
+  }, [calculateDuration, pushHistory]);
 
   // Trim clip
   const trimClip = useCallback(
@@ -308,6 +311,9 @@ export function useTimelineEditor() {
             : c
         );
 
+        // Push history for trim operations
+        pushHistory(newClips, prev.transitions, prev.backgroundAudio);
+
         return {
           ...prev,
           clips: newClips,
@@ -315,7 +321,7 @@ export function useTimelineEditor() {
         };
       });
     },
-    [calculateDuration]
+    [calculateDuration, pushHistory]
   );
 
   // Split clip at current time
@@ -347,13 +353,16 @@ export function useTimelineEditor() {
         .filter((c) => c.id !== clipId)
         .concat([firstHalf, secondHalf]);
 
+      // Push history BEFORE returning new state
+      pushHistory(newClips, prev.transitions, prev.backgroundAudio);
+
       return {
         ...prev,
         clips: newClips,
         duration: calculateDuration(newClips),
       };
     });
-  }, [calculateDuration]);
+  }, [calculateDuration, pushHistory]);
 
   // Playback controls
   const play = useCallback(() => {
