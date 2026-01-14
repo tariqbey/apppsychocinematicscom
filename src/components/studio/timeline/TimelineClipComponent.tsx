@@ -1,7 +1,8 @@
-import { useState, useRef } from "react";
-import { Film, Image, Music, Volume2, VolumeX, Scissors, Trash2, GripVertical } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
+import { Film, Image, Music, Volume2, VolumeX, Scissors, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { TimelineClip } from "@/hooks/useTimelineEditor";
+import { SimpleWaveform } from "./AudioWaveform";
 import { cn } from "@/lib/utils";
 
 interface TimelineClipComponentProps {
@@ -86,11 +87,14 @@ export function TimelineClipComponent({
     document.addEventListener("mouseup", handleMouseUp);
   };
 
+  // Calculate number of waveform bars based on clip width
+  const waveformBars = Math.max(5, Math.floor(width / 8));
+
   return (
     <div
       ref={clipRef}
       className={cn(
-        "absolute top-1 bottom-1 rounded-md border transition-all cursor-pointer group",
+        "absolute top-1 bottom-1 rounded-md border transition-all cursor-pointer group overflow-hidden",
         clip.type === "video" && "bg-primary/30 border-primary/50 hover:border-primary",
         clip.type === "audio" && "bg-accent/30 border-accent/50 hover:border-accent",
         clip.type === "image" && "bg-amber-500/30 border-amber-500/50 hover:border-amber-500",
@@ -101,15 +105,27 @@ export function TimelineClipComponent({
       style={{ left: `${left}px`, width: `${Math.max(width, 20)}px` }}
       onClick={onSelect}
     >
+      {/* Waveform background for video/audio clips */}
+      {(clip.type === "video" || clip.type === "audio") && width > 40 && (
+        <div className="absolute inset-0 flex items-center justify-center opacity-40 pointer-events-none">
+          <SimpleWaveform
+            width={Math.max(width - 8, 20)}
+            height={40}
+            bars={waveformBars}
+            color={clip.type === "video" ? "hsl(var(--primary))" : "hsl(var(--accent))"}
+          />
+        </div>
+      )}
+
       {/* Left resize handle */}
       <div
-        className="absolute left-0 top-0 bottom-0 w-2 cursor-ew-resize hover:bg-foreground/20 rounded-l-md"
+        className="absolute left-0 top-0 bottom-0 w-2 cursor-ew-resize hover:bg-foreground/20 rounded-l-md z-10"
         onMouseDown={(e) => handleMouseDown(e, "resize-start")}
       />
 
       {/* Content */}
       <div
-        className="flex items-center gap-1 px-2 h-full overflow-hidden"
+        className="relative flex items-center gap-1 px-2 h-full overflow-hidden z-10"
         onMouseDown={(e) => handleMouseDown(e, "drag")}
       >
         {/* Thumbnail or icon */}
@@ -117,15 +133,15 @@ export function TimelineClipComponent({
           <img
             src={clip.thumbnail}
             alt=""
-            className="h-6 w-10 object-cover rounded flex-shrink-0"
+            className="h-6 w-10 object-cover rounded flex-shrink-0 border border-white/20"
             draggable={false}
           />
         ) : (
-          <div className="flex-shrink-0">{getIcon()}</div>
+          <div className="flex-shrink-0 bg-background/50 p-1 rounded">{getIcon()}</div>
         )}
 
         {/* Name */}
-        <span className="text-xs truncate flex-1">{clip.name}</span>
+        <span className="text-xs truncate flex-1 drop-shadow-sm">{clip.name}</span>
 
         {/* Mute indicator */}
         {clip.type !== "image" && clip.muted && (
@@ -135,7 +151,7 @@ export function TimelineClipComponent({
 
       {/* Right resize handle */}
       <div
-        className="absolute right-0 top-0 bottom-0 w-2 cursor-ew-resize hover:bg-foreground/20 rounded-r-md"
+        className="absolute right-0 top-0 bottom-0 w-2 cursor-ew-resize hover:bg-foreground/20 rounded-r-md z-10"
         onMouseDown={(e) => handleMouseDown(e, "resize-end")}
       />
 

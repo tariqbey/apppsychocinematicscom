@@ -14,6 +14,8 @@ import {
   FolderOpen,
   Plus,
   X,
+  Volume2,
+  VolumeX,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
@@ -33,6 +35,7 @@ import { useToast } from "@/hooks/use-toast";
 import { TimelineTrackComponent } from "./TimelineTrackComponent";
 import { TimelineRuler } from "./TimelineRuler";
 import { TimelinePreview } from "./TimelinePreview";
+import { AudioWaveform } from "./AudioWaveform";
 import { cn } from "@/lib/utils";
 
 interface TimelineEditorProps {
@@ -421,6 +424,17 @@ export function TimelineEditor({ onExport }: TimelineEditorProps) {
                 <p className="text-xs text-muted-foreground truncate">
                   {state.backgroundAudio.name}
                 </p>
+                {/* Audio Waveform Visualization */}
+                <div className="rounded bg-muted/50 overflow-hidden">
+                  <AudioWaveform
+                    src={state.backgroundAudio.url}
+                    duration={state.duration || 60}
+                    width={240}
+                    height={32}
+                    color={state.backgroundAudio.muted ? "hsl(var(--muted-foreground))" : "hsl(var(--primary))"}
+                    backgroundColor="transparent"
+                  />
+                </div>
                 <div className="flex items-center gap-2">
                   <Button
                     variant="ghost"
@@ -429,9 +443,9 @@ export function TimelineEditor({ onExport }: TimelineEditorProps) {
                     onClick={toggleBackgroundAudioMute}
                   >
                     {state.backgroundAudio.muted ? (
-                      <Music className="h-3 w-3 text-muted-foreground" />
+                      <VolumeX className="h-3 w-3 text-muted-foreground" />
                     ) : (
-                      <Music className="h-3 w-3 text-primary" />
+                      <Volume2 className="h-3 w-3 text-primary" />
                     )}
                   </Button>
                   <Slider
