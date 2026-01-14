@@ -70,9 +70,10 @@ interface TimelineEditorProps {
   onExport?: (url: string) => void;
   importData?: TimelineImportData;
   onImportComplete?: () => void;
+  onClose?: () => void;
 }
 
-export function TimelineEditor({ onExport, importData, onImportComplete }: TimelineEditorProps) {
+export function TimelineEditor({ onExport, importData, onImportComplete, onClose }: TimelineEditorProps) {
   const {
     state,
     addClip,
@@ -644,6 +645,11 @@ export function TimelineEditor({ onExport, importData, onImportComplete }: Timel
       {/* Top Bar - Header */}
       <div className="h-12 border-b border-border bg-card/80 backdrop-blur flex items-center justify-between px-4 flex-shrink-0">
         <div className="flex items-center gap-4">
+          {onClose && (
+            <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8" title="Exit Timeline Editor">
+              <X className="h-5 w-5" />
+            </Button>
+          )}
           <h3 className="text-sm font-display tracking-wide text-primary">Timeline Editor</h3>
           <span className="text-xs text-muted-foreground font-mono">
             {formatTime(state.currentTime)} / {formatTime(state.duration)} • Max {formatTime(MAX_DURATION)}
@@ -876,10 +882,11 @@ export function TimelineEditor({ onExport, importData, onImportComplete }: Timel
 
               {/* Tracks */}
               <div className="relative">
-                {state.tracks.map((track) => (
+                {state.tracks.map((track, index) => (
                   <TimelineTrackComponent
                     key={track.id}
                     track={track}
+                    trackIndex={index}
                     clips={state.clips.filter((c) => c.trackId === track.id)}
                     transitions={state.transitions}
                     zoom={state.zoom}
