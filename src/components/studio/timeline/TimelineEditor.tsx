@@ -98,6 +98,7 @@ export function TimelineEditor({ onExport, importData, onImportComplete, onClose
     trimClip,
     splitClip,
     addClips,
+    addMultipleClips,
     play,
     pause,
     togglePlayback,
@@ -677,12 +678,20 @@ export function TimelineEditor({ onExport, importData, onImportComplete, onClose
     },
     [addClip, toast]
   );
-
   // Add multiple clips from media library
   const handleAddMultipleFromLibrary = useCallback(
     async (mediaItems: GeneratedMedia[]) => {
       setShowMediaBrowser(false);
       
+      // Process all media items and collect clip data
+      const clipsData: Array<{
+        sourceUrl: string;
+        type: "video" | "audio" | "image";
+        name: string;
+        sourceDuration: number;
+        thumbnail?: string;
+      }> = [];
+
       for (const media of mediaItems) {
         if (!media.media_url) continue;
 
@@ -724,7 +733,18 @@ export function TimelineEditor({ onExport, importData, onImportComplete, onClose
           thumbnail = media.media_url;
         }
 
-        await addClip(media.media_url, type, media.prompt?.substring(0, 30) + "..." || "Clip", duration, thumbnail);
+        clipsData.push({
+          sourceUrl: media.media_url,
+          type,
+          name: media.prompt?.substring(0, 30) + "..." || "Clip",
+          sourceDuration: duration,
+          thumbnail,
+        });
+      }
+
+      // Add all clips at once to avoid race conditions
+      if (clipsData.length > 0) {
+        addMultipleClips(clipsData);
       }
 
       toast({
@@ -732,7 +752,7 @@ export function TimelineEditor({ onExport, importData, onImportComplete, onClose
         description: `${mediaItems.length} item(s) added to timeline`,
       });
     },
-    [addClip, toast]
+    [addMultipleClips, toast]
   );
 
   // Handle export (download)
