@@ -1,11 +1,12 @@
 import { useMemo, memo, useCallback, useState } from "react";
-import { Film, Music, Volume2, VolumeX, Lock, Unlock, Trash2 } from "lucide-react";
+import { Film, Music, Volume2, VolumeX, Lock, Unlock, Trash2, GripVertical, Headphones } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { TimelineTrack, TimelineClip, TimelineTransition } from "@/hooks/useTimelineEditor";
 import { TimelineClipComponent } from "./TimelineClipComponent";
 import { TransitionIndicator, AddTransitionButton } from "./TransitionIndicator";
 import { cn } from "@/lib/utils";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface SnapInfo {
   time: number;
@@ -30,6 +31,7 @@ interface TimelineTrackComponentProps {
   onUpdateClipVolume: (clipId: string, volume: number) => void;
   onToggleTrackMute: () => void;
   onToggleTrackLock: () => void;
+  onToggleTrackSolo: () => void;
   onSetTrackVolume: (volume: number) => void;
   onRemoveTrack: () => void;
   canRemoveTrack: boolean;
@@ -39,6 +41,14 @@ interface TimelineTrackComponentProps {
   snapEnabled?: boolean;
   onSnapPreview?: (lines: SnapInfo[]) => void;
   snapTime?: (time: number, excludeClipId?: string) => { snappedTime: number; didSnap: boolean; snapType: string | null };
+  // Drag reorder
+  onDragStart?: () => void;
+  onDragEnd?: () => void;
+  onDragOver?: (e: React.DragEvent) => void;
+  onDrop?: (e: React.DragEvent) => void;
+  isDragging?: boolean;
+  isDragOver?: boolean;
+  hasSoloedTrack?: boolean; // True if any track is soloed
 }
 
 export const TimelineTrackComponent = memo(function TimelineTrackComponent({
@@ -59,6 +69,7 @@ export const TimelineTrackComponent = memo(function TimelineTrackComponent({
   onUpdateClipVolume,
   onToggleTrackMute,
   onToggleTrackLock,
+  onToggleTrackSolo,
   onSetTrackVolume,
   onRemoveTrack,
   canRemoveTrack,
@@ -68,6 +79,13 @@ export const TimelineTrackComponent = memo(function TimelineTrackComponent({
   snapEnabled = true,
   onSnapPreview,
   snapTime,
+  onDragStart,
+  onDragEnd,
+  onDragOver,
+  onDrop,
+  isDragging = false,
+  isDragOver: isDragOverProp = false,
+  hasSoloedTrack = false,
 }: TimelineTrackComponentProps) {
   const [showVolumeSlider, setShowVolumeSlider] = useState(false);
   // Generate track label like "Video 1", "Audio 1"
@@ -136,44 +154,96 @@ export const TimelineTrackComponent = memo(function TimelineTrackComponent({
     return handlers;
   }, [clips, onSelectClip, onRemoveClip, onMoveClip, onTrimClip, onSplitClip, onToggleClipMute, onUpdateClipVolume]);
 
+  // Determine if track is effectively muted (muted, or another track is soloed)
+  const isEffectivelyMuted = track.muted || (hasSoloedTrack && !track.solo);
+
   return (
-    <div className="flex border-b border-border/50">
+    <div 
+      className={cn(
+        "flex border-b border-border/50 transition-all",
+        isDragging && "opacity-50",
+        isDragOverProp && "border-t-2 border-t-primary"
+      )}
+      draggable
+      onDragStart={(e) => {
+        e.dataTransfer.effectAllowed = "move";
+        e.dataTransfer.setData("text/plain", track.id);
+        onDragStart?.();
+      }}
+      onDragEnd={onDragEnd}
+      onDragOver={(e) => {
+        e.preventDefault();
+        onDragOver?.(e);
+      }}
+      onDrop={(e) => {
+        e.preventDefault();
+        onDrop?.(e);
+      }}
+    >
       {/* Track header with label */}
       <div className="w-28 flex-shrink-0 border-r border-border/50 bg-card/50 flex flex-col">
-        {/* Track label */}
+        {/* Track label with drag handle */}
         <div className={cn(
-          "px-2 py-1.5 border-b border-border/30 flex items-center gap-2",
+          "px-2 py-1.5 border-b border-border/30 flex items-center gap-1",
           track.type === "video" ? "bg-primary/10" : "bg-accent/10"
         )}>
+          <GripVertical className="h-3.5 w-3.5 text-muted-foreground cursor-grab active:cursor-grabbing flex-shrink-0" />
           {track.type === "video" ? (
-            <Film className="h-3.5 w-3.5 text-primary" />
+            <Film className="h-3.5 w-3.5 text-primary flex-shrink-0" />
           ) : (
-            <Music className="h-3.5 w-3.5 text-accent" />
+            <Music className="h-3.5 w-3.5 text-accent flex-shrink-0" />
           )}
-          <span className="text-xs font-semibold tracking-wide">{trackLabel}</span>
+          <span className="text-xs font-semibold tracking-wide truncate">{trackLabel}</span>
         </div>
         
         {/* Controls */}
         <div className="flex-1 flex flex-col justify-center gap-1 px-2 py-1">
-          <div className="flex items-center justify-center gap-1">
-            <Button
-              variant="ghost"
-              size="icon"
-              className={cn("h-6 w-6", track.muted && "text-muted-foreground")}
-              onClick={onToggleTrackMute}
-              title={track.muted ? "Unmute track" : "Mute track"}
-            >
-              {track.muted ? <VolumeX className="h-3.5 w-3.5" /> : <Volume2 className="h-3.5 w-3.5" />}
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className={cn("h-6 w-6", track.locked && "text-amber-500")}
-              onClick={onToggleTrackLock}
-              title={track.locked ? "Unlock track" : "Lock track"}
-            >
-              {track.locked ? <Lock className="h-3.5 w-3.5" /> : <Unlock className="h-3.5 w-3.5" />}
-            </Button>
+          <div className="flex items-center justify-center gap-0.5">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className={cn("h-6 w-6", track.solo && "text-amber-400 bg-amber-400/10")}
+                  onClick={onToggleTrackSolo}
+                >
+                  <Headphones className="h-3.5 w-3.5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="text-xs">
+                {track.solo ? "Unsolo track" : "Solo track (hear only this)"}
+              </TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className={cn("h-6 w-6", isEffectivelyMuted && "text-muted-foreground")}
+                  onClick={onToggleTrackMute}
+                >
+                  {track.muted ? <VolumeX className="h-3.5 w-3.5" /> : <Volume2 className="h-3.5 w-3.5" />}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="text-xs">
+                {track.muted ? "Unmute" : "Mute"}
+              </TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className={cn("h-6 w-6", track.locked && "text-amber-500")}
+                  onClick={onToggleTrackLock}
+                >
+                  {track.locked ? <Lock className="h-3.5 w-3.5" /> : <Unlock className="h-3.5 w-3.5" />}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="text-xs">
+                {track.locked ? "Unlock" : "Lock"}
+              </TooltipContent>
+            </Tooltip>
             {canRemoveTrack && (
               <Button
                 variant="ghost"

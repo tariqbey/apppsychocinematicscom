@@ -1,9 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Progress } from "@/components/ui/progress";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { Image, Video, Clock, AlertCircle, Loader2, Download, Trash2, HardDrive, X, ChevronLeft, ChevronRight, RefreshCw, Mic2, Clapperboard } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Image, Video, Clock, AlertCircle, Loader2, Download, Trash2, HardDrive, X, ChevronLeft, ChevronRight, RefreshCw, Mic2, Clapperboard, Music, Plus, ArrowUpDown } from "lucide-react";
 import { useMediaGeneration, GeneratedMedia } from "@/hooks/useMediaGeneration";
 import { formatDistanceToNow } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
@@ -15,6 +17,7 @@ interface MediaLibraryProps {
   filter?: "image" | "video" | "all";
   onSelect?: (media: GeneratedMedia) => void;
   onAddToTimeline?: (media: GeneratedMedia) => void;
+  onAddMultipleToTimeline?: (media: GeneratedMedia[]) => void;
 }
 
 const MAX_STORAGE_BYTES = 5 * 1024 * 1024 * 1024; // 5GB
@@ -27,13 +30,16 @@ function formatBytes(bytes: number): string {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
 }
 
-export function MediaLibrary({ filter = "all", onSelect, onAddToTimeline }: MediaLibraryProps) {
+export function MediaLibrary({ filter = "all", onSelect, onAddToTimeline, onAddMultipleToTimeline }: MediaLibraryProps) {
   const [history, setHistory] = useState<GeneratedMedia[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [storageUsed, setStorageUsed] = useState(0);
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
   const [lightboxMedia, setLightboxMedia] = useState<GeneratedMedia | null>(null);
   const [showVoiceChanger, setShowVoiceChanger] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [sortBy, setSortBy] = useState<"date" | "type">("date");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const { fetchGenerationHistory } = useMediaGeneration();
   const { toast } = useToast();
   const { user, loading: authLoading } = useAuth();
@@ -138,7 +144,73 @@ export function MediaLibrary({ filter = "all", onSelect, onAddToTimeline }: Medi
     ? history 
     : history.filter(item => item.media_type === filter);
 
-  const completedMedia = filteredHistory.filter(item => item.status === "completed" && item.media_url);
+  // Sort the filtered history
+  const sortedHistory = useMemo(() => {
+    const sorted = [...filteredHistory].sort((a, b) => {
+      if (sortBy === "date") {
+        const dateA = new Date(a.created_at).getTime();
+        const dateB = new Date(b.created_at).getTime();
+        return sortOrder === "desc" ? dateB - dateA : dateA - dateB;
+      } else {
+        // Sort by type: video > image > audio
+        const typeOrder = { video: 0, image: 1, audio: 2 };
+        const typeA = typeOrder[a.media_type as keyof typeof typeOrder] ?? 3;
+        const typeB = typeOrder[b.media_type as keyof typeof typeOrder] ?? 3;
+        if (typeA !== typeB) {
+          return sortOrder === "desc" ? typeA - typeB : typeB - typeA;
+        }
+        // Secondary sort by date
+        const dateA = new Date(a.created_at).getTime();
+        const dateB = new Date(b.created_at).getTime();
+        return dateB - dateA;
+      }
+    });
+    return sorted;
+  }, [filteredHistory, sortBy, sortOrder]);
+
+  const completedMedia = sortedHistory.filter(item => item.status === "completed" && item.media_url);
+
+  // Toggle selection
+  const toggleSelection = (id: string, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
+  // Clear selection
+  const clearSelection = () => setSelectedIds(new Set());
+
+  // Get selected media items
+  const selectedMedia = completedMedia.filter(m => selectedIds.has(m.id));
+
+  // Handle adding all selected to timeline
+  const handleAddSelectedToTimeline = () => {
+    if (selectedMedia.length === 0) return;
+    
+    if (onAddMultipleToTimeline) {
+      onAddMultipleToTimeline(selectedMedia);
+      clearSelection();
+      toast({
+        title: "Added to Timeline",
+        description: `${selectedMedia.length} item(s) added to timeline`,
+      });
+    } else if (onAddToTimeline) {
+      // Fallback: add one by one
+      selectedMedia.forEach(m => onAddToTimeline(m));
+      clearSelection();
+      toast({
+        title: "Added to Timeline",
+        description: `${selectedMedia.length} item(s) added to timeline`,
+      });
+    }
+  };
 
   const currentIndex = lightboxMedia ? completedMedia.findIndex(m => m.id === lightboxMedia.id) : -1;
 
@@ -151,6 +223,15 @@ export function MediaLibrary({ filter = "all", onSelect, onAddToTimeline }: Medi
   };
 
   const storagePercentage = (storageUsed / MAX_STORAGE_BYTES) * 100;
+
+  // Select all/none
+  const toggleSelectAll = () => {
+    if (selectedIds.size === completedMedia.length) {
+      clearSelection();
+    } else {
+      setSelectedIds(new Set(completedMedia.map(m => m.id)));
+    }
+  };
 
   // Show loading while auth is resolving
   if (authLoading || isLoading) {
@@ -343,7 +424,63 @@ export function MediaLibrary({ filter = "all", onSelect, onAddToTimeline }: Medi
         )}
       </div>
 
-      {filteredHistory.length === 0 ? (
+      {/* Selection & Sort Controls */}
+      {completedMedia.length > 0 && (
+        <div className="flex items-center justify-between gap-2 py-2">
+          <div className="flex items-center gap-2">
+            <Checkbox
+              checked={selectedIds.size === completedMedia.length && completedMedia.length > 0}
+              onCheckedChange={toggleSelectAll}
+              aria-label="Select all"
+            />
+            <span className="text-xs text-muted-foreground">
+              {selectedIds.size > 0 ? `${selectedIds.size} selected` : "Select all"}
+            </span>
+            {selectedIds.size > 0 && (onAddToTimeline || onAddMultipleToTimeline) && (
+              <Button
+                size="sm"
+                className="h-7 text-xs gap-1"
+                onClick={handleAddSelectedToTimeline}
+              >
+                <Plus className="h-3 w-3" />
+                Add {selectedIds.size} to Timeline
+              </Button>
+            )}
+            {selectedIds.size > 0 && (
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-7 text-xs"
+                onClick={clearSelection}
+              >
+                Clear
+              </Button>
+            )}
+          </div>
+          <div className="flex items-center gap-1">
+            <Select value={sortBy} onValueChange={(v) => setSortBy(v as "date" | "type")}>
+              <SelectTrigger className="h-7 w-24 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="date">Date</SelectItem>
+                <SelectItem value="type">Type</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7"
+              onClick={() => setSortOrder(prev => prev === "asc" ? "desc" : "asc")}
+              title={sortOrder === "desc" ? "Newest first" : "Oldest first"}
+            >
+              <ArrowUpDown className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {sortedHistory.length === 0 ? (
         <div className="text-center py-8 text-muted-foreground">
           <Clock className="h-8 w-8 mx-auto mb-2 opacity-50" />
           <p>No generations yet</p>
@@ -352,7 +489,7 @@ export function MediaLibrary({ filter = "all", onSelect, onAddToTimeline }: Medi
       ) : (
         <ScrollArea className="h-[350px]">
           <div className="grid grid-cols-2 gap-3 pr-4">
-            {filteredHistory.map((item) => (
+            {sortedHistory.map((item) => (
               <div
                 key={item.id}
                 className="group relative rounded-lg border border-border/50 overflow-hidden hover:border-primary/50 transition-colors cursor-pointer"
@@ -446,8 +583,19 @@ export function MediaLibrary({ filter = "all", onSelect, onAddToTimeline }: Medi
                     </div>
                   )}
                   
-                  {/* Type Badge */}
-                  <div className="absolute top-2 left-2">
+                  {/* Selection Checkbox & Type Badge */}
+                  <div className="absolute top-2 left-2 flex items-center gap-1.5">
+                    {item.status === "completed" && item.media_url && (
+                      <div 
+                        className="bg-black/60 rounded p-0.5"
+                        onClick={(e) => toggleSelection(item.id, e)}
+                      >
+                        <Checkbox
+                          checked={selectedIds.has(item.id)}
+                          className="h-4 w-4 border-white/70 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+                        />
+                      </div>
+                    )}
                     <span className="px-2 py-0.5 text-xs font-medium rounded bg-black/60 text-white capitalize">
                       {item.media_type}
                     </span>
