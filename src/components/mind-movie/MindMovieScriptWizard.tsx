@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { X, ChevronLeft, ChevronRight, Sparkles, Save, Clapperboard, Palette, Layout, Wand2, Music, Check, RefreshCw, Plus, User, ChevronDown, Trash2, HelpCircle, ExternalLink, Film } from "lucide-react";
+import { X, ChevronLeft, ChevronRight, Sparkles, Save, Clapperboard, Palette, Layout, Wand2, Music, Check, RefreshCw, Plus, User, ChevronDown, Trash2, HelpCircle, ExternalLink, Film, Zap, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
@@ -26,6 +26,7 @@ import { LyricsEditor } from "./LyricsEditor";
 import { SoundtrackPlayer } from "./SoundtrackPlayer";
 import { useMindMovieScript, type Scene } from "@/hooks/useMindMovieScript";
 import { useMindMovieMusic, MUSIC_STYLES, type MusicStyle } from "@/hooks/useMindMovieMusic";
+import { useMediaGeneration } from "@/hooks/useMediaGeneration";
 import { toast } from "sonner";
 
 const PERSONA_STORAGE_KEY = 'mind-movie-saved-personas';
@@ -116,6 +117,8 @@ export function MindMovieScriptWizard({
   const [regeneratingSceneOrder, setRegeneratingSceneOrder] = useState<number | null>(null);
   const [savedPersonas, setSavedPersonas] = useState<SavedPersona[]>([]);
   const [songCount, setSongCount] = useState<1 | 2>(1);
+  const [isAutoGenerating, setIsAutoGenerating] = useState(false);
+  const [autoGenerateProgress, setAutoGenerateProgress] = useState({ current: 0, total: 0, stage: "" });
   
   const { 
     isGenerating, 
@@ -126,6 +129,13 @@ export function MindMovieScriptWizard({
     fetchLatestScript,
     fetchScriptById,
   } = useMindMovieScript();
+
+  const {
+    generateImage,
+    generateVideo,
+    isGeneratingImage,
+    isGeneratingVideo,
+  } = useMediaGeneration();
 
   const {
     isGeneratingLyrics,
@@ -156,6 +166,7 @@ export function MindMovieScriptWizard({
   useEffect(() => {
     setSavedPersonas(loadSavedPersonas());
   }, []);
+
 
   // Load script based on movieId or fetch latest
   useEffect(() => {
@@ -378,6 +389,116 @@ export function MindMovieScriptWizard({
   const handleSaveLyrics = async () => {
     if (!currentScript || !generatedLyrics) return;
     await saveLyrics(currentScript.id, generatedLyrics);
+  };
+
+  // Auto-generate all images and videos for scenes, then add to timeline
+  const handleAutoGenerateAll = async () => {
+    if (generatedScenes.length === 0) {
+      toast.error("Please generate scenes first");
+      return;
+    }
+
+    setIsAutoGenerating(true);
+    const scenesWithoutImages = generatedScenes.filter(s => !s.generatedImageUrl);
+    const totalSteps = scenesWithoutImages.length * 2; // Image + Video for each
+    let currentStep = 0;
+
+    try {
+      // Phase 1: Generate images for scenes that don't have them
+      for (const scene of scenesWithoutImages) {
+        setAutoGenerateProgress({
+          current: currentStep,
+          total: totalSteps,
+          stage: `Generating image for Scene ${scene.order}...`
+        });
+
+        const imageUrl = await generateImage({
+          prompt: scene.prompt,
+          aspect_ratio: "16:9",
+          resolution: "2k"
+        });
+
+        if (imageUrl) {
+          setGeneratedScenes(prev => prev.map(s => 
+            s.order === scene.order ? { ...s, generatedImageUrl: imageUrl } : s
+          ));
+        }
+        currentStep++;
+      }
+
+      // Phase 2: Generate videos for scenes that have images
+      const updatedScenes = [...generatedScenes];
+      const scenesForVideo = updatedScenes.filter(s => 
+        (s.generatedImageUrl || scenesWithoutImages.find(sw => sw.order === s.order)) && 
+        !s.generatedVideoUrl
+      );
+
+      for (const scene of scenesForVideo) {
+        setAutoGenerateProgress({
+          current: currentStep,
+          total: totalSteps,
+          stage: `Generating video for Scene ${scene.order}...`
+        });
+
+        // Get the latest image URL
+        const latestScene = generatedScenes.find(s => s.order === scene.order);
+        const imageUrl = latestScene?.generatedImageUrl || scene.generatedImageUrl;
+
+        if (imageUrl) {
+          const videoUrl = await generateVideo({
+            model: "google/veo3-fast/image-to-video",
+            prompt: scene.prompt,
+            image: imageUrl,
+            duration: Math.min(scene.duration, 8),
+            aspect_ratio: "16:9"
+          });
+
+          if (videoUrl) {
+            setGeneratedScenes(prev => prev.map(s => 
+              s.order === scene.order ? { ...s, generatedVideoUrl: videoUrl } : s
+            ));
+          }
+        }
+        currentStep++;
+      }
+
+      setAutoGenerateProgress({
+        current: totalSteps,
+        total: totalSteps,
+        stage: "Complete! Adding to timeline..."
+      });
+
+      toast.success("All media generated! Adding to timeline...");
+      
+      // Save the script with generated media
+      await saveScript(
+        generatedTitle,
+        generatedScenes,
+        chiefAim,
+        visualStyle,
+        currentScript?.id
+      );
+
+      // Automatically add to timeline
+      if (onAddToTimeline) {
+        const bestSoundtrack = songs.length > 0 
+          ? songs.find(s => s.soundtrackUrl)?.soundtrackUrl 
+          : soundtrackUrl;
+        
+        onAddToTimeline({
+          scenes: generatedScenes,
+          soundtrackUrl: bestSoundtrack,
+          title: generatedTitle,
+        });
+        onClose();
+      }
+    } catch (error) {
+      console.error("Auto-generate error:", error);
+      toast.error("Some generations failed. Check your credits and try again.");
+    } finally {
+      setIsAutoGenerating(false);
+      setAutoGenerateProgress({ current: 0, total: 0, stage: "" });
+    }
   };
 
   const handleAddToTimeline = useCallback(() => {
@@ -651,30 +772,72 @@ export function MindMovieScriptWizard({
             {/* Step 3: Storyboard */}
             {step === 3 && (
               <div className="space-y-6">
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between flex-wrap gap-4">
                   <div>
                     <h2 className="text-2xl font-bold">{generatedTitle || "Your Storyboard"}</h2>
                     <p className="text-muted-foreground">
                       {generatedScenes.length} scenes • Click to edit or copy prompts
                     </p>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap gap-2">
+                    {/* Auto-Generate All Button */}
+                    {onAddToTimeline && (
+                      <Button 
+                        onClick={handleAutoGenerateAll}
+                        disabled={generatedScenes.length === 0 || isAutoGenerating}
+                        className="bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white"
+                      >
+                        {isAutoGenerating ? (
+                          <>
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            Auto-Generating...
+                          </>
+                        ) : (
+                          <>
+                            <Zap className="w-4 h-4 mr-2" />
+                            Auto-Generate All
+                          </>
+                        )}
+                      </Button>
+                    )}
                     {onAddToTimeline && (
                       <Button 
                         onClick={handleAddToTimeline} 
                         variant="outline"
-                        disabled={generatedScenes.length === 0}
+                        disabled={generatedScenes.length === 0 || isAutoGenerating}
                       >
                         <Film className="w-4 h-4 mr-2" />
                         Add to Timeline
                       </Button>
                     )}
-                    <Button onClick={handleSaveStoryboard} disabled={isLoading}>
+                    <Button onClick={handleSaveStoryboard} disabled={isLoading || isAutoGenerating}>
                       <Save className="w-4 h-4 mr-2" />
                       {isLoading ? "Saving..." : "Save Storyboard"}
                     </Button>
                   </div>
                 </div>
+
+                {/* Auto-Generate Progress */}
+                {isAutoGenerating && autoGenerateProgress.total > 0 && (
+                  <div className="p-4 rounded-lg bg-gradient-to-r from-amber-500/10 to-orange-600/10 border border-amber-500/30 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="flex items-center gap-2 text-sm font-medium">
+                        <Zap className="w-4 h-4 text-amber-500" />
+                        {autoGenerateProgress.stage}
+                      </span>
+                      <span className="text-sm text-muted-foreground">
+                        {autoGenerateProgress.current} / {autoGenerateProgress.total}
+                      </span>
+                    </div>
+                    <Progress 
+                      value={(autoGenerateProgress.current / autoGenerateProgress.total) * 100} 
+                      className="h-2" 
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      This will generate images and videos for all scenes, then add them to the timeline automatically.
+                    </p>
+                  </div>
+                )}
 
                 <StoryboardGrid
                   scenes={generatedScenes}
@@ -683,7 +846,7 @@ export function MindMovieScriptWizard({
                   onRegenerateScene={handleRegenerateScene}
                   onDeleteScene={handleDeleteScene}
                   regeneratingSceneOrder={regeneratingSceneOrder}
-                  isEditable={true}
+                  isEditable={!isAutoGenerating}
                 />
               </div>
             )}

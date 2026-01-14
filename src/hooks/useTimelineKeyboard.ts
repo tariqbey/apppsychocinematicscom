@@ -16,6 +16,7 @@ interface UseTimelineKeyboardProps {
   onSeekEnd: () => void;
   onNudgeLeft: () => void;
   onNudgeRight: () => void;
+  onAddAudio?: () => void;
   enabled?: boolean;
 }
 
@@ -34,6 +35,7 @@ export function useTimelineKeyboard({
   onSeekEnd,
   onNudgeLeft,
   onNudgeRight,
+  onAddAudio,
   enabled = true,
 }: UseTimelineKeyboardProps) {
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
@@ -72,6 +74,10 @@ export function useTimelineKeyboard({
         case "s":
           e.preventDefault();
           onSnapToggle();
+          return;
+        case "a":
+          e.preventDefault();
+          onAddAudio?.();
           return;
       }
     }
@@ -164,6 +170,7 @@ export function useTimelineKeyboard({
     onSeekEnd,
     onNudgeLeft,
     onNudgeRight,
+    onAddAudio,
   ]);
 
   useEffect(() => {
