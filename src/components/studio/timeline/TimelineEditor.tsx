@@ -616,7 +616,13 @@ export function TimelineEditor({ onExport, importData, onImportComplete, onClose
     async (media: GeneratedMedia) => {
       if (!media.media_url) return;
 
-      const type = media.media_type === "image" ? "image" : "video";
+      // Handle audio, video, and image types
+      // Note: media_type from GeneratedMedia is typically "image" | "video", 
+      // but we cast to allow audio in case it's added later
+      const mediaType = media.media_type as "video" | "audio" | "image";
+      const type: "video" | "audio" | "image" = 
+        mediaType === "audio" ? "audio" : 
+        mediaType === "image" ? "image" : "video";
       let duration = 5;
 
       if (type === "video") {
@@ -628,23 +634,35 @@ export function TimelineEditor({ onExport, importData, onImportComplete, onClose
             resolve();
           };
           video.onerror = () => resolve();
+          setTimeout(resolve, 2000);
+        });
+      } else if (type === "audio") {
+        const audio = document.createElement("audio");
+        audio.src = media.media_url;
+        await new Promise<void>((resolve) => {
+          audio.onloadedmetadata = () => {
+            duration = audio.duration;
+            resolve();
+          };
+          audio.onerror = () => resolve();
+          setTimeout(resolve, 2000);
         });
       }
 
-      // Generate thumbnail
+      // Generate thumbnail (only for video)
       let thumbnail: string | undefined;
       if (type === "video") {
         thumbnail = await generateVideoThumbnail(media.media_url);
-      } else {
+      } else if (type === "image") {
         thumbnail = media.media_url;
       }
 
-      addClip(media.media_url, type, media.prompt.substring(0, 30) + "...", duration, thumbnail);
+      addClip(media.media_url, type, media.prompt?.substring(0, 30) + "..." || "Clip", duration, thumbnail);
       setShowMediaBrowser(false);
 
       toast({
         title: "Clip added",
-        description: "Added to timeline",
+        description: `${type.charAt(0).toUpperCase() + type.slice(1)} added to timeline`,
       });
     },
     [addClip, toast]
@@ -658,7 +676,11 @@ export function TimelineEditor({ onExport, importData, onImportComplete, onClose
       for (const media of mediaItems) {
         if (!media.media_url) continue;
 
-        const type = media.media_type === "image" ? "image" : "video";
+        // Handle audio, video, and image types
+        const mediaType = media.media_type as "video" | "audio" | "image";
+        const type: "video" | "audio" | "image" = 
+          mediaType === "audio" ? "audio" : 
+          mediaType === "image" ? "image" : "video";
         let duration = 5;
 
         if (type === "video") {
@@ -672,12 +694,23 @@ export function TimelineEditor({ onExport, importData, onImportComplete, onClose
             video.onerror = () => resolve();
             setTimeout(resolve, 2000);
           });
+        } else if (type === "audio") {
+          const audio = document.createElement("audio");
+          audio.src = media.media_url;
+          await new Promise<void>((resolve) => {
+            audio.onloadedmetadata = () => {
+              duration = audio.duration;
+              resolve();
+            };
+            audio.onerror = () => resolve();
+            setTimeout(resolve, 2000);
+          });
         }
 
         let thumbnail: string | undefined;
         if (type === "video") {
           thumbnail = await generateVideoThumbnail(media.media_url);
-        } else {
+        } else if (type === "image") {
           thumbnail = media.media_url;
         }
 
