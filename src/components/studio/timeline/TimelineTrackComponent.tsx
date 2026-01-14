@@ -9,8 +9,9 @@ interface TimelineTrackComponentProps {
   clips: TimelineClip[];
   zoom: number;
   currentTime: number;
-  selectedClipId: string | null;
-  onSelectClip: (clipId: string | null) => void;
+  selectedClipIds: string[];
+  onSelectClip: (clipId: string, addToSelection?: boolean) => void;
+  onClearSelection: () => void;
   onRemoveClip: (clipId: string) => void;
   onMoveClip: (clipId: string, newStartTime: number) => void;
   onTrimClip: (clipId: string, trimStart: number, trimEnd: number) => void;
@@ -25,8 +26,9 @@ export function TimelineTrackComponent({
   clips,
   zoom,
   currentTime,
-  selectedClipId,
+  selectedClipIds,
   onSelectClip,
+  onClearSelection,
   onRemoveClip,
   onMoveClip,
   onTrimClip,
@@ -35,6 +37,13 @@ export function TimelineTrackComponent({
   onToggleTrackMute,
   onToggleTrackLock,
 }: TimelineTrackComponentProps) {
+  const handleTrackClick = (e: React.MouseEvent) => {
+    // Only clear if clicking the track background, not a clip
+    if (e.target === e.currentTarget) {
+      onClearSelection();
+    }
+  };
+
   return (
     <div className="flex border-b border-border/50">
       {/* Track header */}
@@ -75,7 +84,7 @@ export function TimelineTrackComponent({
           "flex-1 relative h-16 bg-muted/20",
           track.locked && "opacity-50 pointer-events-none"
         )}
-        onClick={() => onSelectClip(null)}
+        onClick={handleTrackClick}
       >
         {/* Clips */}
         {clips.map((clip) => (
@@ -83,8 +92,11 @@ export function TimelineTrackComponent({
             key={clip.id}
             clip={clip}
             zoom={zoom}
-            isSelected={selectedClipId === clip.id}
-            onSelect={() => onSelectClip(clip.id)}
+            isSelected={selectedClipIds.includes(clip.id)}
+            onSelect={(e?: React.MouseEvent) => {
+              const addToSelection = e?.shiftKey || e?.metaKey || e?.ctrlKey;
+              onSelectClip(clip.id, addToSelection);
+            }}
             onRemove={() => onRemoveClip(clip.id)}
             onMove={(newStartTime) => onMoveClip(clip.id, newStartTime)}
             onTrim={(trimStart, trimEnd) => onTrimClip(clip.id, trimStart, trimEnd)}
