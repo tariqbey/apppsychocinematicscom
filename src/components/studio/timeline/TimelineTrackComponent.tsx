@@ -4,6 +4,11 @@ import { TimelineTrack, TimelineClip } from "@/hooks/useTimelineEditor";
 import { TimelineClipComponent } from "./TimelineClipComponent";
 import { cn } from "@/lib/utils";
 
+interface SnapInfo {
+  time: number;
+  type: "clip-start" | "clip-end" | "playhead" | "grid";
+}
+
 interface TimelineTrackComponentProps {
   track: TimelineTrack;
   clips: TimelineClip[];
@@ -19,6 +24,9 @@ interface TimelineTrackComponentProps {
   onToggleClipMute: (clipId: string) => void;
   onToggleTrackMute: () => void;
   onToggleTrackLock: () => void;
+  snapEnabled?: boolean;
+  onSnapPreview?: (lines: SnapInfo[]) => void;
+  snapTime?: (time: number, excludeClipId?: string) => { snappedTime: number; didSnap: boolean; snapType: string | null };
 }
 
 export function TimelineTrackComponent({
@@ -36,6 +44,9 @@ export function TimelineTrackComponent({
   onToggleClipMute,
   onToggleTrackMute,
   onToggleTrackLock,
+  snapEnabled = true,
+  onSnapPreview,
+  snapTime,
 }: TimelineTrackComponentProps) {
   const handleTrackClick = (e: React.MouseEvent) => {
     // Only clear if clicking the track background, not a clip
@@ -102,6 +113,9 @@ export function TimelineTrackComponent({
             onTrim={(trimStart, trimEnd) => onTrimClip(clip.id, trimStart, trimEnd)}
             onSplit={() => onSplitClip(clip.id)}
             onToggleMute={() => onToggleClipMute(clip.id)}
+            snapEnabled={snapEnabled}
+            onSnapPreview={onSnapPreview}
+            snapTime={snapTime}
           />
         ))}
       </div>

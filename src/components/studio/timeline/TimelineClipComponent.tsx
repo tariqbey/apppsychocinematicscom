@@ -1,9 +1,14 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { Film, Image, Music, Volume2, VolumeX, Scissors, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { TimelineClip } from "@/hooks/useTimelineEditor";
 import { SimpleWaveform } from "./AudioWaveform";
 import { cn } from "@/lib/utils";
+
+interface SnapInfo {
+  time: number;
+  type: "clip-start" | "clip-end" | "playhead" | "grid";
+}
 
 interface TimelineClipComponentProps {
   clip: TimelineClip;
@@ -15,6 +20,9 @@ interface TimelineClipComponentProps {
   onTrim: (trimStart: number, trimEnd: number) => void;
   onSplit: () => void;
   onToggleMute: () => void;
+  snapEnabled?: boolean;
+  onSnapPreview?: (lines: SnapInfo[]) => void;
+  snapTime?: (time: number, excludeClipId?: string) => { snappedTime: number; didSnap: boolean; snapType: string | null };
 }
 
 export function TimelineClipComponent({
@@ -27,12 +35,17 @@ export function TimelineClipComponent({
   onTrim,
   onSplit,
   onToggleMute,
+  snapEnabled = true,
+  onSnapPreview,
+  snapTime,
 }: TimelineClipComponentProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [isResizing, setIsResizing] = useState<"start" | "end" | null>(null);
   const clipRef = useRef<HTMLDivElement>(null);
   const dragStartX = useRef(0);
   const dragStartTime = useRef(0);
+  const dragStartTrimStart = useRef(0);
+  const dragStartTrimEnd = useRef(0);
 
   const width = clip.duration * zoom;
   const left = clip.startTime * zoom;
@@ -59,6 +72,8 @@ export function TimelineClipComponent({
     } else {
       setIsResizing(action === "resize-start" ? "start" : "end");
       dragStartX.current = e.clientX;
+      dragStartTrimStart.current = clip.trimStart;
+      dragStartTrimEnd.current = clip.trimEnd;
     }
 
     const handleMouseMove = (moveEvent: MouseEvent) => {
@@ -66,12 +81,59 @@ export function TimelineClipComponent({
       const deltaTime = deltaX / zoom;
 
       if (action === "drag") {
-        onMove(Math.max(0, dragStartTime.current + deltaTime));
+        let newStartTime = Math.max(0, dragStartTime.current + deltaTime);
+        
+        // Apply snapping
+        if (snapEnabled && snapTime) {
+          const startSnap = snapTime(newStartTime, clip.id);
+          const endSnap = snapTime(newStartTime + clip.duration, clip.id);
+          
+          // Prefer snapping to whichever edge is closer to a snap point
+          if (startSnap.didSnap && (!endSnap.didSnap || Math.abs(startSnap.snappedTime - newStartTime) <= Math.abs(endSnap.snappedTime - (newStartTime + clip.duration)))) {
+            newStartTime = startSnap.snappedTime;
+            onSnapPreview?.([{ time: startSnap.snappedTime, type: startSnap.snapType as SnapInfo["type"] }]);
+          } else if (endSnap.didSnap) {
+            newStartTime = endSnap.snappedTime - clip.duration;
+            onSnapPreview?.([{ time: endSnap.snappedTime, type: endSnap.snapType as SnapInfo["type"] }]);
+          } else {
+            onSnapPreview?.([]);
+          }
+        }
+        
+        onMove(newStartTime);
       } else if (action === "resize-start") {
-        const newTrimStart = Math.max(0, Math.min(clip.trimStart + deltaTime, clip.trimEnd - 0.5));
+        let newTrimStart = Math.max(0, Math.min(dragStartTrimStart.current + deltaTime, clip.trimEnd - 0.5));
+        const newStartTime = clip.startTime + (newTrimStart - clip.trimStart);
+        
+        // Apply snapping to start edge
+        if (snapEnabled && snapTime) {
+          const snap = snapTime(newStartTime, clip.id);
+          if (snap.didSnap) {
+            const timeDiff = snap.snappedTime - newStartTime;
+            newTrimStart = Math.max(0, Math.min(newTrimStart + timeDiff, clip.trimEnd - 0.5));
+            onSnapPreview?.([{ time: snap.snappedTime, type: snap.snapType as SnapInfo["type"] }]);
+          } else {
+            onSnapPreview?.([]);
+          }
+        }
+        
         onTrim(newTrimStart, clip.trimEnd);
       } else {
-        const newTrimEnd = Math.max(clip.trimStart + 0.5, Math.min(clip.trimEnd + deltaTime, clip.sourceDuration));
+        let newTrimEnd = Math.max(clip.trimStart + 0.5, Math.min(dragStartTrimEnd.current + deltaTime, clip.sourceDuration));
+        const newEndTime = clip.startTime + (newTrimEnd - clip.trimStart);
+        
+        // Apply snapping to end edge
+        if (snapEnabled && snapTime) {
+          const snap = snapTime(newEndTime, clip.id);
+          if (snap.didSnap) {
+            const timeDiff = snap.snappedTime - newEndTime;
+            newTrimEnd = Math.max(clip.trimStart + 0.5, Math.min(newTrimEnd + timeDiff, clip.sourceDuration));
+            onSnapPreview?.([{ time: snap.snappedTime, type: snap.snapType as SnapInfo["type"] }]);
+          } else {
+            onSnapPreview?.([]);
+          }
+        }
+        
         onTrim(clip.trimStart, newTrimEnd);
       }
     };
@@ -79,6 +141,7 @@ export function TimelineClipComponent({
     const handleMouseUp = () => {
       setIsDragging(false);
       setIsResizing(null);
+      onSnapPreview?.([]);
       document.removeEventListener("mousemove", handleMouseMove);
       document.removeEventListener("mouseup", handleMouseUp);
     };
