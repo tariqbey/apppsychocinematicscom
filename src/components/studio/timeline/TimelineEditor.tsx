@@ -33,6 +33,7 @@ import { useTimelineExport } from "@/hooks/useTimelineExport";
 import { useMediaGeneration, GeneratedMedia } from "@/hooks/useMediaGeneration";
 import { useTimelineClipboard } from "@/hooks/useTimelineClipboard";
 import { useTimelineKeyboard } from "@/hooks/useTimelineKeyboard";
+import { useTimelineSnapping } from "@/hooks/useTimelineSnapping";
 import { useToast } from "@/hooks/use-toast";
 import { TimelineTrackComponent } from "./TimelineTrackComponent";
 import { TimelineRuler } from "./TimelineRuler";
@@ -40,6 +41,11 @@ import { TimelinePreview } from "./TimelinePreview";
 import { AudioWaveform } from "./AudioWaveform";
 import { TimelineToolbar, EditingTool } from "./TimelineToolbar";
 import { cn } from "@/lib/utils";
+
+interface SnapInfo {
+  time: number;
+  type: "clip-start" | "clip-end" | "playhead" | "grid";
+}
 
 interface TimelineEditorProps {
   onExport?: (url: string) => void;
@@ -86,10 +92,26 @@ export function TimelineEditor({ onExport }: TimelineEditorProps) {
   const [isLoadingLibrary, setIsLoadingLibrary] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
   const [rangeSelection, setRangeSelection] = useState<{ start: number; end: number } | null>(null);
+  const [snapPreviewLines, setSnapPreviewLines] = useState<SnapInfo[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const audioInputRef = useRef<HTMLInputElement>(null);
   const timelineRef = useRef<HTMLDivElement>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
+
+  // Snapping hook
+  const { snapTime } = useTimelineSnapping({
+    clips: state.clips,
+    currentTime: state.currentTime,
+    gridInterval: 1,
+    snapThreshold: 10,
+    zoom: state.zoom,
+    enabled: snapEnabled,
+  });
+
+  // Handle snap preview lines
+  const handleSnapPreview = useCallback((lines: SnapInfo[]) => {
+    setSnapPreviewLines(lines);
+  }, []);
 
   // Get selected clips
   const selectedClips = state.clips.filter(c => selectedClipIds.includes(c.id));
@@ -755,7 +777,36 @@ export function TimelineEditor({ onExport }: TimelineEditorProps) {
                   }
                   onToggleTrackMute={() => toggleTrackMute(track.id)}
                   onToggleTrackLock={() => toggleTrackLock(track.id)}
+                  snapEnabled={snapEnabled}
+                  onSnapPreview={handleSnapPreview}
+                  snapTime={snapTime}
                 />
+              ))}
+
+              {/* Snap indicator lines */}
+              {snapPreviewLines.map((line, index) => (
+                <div
+                  key={`snap-${index}-${line.time}`}
+                  className={cn(
+                    "absolute top-6 bottom-0 w-0.5 pointer-events-none z-20 transition-opacity",
+                    line.type === "playhead" && "bg-primary",
+                    line.type === "clip-start" && "bg-amber-400",
+                    line.type === "clip-end" && "bg-amber-400",
+                    line.type === "grid" && "bg-muted-foreground/50"
+                  )}
+                  style={{ left: `${line.time * state.zoom + 128}px` }}
+                >
+                  {/* Snap indicator dot at top */}
+                  <div
+                    className={cn(
+                      "absolute -top-1 left-1/2 -translate-x-1/2 w-2 h-2 rounded-full",
+                      line.type === "playhead" && "bg-primary",
+                      line.type === "clip-start" && "bg-amber-400",
+                      line.type === "clip-end" && "bg-amber-400",
+                      line.type === "grid" && "bg-muted-foreground/50"
+                    )}
+                  />
+                </div>
               ))}
 
               {/* Playhead */}
