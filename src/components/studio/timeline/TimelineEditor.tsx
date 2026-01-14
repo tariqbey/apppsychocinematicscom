@@ -17,6 +17,7 @@ import {
   Volume2,
   VolumeX,
   Save,
+  FileDown,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
@@ -35,6 +36,7 @@ import { useMediaGeneration, GeneratedMedia } from "@/hooks/useMediaGeneration";
 import { useTimelineClipboard } from "@/hooks/useTimelineClipboard";
 import { useTimelineKeyboard } from "@/hooks/useTimelineKeyboard";
 import { useTimelineSnapping } from "@/hooks/useTimelineSnapping";
+import { useTimelineProjects } from "@/hooks/useTimelineProjects";
 import { useToast } from "@/hooks/use-toast";
 import { TimelineTrackComponent } from "./TimelineTrackComponent";
 import { TimelineRuler } from "./TimelineRuler";
@@ -43,6 +45,8 @@ import { AudioWaveform } from "./AudioWaveform";
 import { MediaLibrary } from "@/components/studio/MediaLibrary";
 import { TimelineToolbar, EditingTool } from "./TimelineToolbar";
 import { SaveToVaultDialog } from "./SaveToVaultDialog";
+import { SaveProjectDialog } from "./SaveProjectDialog";
+import { LoadProjectDialog } from "./LoadProjectDialog";
 import { TimelineMinimap } from "./TimelineMinimap";
 import { FilmstripScrubber } from "./FilmstripScrubber";
 import { cn } from "@/lib/utils";
@@ -103,6 +107,7 @@ export function TimelineEditor({ onExport, importData, onImportComplete, onClose
     reorderTrack,
     setMasterVolume,
     clearTimeline,
+    loadTimelineState,
     addTransition,
     updateTransition,
     removeTransition,
@@ -116,6 +121,16 @@ export function TimelineEditor({ onExport, importData, onImportComplete, onClose
   const { exportTimeline, isExporting, progress: exportProgress, cancelExport } = useTimelineExport();
   const { fetchGenerationHistory } = useMediaGeneration();
   const { copy, paste, duplicate, hasClipboard } = useTimelineClipboard();
+  const { 
+    projects, 
+    isLoading: isLoadingProjects, 
+    isSaving, 
+    fetchProjects, 
+    saveProject, 
+    updateProject, 
+    deleteProject, 
+    loadProject 
+  } = useTimelineProjects();
   const { toast } = useToast();
 
   const [selectedClipIds, setSelectedClipIds] = useState<string[]>([]);
@@ -132,6 +147,10 @@ export function TimelineEditor({ onExport, importData, onImportComplete, onClose
   const [visibleRange, setVisibleRange] = useState({ start: 0, end: 60 });
   const [draggingTrackId, setDraggingTrackId] = useState<string | null>(null);
   const [dragOverTrackIndex, setDragOverTrackIndex] = useState<number | null>(null);
+  const [showSaveProjectDialog, setShowSaveProjectDialog] = useState(false);
+  const [showLoadProjectDialog, setShowLoadProjectDialog] = useState(false);
+  const [currentProjectId, setCurrentProjectId] = useState<string | null>(null);
+  const [currentProjectTitle, setCurrentProjectTitle] = useState<string>("");
   const hasImportedRef = useRef(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const audioInputRef = useRef<HTMLInputElement>(null);
@@ -733,6 +752,51 @@ export function TimelineEditor({ onExport, importData, onImportComplete, onClose
     return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
 
+  // Handle saving project
+  const handleSaveProject = useCallback(async (title: string) => {
+    if (currentProjectId) {
+      await updateProject(currentProjectId, title, state);
+      setCurrentProjectTitle(title);
+    } else {
+      const newId = await saveProject(title, state);
+      if (newId) {
+        setCurrentProjectId(newId);
+        setCurrentProjectTitle(title);
+      }
+    }
+  }, [currentProjectId, state, saveProject, updateProject]);
+
+  // Handle loading project
+  const handleLoadProject = useCallback(async (projectId: string) => {
+    const projectData = await loadProject(projectId);
+    if (projectData) {
+      loadTimelineState(
+        projectData.tracks,
+        projectData.clips,
+        projectData.transitions,
+        projectData.masterVolume,
+        projectData.backgroundAudio
+      );
+      // Find the project to get its title
+      const project = projects.find(p => p.id === projectId);
+      setCurrentProjectId(projectId);
+      setCurrentProjectTitle(project?.title || "");
+      toast({
+        title: "Project loaded",
+        description: `"${project?.title}" has been loaded`,
+      });
+    }
+  }, [loadProject, loadTimelineState, projects, toast]);
+
+  // Handle delete project
+  const handleDeleteProject = useCallback(async (projectId: string) => {
+    await deleteProject(projectId);
+    if (currentProjectId === projectId) {
+      setCurrentProjectId(null);
+      setCurrentProjectTitle("");
+    }
+  }, [deleteProject, currentProjectId]);
+
   return (
     <div className="fixed inset-0 z-50 bg-background flex flex-col">
       {/* Top Bar - Header */}
@@ -743,12 +807,36 @@ export function TimelineEditor({ onExport, importData, onImportComplete, onClose
               <X className="h-5 w-5" />
             </Button>
           )}
-          <h3 className="text-sm font-display tracking-wide text-primary">Timeline Editor</h3>
+          <div className="flex items-center gap-2">
+            <h3 className="text-sm font-display tracking-wide text-primary">Timeline Editor</h3>
+            {currentProjectTitle && (
+              <span className="text-xs text-muted-foreground bg-muted/50 px-2 py-0.5 rounded">
+                {currentProjectTitle}
+              </span>
+            )}
+          </div>
           <span className="text-xs text-muted-foreground font-mono">
             {formatTime(state.currentTime)} / {formatTime(state.duration)} • Max {formatTime(MAX_DURATION)}
           </span>
         </div>
         <div className="flex items-center gap-2">
+          {/* Project Management */}
+          <Button variant="ghost" size="sm" onClick={() => setShowLoadProjectDialog(true)}>
+            <FolderOpen className="h-4 w-4 mr-1" />
+            Open
+          </Button>
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={() => setShowSaveProjectDialog(true)} 
+            disabled={state.clips.length === 0 || isSaving}
+          >
+            {isSaving ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <FileDown className="h-4 w-4 mr-1" />}
+            {currentProjectId ? "Save" : "Save As"}
+          </Button>
+
+          <div className="h-5 w-px bg-border mx-1" />
+
           <Button variant="ghost" size="sm" onClick={clearTimeline} disabled={state.clips.length === 0}>
             <Trash2 className="h-4 w-4 mr-1" />
             Clear
@@ -1095,12 +1183,33 @@ export function TimelineEditor({ onExport, importData, onImportComplete, onClose
       <input ref={fileInputRef} type="file" accept="video/*,image/*" multiple className="hidden" onChange={(e) => handleFileUpload(e.target.files)} />
       <input ref={audioInputRef} type="file" accept="audio/*" className="hidden" onChange={(e) => handleFileUpload(e.target.files, true)} />
 
-      {/* Save Dialog */}
+      {/* Save to Vault Dialog */}
       <SaveToVaultDialog
         open={showSaveToVault}
         onOpenChange={setShowSaveToVault}
         exportedBlobUrl={lastExportedUrl}
         onSaveComplete={handleSaveToVaultComplete}
+      />
+
+      {/* Save Project Dialog */}
+      <SaveProjectDialog
+        open={showSaveProjectDialog}
+        onOpenChange={setShowSaveProjectDialog}
+        onSave={handleSaveProject}
+        isSaving={isSaving}
+        defaultTitle={currentProjectTitle}
+        isUpdate={!!currentProjectId}
+      />
+
+      {/* Load Project Dialog */}
+      <LoadProjectDialog
+        open={showLoadProjectDialog}
+        onOpenChange={setShowLoadProjectDialog}
+        projects={projects}
+        isLoading={isLoadingProjects}
+        onLoad={handleLoadProject}
+        onDelete={handleDeleteProject}
+        onRefresh={fetchProjects}
       />
     </div>
   );
