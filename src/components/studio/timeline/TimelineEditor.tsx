@@ -70,9 +70,103 @@ export function TimelineEditor({ onExport }: TimelineEditorProps) {
   const [showMediaBrowser, setShowMediaBrowser] = useState(false);
   const [mediaLibrary, setMediaLibrary] = useState<GeneratedMedia[]>([]);
   const [isLoadingLibrary, setIsLoadingLibrary] = useState(false);
+  const [isDragOver, setIsDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const audioInputRef = useRef<HTMLInputElement>(null);
   const timelineRef = useRef<HTMLDivElement>(null);
+
+  // Drag and drop handlers
+  const handleDragEnter = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.dataTransfer.types.includes("Files")) {
+      setIsDragOver(true);
+    }
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    // Only set false if we're leaving the container entirely
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX;
+    const y = e.clientY;
+    if (x < rect.left || x > rect.right || y < rect.top || y > rect.bottom) {
+      setIsDragOver(false);
+    }
+  }, []);
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.dataTransfer.types.includes("Files")) {
+      e.dataTransfer.dropEffect = "copy";
+    }
+  }, []);
+
+  const handleDrop = useCallback(async (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(false);
+
+    const files = e.dataTransfer.files;
+    if (!files || files.length === 0) return;
+
+    // Process dropped files
+    for (const file of Array.from(files)) {
+      const isAudio = file.type.startsWith("audio/");
+      const isVideo = file.type.startsWith("video/");
+      const isImage = file.type.startsWith("image/");
+
+      if (!isAudio && !isVideo && !isImage) {
+        toast({
+          title: "Unsupported file type",
+          description: `${file.name} is not a supported media file`,
+          variant: "destructive",
+        });
+        continue;
+      }
+
+      const url = URL.createObjectURL(file);
+
+      if (isAudio) {
+        // Set as background audio
+        setBackgroundAudio(url, file.name);
+        toast({
+          title: "Background audio added",
+          description: file.name,
+        });
+      } else {
+        // Determine type and duration
+        const type = isVideo ? "video" : "image";
+        let duration = 5; // Default for images
+
+        if (isVideo) {
+          const mediaEl = document.createElement("video");
+          mediaEl.src = url;
+          await new Promise<void>((resolve) => {
+            mediaEl.onloadedmetadata = () => {
+              duration = mediaEl.duration;
+              resolve();
+            };
+            mediaEl.onerror = () => resolve();
+          });
+        }
+
+        // Generate thumbnail for video
+        let thumbnail: string | undefined;
+        if (type === "video") {
+          thumbnail = await generateVideoThumbnail(url);
+        }
+
+        addClip(url, type, file.name, duration, thumbnail);
+        toast({
+          title: "Clip added",
+          description: `${file.name} added to timeline`,
+        });
+      }
+    }
+  }, [addClip, setBackgroundAudio, toast]);
 
   // Load media library
   const loadMediaLibrary = useCallback(async () => {
@@ -364,7 +458,18 @@ export function TimelineEditor({ onExport }: TimelineEditorProps) {
         </div>
 
         {/* Timeline Panel */}
-        <div className="flex-1 flex flex-col min-w-0 border border-border/50 rounded-lg overflow-hidden">
+        <div 
+          className={cn(
+            "flex-1 flex flex-col min-w-0 border rounded-lg overflow-hidden transition-all",
+            isDragOver 
+              ? "border-primary border-2 bg-primary/5" 
+              : "border-border/50"
+          )}
+          onDragEnter={handleDragEnter}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+        >
           {/* Timeline Toolbar */}
           <div className="flex items-center gap-2 p-2 border-b border-border/50 bg-card/50">
             <Button
@@ -508,13 +613,24 @@ export function TimelineEditor({ onExport }: TimelineEditorProps) {
                 style={{ left: `${state.currentTime * state.zoom + 128}px` }}
               />
 
-              {/* Empty state */}
-              {state.clips.length === 0 && (
+              {/* Empty state / Drop zone indicator */}
+              {state.clips.length === 0 && !isDragOver && (
                 <div className="absolute inset-0 flex items-center justify-center ml-32 mt-6">
                   <div className="text-center text-muted-foreground p-8">
                     <Upload className="h-8 w-8 mx-auto mb-2 opacity-50" />
                     <p className="font-medium">Drop clips here to start</p>
                     <p className="text-sm">Or use the Upload/Gallery buttons above</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Active drag overlay */}
+              {isDragOver && (
+                <div className="absolute inset-0 flex items-center justify-center ml-32 mt-6 bg-primary/10 border-2 border-dashed border-primary rounded-lg z-20">
+                  <div className="text-center p-8">
+                    <Upload className="h-12 w-12 mx-auto mb-3 text-primary animate-bounce" />
+                    <p className="font-medium text-primary text-lg">Drop files here</p>
+                    <p className="text-sm text-muted-foreground">Video, image, or audio files</p>
                   </div>
                 </div>
               )}
