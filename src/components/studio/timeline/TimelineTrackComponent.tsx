@@ -1,5 +1,5 @@
 import { useMemo, memo, useCallback, useState } from "react";
-import { Film, Music, Volume2, VolumeX, Lock, Unlock } from "lucide-react";
+import { Film, Music, Volume2, VolumeX, Lock, Unlock, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { TimelineTrack, TimelineClip, TimelineTransition } from "@/hooks/useTimelineEditor";
@@ -31,6 +31,8 @@ interface TimelineTrackComponentProps {
   onToggleTrackMute: () => void;
   onToggleTrackLock: () => void;
   onSetTrackVolume: (volume: number) => void;
+  onRemoveTrack: () => void;
+  canRemoveTrack: boolean;
   onAddTransition: (clipAId: string, clipBId: string) => void;
   onUpdateTransition: (transitionId: string, updates: Partial<TimelineTransition>) => void;
   onRemoveTransition: (transitionId: string) => void;
@@ -58,6 +60,8 @@ export const TimelineTrackComponent = memo(function TimelineTrackComponent({
   onToggleTrackMute,
   onToggleTrackLock,
   onSetTrackVolume,
+  onRemoveTrack,
+  canRemoveTrack,
   onAddTransition,
   onUpdateTransition,
   onRemoveTransition,
@@ -170,6 +174,17 @@ export const TimelineTrackComponent = memo(function TimelineTrackComponent({
             >
               {track.locked ? <Lock className="h-3.5 w-3.5" /> : <Unlock className="h-3.5 w-3.5" />}
             </Button>
+            {canRemoveTrack && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6 text-muted-foreground hover:text-destructive"
+                onClick={onRemoveTrack}
+                title="Remove track"
+              >
+                <Trash2 className="h-3 w-3" />
+              </Button>
+            )}
           </div>
           
           {/* Volume slider */}

@@ -96,6 +96,9 @@ export function TimelineEditor({ onExport, importData, onImportComplete, onClose
     toggleTrackMute,
     toggleTrackLock,
     setTrackVolume,
+    addTrack,
+    removeTrack,
+    setMasterVolume,
     clearTimeline,
     addTransition,
     updateTransition,
@@ -757,6 +760,7 @@ export function TimelineEditor({ onExport, importData, onImportComplete, onClose
               tracks={state.tracks}
               currentTime={state.currentTime}
               isPlaying={state.isPlaying}
+              masterVolume={state.masterVolume}
               backgroundAudio={state.backgroundAudio}
             />
             
@@ -870,6 +874,23 @@ export function TimelineEditor({ onExport, importData, onImportComplete, onClose
 
           <div className="h-5 w-px bg-border mx-1" />
 
+          {/* Master Volume */}
+          <div className="flex items-center gap-1.5 px-2">
+            <Volume2 className="h-3.5 w-3.5 text-muted-foreground" />
+            <span className="text-[10px] text-muted-foreground">Master</span>
+            <input
+              type="range"
+              min="0"
+              max="100"
+              value={state.masterVolume * 100}
+              onChange={(e) => setMasterVolume(Number(e.target.value) / 100)}
+              className="w-16 h-1.5 accent-primary cursor-pointer"
+            />
+            <span className="text-[10px] text-muted-foreground w-6 tabular-nums">{Math.round(state.masterVolume * 100)}</span>
+          </div>
+
+          <div className="h-5 w-px bg-border mx-1" />
+
           {/* Zoom */}
           <div className="flex items-center gap-1">
             <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setZoom(state.zoom - 10)} disabled={state.zoom <= 10}>
@@ -960,6 +981,8 @@ export function TimelineEditor({ onExport, importData, onImportComplete, onClose
                     onToggleTrackMute={() => toggleTrackMute(track.id)}
                     onToggleTrackLock={() => toggleTrackLock(track.id)}
                     onSetTrackVolume={(volume) => setTrackVolume(track.id, volume)}
+                    onRemoveTrack={() => removeTrack(track.id)}
+                    canRemoveTrack={state.tracks.filter((t) => t.type === track.type).length > 1 && !state.clips.some((c) => c.trackId === track.id)}
                     onAddTransition={addTransition}
                     onUpdateTransition={updateTransition}
                     onRemoveTransition={removeTransition}
@@ -968,6 +991,31 @@ export function TimelineEditor({ onExport, importData, onImportComplete, onClose
                     snapTime={snapTime}
                   />
                 ))}
+
+                {/* Add Track Buttons */}
+                <div className="flex border-b border-border/50">
+                  <div className="w-28 flex-shrink-0 border-r border-border/50 bg-card/30 flex items-center justify-center gap-2 py-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 text-xs gap-1 text-muted-foreground hover:text-primary"
+                      onClick={() => addTrack("video")}
+                    >
+                      <Plus className="h-3 w-3" />
+                      Video
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 text-xs gap-1 text-muted-foreground hover:text-accent"
+                      onClick={() => addTrack("audio")}
+                    >
+                      <Plus className="h-3 w-3" />
+                      Audio
+                    </Button>
+                  </div>
+                  <div className="flex-1 bg-muted/10" />
+                </div>
 
                 {/* Snap lines */}
                 {snapPreviewLines.map((line, index) => (
