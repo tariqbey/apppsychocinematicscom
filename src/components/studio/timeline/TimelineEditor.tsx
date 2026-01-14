@@ -46,6 +46,7 @@ import {
 } from "@/components/ui/resizable";
 import { useTimelineEditor, TimelineClip } from "@/hooks/useTimelineEditor";
 import { useTimelineExport } from "@/hooks/useTimelineExport";
+import type { ExportResult } from "@/hooks/useTimelineExport";
 import { useMediaGeneration, GeneratedMedia } from "@/hooks/useMediaGeneration";
 import { useTimelineClipboard } from "@/hooks/useTimelineClipboard";
 import { useTimelineKeyboard } from "@/hooks/useTimelineKeyboard";
@@ -58,6 +59,7 @@ import { TimelinePreview } from "./TimelinePreview";
 import { AudioWaveform } from "./AudioWaveform";
 import { MediaLibrary } from "@/components/studio/MediaLibrary";
 import { TimelineToolbar, EditingTool } from "./TimelineToolbar";
+import { ExportReviewDialog } from "./ExportReviewDialog";
 import { SaveToVaultDialog } from "./SaveToVaultDialog";
 import { SaveProjectDialog } from "./SaveProjectDialog";
 import { LoadProjectDialog } from "./LoadProjectDialog";
