@@ -11,13 +11,15 @@ import { DirectorAIAgent } from "@/components/director-ai/DirectorAIAgent";
 import { DailyScorecard } from "@/components/scorecard/DailyScorecard";
 import { ChiefAimWizard } from "@/components/chief-aim/ChiefAimWizard";
 import { MindMovieScriptWizard } from "@/components/mind-movie/MindMovieScriptWizard";
+import { MovieVault } from "@/components/mind-movie/MovieVault";
 import { ThreeThings } from "@/components/tasks/ThreeThings";
 import { AuthModal } from "@/components/auth/AuthModal";
 import { OnboardingModal, useOnboarding } from "@/components/onboarding/OnboardingModal";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { useGamification } from "@/hooks/useGamification";
-import { Film, Loader2, Wand2, Sparkles, Bot, Clapperboard, HelpCircle } from "lucide-react";
+import { useMindMovies, MindMovie } from "@/hooks/useMindMovies";
+import { Film, Loader2, Wand2, Sparkles, Bot, Clapperboard, FolderOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { InfoTooltip } from "@/components/ui/info-tooltip";
 
@@ -29,12 +31,30 @@ const Index = () => {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showChiefAimWizard, setShowChiefAimWizard] = useState(false);
   const [showMindMovieWizard, setShowMindMovieWizard] = useState(false);
+  const [showMovieVault, setShowMovieVault] = useState(false);
+  const [selectedMovieId, setSelectedMovieId] = useState<string | undefined>();
   const [editBayInitialPrompt, setEditBayInitialPrompt] = useState<string | undefined>();
 
   const { user, loading: authLoading } = useAuth();
   const { profile, loading: profileLoading, updateProfile } = useUserProfile();
   const { refreshData, checkAndAwardBadges } = useGamification();
   const { showOnboarding, completeOnboarding, closeOnboarding } = useOnboarding(user?.id);
+  const { createNewMovie } = useMindMovies();
+
+  const handleCreateNewMovie = useCallback(async () => {
+    const movie = await createNewMovie();
+    if (movie) {
+      setSelectedMovieId(movie.id);
+      setShowMovieVault(false);
+      setShowMindMovieWizard(true);
+    }
+  }, [createNewMovie]);
+
+  const handleSelectMovie = useCallback((movie: MindMovie) => {
+    setSelectedMovieId(movie.id);
+    setShowMovieVault(false);
+    setShowMindMovieWizard(true);
+  }, []);
 
   const handleScorecardSuccess = useCallback(async () => {
     await refreshData();
@@ -139,33 +159,45 @@ const Index = () => {
             </div>
           </button>
 
-          {/* Mind Movie Script Writer Card */}
-          {chiefAimComplete && (
+          {/* Mind Movie Vault Card */}
+          <div className="flex flex-col sm:flex-row gap-4">
             <button
-              onClick={() => setShowMindMovieWizard(true)}
-              className="w-full glass-card p-6 cinematic-border animate-slide-up group hover:border-amber-500/50 transition-all duration-300 text-left"
+              onClick={() => setShowMovieVault(true)}
+              className="flex-1 glass-card p-6 cinematic-border animate-slide-up group hover:border-amber-500/50 transition-all duration-300 text-left"
             >
               <div className="flex items-center gap-4">
                 <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-amber-500/20 to-orange-600/20 flex items-center justify-center group-hover:from-amber-500/30 group-hover:to-orange-600/30 transition-all duration-300">
-                  <Clapperboard className="w-7 h-7 text-amber-500" />
+                  <FolderOpen className="w-7 h-7 text-amber-500" />
                 </div>
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-1">
-                    <h3 className="text-xl font-display tracking-wide group-hover:text-amber-500 transition-colors">Mind Movie Script Writer</h3>
+                    <h3 className="text-xl font-display tracking-wide group-hover:text-amber-500 transition-colors">Mind Movie Vault</h3>
                     <Sparkles className="w-4 h-4 text-amber-500/60" />
-                    <InfoTooltip content="AI generates scene-by-scene prompts from your Chief Aim. Use these prompts in the Edit Bay to create visuals, then generate a custom AI soundtrack with your own lyrics." />
+                    <InfoTooltip content="Create and manage multiple Mind Movies for different goals and scenarios. Each movie has its own Chief Aim snapshot, storyboard, and soundtrack." />
                   </div>
                   <p className="text-sm text-muted-foreground">
-                    AI-powered storyboard generator — Create scene-by-scene prompts from your Chief Aim.
+                    Manage multiple Mind Movies — One for each goal or scenario.
                   </p>
                 </div>
                 <div className="hidden sm:flex items-center gap-2 text-sm text-muted-foreground group-hover:text-amber-500 transition-colors">
-                  <span>Create Storyboard</span>
+                  <span>Open Vault</span>
                   <span className="text-lg">→</span>
                 </div>
               </div>
             </button>
-          )}
+
+            {/* Quick Create New Movie Button */}
+            {chiefAimComplete && (
+              <Button
+                variant="gold"
+                onClick={handleCreateNewMovie}
+                className="sm:w-auto h-auto py-4 px-6"
+              >
+                <Clapperboard className="w-5 h-5 mr-2" />
+                Start New Movie
+              </Button>
+            )}
+          </div>
 
           {/* Three Things - Daily Task Manager */}
           <ThreeThings />
@@ -208,12 +240,24 @@ const Index = () => {
         />
       )}
 
+      {/* Movie Vault */}
+      <MovieVault
+        isOpen={showMovieVault}
+        onClose={() => setShowMovieVault(false)}
+        onSelectMovie={handleSelectMovie}
+        onCreateNew={handleCreateNewMovie}
+      />
+
       {/* Mind Movie Script Wizard */}
       {showMindMovieWizard && (
         <MindMovieScriptWizard
           isOpen={showMindMovieWizard}
-          onClose={() => setShowMindMovieWizard(false)}
+          onClose={() => {
+            setShowMindMovieWizard(false);
+            setSelectedMovieId(undefined);
+          }}
           chiefAim={chiefAim}
+          movieId={selectedMovieId}
           onOpenEditBay={(prompt) => {
             setEditBayInitialPrompt(prompt);
             setShowEditBay(true);

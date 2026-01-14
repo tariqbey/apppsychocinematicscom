@@ -78,6 +78,41 @@ export function useMindMovieScript() {
     }
   }, [user]);
 
+  const fetchScriptById = useCallback(async (scriptId: string) => {
+    if (!user) return null;
+    
+    setIsLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from("mind_movie_scripts")
+        .select("*")
+        .eq("id", scriptId)
+        .eq("user_id", user.id)
+        .single();
+
+      if (error) {
+        console.error("Error fetching script:", error);
+        return null;
+      }
+
+      if (data) {
+        const script: MindMovieScript = {
+          ...data,
+          scenes: (data.scenes as unknown as Scene[]) || [],
+          chief_aim_snapshot: data.chief_aim_snapshot as MindMovieScript["chief_aim_snapshot"],
+        };
+        setCurrentScript(script);
+        return script;
+      }
+      return null;
+    } catch (error) {
+      console.error("Error fetching script:", error);
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  }, [user]);
+
   const generateStoryboard = useCallback(async (
     chiefAim: { what?: string; byWhen?: string; exchange?: string; plan?: string },
     visualStyle: string,
@@ -234,6 +269,7 @@ export function useMindMovieScript() {
     isGenerating,
     currentScript,
     fetchLatestScript,
+    fetchScriptById,
     generateStoryboard,
     saveScript,
     updateScene,

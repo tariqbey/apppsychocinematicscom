@@ -310,6 +310,8 @@ export type Database = {
           chief_aim_snapshot: Json | null
           created_at: string | null
           id: string
+          is_active: boolean | null
+          movie_url: string | null
           music_style: string | null
           scenes: Json | null
           song_lyrics: string | null
@@ -325,6 +327,8 @@ export type Database = {
           chief_aim_snapshot?: Json | null
           created_at?: string | null
           id?: string
+          is_active?: boolean | null
+          movie_url?: string | null
           music_style?: string | null
           scenes?: Json | null
           song_lyrics?: string | null
@@ -340,6 +344,8 @@ export type Database = {
           chief_aim_snapshot?: Json | null
           created_at?: string | null
           id?: string
+          is_active?: boolean | null
+          movie_url?: string | null
           music_style?: string | null
           scenes?: Json | null
           song_lyrics?: string | null
