@@ -1,5 +1,15 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 
+export type TransitionType = "none" | "fade" | "dissolve" | "wipe-left" | "wipe-right" | "wipe-up" | "wipe-down";
+
+export interface TimelineTransition {
+  id: string;
+  type: TransitionType;
+  duration: number; // in seconds
+  clipAId: string; // outgoing clip
+  clipBId: string; // incoming clip
+}
+
 export interface TimelineClip {
   id: string;
   type: "video" | "audio" | "image";
@@ -34,6 +44,7 @@ export interface TimelineTrack {
 export interface TimelineState {
   tracks: TimelineTrack[];
   clips: TimelineClip[];
+  transitions: TimelineTransition[];
   currentTime: number;
   duration: number;
   isPlaying: boolean;
@@ -48,6 +59,7 @@ export interface TimelineState {
 
 interface HistoryState {
   clips: TimelineClip[];
+  transitions: TimelineTransition[];
   backgroundAudio: TimelineState["backgroundAudio"];
 }
 
@@ -64,6 +76,7 @@ export function useTimelineEditor() {
       { id: "audio-1", type: "audio", name: "Audio Track", muted: false, locked: false },
     ],
     clips: [],
+    transitions: [],
     currentTime: 0,
     duration: 0,
     isPlaying: false,
@@ -82,6 +95,7 @@ export function useTimelineEditor() {
   // History for undo/redo
   const [history, setHistory] = useState<HistoryState[]>([{
     clips: [],
+    transitions: [],
     backgroundAudio: { url: null, name: "", volume: 1, muted: false },
   }]);
   const [historyIndex, setHistoryIndex] = useState(0);
@@ -91,7 +105,7 @@ export function useTimelineEditor() {
   const canRedo = historyIndex < history.length - 1;
 
   // Push state to history
-  const pushHistory = useCallback((clips: TimelineClip[], backgroundAudio: TimelineState["backgroundAudio"]) => {
+  const pushHistory = useCallback((clips: TimelineClip[], transitions: TimelineTransition[], backgroundAudio: TimelineState["backgroundAudio"]) => {
     if (isUndoingRef.current) {
       isUndoingRef.current = false;
       return;
@@ -101,6 +115,7 @@ export function useTimelineEditor() {
       const newHistory = prev.slice(0, historyIndex + 1);
       newHistory.push({
         clips: JSON.parse(JSON.stringify(clips)),
+        transitions: JSON.parse(JSON.stringify(transitions)),
         backgroundAudio: JSON.parse(JSON.stringify(backgroundAudio)),
       });
       
@@ -182,7 +197,7 @@ export function useTimelineEditor() {
           ? prev.tracks
           : [...prev.tracks, track];
 
-      pushHistory(newClips, prev.backgroundAudio);
+      pushHistory(newClips, prev.transitions, prev.backgroundAudio);
 
         return {
           ...prev,
@@ -199,7 +214,7 @@ export function useTimelineEditor() {
   const addClips = useCallback((newClips: TimelineClip[]) => {
     setState(prev => {
       const updatedClips = [...prev.clips, ...newClips];
-      pushHistory(updatedClips, prev.backgroundAudio);
+      pushHistory(updatedClips, prev.transitions, prev.backgroundAudio);
       return {
         ...prev,
         clips: updatedClips,
@@ -212,10 +227,15 @@ export function useTimelineEditor() {
   const removeClip = useCallback((clipId: string) => {
     setState((prev) => {
       const newClips = prev.clips.filter((c) => c.id !== clipId);
-      pushHistory(newClips, prev.backgroundAudio);
+      // Also remove transitions involving this clip
+      const newTransitions = prev.transitions.filter(
+        (t) => t.clipAId !== clipId && t.clipBId !== clipId
+      );
+      pushHistory(newClips, newTransitions, prev.backgroundAudio);
       return {
         ...prev,
         clips: newClips,
+        transitions: newTransitions,
         duration: calculateDuration(newClips),
       };
     });
@@ -448,15 +468,64 @@ export function useTimelineEditor() {
       volume: 1,
       muted: false,
     };
-    pushHistory([], emptyBackgroundAudio);
+    pushHistory([], [], emptyBackgroundAudio);
     setState((prev) => ({
       ...prev,
       clips: [],
+      transitions: [],
       currentTime: 0,
       duration: 0,
       backgroundAudio: emptyBackgroundAudio,
     }));
   }, [pause, pushHistory]);
+
+  // Transition management
+  const addTransition = useCallback((clipAId: string, clipBId: string, type: TransitionType = "fade", duration: number = 1) => {
+    setState((prev) => {
+      // Check if transition already exists
+      const exists = prev.transitions.some(
+        (t) => t.clipAId === clipAId && t.clipBId === clipBId
+      );
+      if (exists) return prev;
+
+      const newTransition: TimelineTransition = {
+        id: generateId(),
+        type,
+        duration,
+        clipAId,
+        clipBId,
+      };
+      const newTransitions = [...prev.transitions, newTransition];
+      pushHistory(prev.clips, newTransitions, prev.backgroundAudio);
+      return {
+        ...prev,
+        transitions: newTransitions,
+      };
+    });
+  }, [pushHistory]);
+
+  const updateTransition = useCallback((transitionId: string, updates: Partial<TimelineTransition>) => {
+    setState((prev) => {
+      const newTransitions = prev.transitions.map((t) =>
+        t.id === transitionId ? { ...t, ...updates } : t
+      );
+      return {
+        ...prev,
+        transitions: newTransitions,
+      };
+    });
+  }, []);
+
+  const removeTransition = useCallback((transitionId: string) => {
+    setState((prev) => {
+      const newTransitions = prev.transitions.filter((t) => t.id !== transitionId);
+      pushHistory(prev.clips, newTransitions, prev.backgroundAudio);
+      return {
+        ...prev,
+        transitions: newTransitions,
+      };
+    });
+  }, [pushHistory]);
 
   // Undo
   const undo = useCallback(() => {
@@ -470,6 +539,7 @@ export function useTimelineEditor() {
     setState(state => ({
       ...state,
       clips: JSON.parse(JSON.stringify(prevState.clips)),
+      transitions: JSON.parse(JSON.stringify(prevState.transitions)),
       backgroundAudio: JSON.parse(JSON.stringify(prevState.backgroundAudio)),
       duration: calculateDuration(prevState.clips),
     }));
@@ -487,6 +557,7 @@ export function useTimelineEditor() {
     setState(state => ({
       ...state,
       clips: JSON.parse(JSON.stringify(nextState.clips)),
+      transitions: JSON.parse(JSON.stringify(nextState.transitions)),
       backgroundAudio: JSON.parse(JSON.stringify(nextState.backgroundAudio)),
       duration: calculateDuration(nextState.clips),
     }));
@@ -531,6 +602,9 @@ export function useTimelineEditor() {
     toggleTrackLock,
     clearTimeline,
     getActiveClips,
+    addTransition,
+    updateTransition,
+    removeTransition,
     undo,
     redo,
     canUndo,
