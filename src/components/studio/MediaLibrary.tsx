@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Progress } from "@/components/ui/progress";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { Image, Video, Clock, AlertCircle, Loader2, Download, Trash2, HardDrive, X, ChevronLeft, ChevronRight, RefreshCw, Mic2 } from "lucide-react";
+import { Image, Video, Clock, AlertCircle, Loader2, Download, Trash2, HardDrive, X, ChevronLeft, ChevronRight, RefreshCw, Mic2, Clapperboard } from "lucide-react";
 import { useMediaGeneration, GeneratedMedia } from "@/hooks/useMediaGeneration";
 import { formatDistanceToNow } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
@@ -14,6 +14,7 @@ import { VoiceChanger } from "./VoiceChanger";
 interface MediaLibraryProps {
   filter?: "image" | "video" | "all";
   onSelect?: (media: GeneratedMedia) => void;
+  onAddToTimeline?: (media: GeneratedMedia) => void;
 }
 
 const MAX_STORAGE_BYTES = 5 * 1024 * 1024 * 1024; // 5GB
@@ -26,7 +27,7 @@ function formatBytes(bytes: number): string {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
 }
 
-export function MediaLibrary({ filter = "all", onSelect }: MediaLibraryProps) {
+export function MediaLibrary({ filter = "all", onSelect, onAddToTimeline }: MediaLibraryProps) {
   const [history, setHistory] = useState<GeneratedMedia[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [storageUsed, setStorageUsed] = useState(0);
@@ -232,6 +233,21 @@ export function MediaLibrary({ filter = "all", onSelect }: MediaLibraryProps) {
                 <div className="p-4 bg-background/80 backdrop-blur-sm border-t border-border/50">
                   {/* Action Buttons Row */}
                   <div className="flex flex-wrap items-center gap-2 mb-3">
+                    {/* Add to Timeline Button */}
+                    {onAddToTimeline && (
+                      <Button
+                        size="sm"
+                        variant="default"
+                        className="bg-primary text-primary-foreground"
+                        onClick={() => {
+                          onAddToTimeline(lightboxMedia);
+                          setLightboxMedia(null);
+                        }}
+                      >
+                        <Clapperboard className="h-4 w-4 mr-2" />
+                        Add to Timeline
+                      </Button>
+                    )}
                     {/* Voice Changer Toggle for Videos */}
                     {lightboxMedia.media_type === "video" && (
                       <Button

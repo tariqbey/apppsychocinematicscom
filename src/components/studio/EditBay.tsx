@@ -8,6 +8,7 @@ import { MediaLibrary } from "./MediaLibrary";
 import { TimelineEditor } from "./timeline/TimelineEditor";
 import { useToast } from "@/hooks/use-toast";
 import { TimelineExportData } from "@/components/mind-movie/MindMovieScriptWizard";
+import { GeneratedMedia } from "@/hooks/useMediaGeneration";
 
 export interface EditBayProps {
   onClose: () => void;
@@ -19,6 +20,7 @@ export function EditBay({ onClose, initialPrompt, timelineImportData }: EditBayP
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState(timelineImportData ? "timeline" : "image");
   const [galleryKey, setGalleryKey] = useState(0);
+  const [pendingTimelineMedia, setPendingTimelineMedia] = useState<GeneratedMedia | null>(null);
   const previousTab = useRef(activeTab);
 
   const refreshGallery = () => {
@@ -56,6 +58,15 @@ export function EditBay({ onClose, initialPrompt, timelineImportData }: EditBayP
           View Gallery
         </Button>
       ),
+    });
+  };
+
+  const handleAddToTimeline = (media: GeneratedMedia) => {
+    setPendingTimelineMedia(media);
+    setActiveTab("timeline");
+    toast({
+      title: "Adding to Timeline",
+      description: `${media.media_type === "image" ? "Image" : "Video"} will be added to your timeline.`,
     });
   };
 
@@ -119,7 +130,10 @@ export function EditBay({ onClose, initialPrompt, timelineImportData }: EditBayP
 
             <TabsContent value="gallery" className="mt-0">
               <div className="glass-card p-6 cinematic-border">
-                <MediaLibrary key={galleryKey} />
+                <MediaLibrary 
+                  key={galleryKey} 
+                  onAddToTimeline={handleAddToTimeline}
+                />
               </div>
             </TabsContent>
 
@@ -134,6 +148,8 @@ export function EditBay({ onClose, initialPrompt, timelineImportData }: EditBayP
                     // Clear the import data after import is complete
                   }}
                   onClose={onClose}
+                  pendingMedia={pendingTimelineMedia}
+                  onPendingMediaAdded={() => setPendingTimelineMedia(null)}
                 />
               </div>
             </TabsContent>

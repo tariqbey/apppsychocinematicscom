@@ -71,9 +71,11 @@ interface TimelineEditorProps {
   importData?: TimelineImportData;
   onImportComplete?: () => void;
   onClose?: () => void;
+  pendingMedia?: GeneratedMedia | null;
+  onPendingMediaAdded?: () => void;
 }
 
-export function TimelineEditor({ onExport, importData, onImportComplete, onClose }: TimelineEditorProps) {
+export function TimelineEditor({ onExport, importData, onImportComplete, onClose, pendingMedia, onPendingMediaAdded }: TimelineEditorProps) {
   const {
     state,
     addClip,
@@ -260,6 +262,59 @@ export function TimelineEditor({ onExport, importData, onImportComplete, onClose
 
     importMindMovieScenes();
   }, [importData, addClip, clearTimeline, setBackgroundAudio, toast, onImportComplete, isImporting]);
+
+  // Handle pending media from gallery
+  useEffect(() => {
+    if (!pendingMedia || !pendingMedia.media_url) return;
+
+    const addPendingMedia = async () => {
+      const isVideo = pendingMedia.media_type === "video";
+      const isImage = pendingMedia.media_type === "image";
+      
+      if (!isVideo && !isImage) return;
+
+      let duration = 5; // Default for images
+      let thumbnail: string | undefined;
+
+      if (isVideo) {
+        // Get video duration
+        const video = document.createElement("video");
+        video.src = pendingMedia.media_url!;
+        video.crossOrigin = "anonymous";
+        
+        await new Promise<void>((resolve) => {
+          video.onloadedmetadata = () => {
+            duration = video.duration || 5;
+            resolve();
+          };
+          video.onerror = () => resolve();
+          setTimeout(resolve, 3000);
+        });
+
+        // Generate thumbnail
+        thumbnail = await generateVideoThumbnail(pendingMedia.media_url!);
+      } else {
+        thumbnail = pendingMedia.media_url!;
+      }
+
+      await addClip(
+        pendingMedia.media_url!,
+        isVideo ? "video" : "image",
+        pendingMedia.prompt?.slice(0, 30) || `${pendingMedia.media_type} clip`,
+        duration,
+        thumbnail
+      );
+
+      toast({
+        title: "Added to Timeline",
+        description: `${isVideo ? "Video" : "Image"} has been added to your timeline.`,
+      });
+
+      onPendingMediaAdded?.();
+    };
+
+    addPendingMedia();
+  }, [pendingMedia, addClip, toast, onPendingMediaAdded]);
 
   // Snapping hook
   const { snapTime } = useTimelineSnapping({
