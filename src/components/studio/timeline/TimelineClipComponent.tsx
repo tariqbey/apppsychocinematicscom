@@ -218,6 +218,10 @@ export const TimelineClipComponent = memo(function TimelineClipComponent({
     onVolumeChange?.(value[0]);
   }, [onVolumeChange]);
 
+  // Calculate how many thumbnails can fit
+  const thumbnailWidth = 48;
+  const thumbnailCount = clip.thumbnail ? Math.max(1, Math.floor((width - 24) / thumbnailWidth)) : 0;
+
   return (
     <div
       ref={clipRef}
@@ -237,7 +241,22 @@ export const TimelineClipComponent = memo(function TimelineClipComponent({
       }}
       onClick={onSelect}
     >
-      {/* Waveform background for video/audio clips */}
+      {/* Thumbnail strip background for video/image clips */}
+      {clip.thumbnail && (clip.type === "video" || clip.type === "image") && width > 40 && (
+        <div className="absolute inset-0 flex items-center pointer-events-none overflow-hidden">
+          {Array.from({ length: thumbnailCount }).map((_, i) => (
+            <img
+              key={i}
+              src={clip.thumbnail}
+              alt=""
+              className="h-full w-12 object-cover flex-shrink-0 opacity-70 border-r border-white/10"
+              draggable={false}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* Waveform background for audio clips */}
       {clip.type === "audio" && width > 40 && (
         <div className="absolute inset-0 flex items-center justify-center opacity-60 pointer-events-none">
           <AudioWaveform
@@ -250,11 +269,13 @@ export const TimelineClipComponent = memo(function TimelineClipComponent({
           />
         </div>
       )}
+      
+      {/* Waveform overlay for video clips (on top of thumbnails) */}
       {clip.type === "video" && width > 40 && (
-        <div className="absolute inset-0 flex items-center justify-center opacity-40 pointer-events-none">
+        <div className="absolute inset-0 flex items-end justify-center opacity-50 pointer-events-none">
           <SimpleWaveform
             width={Math.max(width - 8, 20)}
-            height={40}
+            height={16}
             bars={waveformBars}
             color="hsl(var(--primary))"
           />
@@ -267,29 +288,24 @@ export const TimelineClipComponent = memo(function TimelineClipComponent({
         onMouseDown={handleResizeStartMouseDown}
       />
 
-      {/* Content */}
+      {/* Content overlay */}
       <div
         className="relative flex items-center gap-1 px-2 h-full overflow-hidden z-10"
         onMouseDown={handleDragMouseDown}
       >
-        {/* Thumbnail or icon */}
-        {clip.thumbnail ? (
-          <img
-            src={clip.thumbnail}
-            alt=""
-            className="h-6 w-10 object-cover rounded flex-shrink-0 border border-white/20"
-            draggable={false}
-          />
-        ) : (
-          <div className="flex-shrink-0 bg-background/50 p-1 rounded">{getIcon()}</div>
-        )}
+        {/* Type icon badge */}
+        <div className="flex-shrink-0 bg-background/80 p-1 rounded shadow-sm">
+          {getIcon()}
+        </div>
 
-        {/* Name */}
-        <span className="text-xs truncate flex-1 drop-shadow-sm">{clip.name}</span>
+        {/* Name with background for readability */}
+        <span className="text-xs truncate flex-1 drop-shadow-sm bg-background/60 px-1 rounded">
+          {clip.name}
+        </span>
 
         {/* Mute indicator */}
         {clip.type !== "image" && clip.muted && (
-          <VolumeX className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+          <VolumeX className="h-3 w-3 text-muted-foreground flex-shrink-0 bg-background/60 rounded p-0.5" />
         )}
       </div>
 
