@@ -172,6 +172,29 @@ export const DailyScorecard = ({ onClose, onSubmitSuccess }: DailyScorecardProps
       setSubmitted(true);
       toast.success(`Scorecard submitted! +${earned} credits earned`);
       onSubmitSuccess?.();
+
+      // Auto-sync to Notion if enabled
+      try {
+        const { data: notionIntegration } = await supabase
+          .from("user_integrations")
+          .select("settings")
+          .eq("user_id", user.id)
+          .eq("service_name", "notion")
+          .single();
+
+        const settings = notionIntegration?.settings as Record<string, string> | null;
+        if (settings?.auto_sync_scorecard === "true") {
+          supabase.functions.invoke("notion-sync", {
+            body: { type: "scorecard" },
+          }).then(({ error: syncError }) => {
+            if (syncError) {
+              console.warn("Notion auto-sync failed:", syncError);
+            }
+          });
+        }
+      } catch (syncCheckError) {
+        // Silently ignore if no Notion integration
+      }
     } catch (err) {
       console.error("Error submitting scorecard:", err);
       toast.error("Failed to submit scorecard");

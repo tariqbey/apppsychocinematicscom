@@ -99,7 +99,9 @@ export function IntegrationsTab() {
           inputLabel="Integration Token"
           inputPlaceholder="secret_your-notion-token..."
           additionalFields={[
-            { key: "database_id", label: "Database ID (optional)", placeholder: "Your Notion database ID..." },
+            { key: "database_id", label: "Database ID", placeholder: "Your Notion database ID..." },
+            { key: "auto_sync_journal", label: "Auto-sync Journal Entries", placeholder: "", isToggle: true },
+            { key: "auto_sync_scorecard", label: "Auto-sync Daily Scorecards", placeholder: "", isToggle: true },
           ]}
           helpUrl="https://www.notion.so/my-integrations"
           helpSteps={[
@@ -108,7 +110,7 @@ export function IntegrationsTab() {
             "Copy the Internal Integration Token",
             "Share your database with the integration",
           ]}
-          note="Your journal entries, Chief Aim, and daily scores can be synced to Notion pages."
+          note="Enable auto-sync to automatically send journal entries and scorecards to Notion when saved."
         />
 
         {/* Telegram Integration */}
