@@ -14,6 +14,8 @@ interface CycleInfo {
   actProgress: number; // 0-100
   isReviewDue: boolean;
   totalDaysInProgram: number;
+  cycleWithinAct: number;
+  cyclesInCurrentAct: number;
 }
 
 interface CycleReview {
@@ -40,7 +42,36 @@ interface CycleReview {
 }
 
 const DAYS_PER_CYCLE = 21;
-const CYCLES_PER_ACT = 3;
+
+// Act structure: Act 1 = 3 cycles, Act 2 = 4 cycles, Act 3 = 3 cycles
+const ACT_CYCLE_COUNTS: Record<number, number> = {
+  1: 3, // Act 1: The Awakening - 3 cycles (63 days)
+  2: 4, // Act 2: The Integration - 4 cycles (84 days)  
+  3: 3, // Act 3: The Mastery - 3 cycles (63 days)
+};
+
+const getCyclesPerAct = (actNumber: number): number => {
+  return ACT_CYCLE_COUNTS[actNumber] || 3;
+};
+
+const getActForCycle = (cycleNumber: number): number => {
+  // Act 1: cycles 1-3
+  if (cycleNumber <= 3) return 1;
+  // Act 2: cycles 4-7
+  if (cycleNumber <= 7) return 2;
+  // Act 3: cycles 8-10
+  if (cycleNumber <= 10) return 3;
+  // Beyond program: continue in "extended" acts
+  return 4 + Math.floor((cycleNumber - 11) / 3);
+};
+
+const getCycleWithinAct = (cycleNumber: number, actNumber: number): number => {
+  if (actNumber === 1) return cycleNumber;
+  if (actNumber === 2) return cycleNumber - 3;
+  if (actNumber === 3) return cycleNumber - 7;
+  // Extended acts
+  return ((cycleNumber - 11) % 3) + 1;
+};
 
 export function useCycleTracking() {
   const { user } = useAuth();
@@ -61,6 +92,8 @@ export function useCycleTracking() {
         actProgress: 0,
         isReviewDue: false,
         totalDaysInProgram: 1,
+        cycleWithinAct: 1,
+        cyclesInCurrentAct: getCyclesPerAct(1),
       };
     }
 
@@ -74,8 +107,8 @@ export function useCycleTracking() {
     // Calculate day within current cycle (1-21)
     const currentCycleDay = ((totalDays - 1) % DAYS_PER_CYCLE) + 1;
     
-    // Calculate current act (every 3 cycles = 1 act)
-    const currentAct = Math.floor((currentCycle - 1) / CYCLES_PER_ACT) + 1;
+    // Calculate current act using the 3-4-3 structure
+    const currentAct = getActForCycle(currentCycle);
     
     // Calculate cycles completed (full cycles only)
     const cyclesCompleted = currentCycle - 1;
@@ -86,9 +119,10 @@ export function useCycleTracking() {
     // Progress percentages
     const cycleProgress = (currentCycleDay / DAYS_PER_CYCLE) * 100;
     
-    // Act progress (how far through 3 cycles)
-    const cycleWithinAct = ((currentCycle - 1) % CYCLES_PER_ACT) + 1;
-    const actProgress = ((cycleWithinAct - 1) * DAYS_PER_CYCLE + currentCycleDay) / (CYCLES_PER_ACT * DAYS_PER_CYCLE) * 100;
+    // Act progress using the dynamic cycle count per act
+    const cyclesInCurrentAct = getCyclesPerAct(currentAct);
+    const cycleWithinAct = getCycleWithinAct(currentCycle, currentAct);
+    const actProgress = ((cycleWithinAct - 1) * DAYS_PER_CYCLE + currentCycleDay) / (cyclesInCurrentAct * DAYS_PER_CYCLE) * 100;
     
     // Review is due on day 21 of each cycle
     const isReviewDue = currentCycleDay === DAYS_PER_CYCLE;
@@ -104,6 +138,8 @@ export function useCycleTracking() {
       actProgress,
       isReviewDue,
       totalDaysInProgram: totalDays,
+      cycleWithinAct,
+      cyclesInCurrentAct,
     };
   }, []);
 
@@ -221,21 +257,23 @@ export function useCycleTracking() {
   const getActName = (actNumber: number): string => {
     const actNames: Record<number, string> = {
       1: "Act I: The Awakening",
-      2: "Act II: The Transformation", 
+      2: "Act II: The Integration", 
       3: "Act III: The Mastery",
       4: "Act IV: The Legacy",
     };
     return actNames[actNumber] || `Act ${actNumber}: The Journey Continues`;
   };
 
-  const getCycleName = (cycleNumber: number, actNumber: number): string => {
-    const cycleWithinAct = ((cycleNumber - 1) % CYCLES_PER_ACT) + 1;
-    const cycleNames: Record<number, string> = {
-      1: "Foundation",
-      2: "Integration",
-      3: "Mastery",
-    };
-    return cycleNames[cycleWithinAct] || `Cycle ${cycleWithinAct}`;
+  const getCycleNameForDisplay = (cycleNumber: number, actNumber: number): string => {
+    const cycleInAct = getCycleWithinAct(cycleNumber, actNumber);
+    const cyclesInAct = getCyclesPerAct(actNumber);
+    
+    // Dynamic names based on position in act
+    if (cycleInAct === 1) return "Foundation";
+    if (cycleInAct === cyclesInAct) return "Mastery";
+    if (actNumber === 2 && cycleInAct === 2) return "Deep Work";
+    if (actNumber === 2 && cycleInAct === 3) return "Integration";
+    return "Integration";
   };
 
   return {
@@ -246,8 +284,8 @@ export function useCycleTracking() {
     completeCycleReview,
     refetch: fetchCycleData,
     getActName,
-    getCycleName,
+    getCycleName: getCycleNameForDisplay,
     DAYS_PER_CYCLE,
-    CYCLES_PER_ACT,
+    getCyclesPerAct,
   };
 }
