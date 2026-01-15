@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Film, Plus, Play, Star, Trash2, Copy, Edit3, Check, Loader2, X, Clapperboard, Eye, HardDrive, Download } from "lucide-react";
+import { Film, Plus, Play, Star, Trash2, Copy, Edit3, Check, Loader2, X, Clapperboard, Eye, HardDrive, Download, Share2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -19,8 +19,10 @@ import {
 import { useMindMovies, MindMovie } from "@/hooks/useMindMovies";
 import { useStorageUsage } from "@/hooks/useStorageUsage";
 import { MoviePreviewModal } from "./MoviePreviewModal";
+import { useFeaturedContent } from "@/hooks/useFeaturedContent";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
+import { toast } from "sonner";
 
 interface MovieVaultProps {
   isOpen: boolean;
@@ -33,6 +35,7 @@ export function MovieVault({ isOpen, onClose, onSelectMovie, onCreateNew }: Movi
   const { movies, isLoading, fetchAllMovies, setMovieAsActive, deleteMovie, duplicateMovie } =
     useMindMovies();
   const { usage, isLoading: isLoadingUsage, calculateUsage, formatUsage, STORAGE_LIMIT_GB } = useStorageUsage();
+  const { submitMovieToCommunity } = useFeaturedContent();
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [settingActiveId, setSettingActiveId] = useState<string | null>(null);
   const [previewMovie, setPreviewMovie] = useState<MindMovie | null>(null);
@@ -165,6 +168,21 @@ export function MovieVault({ isOpen, onClose, onSelectMovie, onCreateNew }: Movi
                     console.error('Download failed:', error);
                   }
                 }}
+                onSubmitToCommunity={async () => {
+                  if (!movie.movie_url) {
+                    toast.error("Complete your movie first before submitting");
+                    return;
+                  }
+                  const success = await submitMovieToCommunity(
+                    movie.id,
+                    movie.title || "My Mind Movie",
+                    "",
+                    movie.movie_url,
+                    movie.scenes?.[0]?.generatedImageUrl,
+                    movie.chief_aim_snapshot?.what as string
+                  );
+                  if (success) toast.success("🎬 Submitted to community!");
+                }}
               />
             ))}
           </div>
@@ -192,6 +210,7 @@ interface MovieCardProps {
   onDuplicate: () => void;
   onPreview: () => void;
   onDownload: () => void;
+  onSubmitToCommunity: () => void;
 }
 
 function MovieCard({
@@ -204,6 +223,7 @@ function MovieCard({
   onDuplicate,
   onPreview,
   onDownload,
+  onSubmitToCommunity,
 }: MovieCardProps) {
   const hasVideo = !!movie.movie_url;
   const hasScenes = movie.scenes && movie.scenes.length > 0;
@@ -365,6 +385,18 @@ function MovieCard({
               title="Download movie"
             >
               <Download className="w-3 h-3" />
+            </Button>
+          )}
+
+          {hasVideo && movie.status === "complete" && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 text-gold hover:text-gold/80"
+              onClick={onSubmitToCommunity}
+              title="Submit to Community"
+            >
+              <Share2 className="w-3 h-3" />
             </Button>
           )}
 

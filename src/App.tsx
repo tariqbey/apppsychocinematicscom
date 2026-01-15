@@ -14,6 +14,7 @@ import CreditsSuccess from "./pages/CreditsSuccess";
 import Credits from "./pages/Credits";
 import DirectorsGuide from "./pages/DirectorsGuide";
 import AdminDashboard from "./pages/AdminDashboard";
+import AwardsCeremony from "./pages/AwardsCeremony";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 import { RequireAdmin } from "./components/auth/RequireAdmin";
@@ -40,6 +41,7 @@ const App = () => (
           <Route path="/tutorial" element={<DirectorsGuide />} />
           <Route path="/tutorials" element={<DirectorsGuide />} />
           <Route path="/admin" element={<RequireAdmin><AdminDashboard /></RequireAdmin>} />
+          <Route path="/awards" element={<AwardsCeremony />} />
           <Route path="/settings" element={<Settings />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
