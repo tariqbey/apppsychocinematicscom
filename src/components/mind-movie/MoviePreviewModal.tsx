@@ -44,7 +44,15 @@ export function MoviePreviewModal({
     if (!video) return;
 
     const handleTimeUpdate = () => setCurrentTime(video.currentTime);
-    const handleLoadedMetadata = () => setDuration(video.duration);
+    
+    // Some WebM files don't report duration on loadedmetadata, so we listen for both
+    const handleDurationUpdate = () => {
+      const dur = video.duration;
+      if (dur && Number.isFinite(dur) && dur > 0) {
+        setDuration(dur);
+      }
+    };
+    
     const handleEnded = () => setIsPlaying(false);
     const handleError = () => {
       console.error("Video playback error:", video.error);
@@ -55,18 +63,27 @@ export function MoviePreviewModal({
       });
     };
 
+    // Also check if duration is already available
+    if (video.duration && Number.isFinite(video.duration) && video.duration > 0) {
+      setDuration(video.duration);
+    }
+
     video.addEventListener("timeupdate", handleTimeUpdate);
-    video.addEventListener("loadedmetadata", handleLoadedMetadata);
+    video.addEventListener("loadedmetadata", handleDurationUpdate);
+    video.addEventListener("durationchange", handleDurationUpdate);
+    video.addEventListener("canplay", handleDurationUpdate);
     video.addEventListener("ended", handleEnded);
     video.addEventListener("error", handleError);
 
     return () => {
       video.removeEventListener("timeupdate", handleTimeUpdate);
-      video.removeEventListener("loadedmetadata", handleLoadedMetadata);
+      video.removeEventListener("loadedmetadata", handleDurationUpdate);
+      video.removeEventListener("durationchange", handleDurationUpdate);
+      video.removeEventListener("canplay", handleDurationUpdate);
       video.removeEventListener("ended", handleEnded);
       video.removeEventListener("error", handleError);
     };
-  }, [toast]);
+  }, [toast, movieUrl]);
 
   // Auto-hide controls
   const resetControlsTimeout = () => {
@@ -119,6 +136,7 @@ export function MoviePreviewModal({
   };
 
   const formatTime = (seconds: number) => {
+    if (!Number.isFinite(seconds) || seconds < 0) return "--:--";
     const mins = Math.floor(seconds / 60);
     const secs = Math.floor(seconds % 60);
     return `${mins}:${secs.toString().padStart(2, "0")}`;
