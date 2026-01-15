@@ -12,6 +12,7 @@ import { Link } from "react-router-dom";
 import { format } from "date-fns";
 import { IntegrationsTab } from "@/components/settings/IntegrationsTab";
 import { NotificationSettings } from "@/components/notifications/NotificationSettings";
+import { AccessCodeRedemption } from "@/components/settings/AccessCodeRedemption";
 import { ReminderScheduler } from "@/components/notifications/ReminderScheduler";
 
 export default function Settings() {
@@ -103,22 +104,26 @@ export default function Settings() {
           </TabsList>
 
           <TabsContent value="account">
-            <Card className="bg-card border-border">
-              <CardHeader>
-                <CardTitle>Account Settings</CardTitle>
-                <CardDescription>Manage your account information</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <label className="text-sm text-muted-foreground">Email</label>
-                  <p className="text-foreground">{user?.email}</p>
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm text-muted-foreground">User ID</label>
-                  <p className="text-foreground text-sm font-mono">{user?.id}</p>
-                </div>
-              </CardContent>
-            </Card>
+            <div className="space-y-6">
+              <Card className="bg-card border-border">
+                <CardHeader>
+                  <CardTitle>Account Settings</CardTitle>
+                  <CardDescription>Manage your account information</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <label className="text-sm text-muted-foreground">Email</label>
+                    <p className="text-foreground">{user?.email}</p>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm text-muted-foreground">User ID</label>
+                    <p className="text-foreground text-sm font-mono">{user?.id}</p>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <AccessCodeRedemption />
+            </div>
           </TabsContent>
 
           <TabsContent value="subscription">
