@@ -5,7 +5,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { 
   Target, Plus, Trash2, Loader2, Sparkles, ChevronLeft, ChevronRight,
-  Calendar, RefreshCw, X, AlertCircle
+  Calendar, RefreshCw, X, AlertCircle, BarChart3
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -20,6 +20,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
+import { ExcuseAnalytics } from "./ExcuseAnalytics";
 
 interface Task {
   id: string;
@@ -53,6 +54,7 @@ export function ThreeThings() {
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [excuseDialogOpen, setExcuseDialogOpen] = useState(false);
   const [taskToUncheck, setTaskToUncheck] = useState<Task | null>(null);
+  const [showAnalytics, setShowAnalytics] = useState(false);
   const { user } = useAuth();
   const { profile } = useUserProfile();
   const { toast } = useToast();
@@ -255,21 +257,40 @@ export function ThreeThings() {
             <p className="text-sm text-muted-foreground">Your daily priorities</p>
           </div>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={getSuggestions}
-          disabled={isSuggesting}
-          className="gap-2"
-        >
-          {isSuggesting ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <Sparkles className="h-4 w-4" />
-          )}
-          Director's Suggestions
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowAnalytics(!showAnalytics)}
+            className={`gap-2 ${showAnalytics ? 'bg-gold/10 border-gold/30' : ''}`}
+          >
+            <BarChart3 className="h-4 w-4" />
+            <span className="hidden sm:inline">Patterns</span>
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={getSuggestions}
+            disabled={isSuggesting}
+            className="gap-2"
+          >
+            {isSuggesting ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Sparkles className="h-4 w-4" />
+            )}
+            <span className="hidden sm:inline">Director's Suggestions</span>
+            <span className="sm:hidden">Suggest</span>
+          </Button>
+        </div>
       </div>
+
+      {/* Analytics Panel */}
+      {showAnalytics && (
+        <div className="animate-slide-up">
+          <ExcuseAnalytics />
+        </div>
+      )}
 
       {/* Week Navigation */}
       <div className="flex items-center justify-between">
