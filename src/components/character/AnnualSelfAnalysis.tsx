@@ -358,191 +358,193 @@ export function AnnualSelfAnalysis({ onClose, inline = false }: AnnualSelfAnalys
     toast.success("PDF ready - use Print > Save as PDF");
   };
 
-  if (isComplete) {
-    return (
-      <div className="fixed inset-0 bg-background/95 backdrop-blur-sm z-50 overflow-y-auto">
-        <div className="min-h-screen flex items-center justify-center p-4">
-          <Card className="w-full max-w-2xl glass-card cinematic-border">
-            <CardHeader className="text-center space-y-4">
-              <div className="w-20 h-20 rounded-full bg-gradient-to-br from-gold/30 to-amber-500/30 flex items-center justify-center mx-auto animate-pulse">
-                <CheckCircle2 className="w-10 h-10 text-gold" />
-              </div>
-              <CardTitle className="text-2xl font-display tracking-wide text-gold-gradient">
-                Self-Analysis Complete
-              </CardTitle>
-              <p className="text-muted-foreground max-w-md mx-auto">
-                "Annual self-analysis will disclose whether advancement has been made, and if so, how much."
-                <span className="block mt-2 text-gold/70 text-sm">— Napoleon Hill</span>
-              </p>
-            </CardHeader>
-
-            <CardContent className="space-y-6">
-              <div className="bg-muted/30 rounded-lg p-4 space-y-3">
-                <h4 className="font-medium text-sm text-gold">Summary</h4>
-                <p className="text-sm text-muted-foreground">
-                  You've completed {Object.keys(responses).length} of {SELF_ANALYSIS_QUESTIONS.length} questions.
-                  This reflection will be saved to your Director's Journal for future reference.
-                </p>
-              </div>
-
-              <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                <Button 
-                  variant="outline" 
-                  onClick={generatePDF}
-                  className="gap-2"
-                >
-                  <Download className="h-4 w-4" />
-                  Export PDF
-                </Button>
-                <Button variant="outline" onClick={onClose}>
-                  Review Later
-                </Button>
-                <Button 
-                  onClick={saveAnalysis} 
-                  disabled={isSaving}
-                  className="gap-2 bg-gold hover:bg-gold/90 text-background"
-                >
-                  {isSaving ? "Saving..." : "Save to Journal"}
-                  <Award className="h-4 w-4" />
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+  const completeContent = (
+    <Card className="w-full max-w-2xl mx-auto glass-card cinematic-border">
+      <CardHeader className="text-center space-y-4">
+        <div className="w-20 h-20 rounded-full bg-gradient-to-br from-gold/30 to-amber-500/30 flex items-center justify-center mx-auto animate-pulse">
+          <CheckCircle2 className="w-10 h-10 text-gold" />
         </div>
-      </div>
-    );
+        <CardTitle className="text-2xl font-display tracking-wide text-gold-gradient">
+          Self-Analysis Complete
+        </CardTitle>
+        <p className="text-muted-foreground max-w-md mx-auto">
+          "Annual self-analysis will disclose whether advancement has been made, and if so, how much."
+          <span className="block mt-2 text-gold/70 text-sm">— Napoleon Hill</span>
+        </p>
+      </CardHeader>
+
+      <CardContent className="space-y-6">
+        <div className="bg-muted/30 rounded-lg p-4 space-y-3">
+          <h4 className="font-medium text-sm text-gold">Summary</h4>
+          <p className="text-sm text-muted-foreground">
+            You've completed {Object.keys(responses).length} of {SELF_ANALYSIS_QUESTIONS.length} questions.
+            This reflection will be saved to your Director's Journal for future reference.
+          </p>
+        </div>
+
+        <div className="flex flex-col sm:flex-row gap-3 justify-center">
+          <Button 
+            variant="outline" 
+            onClick={generatePDF}
+            className="gap-2"
+          >
+            <Download className="h-4 w-4" />
+            Export PDF
+          </Button>
+          {onClose && (
+            <Button variant="outline" onClick={onClose}>
+              Review Later
+            </Button>
+          )}
+          <Button 
+            onClick={saveAnalysis} 
+            disabled={isSaving}
+            className="gap-2 bg-gold hover:bg-gold/90 text-background"
+          >
+            {isSaving ? "Saving..." : "Save to Journal"}
+            <Award className="h-4 w-4" />
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+
+  const questionContent = (
+    <Card className="w-full max-w-2xl mx-auto glass-card cinematic-border relative">
+      <CardHeader className="text-center space-y-4">
+        {!inline && onClose && (
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onClose}
+            className="absolute top-4 right-4"
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        )}
+        <div className="w-16 h-16 rounded-full bg-gradient-to-br from-gold/20 to-amber-500/20 flex items-center justify-center mx-auto">
+          <Calendar className="w-8 h-8 text-gold" />
+        </div>
+        <div>
+          <CardTitle className="text-2xl font-display tracking-wide text-gold-gradient">
+            Annual Self-Analysis
+          </CardTitle>
+          <p className="text-sm text-muted-foreground mt-1">
+            Year-End Reflection by Napoleon Hill
+          </p>
+        </div>
+        <Progress value={progress} className="h-2" />
+        <p className="text-xs text-muted-foreground">
+          Question {currentQuestion + 1} of {SELF_ANALYSIS_QUESTIONS.length}
+        </p>
+      </CardHeader>
+
+      <CardContent className="space-y-6">
+        {/* Category Tag */}
+        <div className="flex justify-center">
+          <span className="px-3 py-1 rounded-full bg-gold/10 text-gold text-xs font-medium">
+            {question.category}
+          </span>
+        </div>
+
+        {/* Question */}
+        <h3 className="text-lg font-medium text-center leading-relaxed">
+          {question.question}
+        </h3>
+
+        {/* Response Area */}
+        <div className="space-y-4">
+          {question.type === "text" && (
+            <Textarea
+              value={responses[question.id] || ""}
+              onChange={(e) => handleTextResponse(e.target.value)}
+              placeholder="Take your time to reflect honestly..."
+              className="min-h-[120px] resize-none"
+            />
+          )}
+
+          {question.type === "scale" && (
+            <div className="space-y-4">
+              <RadioGroup
+                value={responses[question.id] || ""}
+                onValueChange={handleScaleResponse}
+                className="flex justify-center gap-2"
+              >
+                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((num) => (
+                  <div key={num} className="flex flex-col items-center">
+                    <RadioGroupItem
+                      value={num.toString()}
+                      id={`scale-${num}`}
+                      className="peer sr-only"
+                    />
+                    <Label
+                      htmlFor={`scale-${num}`}
+                      className="w-8 h-8 rounded-full flex items-center justify-center border border-muted-foreground/30 cursor-pointer transition-all peer-data-[state=checked]:bg-gold peer-data-[state=checked]:border-gold peer-data-[state=checked]:text-background hover:border-gold/50"
+                    >
+                      {num}
+                    </Label>
+                  </div>
+                ))}
+              </RadioGroup>
+              <div className="flex justify-between text-xs text-muted-foreground px-2">
+                <span>Needs Work</span>
+                <span>Excellent</span>
+              </div>
+            </div>
+          )}
+
+          {question.type === "yesno" && (
+            <div className="flex justify-center gap-4">
+              <Button
+                variant={responses[question.id] === "yes" ? "default" : "outline"}
+                onClick={() => handleYesNoResponse("yes")}
+                className={responses[question.id] === "yes" ? "bg-green-600 hover:bg-green-700" : ""}
+              >
+                Yes
+              </Button>
+              <Button
+                variant={responses[question.id] === "no" ? "default" : "outline"}
+                onClick={() => handleYesNoResponse("no")}
+                className={responses[question.id] === "no" ? "bg-red-600 hover:bg-red-700" : ""}
+              >
+                No
+              </Button>
+            </div>
+          )}
+        </div>
+
+        {/* Navigation */}
+        <div className="flex justify-between pt-4">
+          <Button
+            variant="ghost"
+            onClick={goBack}
+            disabled={currentQuestion === 0}
+            className="gap-2"
+          >
+            <ChevronLeft className="h-4 w-4" />
+            Back
+          </Button>
+          <Button
+            onClick={goNext}
+            className="gap-2"
+          >
+            {currentQuestion === SELF_ANALYSIS_QUESTIONS.length - 1 ? "Complete" : "Next"}
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+
+  if (inline) {
+    return isComplete ? completeContent : questionContent;
   }
 
+  // Modal mode
   return (
     <div className="fixed inset-0 bg-background/95 backdrop-blur-sm z-50 overflow-y-auto">
       <div className="min-h-screen flex items-center justify-center p-4">
-        <Card className="w-full max-w-2xl glass-card cinematic-border">
-          <CardHeader className="text-center space-y-4">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={onClose}
-              className="absolute top-4 right-4"
-            >
-              <X className="h-4 w-4" />
-            </Button>
-            <div className="w-16 h-16 rounded-full bg-gradient-to-br from-gold/20 to-amber-500/20 flex items-center justify-center mx-auto">
-              <Calendar className="w-8 h-8 text-gold" />
-            </div>
-            <div>
-              <CardTitle className="text-2xl font-display tracking-wide text-gold-gradient">
-                Annual Self-Analysis
-              </CardTitle>
-              <p className="text-sm text-muted-foreground mt-1">
-                Year-End Reflection by Napoleon Hill
-              </p>
-            </div>
-            <Progress value={progress} className="h-2" />
-            <p className="text-xs text-muted-foreground">
-              Question {currentQuestion + 1} of {SELF_ANALYSIS_QUESTIONS.length}
-            </p>
-          </CardHeader>
-
-          <CardContent className="space-y-6">
-            {/* Category Tag */}
-            <div className="flex justify-center">
-              <span className="px-3 py-1 rounded-full bg-gold/10 text-gold text-xs font-medium">
-                {question.category}
-              </span>
-            </div>
-
-            {/* Question */}
-            <h3 className="text-lg font-medium text-center leading-relaxed">
-              {question.question}
-            </h3>
-
-            {/* Response Area */}
-            <div className="space-y-4">
-              {question.type === "text" && (
-                <Textarea
-                  value={responses[question.id] || ""}
-                  onChange={(e) => handleTextResponse(e.target.value)}
-                  placeholder="Take your time to reflect honestly..."
-                  className="min-h-[120px] resize-none"
-                />
-              )}
-
-              {question.type === "scale" && (
-                <div className="space-y-4">
-                  <RadioGroup
-                    value={responses[question.id] || ""}
-                    onValueChange={handleScaleResponse}
-                    className="flex justify-center gap-2"
-                  >
-                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((num) => (
-                      <div key={num} className="flex flex-col items-center">
-                        <RadioGroupItem
-                          value={num.toString()}
-                          id={`scale-${num}`}
-                          className="sr-only"
-                        />
-                        <Label
-                          htmlFor={`scale-${num}`}
-                          className={`w-10 h-10 rounded-full border flex items-center justify-center cursor-pointer transition-all ${
-                            responses[question.id] === num.toString()
-                              ? "bg-gold text-background border-gold"
-                              : "border-border hover:border-gold/50 hover:bg-gold/10"
-                          }`}
-                        >
-                          {num}
-                        </Label>
-                      </div>
-                    ))}
-                  </RadioGroup>
-                  <div className="flex justify-between text-xs text-muted-foreground">
-                    <span>Needs Work</span>
-                    <span>Excellent</span>
-                  </div>
-                </div>
-              )}
-
-              {question.type === "yesno" && (
-                <div className="flex justify-center gap-4">
-                  <Button
-                    variant={responses[question.id] === "yes" ? "default" : "outline"}
-                    onClick={() => handleYesNoResponse("yes")}
-                    className={`w-24 ${responses[question.id] === "yes" ? "bg-green-600 hover:bg-green-700" : ""}`}
-                  >
-                    Yes
-                  </Button>
-                  <Button
-                    variant={responses[question.id] === "no" ? "default" : "outline"}
-                    onClick={() => handleYesNoResponse("no")}
-                    className={`w-24 ${responses[question.id] === "no" ? "bg-red-600 hover:bg-red-700" : ""}`}
-                  >
-                    No
-                  </Button>
-                </div>
-              )}
-            </div>
-
-            {/* Navigation */}
-            <div className="flex justify-between pt-4">
-              <Button
-                variant="ghost"
-                onClick={goBack}
-                disabled={currentQuestion === 0}
-                className="gap-2"
-              >
-                <ChevronLeft className="h-4 w-4" />
-                Back
-              </Button>
-              <Button
-                onClick={goNext}
-                className="gap-2"
-                disabled={question.type === "text" && !responses[question.id]?.trim()}
-              >
-                {currentQuestion === SELF_ANALYSIS_QUESTIONS.length - 1 ? "Complete" : "Next"}
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+        {isComplete ? completeContent : questionContent}
       </div>
     </div>
   );
