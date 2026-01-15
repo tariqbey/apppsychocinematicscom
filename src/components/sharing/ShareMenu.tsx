@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Share2, MessageCircle, Copy, Check, ExternalLink, Users } from "lucide-react";
+import { Share2, Copy, Check, ExternalLink, Users, Loader2, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -7,8 +7,14 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuSubContent,
+  DropdownMenuPortal,
 } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
+import { useUserIntegrations } from "@/hooks/useUserIntegrations";
+import { useIntegrationNotifications } from "@/hooks/useIntegrationNotifications";
 
 // Social platform icons as SVG
 const FacebookIcon = () => (
@@ -52,8 +58,17 @@ export function ShareMenu({
 }: ShareMenuProps) {
   const { toast } = useToast();
   const [copied, setCopied] = useState(false);
+  const { getIntegration } = useUserIntegrations();
+  const { postToSocial, isPosting } = useIntegrationNotifications();
 
   const shareText = `${title} #PsychoCinematics #DirectorsOS`;
+
+  // Check which platforms are connected
+  const hasTwitter = !!getIntegration("social_twitter")?.api_key;
+  const hasFacebook = !!getIntegration("social_facebook")?.api_key;
+  const hasInstagram = !!getIntegration("social_instagram")?.api_key;
+  const hasTikTok = !!getIntegration("social_tiktok")?.api_key;
+  const hasAnyConnected = hasTwitter || hasFacebook || hasInstagram || hasTikTok;
 
   const handleCopyLink = async () => {
     try {
@@ -73,23 +88,31 @@ export function ShareMenu({
     }
   };
 
+  const handleDirectPost = async (platform: "facebook" | "twitter" | "instagram" | "tiktok") => {
+    const result = await postToSocial(platform, title, mediaUrl);
+    
+    if (result.manualPost && result.content) {
+      // Copy the branded content for manual posting
+      await navigator.clipboard.writeText(result.content);
+      toast({
+        title: `Post to ${platform}`,
+        description: "Branded content copied! Paste it when posting.",
+      });
+    }
+  };
+
   const openExternalShare = (platform: string) => {
-    // For most platforms, we'll share the URL with text
-    // Note: Direct media sharing requires platform-specific APIs
     const encodedUrl = encodeURIComponent(mediaUrl);
     const encodedText = encodeURIComponent(shareText);
 
     const urls: Record<string, string> = {
       facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}&quote=${encodedText}`,
       twitter: `https://twitter.com/intent/tweet?text=${encodedText}&url=${encodedUrl}`,
-      // Instagram and TikTok don't have direct web share URLs
-      // They require mobile apps or specific integrations
     };
 
     if (urls[platform]) {
       window.open(urls[platform], '_blank', 'width=600,height=400');
     } else if (platform === 'instagram' || platform === 'tiktok') {
-      // For Instagram and TikTok, we copy the link and provide instructions
       handleCopyLink();
       toast({
         title: `Share to ${platform === 'instagram' ? 'Instagram' : 'TikTok'}`,
@@ -101,7 +124,6 @@ export function ShareMenu({
   const handleNativeShare = async () => {
     if (navigator.share) {
       try {
-        // Try to fetch and share the actual file
         const response = await fetch(mediaUrl);
         const blob = await response.blob();
         const file = new File([blob], `share.${mediaType === 'image' ? 'png' : 'mp4'}`, { type: blob.type });
@@ -112,7 +134,6 @@ export function ShareMenu({
           files: [file],
         });
       } catch {
-        // Fallback to URL sharing
         try {
           await navigator.share({
             title: title,
@@ -134,14 +155,56 @@ export function ShareMenu({
           {!compact && "Share"}
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-56">
+      <DropdownMenuContent align="end" className="w-56 bg-popover">
         {/* Share to Community */}
         {onShareToCommunity && (
           <>
             <DropdownMenuItem onClick={onShareToCommunity} className="gap-2">
-              <Users className="h-4 w-4 text-gold" />
+              <Users className="h-4 w-4 text-primary" />
               <span>Share to Director's Corner</span>
             </DropdownMenuItem>
+            <DropdownMenuSeparator />
+          </>
+        )}
+
+        {/* Direct Post (if connected) */}
+        {hasAnyConnected && (
+          <>
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger className="gap-2">
+                <Send className="h-4 w-4 text-primary" />
+                <span>Post Directly</span>
+                {isPosting && <Loader2 className="h-3 w-3 animate-spin ml-auto" />}
+              </DropdownMenuSubTrigger>
+              <DropdownMenuPortal>
+                <DropdownMenuSubContent className="bg-popover">
+                  {hasTwitter && (
+                    <DropdownMenuItem onClick={() => handleDirectPost("twitter")} className="gap-2">
+                      <TwitterIcon />
+                      <span>Post to X</span>
+                    </DropdownMenuItem>
+                  )}
+                  {hasFacebook && (
+                    <DropdownMenuItem onClick={() => handleDirectPost("facebook")} className="gap-2">
+                      <FacebookIcon />
+                      <span>Post to Facebook</span>
+                    </DropdownMenuItem>
+                  )}
+                  {hasInstagram && (
+                    <DropdownMenuItem onClick={() => handleDirectPost("instagram")} className="gap-2">
+                      <InstagramIcon />
+                      <span>Post to Instagram</span>
+                    </DropdownMenuItem>
+                  )}
+                  {hasTikTok && (
+                    <DropdownMenuItem onClick={() => handleDirectPost("tiktok")} className="gap-2">
+                      <TikTokIcon />
+                      <span>Post to TikTok</span>
+                    </DropdownMenuItem>
+                  )}
+                </DropdownMenuSubContent>
+              </DropdownMenuPortal>
+            </DropdownMenuSub>
             <DropdownMenuSeparator />
           </>
         )}
@@ -154,7 +217,7 @@ export function ShareMenu({
           </DropdownMenuItem>
         )}
 
-        {/* Social Platforms */}
+        {/* Social Platforms (Web Share) */}
         <DropdownMenuItem onClick={() => openExternalShare('facebook')} className="gap-2">
           <FacebookIcon />
           <span>Facebook</span>

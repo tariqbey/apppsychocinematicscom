@@ -352,19 +352,19 @@ export function ThreeThings() {
               </Button>
             </div>
           </div>
-          <ScrollArea className="max-h-[200px]">
-            <div className="space-y-2">
+          <ScrollArea className="h-[280px] pr-3">
+            <div className="space-y-3">
               {suggestions.map((suggestion, i) => (
                 <div
                   key={i}
-                  className="p-3 rounded-lg bg-gold/5 border border-gold/20 space-y-1"
+                  className="p-4 rounded-lg bg-gold/5 border border-gold/20 space-y-2"
                 >
-                  <div className="flex items-start justify-between gap-2">
-                    <p className="text-sm font-medium">{suggestion.task}</p>
+                  <div className="flex items-start justify-between gap-3">
+                    <p className="text-sm font-medium leading-relaxed flex-1">{suggestion.task}</p>
                     <Button
                       size="sm"
                       variant="outline"
-                      className="shrink-0 h-7 text-xs"
+                      className="shrink-0 h-8 text-xs border-gold/30 hover:bg-gold/10"
                       onClick={() => addSuggestion(suggestion)}
                       disabled={tasks.length >= 3}
                     >
@@ -372,7 +372,7 @@ export function ThreeThings() {
                       Add
                     </Button>
                   </div>
-                  <p className="text-xs text-muted-foreground">{suggestion.reason}</p>
+                  <p className="text-xs text-muted-foreground leading-relaxed">{suggestion.reason}</p>
                 </div>
               ))}
             </div>
