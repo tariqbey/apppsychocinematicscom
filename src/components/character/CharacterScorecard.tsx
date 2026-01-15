@@ -237,11 +237,19 @@ export function CharacterScorecard({ onClose, onSubmitSuccess, inline = false }:
 
   const result = getResult();
 
+  const wrapperClass = inline 
+    ? "w-full" 
+    : "fixed inset-0 z-50 bg-cinematic-midnight/95 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in";
+  
+  const cardWrapperClass = inline 
+    ? "" 
+    : "flex items-center justify-center";
+
   if (loading) {
     return (
       <TooltipProvider>
-        <div className="fixed inset-0 z-50 bg-cinematic-midnight/95 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="flex flex-col items-center gap-4">
+        <div className={wrapperClass}>
+          <div className={cn(cardWrapperClass, "flex flex-col items-center gap-4 py-16")}>
             <Loader2 className="h-8 w-8 animate-spin text-gold" />
             <p className="text-muted-foreground">Loading your character profile...</p>
           </div>
@@ -253,17 +261,18 @@ export function CharacterScorecard({ onClose, onSubmitSuccess, inline = false }:
   if (!analysis) {
     return (
       <TooltipProvider>
-        <div className="fixed inset-0 z-50 bg-cinematic-midnight/95 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
-          <div className="w-full max-w-lg glass-card cinematic-border p-6 text-center space-y-4">
-            <div className="w-16 h-16 rounded-full bg-amber-500/20 flex items-center justify-center mx-auto">
-              <Target className="w-8 h-8 text-amber-400" />
+        <div className={wrapperClass}>
+          <div className={cn(cardWrapperClass, "w-full")}>
+            <div className="w-full max-w-lg mx-auto glass-card cinematic-border p-6 text-center space-y-4">
+              <div className="w-16 h-16 rounded-full bg-amber-500/20 flex items-center justify-center mx-auto">
+                <Target className="w-8 h-8 text-amber-400" />
+              </div>
+              <h2 className="text-xl font-display">No Character Analysis Found</h2>
+              <p className="text-muted-foreground text-sm">
+                You need to complete a Character Transformation Analysis first. 
+                Go to the Transform tab, and click "Reveal My Required Character" to get your personalized traits to track.
+              </p>
             </div>
-            <h2 className="text-xl font-display">No Character Analysis Found</h2>
-            <p className="text-muted-foreground text-sm">
-              You need to complete a Character Transformation Analysis first. 
-              Go to Character Central, take the archetype survey, and click "Reveal My Required Character" to get your personalized traits to track.
-            </p>
-            <Button variant="outline" onClick={onClose}>Close</Button>
           </div>
         </div>
       </TooltipProvider>
@@ -273,17 +282,18 @@ export function CharacterScorecard({ onClose, onSubmitSuccess, inline = false }:
   if (existingEntry && !submitted) {
     return (
       <TooltipProvider>
-        <div className="fixed inset-0 z-50 bg-cinematic-midnight/95 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
-          <div className="w-full max-w-lg glass-card cinematic-border p-6 text-center space-y-4">
-            <div className="w-16 h-16 rounded-full bg-green-500/20 flex items-center justify-center mx-auto">
-              <Check className="w-8 h-8 text-green-400" />
+        <div className={wrapperClass}>
+          <div className={cn(cardWrapperClass, "w-full")}>
+            <div className="w-full max-w-lg mx-auto glass-card cinematic-border p-6 text-center space-y-4">
+              <div className="w-16 h-16 rounded-full bg-green-500/20 flex items-center justify-center mx-auto">
+                <Check className="w-8 h-8 text-green-400" />
+              </div>
+              <h2 className="text-xl font-display">Already Submitted Today</h2>
+              <p className="text-muted-foreground text-sm">
+                You've already tracked your character alignment for today. 
+                Come back tomorrow to continue your transformation journey.
+              </p>
             </div>
-            <h2 className="text-xl font-display">Already Submitted Today</h2>
-            <p className="text-muted-foreground text-sm">
-              You've already tracked your character alignment for today. 
-              Come back tomorrow to continue your transformation journey.
-            </p>
-            <Button variant="outline" onClick={onClose}>Close</Button>
           </div>
         </div>
       </TooltipProvider>
@@ -292,23 +302,29 @@ export function CharacterScorecard({ onClose, onSubmitSuccess, inline = false }:
 
   return (
     <TooltipProvider>
-      <div className="fixed inset-0 z-50 bg-cinematic-midnight/95 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
-        <div className="w-full max-w-lg glass-card cinematic-border overflow-hidden max-h-[90vh] flex flex-col">
-          {/* Header */}
-          <div className="p-4 sm:p-6 border-b border-border flex items-center justify-between bg-gradient-to-r from-gold/10 to-transparent shrink-0">
-            <div className="flex items-center gap-2 sm:gap-3">
-              <Crown className="w-5 h-5 sm:w-6 sm:h-6 text-gold" />
-              <div>
-                <h2 className="text-lg sm:text-xl font-display tracking-wide">Character Scorecard</h2>
-                <p className="text-xs sm:text-sm text-muted-foreground">
-                  Track alignment with: {analysis.requiredCharacter.name}
-                </p>
+      <div className={wrapperClass}>
+        <div className={cn(cardWrapperClass, "w-full")}>
+          <div className={cn(
+            "w-full max-w-lg mx-auto glass-card cinematic-border overflow-hidden flex flex-col",
+            inline ? "" : "max-h-[90vh]"
+          )}>
+            {/* Header */}
+            <div className="p-4 sm:p-6 border-b border-border flex items-center justify-between bg-gradient-to-r from-gold/10 to-transparent shrink-0">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <Crown className="w-5 h-5 sm:w-6 sm:h-6 text-gold" />
+                <div>
+                  <h2 className="text-lg sm:text-xl font-display tracking-wide">Character Scorecard</h2>
+                  <p className="text-xs sm:text-sm text-muted-foreground">
+                    Track alignment with: {analysis.requiredCharacter.name}
+                  </p>
+                </div>
               </div>
+              {!inline && onClose && (
+                <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8 sm:h-10 sm:w-10">
+                  <X className="w-4 h-4 sm:w-5 sm:h-5" />
+                </Button>
+              )}
             </div>
-            <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8 sm:h-10 sm:w-10">
-              <X className="w-4 h-4 sm:w-5 sm:h-5" />
-            </Button>
-          </div>
 
           {!submitted ? (
             <>
@@ -510,11 +526,14 @@ export function CharacterScorecard({ onClose, onSubmitSuccess, inline = false }:
                 ))}
               </div>
               
-              <Button variant="cinematic" className="w-full shrink-0" onClick={onClose}>
-                Close
-              </Button>
+              {!inline && onClose && (
+                <Button variant="cinematic" className="w-full shrink-0" onClick={onClose}>
+                  Close
+                </Button>
+              )}
             </div>
           )}
+          </div>
         </div>
       </div>
     </TooltipProvider>
