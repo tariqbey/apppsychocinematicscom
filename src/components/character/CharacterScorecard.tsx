@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
-import { Star, Crown, X, Sparkles, Loader2, Info, Check, Target } from "lucide-react";
+import { Star, Crown, X, Sparkles, Loader2, Info, Check, Target, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -56,9 +57,25 @@ export function CharacterScorecard({ onClose, onSubmitSuccess }: CharacterScorec
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [analysis, setAnalysis] = useState<TransformationAnalysis | null>(null);
+  const [allTraits, setAllTraits] = useState<string[]>([]);
+  const [customTraits, setCustomTraits] = useState<string[]>([]);
+  const [newCustomTrait, setNewCustomTrait] = useState("");
   const [traitScores, setTraitScores] = useState<Record<string, number>>({});
   const [reflection, setReflection] = useState("");
   const [existingEntry, setExistingEntry] = useState(false);
+  const [showAddTrait, setShowAddTrait] = useState(false);
+
+  // Load saved custom traits from localStorage
+  useEffect(() => {
+    const savedCustomTraits = localStorage.getItem("character_custom_traits");
+    if (savedCustomTraits) {
+      try {
+        setCustomTraits(JSON.parse(savedCustomTraits));
+      } catch {
+        // Ignore parse errors
+      }
+    }
+  }, []);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -78,9 +95,17 @@ export function CharacterScorecard({ onClose, onSubmitSuccess }: CharacterScorec
           const transformationAnalysis = profileData.transformation_analysis as unknown as TransformationAnalysis;
           setAnalysis(transformationAnalysis);
           
+          // Combine AI traits with custom traits
+          const aiTraits = transformationAnalysis.requiredCharacter.traits || [];
+          const savedCustomTraits = localStorage.getItem("character_custom_traits");
+          const parsedCustomTraits = savedCustomTraits ? JSON.parse(savedCustomTraits) : [];
+          
+          const combinedTraits = [...aiTraits, ...parsedCustomTraits];
+          setAllTraits(combinedTraits);
+          
           // Initialize scores for each trait
           const initialScores: Record<string, number> = {};
-          transformationAnalysis.requiredCharacter.traits.forEach((trait) => {
+          combinedTraits.forEach((trait) => {
             initialScores[trait] = 0;
           });
           setTraitScores(initialScores);
@@ -111,6 +136,41 @@ export function CharacterScorecard({ onClose, onSubmitSuccess }: CharacterScorec
   const updateTraitScore = (trait: string, score: number) => {
     setTraitScores(prev => ({ ...prev, [trait]: score }));
   };
+
+  const addCustomTrait = () => {
+    const trimmedTrait = newCustomTrait.trim();
+    if (!trimmedTrait) return;
+    if (allTraits.includes(trimmedTrait)) {
+      toast.error("This trait already exists");
+      return;
+    }
+
+    const updatedCustomTraits = [...customTraits, trimmedTrait];
+    setCustomTraits(updatedCustomTraits);
+    localStorage.setItem("character_custom_traits", JSON.stringify(updatedCustomTraits));
+
+    setAllTraits(prev => [...prev, trimmedTrait]);
+    setTraitScores(prev => ({ ...prev, [trimmedTrait]: 0 }));
+    setNewCustomTrait("");
+    setShowAddTrait(false);
+    toast.success("Custom trait added!");
+  };
+
+  const removeCustomTrait = (trait: string) => {
+    const updatedCustomTraits = customTraits.filter(t => t !== trait);
+    setCustomTraits(updatedCustomTraits);
+    localStorage.setItem("character_custom_traits", JSON.stringify(updatedCustomTraits));
+
+    setAllTraits(prev => prev.filter(t => t !== trait));
+    setTraitScores(prev => {
+      const updated = { ...prev };
+      delete updated[trait];
+      return updated;
+    });
+    toast.success("Custom trait removed");
+  };
+
+  const isCustomTrait = (trait: string) => customTraits.includes(trait);
 
   const totalScore = Object.values(traitScores).reduce((sum, score) => sum + score, 0);
   const maxScore = Object.keys(traitScores).length * 3;
@@ -147,7 +207,7 @@ export function CharacterScorecard({ onClose, onSubmitSuccess }: CharacterScorec
       const { error } = await supabase.from("character_scorecards").insert({
         user_id: user.id,
         required_character_name: analysis.requiredCharacter.name,
-        traits: analysis.requiredCharacter.traits,
+        traits: allTraits,
         trait_scores: traitScores,
         total_score: totalScore,
         max_possible_score: maxScore,
@@ -253,34 +313,78 @@ export function CharacterScorecard({ onClose, onSubmitSuccess }: CharacterScorec
             <>
               {/* Traits */}
               <div className="p-4 sm:p-6 space-y-4 sm:space-y-5 overflow-y-auto flex-1">
-                <p className="text-sm text-muted-foreground">
-                  Rate how well you embodied each required character trait today.
-                </p>
+                <div className="flex items-center justify-between">
+                  <p className="text-sm text-muted-foreground">
+                    Rate how well you embodied each required character trait today.
+                  </p>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowAddTrait(!showAddTrait)}
+                    className="text-gold hover:text-gold h-7 px-2"
+                  >
+                    <Plus className="w-4 h-4 mr-1" />
+                    Add Trait
+                  </Button>
+                </div>
+
+                {/* Add Custom Trait Form */}
+                {showAddTrait && (
+                  <div className="flex gap-2 p-3 rounded-lg bg-gold/10 border border-gold/30">
+                    <Input
+                      placeholder="Enter custom trait to track..."
+                      value={newCustomTrait}
+                      onChange={(e) => setNewCustomTrait(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && addCustomTrait()}
+                      className="flex-1 h-9"
+                    />
+                    <Button size="sm" onClick={addCustomTrait} className="h-9">
+                      Add
+                    </Button>
+                  </div>
+                )}
                 
-                {analysis.requiredCharacter.traits.map((trait, index) => (
+                {allTraits.map((trait, index) => (
                   <div key={index} className="space-y-2">
                     <div className="flex items-start justify-between">
-                      <div>
+                      <div className="flex items-center gap-2">
                         <h3 className="font-medium text-sm sm:text-base text-foreground">{trait}</h3>
+                        {isCustomTrait(trait) && (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-gold/20 text-gold border border-gold/30">
+                            Custom
+                          </span>
+                        )}
                       </div>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-5 w-5 sm:h-6 sm:w-6 shrink-0">
-                            <Info className="w-3 h-3 sm:w-4 sm:h-4 text-muted-foreground" />
+                      <div className="flex items-center gap-1">
+                        {isCustomTrait(trait) && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => removeCustomTrait(trait)}
+                            className="h-5 w-5 sm:h-6 sm:w-6 shrink-0 text-red-400 hover:text-red-300"
+                          >
+                            <Trash2 className="w-3 h-3" />
                           </Button>
-                        </TooltipTrigger>
-                        <TooltipContent side="left" className="max-w-xs">
-                          <div className="space-y-2 text-xs">
-                            {SCORE_RUBRIC.map((r) => (
-                              <div key={r.score}>
-                                <span className="font-semibold text-gold">{r.score}</span>
-                                <span className="text-foreground"> — {r.label}:</span>
-                                <span className="text-muted-foreground"> {r.description}</span>
-                              </div>
-                            ))}
-                          </div>
-                        </TooltipContent>
-                      </Tooltip>
+                        )}
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-5 w-5 sm:h-6 sm:w-6 shrink-0">
+                              <Info className="w-3 h-3 sm:w-4 sm:h-4 text-muted-foreground" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent side="left" className="max-w-xs">
+                            <div className="space-y-2 text-xs">
+                              {SCORE_RUBRIC.map((r) => (
+                                <div key={r.score}>
+                                  <span className="font-semibold text-gold">{r.score}</span>
+                                  <span className="text-foreground"> — {r.label}:</span>
+                                  <span className="text-muted-foreground"> {r.description}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </TooltipContent>
+                        </Tooltip>
+                      </div>
                     </div>
                     <div className="flex gap-1.5 sm:gap-2">
                       {SCORE_RUBRIC.map((rubricItem) => (
@@ -380,9 +484,14 @@ export function CharacterScorecard({ onClose, onSubmitSuccess }: CharacterScorec
 
               {/* Trait Breakdown */}
               <div className="space-y-2 text-left">
-                {analysis.requiredCharacter.traits.map((trait, index) => (
+                {allTraits.map((trait, index) => (
                   <div key={index} className="flex items-center justify-between p-2 rounded bg-secondary/30">
-                    <span className="text-sm">{trait}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm">{trait}</span>
+                      {isCustomTrait(trait) && (
+                        <span className="text-[9px] px-1 py-0.5 rounded bg-gold/20 text-gold">Custom</span>
+                      )}
+                    </div>
                     <div className="flex gap-1">
                       {[0, 1, 2, 3].map((score) => (
                         <Star

@@ -8,6 +8,7 @@ import { ExcuseAnalytics } from "@/components/tasks/ExcuseAnalytics";
 import { CharacterCentral } from "@/components/character/CharacterCentral";
 import { AnnualSelfAnalysis } from "@/components/character/AnnualSelfAnalysis";
 import { CharacterScorecard } from "@/components/character/CharacterScorecard";
+import { CharacterWeeklySummary } from "@/components/character/CharacterWeeklySummary";
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -121,6 +122,9 @@ export default function Actions() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Weekly Character Summary */}
+        <CharacterWeeklySummary />
 
         {/* Full Analytics Section */}
         <div className="space-y-4">
