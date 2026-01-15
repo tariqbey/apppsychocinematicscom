@@ -28,18 +28,26 @@ export function MoviePreviewModal({
 
   // Reset state when modal opens or URL changes
   useEffect(() => {
-    if (open && videoRef.current) {
-      videoRef.current.currentTime = 0;
+    if (open) {
       setCurrentTime(0);
       setIsPlaying(false);
       setDuration(0);
+      
+      // Force video reload with a slight delay to ensure element is mounted
+      const timer = setTimeout(() => {
+        if (videoRef.current) {
+          videoRef.current.load();
+        }
+      }, 100);
+      
+      return () => clearTimeout(timer);
     }
   }, [open, movieUrl]);
 
   // Video event listeners with robust duration detection
   useEffect(() => {
     const video = videoRef.current;
-    if (!video) return;
+    if (!video || !open) return;
 
     const handleTimeUpdate = () => setCurrentTime(video.currentTime);
     
@@ -70,7 +78,7 @@ export function MoviePreviewModal({
     };
 
     // Check if duration is already available
-    if (video.duration && Number.isFinite(video.duration) && video.duration > 0) {
+    if (video.readyState >= 1 && video.duration && Number.isFinite(video.duration) && video.duration > 0) {
       setDuration(video.duration);
     }
 
@@ -81,8 +89,23 @@ export function MoviePreviewModal({
     video.addEventListener("loadeddata", handleDurationUpdate);
     video.addEventListener("ended", handleEnded);
     video.addEventListener("error", handleError);
+    
+    // Fallback: Force seek to get duration for some video formats
+    const fallbackTimer = setTimeout(() => {
+      if (video && (!duration || duration <= 0) && video.readyState >= 1) {
+        const originalTime = video.currentTime;
+        video.currentTime = Number.MAX_SAFE_INTEGER;
+        setTimeout(() => {
+          if (video.duration && Number.isFinite(video.duration)) {
+            setDuration(video.duration);
+          }
+          video.currentTime = originalTime;
+        }, 100);
+      }
+    }, 1000);
 
     return () => {
+      clearTimeout(fallbackTimer);
       video.removeEventListener("timeupdate", handleTimeUpdate);
       video.removeEventListener("loadedmetadata", handleDurationUpdate);
       video.removeEventListener("durationchange", handleDurationUpdate);
@@ -91,7 +114,7 @@ export function MoviePreviewModal({
       video.removeEventListener("ended", handleEnded);
       video.removeEventListener("error", handleError);
     };
-  }, [toast, movieUrl]);
+  }, [toast, movieUrl, open, duration]);
 
   const togglePlay = () => {
     if (!videoRef.current) return;
@@ -160,12 +183,12 @@ export function MoviePreviewModal({
         {/* Video container */}
         <div className="relative aspect-video bg-black">
           <video
+            key={movieUrl}
             ref={videoRef}
             src={movieUrl}
             className="w-full h-full object-contain cursor-pointer"
             playsInline
-            preload="metadata"
-            crossOrigin="anonymous"
+            preload="auto"
             onClick={togglePlay}
           />
 

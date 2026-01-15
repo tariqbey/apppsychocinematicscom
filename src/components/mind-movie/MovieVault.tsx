@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Film, Plus, Play, Star, Trash2, Copy, Edit3, Check, Loader2, X, Clapperboard, Eye, HardDrive } from "lucide-react";
+import { Film, Plus, Play, Star, Trash2, Copy, Edit3, Check, Loader2, X, Clapperboard, Eye, HardDrive, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -147,6 +147,24 @@ export function MovieVault({ isOpen, onClose, onSelectMovie, onCreateNew }: Movi
                 onDelete={() => handleDelete(movie.id)}
                 onDuplicate={() => duplicateMovie(movie.id)}
                 onPreview={() => handlePreview(movie)}
+                onDownload={async () => {
+                  if (!movie.movie_url) return;
+                  try {
+                    const response = await fetch(movie.movie_url);
+                    const blob = await response.blob();
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    const ext = movie.movie_url.includes('.webm') ? 'webm' : 'mp4';
+                    a.download = `${movie.title || 'mind-movie'}.${ext}`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                  } catch (error) {
+                    console.error('Download failed:', error);
+                  }
+                }}
               />
             ))}
           </div>
@@ -173,6 +191,7 @@ interface MovieCardProps {
   onDelete: () => void;
   onDuplicate: () => void;
   onPreview: () => void;
+  onDownload: () => void;
 }
 
 function MovieCard({
@@ -184,6 +203,7 @@ function MovieCard({
   onDelete,
   onDuplicate,
   onPreview,
+  onDownload,
 }: MovieCardProps) {
   const hasVideo = !!movie.movie_url;
   const hasScenes = movie.scenes && movie.scenes.length > 0;
@@ -298,7 +318,19 @@ function MovieCard({
             </Button>
           )}
 
-          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onDuplicate}>
+          {hasVideo && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              onClick={onDownload}
+              title="Download movie"
+            >
+              <Download className="w-3 h-3" />
+            </Button>
+          )}
+
+          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onDuplicate} title="Duplicate">
             <Copy className="w-3 h-3" />
           </Button>
 
