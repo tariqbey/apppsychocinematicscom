@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { X, Plus, BookOpen, Sparkles, TrendingUp, Target, Loader2, ChevronDown, ChevronUp, Trash2 } from "lucide-react";
+import { X, Plus, BookOpen, Sparkles, TrendingUp, Target, Loader2, ChevronDown, ChevronUp, Trash2, Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
@@ -19,6 +19,8 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useJournal, JournalEntry, MOOD_OPTIONS, TAG_OPTIONS } from "@/hooks/useJournal";
+import { MoodTrendChart } from "./MoodTrendChart";
+import { NotificationSettings } from "@/components/notifications/NotificationSettings";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 
@@ -249,6 +251,9 @@ export function DirectorsJournal({ isOpen, onClose }: DirectorsJournalProps) {
           {/* Insights Tab */}
           <TabsContent value="insights" className="flex-1 overflow-auto p-4">
             <div className="max-w-2xl mx-auto space-y-6">
+              {/* Mood Trend Chart */}
+              <MoodTrendChart entries={entries} days={30} />
+
               {/* Weekly Progress Report */}
               <Card className="p-6">
                 <div className="flex items-center justify-between mb-4">
@@ -338,6 +343,20 @@ export function DirectorsJournal({ isOpen, onClose }: DirectorsJournalProps) {
                     <p className="text-xs text-muted-foreground">Topics Explored</p>
                   </div>
                 </div>
+              </Card>
+
+              {/* Notification Settings */}
+              <Card className="p-6">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-500 flex items-center justify-center">
+                    <Bell className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="font-medium">Journal Reminders</h3>
+                    <p className="text-sm text-muted-foreground">Get notified to write daily</p>
+                  </div>
+                </div>
+                <NotificationSettings compact />
               </Card>
             </div>
           </TabsContent>
