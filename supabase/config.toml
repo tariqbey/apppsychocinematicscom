@@ -53,3 +53,12 @@ verify_jwt = false
 
 [functions.analyze-journal]
 verify_jwt = false
+
+[functions.send-notification]
+verify_jwt = false
+
+[functions.notion-sync]
+verify_jwt = false
+
+[functions.social-post]
+verify_jwt = false
