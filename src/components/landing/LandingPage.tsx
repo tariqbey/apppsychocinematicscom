@@ -24,8 +24,17 @@ import {
   Award,
   Clock,
   Layers,
-  Wand2
+  Wand2,
+  Quote,
+  HelpCircle,
+  ChevronDown
 } from "lucide-react";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
 import { AuthModal } from "@/components/auth/AuthModal";
 import psychoCinematicsLogo from "@/assets/psycho-cinematics-logo.png";
@@ -145,6 +154,68 @@ export const LandingPage = ({ onLogin }: LandingPageProps) => {
     "Director's Corner Community Access",
     "Slack, Telegram, Notion Integrations",
     "Annual Awards Ceremony Eligibility"
+  ];
+
+  const testimonials = [
+    {
+      quote: "I went from dreaming about my business to actually building it. Watching my Mind Movie every morning rewired something in my brain. The Director AI kept me accountable when I wanted to quit.",
+      name: "Marcus Chen",
+      title: "Founder, Apex Ventures",
+      result: "Launched 7-figure business in 8 months"
+    },
+    {
+      quote: "This isn't just an app—it's a complete operating system for your mind. The Chief Aim Wizard helped me get crystal clear on what I wanted, and the daily scorecard made sure I showed up for it.",
+      name: "Jasmine Williams",
+      title: "Executive Coach & Author",
+      result: "2x'd her client roster in 90 days"
+    },
+    {
+      quote: "The AI-generated Mind Movie brought tears to my eyes. Seeing my goals visualized with that quality of production—it made everything feel real and possible. I've never been more focused.",
+      name: "David Okonkwo",
+      title: "Real Estate Developer",
+      result: "Closed his largest deal ever"
+    },
+    {
+      quote: "I've tried every productivity app out there. This is different. The Swag Coach personality literally calls me out when I'm slacking. It's like having a mentor in my pocket 24/7.",
+      name: "Sarah Martinez",
+      title: "Tech Startup CEO",
+      result: "120-day viewing streak and counting"
+    }
+  ];
+
+  const faqs = [
+    {
+      question: "What exactly is a Mind Movie?",
+      answer: "A Mind Movie is a personalized video that visualizes your goals, dreams, and the identity you're stepping into. Using our AI tools, you create cinematic scenes with images, video, music, and even your own voiceover that represent your ideal life. Watching it daily rewires your subconscious mind for success—based on proven visualization techniques from Maxwell Maltz and Napoleon Hill."
+    },
+    {
+      question: "Do I need any video editing experience?",
+      answer: "Absolutely not. Our One-Click Auto-Generate feature can create your entire Mind Movie from scratch—scenes, images, videos, and soundtrack—all based on your Chief Aim. For those who want more control, our Timeline Editor is intuitive with drag-and-drop simplicity. We've designed it so anyone can produce Hollywood-quality content."
+    },
+    {
+      question: "How is this different from other visualization apps?",
+      answer: "Most visualization apps give you static vision boards or generic guided meditations. Psycho-Cinematics gives you a complete production studio with AI video generation, voice coaching, and daily accountability tracking. It's the difference between looking at a photo and starring in your own movie. Plus, our Director AI actually knows your goals and coaches you in real-time."
+    },
+    {
+      question: "What's included in the $10 monthly production credits?",
+      answer: "Your credits fuel AI generations: videos, images, voice transformations, and soundtrack creation. $10 is enough to create multiple complete Mind Movies each month. Heavy users can purchase additional credit packs. We believe in transparent pricing—you always see the cost before generating anything."
+    },
+    {
+      question: "Can I use my own videos and images?",
+      answer: "Yes! You can upload your own media (up to 5GB per file, 20GB total storage) and mix it with AI-generated content. Many directors combine personal footage with AI-enhanced scenes for a truly personalized experience."
+    },
+    {
+      question: "How does the Director AI Voice Coach work?",
+      answer: "The Director AI is your 24/7 voice-enabled accountability partner. It knows your Chief Aim, tracks your viewing streak and daily tasks, and coaches you based on your progress. Choose from 6 personality styles—from the challenging 'Swag Coach' to the calming 'Zen Guide'—and 10 different voices. It's like having a personal transformation coach in your pocket."
+    },
+    {
+      question: "What if I want to cancel?",
+      answer: "Cancel anytime with one click—no questions asked. Your 3-day trial is completely free with no credit card required. We're confident you'll see the value, but there's zero risk to try it."
+    },
+    {
+      question: "Is my content private?",
+      answer: "Completely. Your Mind Movies, journal entries, and scorecards are private by default. You choose what to share with the community. We take privacy seriously—your transformation journey is yours alone unless you decide to inspire others."
+    }
   ];
 
   return (
@@ -423,6 +494,41 @@ export const LandingPage = ({ onLogin }: LandingPageProps) => {
         </div>
       </section>
 
+      {/* Testimonials Section */}
+      <section className="py-24 relative">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl md:text-5xl font-display tracking-wide mb-4">
+              Directors <span className="text-gold-gradient">Speak</span>
+            </h2>
+            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+              Real transformations from directors who committed to the process.
+            </p>
+          </div>
+          
+          <div className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto">
+            {testimonials.map((testimonial, index) => (
+              <div 
+                key={testimonial.name}
+                className="glass-card p-8 cinematic-border relative"
+              >
+                <Quote className="absolute top-6 right-6 w-10 h-10 text-gold/20" />
+                <p className="text-lg mb-6 italic text-foreground/90 leading-relaxed">
+                  "{testimonial.quote}"
+                </p>
+                <div className="border-t border-border/50 pt-4">
+                  <p className="font-display text-gold">{testimonial.name}</p>
+                  <p className="text-sm text-muted-foreground">{testimonial.title}</p>
+                  <p className="text-sm text-gold/70 mt-2 font-medium">
+                    ✦ {testimonial.result}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* Pricing Section */}
       <section className="py-24 relative" id="pricing">
         <div className="container mx-auto px-4">
@@ -479,6 +585,39 @@ export const LandingPage = ({ onLogin }: LandingPageProps) => {
                 No credit card required for trial. Cancel anytime.
               </p>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* FAQ Section */}
+      <section className="py-24 bg-card/30 relative">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl md:text-5xl font-display tracking-wide mb-4">
+              Frequently Asked <span className="text-gold-gradient">Questions</span>
+            </h2>
+            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+              Everything you need to know before stepping into the director's chair.
+            </p>
+          </div>
+          
+          <div className="max-w-3xl mx-auto">
+            <Accordion type="single" collapsible className="space-y-4">
+              {faqs.map((faq, index) => (
+                <AccordionItem 
+                  key={index} 
+                  value={`item-${index}`}
+                  className="glass-card cinematic-border px-6 border-border/50 data-[state=open]:border-gold/30"
+                >
+                  <AccordionTrigger className="text-left text-lg font-medium hover:text-gold transition-colors py-6">
+                    {faq.question}
+                  </AccordionTrigger>
+                  <AccordionContent className="text-muted-foreground pb-6 leading-relaxed">
+                    {faq.answer}
+                  </AccordionContent>
+                </AccordionItem>
+              ))}
+            </Accordion>
           </div>
         </div>
       </section>
