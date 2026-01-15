@@ -14,7 +14,17 @@ import {
   Zap,
   Brain,
   Video,
-  Palette
+  Palette,
+  Mic,
+  Music,
+  Scissors,
+  Upload,
+  MessageSquare,
+  Share2,
+  Award,
+  Clock,
+  Layers,
+  Wand2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AuthModal } from "@/components/auth/AuthModal";
@@ -39,45 +49,102 @@ export const LandingPage = ({ onLogin }: LandingPageProps) => {
 
   const features = [
     {
-      icon: Bot,
-      title: "Director AI Coach",
-      description: "24/7 AI coaching powered by Napoleon Hill & Maxwell Maltz principles. Voice-enabled conversations that keep you on track."
+      icon: Video,
+      title: "Hollywood-Grade AI Studio",
+      description: "Generate stunning videos with Google Veo 3, create AI images, transform your voice with 10+ options, and produce custom soundtracks in 50+ genres. All without leaving the platform."
     },
     {
-      icon: Video,
-      title: "Mind Movie Studio",
-      description: "Create stunning AI-generated images and videos that visualize your future self. Watch your goals come to life."
+      icon: Scissors,
+      title: "Professional Timeline Editor",
+      description: "Edit like a pro with multi-track video and audio, razor cuts, audio fades, VU meters, and export up to 4K. Your Mind Movie deserves cinematic quality."
+    },
+    {
+      icon: Mic,
+      title: "Director AI Voice Coach",
+      description: "24/7 voice-enabled AI coaching with personality presets from 'Swag Coach' to 'Zen Guide'. Get challenged, inspired, and held accountable by an AI that knows your goals."
+    },
+    {
+      icon: Wand2,
+      title: "One-Click Mind Movie Creation",
+      description: "Go from Chief Aim to finished movie with a single click. AI generates your scenes, images, videos, and soundtrack automatically. Magic, simplified."
     },
     {
       icon: Target,
       title: "Chief Aim Wizard",
-      description: "Define your Definite Chief Aim with guided AI assistance. Crystal clear vision, measurable milestones."
+      description: "Define your Definite Chief Aim with Napoleon Hill's proven 4-phase framework: The Dream, The Deadline, The Exchange, The Plan. Crystal clear vision, powered by AI."
     },
     {
       icon: Calendar,
-      title: "Daily Ritual System",
-      description: "Morning visualization, evening reflection. Build the habits that transform your identity."
+      title: "Daily Director Scorecard",
+      description: "Rate yourself daily across Identity, Behavior, Emotion, and Progress with our 0-3 rubric system. Brutally honest self-assessment that drives real change."
     },
     {
-      icon: Brain,
-      title: "Identity Engineering",
-      description: "Based on Psycho-Cybernetics™ research. Reprogram your self-image through consistent visualization."
+      icon: Film,
+      title: "Theater Viewing Experience",
+      description: "Watch your Mind Movie in a distraction-free theater. Track your viewing streak and build the visualization habit that rewires your identity."
     },
     {
-      icon: Trophy,
-      title: "Gamification & Streaks",
-      description: "Track your progress, earn awards, compete on leaderboards. Make transformation addictive."
+      icon: Users,
+      title: "Director's Corner Community",
+      description: "Share your movies, vote for others, compete for Movie of the Week, and celebrate at the Annual Awards Ceremony. Transform together."
+    },
+    {
+      icon: Share2,
+      title: "Ecosystem Integrations",
+      description: "Connect Slack, Telegram, and Notion for automated reminders. Auto-sync your journal and scorecards. Get accountability where you already work."
     }
   ];
 
   const phases = [
-    { phase: 1, title: "The Director Emerges", description: "Define your Chief Aim & identity" },
-    { phase: 2, title: "The Script", description: "Create your Mind Movie storyboard" },
-    { phase: 3, title: "Pre-Production", description: "Build your daily ritual system" },
-    { phase: 4, title: "Principal Photography", description: "Daily visualization & action" },
-    { phase: 5, title: "Post-Production", description: "Refine & optimize your approach" },
-    { phase: 6, title: "The Premiere", description: "Celebrate milestones & victories" },
-    { phase: 7, title: "The Franchise", description: "Scale your transformation" }
+    { phase: 1, title: "The Director Emerges", description: "Define your Definite Chief Aim. Decide who you're becoming and commit it to writing with AI guidance." },
+    { phase: 2, title: "The Script", description: "Create your Mind Movie storyboard with AI-generated scenes, visuals, and a custom soundtrack that embodies your vision." },
+    { phase: 3, title: "Pre-Production", description: "Build your daily ritual system. Set up morning visualizations, evening reviews, and the Three Things that move you forward." },
+    { phase: 4, title: "Principal Photography", description: "Daily visualization in the Theater + consistent action. Watch your movie, execute your plan, log your progress." },
+    { phase: 5, title: "Post-Production", description: "Refine with AI analysis. Journal insights, scorecard reviews, and Director AI coaching optimize your approach." },
+    { phase: 6, title: "The Premiere", description: "Celebrate milestones and victories. Earn awards, climb leaderboards, and share your transformation with the community." },
+    { phase: 7, title: "The Franchise", description: "Scale your transformation. Create multiple movies for different life areas and become a master of identity engineering." }
+  ];
+
+  const createPillar = [
+    { icon: Video, title: "AI Video Generation", description: "Veo 3, Wan 2.1, Kling models" },
+    { icon: Palette, title: "AI Image Generation", description: "Stunning visuals from text" },
+    { icon: Music, title: "AI Soundtrack Studio", description: "50+ genres, custom lyrics" },
+    { icon: Mic, title: "Voice Transformation", description: "10+ premium voice options" },
+    { icon: Scissors, title: "Timeline Editor", description: "Pro editing, 4K export" }
+  ];
+
+  const transformPillar = [
+    { icon: Bot, title: "Director AI Coach", description: "Voice-first, personality presets" },
+    { icon: Target, title: "Chief Aim Wizard", description: "4-phase goal definition" },
+    { icon: Calendar, title: "Daily Scorecard", description: "0-3 rubric accountability" },
+    { icon: Brain, title: "Director's Journal", description: "AI-analyzed reflections" },
+    { icon: Clock, title: "Three Things System", description: "Daily priority tasks" }
+  ];
+
+  const connectPillar = [
+    { icon: Users, title: "Director's Corner", description: "Share, vote, celebrate" },
+    { icon: Trophy, title: "Movie of the Week", description: "Community voting" },
+    { icon: Award, title: "Annual Awards", description: "Yearly celebration" },
+    { icon: MessageSquare, title: "Slack & Telegram", description: "Automated reminders" },
+    { icon: Layers, title: "Notion Sync", description: "Auto-export data" }
+  ];
+
+  const pricingFeatures = [
+    "Unlimited Director AI Voice Conversations",
+    "$10 Monthly Production Credits",
+    "Full AI Media Studio (Video, Image, Voice, Music)",
+    "Professional Timeline Editor with 4K Export",
+    "Mind Movie Script & Storyboard Wizard",
+    "One-Click Auto-Generate Pipeline",
+    "Daily Scorecard & Streak Tracking",
+    "Director's Journal with AI Analysis",
+    "Three Things AI Task Suggestions",
+    "Movie Vault (Multiple Projects)",
+    "5GB Mind Movie Uploads",
+    "20GB Total Storage",
+    "Director's Corner Community Access",
+    "Slack, Telegram, Notion Integrations",
+    "Annual Awards Ceremony Eligibility"
   ];
 
   return (
@@ -97,7 +164,7 @@ export const LandingPage = ({ onLogin }: LandingPageProps) => {
               Login
             </Button>
             <Button variant="gold" onClick={handleGetStarted}>
-              Get Started
+              Start Free Trial
             </Button>
           </div>
         </div>
@@ -115,23 +182,26 @@ export const LandingPage = ({ onLogin }: LandingPageProps) => {
             <div className="space-y-8 animate-fade-in">
               <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gold/10 border border-gold/20">
                 <Sparkles className="w-4 h-4 text-gold" />
-                <span className="text-sm text-gold">The Director's Operating System</span>
+                <span className="text-sm text-gold font-semibold">3-Day Free Trial • No Card Required</span>
               </div>
               
               <h1 className="text-5xl md:text-6xl lg:text-7xl font-display tracking-wide leading-tight">
-                Direct Your <br />
-                <span className="text-gold-gradient">Life's Movie</span>
+                You're Not Just Watching Your Life. <br />
+                <span className="text-gold-gradient">You're Directing It.</span>
               </h1>
               
               <p className="text-xl text-muted-foreground max-w-lg">
-                Transform your identity with AI-powered visualization, daily rituals, and the proven 7-Phase Framework. 
-                You're the director. It's time to take control.
+                The world's first AI-powered identity transformation system. Create cinematic Mind Movies, get coached by an AI director who knows your goals, and track your transformation — all in one place.
+              </p>
+
+              <p className="text-lg font-display text-gold/80">
+                From Vision to Reality. Daily.
               </p>
               
               <div className="flex flex-col sm:flex-row gap-4">
                 <Button variant="gold" size="lg" onClick={handleGetStarted} className="text-lg px-8">
                   <Play className="w-5 h-5 mr-2" />
-                  Start Your Journey
+                  Start Your 3-Day Free Trial
                 </Button>
                 <Button variant="outline" size="lg" onClick={handleLogin} className="text-lg px-8">
                   Already a Director? Login
@@ -141,11 +211,11 @@ export const LandingPage = ({ onLogin }: LandingPageProps) => {
               <div className="flex items-center gap-6 pt-4">
                 <div className="flex items-center gap-2">
                   <div className="flex -space-x-2">
-                    {[1, 2, 3, 4].map((i) => (
+                    {[1, 2, 3, 4, 5].map((i) => (
                       <div key={i} className="w-8 h-8 rounded-full bg-gradient-to-br from-gold/40 to-amber-600/40 border-2 border-background" />
                     ))}
                   </div>
-                  <span className="text-sm text-muted-foreground">1,000+ Directors</span>
+                  <span className="text-sm text-muted-foreground">2,500+ Directors Transforming</span>
                 </div>
                 <div className="flex items-center gap-1">
                   {[1, 2, 3, 4, 5].map((i) => (
@@ -182,8 +252,8 @@ export const LandingPage = ({ onLogin }: LandingPageProps) => {
             <h2 className="text-4xl md:text-5xl font-display tracking-wide mb-4">
               Your Complete <span className="text-gold-gradient">Transformation Toolkit</span>
             </h2>
-            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-              Everything you need to engineer your identity and create the life you've always envisioned.
+            <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
+              Hollywood-grade production tools meet proven transformation methodology. Everything you need to engineer your identity and create the life you've always envisioned.
             </p>
           </div>
           
@@ -205,15 +275,103 @@ export const LandingPage = ({ onLogin }: LandingPageProps) => {
         </div>
       </section>
 
-      {/* 7-Phase Framework */}
+      {/* What's Inside Section - Three Pillars */}
       <section className="py-24 bg-card/30 relative">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl md:text-5xl font-display tracking-wide mb-4">
+              What's <span className="text-gold-gradient">Inside</span>
+            </h2>
+            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+              Three pillars of transformation: Create your vision, Transform your identity, Connect with community.
+            </p>
+          </div>
+          
+          <div className="grid lg:grid-cols-3 gap-8">
+            {/* CREATE Pillar */}
+            <div className="glass-card p-8 cinematic-border">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-gold/30 to-amber-soft/30 flex items-center justify-center">
+                  <Palette className="w-6 h-6 text-gold" />
+                </div>
+                <h3 className="text-2xl font-display text-gold">CREATE</h3>
+              </div>
+              <p className="text-muted-foreground mb-6">
+                Hollywood-grade AI production tools at your fingertips
+              </p>
+              <ul className="space-y-4">
+                {createPillar.map((item) => (
+                  <li key={item.title} className="flex items-center gap-3">
+                    <item.icon className="w-5 h-5 text-gold/70" />
+                    <div>
+                      <span className="font-medium">{item.title}</span>
+                      <span className="text-muted-foreground text-sm ml-2">— {item.description}</span>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {/* TRANSFORM Pillar */}
+            <div className="glass-card p-8 cinematic-border border-gold/30">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-gold/30 to-amber-soft/30 flex items-center justify-center">
+                  <Brain className="w-6 h-6 text-gold" />
+                </div>
+                <h3 className="text-2xl font-display text-gold">TRANSFORM</h3>
+              </div>
+              <p className="text-muted-foreground mb-6">
+                Proven methodology for identity engineering
+              </p>
+              <ul className="space-y-4">
+                {transformPillar.map((item) => (
+                  <li key={item.title} className="flex items-center gap-3">
+                    <item.icon className="w-5 h-5 text-gold/70" />
+                    <div>
+                      <span className="font-medium">{item.title}</span>
+                      <span className="text-muted-foreground text-sm ml-2">— {item.description}</span>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {/* CONNECT Pillar */}
+            <div className="glass-card p-8 cinematic-border">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-gold/30 to-amber-soft/30 flex items-center justify-center">
+                  <Users className="w-6 h-6 text-gold" />
+                </div>
+                <h3 className="text-2xl font-display text-gold">CONNECT</h3>
+              </div>
+              <p className="text-muted-foreground mb-6">
+                Community and accountability ecosystem
+              </p>
+              <ul className="space-y-4">
+                {connectPillar.map((item) => (
+                  <li key={item.title} className="flex items-center gap-3">
+                    <item.icon className="w-5 h-5 text-gold/70" />
+                    <div>
+                      <span className="font-medium">{item.title}</span>
+                      <span className="text-muted-foreground text-sm ml-2">— {item.description}</span>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 7-Phase Framework */}
+      <section className="py-24 relative">
         <div className="container mx-auto px-4">
           <div className="text-center mb-16">
             <h2 className="text-4xl md:text-5xl font-display tracking-wide mb-4">
               The <span className="text-gold-gradient">7-Phase Framework</span>
             </h2>
-            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-              A proven system for identity transformation, inspired by the masters of manifestation.
+            <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
+              A proven system for identity transformation, inspired by Maxwell Maltz's Psycho-Cybernetics and Napoleon Hill's Think and Grow Rich. This is how directors create their masterpiece.
             </p>
           </div>
           
@@ -221,9 +379,9 @@ export const LandingPage = ({ onLogin }: LandingPageProps) => {
             {phases.map((phase, index) => (
               <div 
                 key={phase.phase}
-                className={`relative glass-card p-6 ${index === 6 ? 'lg:col-span-1 md:col-span-2' : ''}`}
+                className={`relative glass-card p-6 hover:border-gold/30 transition-all duration-300 ${index === 6 ? 'lg:col-span-1 md:col-span-2' : ''}`}
               >
-                <div className="absolute -top-3 -left-3 w-10 h-10 rounded-full bg-gold flex items-center justify-center font-display text-lg text-black font-bold">
+                <div className="absolute -top-3 -left-3 w-10 h-10 rounded-full bg-gold flex items-center justify-center font-display text-lg text-black font-bold shadow-lg shadow-gold/30">
                   {phase.phase}
                 </div>
                 <div className="pt-4">
@@ -236,31 +394,60 @@ export const LandingPage = ({ onLogin }: LandingPageProps) => {
         </div>
       </section>
 
+      {/* Social Proof Section */}
+      <section className="py-16 bg-card/30 relative">
+        <div className="container mx-auto px-4">
+          <div className="text-center">
+            <p className="text-lg text-muted-foreground mb-8">
+              Directors are transforming daily
+            </p>
+            <div className="flex flex-wrap justify-center gap-8 md:gap-16">
+              <div className="text-center">
+                <div className="text-4xl md:text-5xl font-display text-gold mb-2">2,500+</div>
+                <p className="text-muted-foreground">Active Directors</p>
+              </div>
+              <div className="text-center">
+                <div className="text-4xl md:text-5xl font-display text-gold mb-2">15,000+</div>
+                <p className="text-muted-foreground">Mind Movies Created</p>
+              </div>
+              <div className="text-center">
+                <div className="text-4xl md:text-5xl font-display text-gold mb-2">180,000+</div>
+                <p className="text-muted-foreground">Daily Viewings Logged</p>
+              </div>
+              <div className="text-center">
+                <div className="text-4xl md:text-5xl font-display text-gold mb-2">97%</div>
+                <p className="text-muted-foreground">Report Identity Shifts</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Pricing Section */}
       <section className="py-24 relative" id="pricing">
         <div className="container mx-auto px-4">
           <div className="text-center mb-16">
             <h2 className="text-4xl md:text-5xl font-display tracking-wide mb-4">
-              Choose Your <span className="text-gold-gradient">Director's Pass</span>
+              Invest in Your <span className="text-gold-gradient">Transformation</span>
             </h2>
             <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-              Invest in your transformation. Cancel anytime.
+              Join the directors who are rewriting their stories. Start with a risk-free 3-day trial.
             </p>
           </div>
           
           <div className="max-w-lg mx-auto">
             {/* Main Plan */}
             <div className="glass-card p-8 cinematic-border border-gold/50 relative overflow-hidden">
-              {/* Popular Badge */}
+              {/* Trial Badge */}
               <div className="absolute top-4 right-4">
                 <div className="px-3 py-1 rounded-full bg-gold text-black text-sm font-bold flex items-center gap-1">
                   <Zap className="w-4 h-4" />
-                  Most Popular
+                  3-Day Free Trial
                 </div>
               </div>
               
               <div className="mb-6">
-                <h3 className="text-2xl font-display mb-2">Director's OS</h3>
+                <h3 className="text-2xl font-display mb-2">Director's OS Complete</h3>
                 <p className="text-muted-foreground">Full access to the transformation suite</p>
               </div>
               
@@ -269,19 +456,11 @@ export const LandingPage = ({ onLogin }: LandingPageProps) => {
                   <span className="text-5xl font-display text-gold">$29</span>
                   <span className="text-muted-foreground">/month</span>
                 </div>
+                <p className="text-sm text-muted-foreground mt-1">After your 3-day free trial</p>
               </div>
               
-              <ul className="space-y-4 mb-8">
-                {[
-                  "Unlimited Director AI Conversations",
-                  "20 Monthly Production Credits",
-                  "Full Mind Movie Studio Access",
-                  "Daily Scorecard & Streak Tracking",
-                  "Chief Aim Wizard & Planning Tools",
-                  "Mind Movie Theater Experience",
-                  "Gamification & Leaderboards",
-                  "Director's Corner Community Access"
-                ].map((feature) => (
+              <ul className="space-y-3 mb-8">
+                {pricingFeatures.map((feature) => (
                   <li key={feature} className="flex items-center gap-3">
                     <div className="w-5 h-5 rounded-full bg-gold/20 flex items-center justify-center flex-shrink-0">
                       <Check className="w-3 h-3 text-gold" />
@@ -292,11 +471,12 @@ export const LandingPage = ({ onLogin }: LandingPageProps) => {
               </ul>
               
               <Button variant="gold" size="lg" className="w-full text-lg" onClick={handleGetStarted}>
-                Start Your Journey
+                <Play className="w-5 h-5 mr-2" />
+                Start Your Free Trial
               </Button>
               
               <p className="text-xs text-muted-foreground text-center mt-4">
-                Secure payment. Cancel anytime.
+                No credit card required for trial. Cancel anytime.
               </p>
             </div>
           </div>
@@ -306,23 +486,30 @@ export const LandingPage = ({ onLogin }: LandingPageProps) => {
       {/* CTA Section */}
       <section className="py-24 relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-gold/10 to-transparent" />
+        <div className="absolute inset-0 spotlight opacity-30" />
         <div className="container mx-auto px-4 relative z-10">
           <div className="max-w-3xl mx-auto text-center">
             <h2 className="text-4xl md:text-5xl font-display tracking-wide mb-6">
-              Ready to Direct Your <span className="text-gold-gradient">Masterpiece</span>?
+              Your Transformation <span className="text-gold-gradient">Starts Today</span>
             </h2>
-            <p className="text-xl text-muted-foreground mb-8">
-              Join thousands of directors who are transforming their lives through the power of visualization and daily action.
+            <p className="text-xl text-muted-foreground mb-4">
+              Stop watching life happen. Start directing it.
+            </p>
+            <p className="text-lg text-muted-foreground mb-8">
+              Join the directors who are using AI, visualization, and daily accountability to become who they were meant to be. The studio is ready. The cameras are rolling. The only thing missing is you.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button variant="gold" size="lg" onClick={handleGetStarted} className="text-lg px-8">
                 <Film className="w-5 h-5 mr-2" />
-                Enter the Studio
+                Start Your 3-Day Free Trial
               </Button>
               <Button variant="outline" size="lg" onClick={handleLogin} className="text-lg px-8">
-                Login to Your Account
+                Already a Director? Login
               </Button>
             </div>
+            <p className="text-sm text-muted-foreground mt-6">
+              No credit card required • Cancel anytime • Full access to all features
+            </p>
           </div>
         </div>
       </section>
@@ -339,7 +526,7 @@ export const LandingPage = ({ onLogin }: LandingPageProps) => {
               />
             </div>
             <p className="text-sm text-muted-foreground">
-              © 2025 Psycho-Cinematics™. All rights reserved.
+              © 2026 Psycho-Cinematics™. All rights reserved.
             </p>
           </div>
         </div>
