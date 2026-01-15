@@ -632,10 +632,14 @@ export type Database = {
           day_number: number | null
           director_character_name: string | null
           display_name: string | null
+          evening_scorecard_reminder_time: string | null
           id: string
+          journal_reminder_time: string | null
           last_viewing_date: string | null
           mind_movie_url: string | null
+          morning_ritual_reminder_time: string | null
           phone_number: string | null
+          push_notifications_enabled: boolean | null
           show_on_leaderboard: boolean
           updated_at: string
           user_id: string
@@ -659,10 +663,14 @@ export type Database = {
           day_number?: number | null
           director_character_name?: string | null
           display_name?: string | null
+          evening_scorecard_reminder_time?: string | null
           id?: string
+          journal_reminder_time?: string | null
           last_viewing_date?: string | null
           mind_movie_url?: string | null
+          morning_ritual_reminder_time?: string | null
           phone_number?: string | null
+          push_notifications_enabled?: boolean | null
           show_on_leaderboard?: boolean
           updated_at?: string
           user_id: string
@@ -686,10 +694,14 @@ export type Database = {
           day_number?: number | null
           director_character_name?: string | null
           display_name?: string | null
+          evening_scorecard_reminder_time?: string | null
           id?: string
+          journal_reminder_time?: string | null
           last_viewing_date?: string | null
           mind_movie_url?: string | null
+          morning_ritual_reminder_time?: string | null
           phone_number?: string | null
+          push_notifications_enabled?: boolean | null
           show_on_leaderboard?: boolean
           updated_at?: string
           user_id?: string
