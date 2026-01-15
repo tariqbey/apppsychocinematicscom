@@ -52,6 +52,8 @@ export const TheaterView = ({ onClose }: TheaterViewProps) => {
     if (videoRef.current) {
       videoRef.current.addEventListener("timeupdate", handleTimeUpdate);
       videoRef.current.addEventListener("loadedmetadata", handleLoadedMetadata);
+      videoRef.current.addEventListener("durationchange", handleLoadedMetadata);
+      videoRef.current.addEventListener("canplay", handleLoadedMetadata);
       videoRef.current.addEventListener("ended", handleVideoEnd);
     }
 
@@ -59,6 +61,8 @@ export const TheaterView = ({ onClose }: TheaterViewProps) => {
       if (videoRef.current) {
         videoRef.current.removeEventListener("timeupdate", handleTimeUpdate);
         videoRef.current.removeEventListener("loadedmetadata", handleLoadedMetadata);
+        videoRef.current.removeEventListener("durationchange", handleLoadedMetadata);
+        videoRef.current.removeEventListener("canplay", handleLoadedMetadata);
         videoRef.current.removeEventListener("ended", handleVideoEnd);
       }
     };
@@ -88,7 +92,16 @@ export const TheaterView = ({ onClose }: TheaterViewProps) => {
 
   const handleLoadedMetadata = () => {
     if (videoRef.current) {
-      setDuration(videoRef.current.duration);
+      let dur = videoRef.current.duration;
+      // Fallback to seekable range if duration is not finite
+      if (!Number.isFinite(dur) || dur <= 0) {
+        if (videoRef.current.seekable.length > 0) {
+          dur = videoRef.current.seekable.end(videoRef.current.seekable.length - 1);
+        }
+      }
+      if (dur && Number.isFinite(dur) && dur > 0) {
+        setDuration(dur);
+      }
     }
   };
 
@@ -210,6 +223,7 @@ export const TheaterView = ({ onClose }: TheaterViewProps) => {
   };
 
   const formatTime = (seconds: number) => {
+    if (!Number.isFinite(seconds) || seconds < 0) return "--:--";
     const mins = Math.floor(seconds / 60);
     const secs = Math.floor(seconds % 60);
     return `${mins}:${secs.toString().padStart(2, "0")}`;
