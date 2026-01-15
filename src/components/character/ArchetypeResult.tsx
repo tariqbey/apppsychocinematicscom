@@ -1,9 +1,11 @@
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Sparkles, Shield, AlertTriangle, Target, X, Crown, Zap, Sun, Moon } from "lucide-react";
+import { Sparkles, Shield, AlertTriangle, Target, X, Crown, Zap, Sun, Moon, Swords } from "lucide-react";
 import { Archetype, ARCHETYPES } from "./archetypes";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { CharacterTransformationCoach } from "./CharacterTransformationCoach";
 
 interface ArchetypeResultProps {
   archetype: Archetype;
@@ -13,6 +15,8 @@ interface ArchetypeResultProps {
 }
 
 export function ArchetypeResult({ archetype, scores, onClose, onRetake }: ArchetypeResultProps) {
+  const [showTransformationCoach, setShowTransformationCoach] = useState(false);
+  
   // Sort archetypes by score for ranking
   const rankedArchetypes = ARCHETYPES.map(a => ({
     ...a,
@@ -21,6 +25,16 @@ export function ArchetypeResult({ archetype, scores, onClose, onRetake }: Archet
 
   const topThree = rankedArchetypes.slice(0, 3);
   const maxScore = Math.max(...Object.values(scores), 1);
+
+  if (showTransformationCoach) {
+    return (
+      <CharacterTransformationCoach
+        archetype={archetype}
+        scores={scores}
+        onClose={() => setShowTransformationCoach(false)}
+      />
+    );
+  }
 
   return (
     <div className="fixed inset-0 bg-background/95 backdrop-blur-sm z-50 overflow-hidden">
@@ -196,6 +210,28 @@ export function ArchetypeResult({ archetype, scores, onClose, onRetake }: Archet
                   <p className="text-xs text-gold mb-1">Your Redemption Arc</p>
                   <p className="text-sm font-medium">{archetype.signature.redemptionBeat}</p>
                 </div>
+              </CardContent>
+            </Card>
+
+            {/* Transformation Coach CTA */}
+            <Card className="glass-card border-red-500/30 bg-gradient-to-br from-red-500/5 to-orange-500/5">
+              <CardContent className="py-6 text-center space-y-4">
+                <div className="w-14 h-14 rounded-full bg-gradient-to-br from-red-500/20 to-orange-500/20 flex items-center justify-center mx-auto">
+                  <Swords className="w-7 h-7 text-red-400" />
+                </div>
+                <div>
+                  <h3 className="font-display text-lg">Who Must You Become?</h3>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Get AI-powered analysis of the character transformation required to achieve your Chief Aim.
+                  </p>
+                </div>
+                <Button 
+                  onClick={() => setShowTransformationCoach(true)}
+                  className="gap-2 bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-700 hover:to-orange-700"
+                >
+                  <Target className="h-4 w-4" />
+                  Reveal My Required Character
+                </Button>
               </CardContent>
             </Card>
 

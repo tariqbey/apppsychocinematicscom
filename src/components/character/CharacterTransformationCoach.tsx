@@ -1,0 +1,386 @@
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Loader2, Target, Sparkles, AlertTriangle, ArrowRight, Crown, Swords, Shield, X } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
+import { Archetype } from "./archetypes";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { toast } from "sonner";
+
+interface TransformationAnalysis {
+  currentSelf: {
+    archetype: string;
+    strengths: string[];
+    liabilities: string[];
+    blindSpots: string[];
+  };
+  requiredCharacter: {
+    name: string;
+    traits: string[];
+    behaviors: string[];
+    mindset: string;
+  };
+  gap: {
+    whatMustDie: string[];
+    whatMustEmerge: string[];
+    dailyPractices: string[];
+  };
+  script: {
+    role: string;
+    motivation: string;
+    arc: string;
+  };
+}
+
+interface CharacterTransformationCoachProps {
+  archetype: Archetype;
+  scores: Record<string, number>;
+  onClose: () => void;
+}
+
+export function CharacterTransformationCoach({ 
+  archetype, 
+  scores, 
+  onClose 
+}: CharacterTransformationCoachProps) {
+  const { user } = useAuth();
+  const [analysis, setAnalysis] = useState<TransformationAnalysis | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [chiefAim, setChiefAim] = useState<{
+    what: string | null;
+    byWhen: string | null;
+    exchange: string | null;
+    plan: string | null;
+  } | null>(null);
+
+  const generateTransformationPlan = async () => {
+    if (!user) return;
+    
+    setIsLoading(true);
+    
+    try {
+      // Fetch user's chief aim
+      const { data: profileData } = await supabase
+        .from("user_profiles")
+        .select("chief_aim_what, chief_aim_by_when, chief_aim_exchange, chief_aim_plan, display_name")
+        .eq("user_id", user.id)
+        .single();
+
+      if (!profileData?.chief_aim_what) {
+        toast.error("You need to define your Definite Chief Aim first to get transformation guidance.");
+        setIsLoading(false);
+        return;
+      }
+
+      setChiefAim({
+        what: profileData.chief_aim_what,
+        byWhen: profileData.chief_aim_by_when,
+        exchange: profileData.chief_aim_exchange,
+        plan: profileData.chief_aim_plan
+      });
+
+      // Call AI to generate the transformation analysis
+      const { data, error } = await supabase.functions.invoke("analyze-character-transformation", {
+        body: {
+          archetype: {
+            id: archetype.id,
+            name: archetype.name,
+            strengths: archetype.strengths,
+            weaknesses: archetype.weaknesses,
+            lightShadow: archetype.lightShadow,
+            storyFuel: archetype.storyFuel,
+            conflictPattern: archetype.conflictPattern
+          },
+          archetypeScores: scores,
+          chiefAim: {
+            what: profileData.chief_aim_what,
+            byWhen: profileData.chief_aim_by_when,
+            exchange: profileData.chief_aim_exchange,
+            plan: profileData.chief_aim_plan
+          },
+          userName: profileData.display_name
+        }
+      });
+
+      if (error) throw error;
+      
+      setAnalysis(data.analysis);
+    } catch (error) {
+      console.error("Error generating transformation plan:", error);
+      toast.error("Failed to generate transformation analysis. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-background/95 backdrop-blur-sm z-50 overflow-hidden">
+      <ScrollArea className="h-full">
+        <div className="min-h-screen py-8 px-4">
+          <div className="max-w-3xl mx-auto space-y-6">
+            {/* Close Button */}
+            <div className="flex justify-end">
+              <Button variant="ghost" size="icon" onClick={onClose}>
+                <X className="h-5 w-5" />
+              </Button>
+            </div>
+
+            {!analysis && !isLoading && (
+              <Card className="glass-card border-gold/50">
+                <CardHeader className="text-center space-y-4">
+                  <div className="w-20 h-20 rounded-full bg-gradient-to-br from-red-500/20 to-orange-500/20 flex items-center justify-center mx-auto">
+                    <Target className="w-10 h-10 text-red-400" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-2xl font-display tracking-wide">
+                      Character Transformation Analysis
+                    </CardTitle>
+                    <p className="text-muted-foreground mt-2 max-w-md mx-auto">
+                      Based on your archetype profile and Definite Chief Aim, discover who you must become to achieve your Final Scene.
+                    </p>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="p-4 rounded-lg bg-muted/30 border border-border">
+                    <h4 className="font-medium mb-2 flex items-center gap-2">
+                      <Crown className="h-4 w-4 text-gold" />
+                      Current Archetype: {archetype.name}
+                    </h4>
+                    <p className="text-sm text-muted-foreground">
+                      The AI will analyze the gap between who you are now and who you need to become.
+                    </p>
+                  </div>
+
+                  <div className="text-center">
+                    <p className="text-sm text-muted-foreground mb-4">
+                      "It's like going out for a role in a movie. Here's the script. This is the character you must become for the Oscar-winning performance."
+                    </p>
+                    <Button 
+                      onClick={generateTransformationPlan}
+                      className="gap-2 bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-700 hover:to-orange-700"
+                      size="lg"
+                    >
+                      <Sparkles className="h-4 w-4" />
+                      Reveal My Required Character
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {isLoading && (
+              <Card className="glass-card">
+                <CardContent className="flex flex-col items-center justify-center py-16">
+                  <Loader2 className="h-10 w-10 animate-spin text-gold mb-4" />
+                  <p className="text-muted-foreground">Analyzing your character transformation path...</p>
+                  <p className="text-xs text-muted-foreground mt-2">This may take a moment</p>
+                </CardContent>
+              </Card>
+            )}
+
+            {analysis && (
+              <>
+                {/* The Script Header */}
+                <Card className="glass-card border-gold/50 overflow-hidden">
+                  <div className="absolute inset-0 bg-gradient-to-br from-red-500/5 via-transparent to-orange-500/5" />
+                  <CardHeader className="relative text-center pb-2">
+                    <p className="text-xs text-gold font-medium mb-2">YOUR CASTING CALL</p>
+                    <CardTitle className="text-3xl font-display tracking-wide text-gold-gradient">
+                      The Role: {analysis.requiredCharacter.name}
+                    </CardTitle>
+                    <p className="text-muted-foreground mt-2">
+                      To achieve your Final Scene, this is who you must become.
+                    </p>
+                  </CardHeader>
+                  <CardContent className="relative space-y-4">
+                    <div className="p-4 rounded-lg bg-black/20 border border-gold/20">
+                      <p className="text-sm font-medium text-gold mb-1">The Script</p>
+                      <p className="text-lg italic">"{analysis.script.role}"</p>
+                      <p className="text-sm text-muted-foreground mt-2">{analysis.script.motivation}</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-xs text-muted-foreground">Your arc:</p>
+                      <p className="text-sm font-medium">{analysis.script.arc}</p>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Current Self Analysis */}
+                <Card className="glass-card cinematic-border">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-lg font-display tracking-wide flex items-center gap-2">
+                      <Shield className="h-5 w-5 text-slate-400" />
+                      Who You Are Now: The {analysis.currentSelf.archetype}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div>
+                      <p className="text-xs text-green-500 font-medium mb-2">ASSETS (Use These)</p>
+                      <ul className="space-y-1">
+                        {analysis.currentSelf.strengths.map((s, i) => (
+                          <li key={i} className="text-sm flex items-start gap-2">
+                            <span className="text-green-500 mt-1">✓</span>
+                            {s}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                    <div>
+                      <p className="text-xs text-red-400 font-medium mb-2">LIABILITIES (These Will Sabotage You)</p>
+                      <ul className="space-y-1">
+                        {analysis.currentSelf.liabilities.map((l, i) => (
+                          <li key={i} className="text-sm flex items-start gap-2">
+                            <span className="text-red-400 mt-1">✗</span>
+                            {l}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                    <div>
+                      <p className="text-xs text-amber-500 font-medium mb-2">BLIND SPOTS (You Won't See These Coming)</p>
+                      <ul className="space-y-1">
+                        {analysis.currentSelf.blindSpots.map((b, i) => (
+                          <li key={i} className="text-sm flex items-start gap-2">
+                            <AlertTriangle className="h-3 w-3 text-amber-500 mt-1 shrink-0" />
+                            {b}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Required Character */}
+                <Card className="glass-card border-gold/30">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-lg font-display tracking-wide flex items-center gap-2">
+                      <Crown className="h-5 w-5 text-gold" />
+                      The Character You Must Become
+                    </CardTitle>
+                    <p className="text-sm text-muted-foreground">
+                      This is not optional. Your Chief Aim demands this transformation.
+                    </p>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="p-4 rounded-lg bg-gold/5 border border-gold/20">
+                      <p className="text-xs text-gold font-medium mb-2">REQUIRED MINDSET</p>
+                      <p className="text-sm">{analysis.requiredCharacter.mindset}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gold font-medium mb-2">CHARACTER TRAITS TO EMBODY</p>
+                      <div className="flex flex-wrap gap-2">
+                        {analysis.requiredCharacter.traits.map((t, i) => (
+                          <span key={i} className="px-3 py-1 rounded-full bg-gold/10 text-gold text-sm border border-gold/20">
+                            {t}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gold font-medium mb-2">DAILY BEHAVIORS (Non-Negotiable)</p>
+                      <ul className="space-y-2">
+                        {analysis.requiredCharacter.behaviors.map((b, i) => (
+                          <li key={i} className="text-sm flex items-start gap-2">
+                            <ArrowRight className="h-4 w-4 text-gold shrink-0 mt-0.5" />
+                            {b}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* The Gap - What Must Change */}
+                <Card className="glass-card cinematic-border">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-lg font-display tracking-wide flex items-center gap-2">
+                      <Swords className="h-5 w-5 text-red-400" />
+                      The Transformation Gap
+                    </CardTitle>
+                    <p className="text-sm text-muted-foreground">
+                      The old you cannot achieve the new goal. Here's what changes.
+                    </p>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid md:grid-cols-2 gap-4">
+                      <div className="p-4 rounded-lg bg-red-500/5 border border-red-500/20">
+                        <p className="text-xs text-red-400 font-medium mb-2">WHAT MUST DIE</p>
+                        <ul className="space-y-2">
+                          {analysis.gap.whatMustDie.map((d, i) => (
+                            <li key={i} className="text-sm text-red-300 flex items-start gap-2">
+                              <span className="text-red-500">💀</span>
+                              {d}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                      <div className="p-4 rounded-lg bg-green-500/5 border border-green-500/20">
+                        <p className="text-xs text-green-400 font-medium mb-2">WHAT MUST EMERGE</p>
+                        <ul className="space-y-2">
+                          {analysis.gap.whatMustEmerge.map((e, i) => (
+                            <li key={i} className="text-sm text-green-300 flex items-start gap-2">
+                              <span className="text-green-500">🌱</span>
+                              {e}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    </div>
+                    <div className="p-4 rounded-lg bg-primary/5 border border-primary/20">
+                      <p className="text-xs text-primary font-medium mb-2">DAILY PRACTICES FOR TRANSFORMATION</p>
+                      <ul className="space-y-2">
+                        {analysis.gap.dailyPractices.map((p, i) => (
+                          <li key={i} className="text-sm flex items-start gap-2">
+                            <span className="text-primary font-bold">{i + 1}.</span>
+                            {p}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Chief Aim Reference */}
+                {chiefAim && (
+                  <Card className="glass-card">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-lg font-display tracking-wide">
+                        Your Final Scene
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-sm text-muted-foreground italic">"{chiefAim.what}"</p>
+                      {chiefAim.byWhen && (
+                        <p className="text-xs text-gold mt-2">By: {chiefAim.byWhen}</p>
+                      )}
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Bottom Quote */}
+                <div className="text-center py-6">
+                  <p className="text-sm text-muted-foreground italic max-w-lg mx-auto">
+                    "At the end of the day, the goal is just the carrot on a stick. The real goal is the character modification. 
+                    Who did you have to become to achieve that objective? Because when you pass away, those things do not go with you. 
+                    The only thing that goes with you is your character."
+                  </p>
+                </div>
+
+                {/* Actions */}
+                <div className="flex justify-center gap-4 pb-8">
+                  <Button variant="outline" onClick={onClose}>
+                    Close
+                  </Button>
+                  <Button variant="gold" onClick={generateTransformationPlan}>
+                    Regenerate Analysis
+                  </Button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      </ScrollArea>
+    </div>
+  );
+}
