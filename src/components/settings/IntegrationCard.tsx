@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
 import { Loader2, Check, Trash2, ExternalLink, Eye, EyeOff, LucideIcon } from "lucide-react";
 
 interface IntegrationCardProps {
@@ -22,6 +23,7 @@ interface IntegrationCardProps {
     label: string;
     placeholder: string;
     type?: string;
+    isToggle?: boolean;
   }[];
   note?: string;
 }
@@ -143,12 +145,27 @@ export function IntegrationCard({
             {additionalFields?.map((field) => (
               <div key={field.key} className="space-y-2">
                 <Label>{field.label}</Label>
-                <Input
-                  type={field.type || "text"}
-                  placeholder={field.placeholder}
-                  value={additionalValues[field.key] || ""}
-                  onChange={(e) => setAdditionalValues(prev => ({ ...prev, [field.key]: e.target.value }))}
-                />
+                {field.isToggle ? (
+                  <div className="flex items-center space-x-2">
+                    <Switch
+                      id={field.key}
+                      checked={additionalValues[field.key] === "true"}
+                      onCheckedChange={(checked) => 
+                        setAdditionalValues(prev => ({ ...prev, [field.key]: checked ? "true" : "false" }))
+                      }
+                    />
+                    <Label htmlFor={field.key} className="text-sm text-muted-foreground">
+                      {additionalValues[field.key] === "true" ? "Enabled" : "Disabled"}
+                    </Label>
+                  </div>
+                ) : (
+                  <Input
+                    type={field.type || "text"}
+                    placeholder={field.placeholder}
+                    value={additionalValues[field.key] || ""}
+                    onChange={(e) => setAdditionalValues(prev => ({ ...prev, [field.key]: e.target.value }))}
+                  />
+                )}
               </div>
             ))}
 

@@ -110,6 +110,29 @@ export function useJournal() {
         description: "Your journal entry has been recorded.",
       });
 
+      // Auto-sync to Notion if enabled
+      try {
+        const { data: notionIntegration } = await supabase
+          .from("user_integrations")
+          .select("settings")
+          .eq("user_id", user.id)
+          .eq("service_name", "notion")
+          .single();
+
+        const settings = notionIntegration?.settings as Record<string, string> | null;
+        if (settings?.auto_sync_journal === "true") {
+          supabase.functions.invoke("notion-sync", {
+            body: { type: "journal", entryId: typedData.id },
+          }).then(({ error: syncError }) => {
+            if (syncError) {
+              console.warn("Notion auto-sync failed:", syncError);
+            }
+          });
+        }
+      } catch (syncCheckError) {
+        // Silently ignore if no Notion integration
+      }
+
       return typedData;
     } catch (error) {
       console.error("Error creating journal entry:", error);
