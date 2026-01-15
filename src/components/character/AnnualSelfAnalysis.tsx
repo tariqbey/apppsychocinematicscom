@@ -203,10 +203,11 @@ const SELF_ANALYSIS_QUESTIONS: AnalysisQuestion[] = [
 ];
 
 interface AnnualSelfAnalysisProps {
-  onClose: () => void;
+  onClose?: () => void;
+  inline?: boolean;
 }
 
-export function AnnualSelfAnalysis({ onClose }: AnnualSelfAnalysisProps) {
+export function AnnualSelfAnalysis({ onClose, inline = false }: AnnualSelfAnalysisProps) {
   const { user } = useAuth();
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [responses, setResponses] = useState<Record<string, string>>({});

@@ -1,10 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, Target, Sparkles, AlertTriangle, ArrowRight, Crown, Swords, Shield, X } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { Archetype } from "./archetypes";
+import { Archetype, ARCHETYPES } from "./archetypes";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
 
@@ -34,19 +34,24 @@ interface TransformationAnalysis {
 }
 
 interface CharacterTransformationCoachProps {
-  archetype: Archetype;
-  scores: Record<string, number>;
-  onClose: () => void;
+  archetype?: Archetype;
+  scores?: Record<string, number>;
+  onClose?: () => void;
+  inline?: boolean;
 }
 
 export function CharacterTransformationCoach({ 
-  archetype, 
-  scores, 
-  onClose 
+  archetype: archetypeProp, 
+  scores: scoresProp, 
+  onClose,
+  inline = false
 }: CharacterTransformationCoachProps) {
   const { user } = useAuth();
   const [analysis, setAnalysis] = useState<TransformationAnalysis | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [loadingData, setLoadingData] = useState(!archetypeProp);
+  const [archetype, setArchetype] = useState<Archetype | null>(archetypeProp || null);
+  const [scores, setScores] = useState<Record<string, number>>(scoresProp || {});
   const [chiefAim, setChiefAim] = useState<{
     what: string | null;
     byWhen: string | null;
@@ -54,8 +59,45 @@ export function CharacterTransformationCoach({
     plan: string | null;
   } | null>(null);
 
+  // Fetch archetype and scores from database if not provided
+  useEffect(() => {
+    const fetchArchetypeData = async () => {
+      if (!user || archetypeProp) {
+        setLoadingData(false);
+        return;
+      }
+
+      try {
+        const { data: profileData } = await supabase
+          .from("character_profiles")
+          .select("archetype, archetype_score, transformation_analysis")
+          .eq("user_id", user.id)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .single();
+
+        if (profileData) {
+          const foundArchetype = ARCHETYPES.find(a => a.id === profileData.archetype);
+          if (foundArchetype) {
+            setArchetype(foundArchetype);
+            setScores(profileData.archetype_score as Record<string, number> || {});
+          }
+          if (profileData.transformation_analysis) {
+            setAnalysis(profileData.transformation_analysis as unknown as TransformationAnalysis);
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching archetype data:", error);
+      } finally {
+        setLoadingData(false);
+      }
+    };
+
+    fetchArchetypeData();
+  }, [user, archetypeProp]);
+
   const generateTransformationPlan = async () => {
-    if (!user) return;
+    if (!user || !archetype) return;
     
     setIsLoading(true);
     
@@ -121,17 +163,42 @@ export function CharacterTransformationCoach({
     }
   };
 
-  return (
-    <div className="fixed inset-0 bg-background/95 backdrop-blur-sm z-50 overflow-hidden">
-      <ScrollArea className="h-full">
-        <div className="min-h-screen py-8 px-4">
-          <div className="max-w-3xl mx-auto space-y-6">
-            {/* Close Button */}
-            <div className="flex justify-end">
-              <Button variant="ghost" size="icon" onClick={onClose}>
-                <X className="h-5 w-5" />
-              </Button>
-            </div>
+  if (loadingData) {
+    return (
+      <Card className="glass-card">
+        <CardContent className="flex flex-col items-center justify-center py-16">
+          <Loader2 className="h-10 w-10 animate-spin text-gold mb-4" />
+          <p className="text-muted-foreground">Loading character data...</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (!archetype) {
+    return (
+      <Card className="glass-card border-amber-500/30">
+        <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+          <AlertTriangle className="h-12 w-12 text-amber-400 mb-4" />
+          <h3 className="text-lg font-semibold mb-2">No Archetype Found</h3>
+          <p className="text-muted-foreground max-w-md mb-4">
+            Complete the Character Survey in the Archetype tab first to discover your Director type.
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const content = (
+    <div className={inline ? "space-y-6" : "min-h-screen py-8 px-4"}>
+      <div className="max-w-3xl mx-auto space-y-6">
+        {/* Close Button - only show in modal mode */}
+        {!inline && onClose && (
+          <div className="flex justify-end">
+            <Button variant="ghost" size="icon" onClick={onClose}>
+              <X className="h-5 w-5" />
+            </Button>
+          </div>
+        )}
 
             {!analysis && !isLoading && (
               <Card className="glass-card border-gold/50">
@@ -376,17 +443,29 @@ export function CharacterTransformationCoach({
 
                 {/* Actions */}
                 <div className="flex justify-center gap-4 pb-8">
-                  <Button variant="outline" onClick={onClose}>
-                    Close
-                  </Button>
+                  {onClose && (
+                    <Button variant="outline" onClick={onClose}>
+                      Close
+                    </Button>
+                  )}
                   <Button variant="gold" onClick={generateTransformationPlan}>
                     Regenerate Analysis
                   </Button>
                 </div>
               </>
             )}
-          </div>
         </div>
+      </div>
+  );
+
+  if (inline) {
+    return content;
+  }
+
+  return (
+    <div className="fixed inset-0 bg-background/95 backdrop-blur-sm z-50 overflow-hidden">
+      <ScrollArea className="h-full">
+        {content}
       </ScrollArea>
     </div>
   );

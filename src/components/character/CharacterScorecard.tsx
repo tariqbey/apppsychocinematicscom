@@ -40,8 +40,9 @@ interface TransformationAnalysis {
 }
 
 interface CharacterScorecardProps {
-  onClose: () => void;
+  onClose?: () => void;
   onSubmitSuccess?: () => void;
+  inline?: boolean;
 }
 
 const SCORE_RUBRIC = [
@@ -51,7 +52,7 @@ const SCORE_RUBRIC = [
   { score: 3, label: "Oscar-Worthy", description: "Fully lived this trait - performance was on point" },
 ];
 
-export function CharacterScorecard({ onClose, onSubmitSuccess }: CharacterScorecardProps) {
+export function CharacterScorecard({ onClose, onSubmitSuccess, inline = false }: CharacterScorecardProps) {
   const { user, session } = useAuth();
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
