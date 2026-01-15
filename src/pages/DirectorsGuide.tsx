@@ -201,11 +201,15 @@ const tutorialSections: TutorialSection[] = [
     id: "director-ai",
     icon: <Mic className="w-6 h-6" />,
     title: "Director AI Coach",
-    description: "Your personal Jarvis-like voice coach",
+    description: "Your personal Jarvis-like voice coach with customizable personality",
     steps: [
       {
         title: "Start a Session",
         content: "Click 'Talk to Director AI' on your dashboard to launch the full-screen voice coaching interface."
+      },
+      {
+        title: "Choose Your Voice & Personality",
+        content: "Click the Settings icon to select from 10 different AI voices (5 male, 5 female) and 6 personality presets: Swag Coach, Executive Coach, Hype Master, Zen Guide, Drill Sergeant, or Best Friend."
       },
       {
         title: "Speak Naturally",
@@ -221,9 +225,10 @@ const tutorialSections: TutorialSection[] = [
       }
     ],
     tips: [
+      "Choose a personality that matches your coaching style preference",
       "Use voice mode for a hands-free coaching experience",
       "The AI remembers your conversation history for continuity",
-      "Ask for specific help: 'Help me with my fear of failure'"
+      "Press 'Stop & Exit' to immediately end the conversation and silence audio"
     ]
   },
   {
@@ -282,6 +287,35 @@ const tutorialSections: TutorialSection[] = [
       "All integrations are managed in Settings → Integrations",
       "Notion sync includes your Chief Aim components for backup",
       "Social posts include inspirational hashtags automatically"
+    ]
+  },
+  {
+    id: "community",
+    icon: <Users className="w-6 h-6" />,
+    title: "Community & Awards",
+    description: "Share your work and compete for recognition",
+    steps: [
+      {
+        title: "Submit to Community",
+        content: "In the Movie Vault, click 'Submit to Community' on any completed Mind Movie to share it with other Directors for voting and feedback."
+      },
+      {
+        title: "Vote for Mind Movies",
+        content: "Browse community submissions and vote for your favorites. Top-voted movies are featured as 'Movie of the Week'."
+      },
+      {
+        title: "Earn Recognition",
+        content: "High performers are recognized as 'Director of the Month' based on streak consistency, scorecard averages, and community engagement."
+      },
+      {
+        title: "Annual Awards Ceremony",
+        content: "Visit the Awards Ceremony page to see yearly winners across categories like Best Mind Movie, Longest Streak, and Top Director Score."
+      }
+    ],
+    tips: [
+      "Submitting to community helps inspire other Directors on their journey",
+      "Movie of the Week and Director of the Month are selected weekly/monthly",
+      "Check the Awards page at /awards to see past winners and current standings"
     ]
   }
 ];
@@ -343,6 +377,30 @@ const faqs = [
   {
     question: "Can I cancel my subscription?",
     answer: "Yes, you can cancel anytime from Settings → Subscription. You'll retain access until the end of your billing period. Purchased credits never expire and remain available even after cancellation."
+  },
+  {
+    question: "How do I change the Director AI voice?",
+    answer: "In the Director AI interface, click the Settings icon (gear) to access Voice & Personality settings. Choose from 10 AI voices — 5 male (Adam, Antoni, Charlie, Daniel, Marcus) and 5 female (Charlotte, Jessica, Lily, Sarah, Nicole). Your selection is saved automatically."
+  },
+  {
+    question: "What personality presets are available for Director AI?",
+    answer: "There are 6 personality presets: Swag Coach (confident street energy), Executive Coach (professional strategic), Hype Master (high energy motivation), Zen Guide (calm mindful approach), Drill Sergeant (direct no-nonsense), and Best Friend (warm supportive). Each changes how the AI communicates while maintaining the Psycho-Cinematics methodology."
+  },
+  {
+    question: "How do I submit my Mind Movie to the community?",
+    answer: "Open the Movie Vault from the Mind Movie Studio. Find a completed movie with a video, then click 'Submit to Community'. Add a description and confirm. Your movie will appear in the community voting pool where other Directors can vote and provide feedback."
+  },
+  {
+    question: "What is Movie of the Week?",
+    answer: "Each week, administrators select the top community-voted Mind Movie to be featured. Winners get prominent placement on the platform and recognition in the community. Keep creating great content and engaging with others to increase your chances."
+  },
+  {
+    question: "How do I become Director of the Month?",
+    answer: "Director of the Month is awarded based on streak consistency, daily scorecard averages, and community engagement. Maintain your daily rituals, score honestly on your scorecards, participate in the community, and you'll be in the running."
+  },
+  {
+    question: "Where can I see the Annual Awards?",
+    answer: "Visit the Awards Ceremony page at /awards to see yearly statistics, category winners, and the leaderboards. Awards include Best Mind Movie, Longest Streak, Top Director Score, Most Movies Created, Community Favorite, and Rising Star."
   }
 ];
 
@@ -546,6 +604,10 @@ const DirectorsGuide = () => {
                 <TabsTrigger value="integrations" className="gap-2">
                   <Plug className="w-4 h-4" />
                   Integrations
+                </TabsTrigger>
+                <TabsTrigger value="community" className="gap-2">
+                  <Trophy className="w-4 h-4" />
+                  Community
                 </TabsTrigger>
               </TabsList>
 
@@ -978,7 +1040,7 @@ const DirectorsGuide = () => {
                       Director AI Coach
                     </CardTitle>
                     <CardDescription>
-                      Your personal Jarvis-like voice coach trained in Psycho-Cinematics™
+                      Your personal Jarvis-like voice coach with customizable voice and personality
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-6">
@@ -991,7 +1053,50 @@ const DirectorsGuide = () => {
                     </div>
 
                     <div>
-                      <h4 className="font-semibold mb-4">Features</h4>
+                      <h4 className="font-semibold mb-4 flex items-center gap-2">
+                        <Settings className="w-5 h-5 text-purple-400" />
+                        Voice & Personality Settings
+                      </h4>
+                      <p className="text-sm text-muted-foreground mb-3">
+                        Click the Settings icon in the Director AI interface to customize your coaching experience.
+                      </p>
+                      <div className="grid sm:grid-cols-2 gap-4">
+                        <div className="p-4 rounded-lg border border-border/50">
+                          <div className="flex items-center gap-2 mb-2">
+                            <Volume2 className="w-5 h-5 text-blue-400" />
+                            <span className="font-medium">Voice Selection</span>
+                          </div>
+                          <p className="text-sm text-muted-foreground mb-2">
+                            Choose from 10 AI voices — 5 male and 5 female options with unique characteristics.
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            Options include: Adam, Antoni, Charlie, Daniel, Marcus (male) and Charlotte, Jessica, Lily, Sarah, Nicole (female).
+                          </p>
+                        </div>
+                        <div className="p-4 rounded-lg border border-border/50">
+                          <div className="flex items-center gap-2 mb-2">
+                            <Star className="w-5 h-5 text-amber-400" />
+                            <span className="font-medium">Personality Presets</span>
+                          </div>
+                          <p className="text-sm text-muted-foreground mb-2">
+                            Select a coaching style that resonates with you:
+                          </p>
+                          <ul className="text-xs text-muted-foreground space-y-1">
+                            <li>• <strong>Swag Coach</strong> — Confident, street-smart energy</li>
+                            <li>• <strong>Executive Coach</strong> — Professional, strategic</li>
+                            <li>• <strong>Hype Master</strong> — High energy, motivational</li>
+                            <li>• <strong>Zen Guide</strong> — Calm, mindful approach</li>
+                            <li>• <strong>Drill Sergeant</strong> — Direct, no-nonsense</li>
+                            <li>• <strong>Best Friend</strong> — Warm, supportive</li>
+                          </ul>
+                        </div>
+                      </div>
+                    </div>
+
+                    <Separator />
+
+                    <div>
+                      <h4 className="font-semibold mb-4">Core Features</h4>
                       <ul className="space-y-3 text-sm text-muted-foreground">
                         <li className="flex items-start gap-2">
                           <Mic className="w-4 h-4 text-gold mt-0.5" />
@@ -1020,6 +1125,13 @@ const DirectorsGuide = () => {
                         <li><strong>3. Reset</strong> — Take 3 deep breaths, reconnect with your Director self</li>
                         <li><strong>4. Resume</strong> — Take an aligned action that matches your Chief Aim identity</li>
                       </ol>
+                    </div>
+
+                    <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/30">
+                      <p className="text-sm text-muted-foreground">
+                        <strong className="text-red-400">Stop & Exit:</strong> Press the "Stop & Exit" button at any time to immediately 
+                        end the conversation and silence all audio playback.
+                      </p>
                     </div>
                   </CardContent>
                 </Card>
@@ -1251,6 +1363,126 @@ const DirectorsGuide = () => {
                       <p className="text-xs text-muted-foreground mt-3">
                         Note: Instagram and TikTok have limited API support — content may be copied for manual posting.
                       </p>
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              {/* Community & Awards */}
+              <TabsContent value="community" className="space-y-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Trophy className="w-6 h-6 text-gold" />
+                      Community & Awards
+                    </CardTitle>
+                    <CardDescription>
+                      Share your work, vote for others, and earn recognition
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    <div className="p-4 rounded-xl bg-gold/10 border border-gold/30">
+                      <h4 className="font-semibold text-gold mb-2">Why Community Matters</h4>
+                      <p className="text-sm text-muted-foreground">
+                        Sharing your Mind Movie and engaging with other Directors creates accountability, 
+                        inspiration, and healthy competition. See what others are manifesting and let their 
+                        success fuel your own journey.
+                      </p>
+                    </div>
+
+                    <div>
+                      <h4 className="font-semibold mb-4 flex items-center gap-2">
+                        <Upload className="w-5 h-5 text-blue-400" />
+                        Submit to Community
+                      </h4>
+                      <p className="text-sm text-muted-foreground mb-3">
+                        Share your completed Mind Movie with the community for voting and feedback.
+                      </p>
+                      <div className="p-4 rounded-lg bg-muted/30 border border-border/50 space-y-3">
+                        <p className="text-sm font-medium">How to Submit:</p>
+                        <ol className="text-sm text-muted-foreground space-y-2 list-decimal list-inside">
+                          <li>Open the <strong>Movie Vault</strong> from the Mind Movie Studio</li>
+                          <li>Find a completed Mind Movie with a video URL</li>
+                          <li>Click the <strong>"Submit to Community"</strong> button</li>
+                          <li>Add a description and confirm your submission</li>
+                          <li>Your movie will appear in the community voting pool</li>
+                        </ol>
+                      </div>
+                    </div>
+
+                    <Separator />
+
+                    <div>
+                      <h4 className="font-semibold mb-4 flex items-center gap-2">
+                        <Star className="w-5 h-5 text-amber-400" />
+                        Recognition Programs
+                      </h4>
+                      <div className="grid sm:grid-cols-2 gap-4">
+                        <div className="p-4 rounded-lg border border-border/50">
+                          <div className="flex items-center gap-2 mb-2">
+                            <Film className="w-5 h-5 text-purple-400" />
+                            <span className="font-medium">Movie of the Week</span>
+                          </div>
+                          <p className="text-sm text-muted-foreground">
+                            Each week, the highest-voted community Mind Movie is featured on the homepage. 
+                            Admins curate from top submissions.
+                          </p>
+                        </div>
+                        <div className="p-4 rounded-lg border border-border/50">
+                          <div className="flex items-center gap-2 mb-2">
+                            <Users className="w-5 h-5 text-green-400" />
+                            <span className="font-medium">Director of the Month</span>
+                          </div>
+                          <p className="text-sm text-muted-foreground">
+                            Monthly recognition for top performers based on streak consistency, 
+                            scorecard averages, and community engagement.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <Separator />
+
+                    <div>
+                      <h4 className="font-semibold mb-4 flex items-center gap-2">
+                        <Trophy className="w-5 h-5 text-gold" />
+                        Annual Awards Ceremony
+                      </h4>
+                      <p className="text-sm text-muted-foreground mb-3">
+                        At the end of each year, winners are calculated and announced across multiple categories.
+                      </p>
+                      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                        <div className="p-3 rounded-lg bg-gold/10 border border-gold/30">
+                          <p className="font-medium text-sm text-gold">🏆 Best Mind Movie</p>
+                          <p className="text-xs text-muted-foreground">Highest total votes</p>
+                        </div>
+                        <div className="p-3 rounded-lg bg-purple-500/10 border border-purple-500/30">
+                          <p className="font-medium text-sm text-purple-400">🔥 Longest Streak</p>
+                          <p className="text-xs text-muted-foreground">Most consecutive days</p>
+                        </div>
+                        <div className="p-3 rounded-lg bg-blue-500/10 border border-blue-500/30">
+                          <p className="font-medium text-sm text-blue-400">⭐ Top Director Score</p>
+                          <p className="text-xs text-muted-foreground">Highest average scorecard</p>
+                        </div>
+                        <div className="p-3 rounded-lg bg-green-500/10 border border-green-500/30">
+                          <p className="font-medium text-sm text-green-400">🎬 Most Movies Created</p>
+                          <p className="text-xs text-muted-foreground">Production volume</p>
+                        </div>
+                        <div className="p-3 rounded-lg bg-pink-500/10 border border-pink-500/30">
+                          <p className="font-medium text-sm text-pink-400">💫 Community Favorite</p>
+                          <p className="text-xs text-muted-foreground">Most engagement</p>
+                        </div>
+                        <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/30">
+                          <p className="font-medium text-sm text-amber-400">🌟 Rising Star</p>
+                          <p className="text-xs text-muted-foreground">Best newcomer</p>
+                        </div>
+                      </div>
+                      <div className="mt-4 p-3 rounded-lg bg-muted/30 border border-border/50">
+                        <p className="text-sm text-muted-foreground">
+                          <strong>View the Awards:</strong> Navigate to <Link to="/awards" className="text-gold hover:underline">/awards</Link> to 
+                          see current standings, past winners, and the annual ceremony page.
+                        </p>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
