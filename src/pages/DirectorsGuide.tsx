@@ -14,6 +14,7 @@ import {
   Sparkles,
   Calendar,
   Users,
+  User,
   ArrowLeft,
   HelpCircle,
   Camera,
@@ -99,6 +100,48 @@ const tutorialSections: TutorialSection[] = [
       "Complete your profile to unlock the full experience",
       "Enable notifications to stay on track with your daily rituals",
       "Connect Notion to automatically sync your journal and scorecards"
+    ]
+  },
+  {
+    id: "character-builder",
+    icon: <User className="w-6 h-6" />,
+    title: "Character Builder",
+    description: "Discover your Director archetype and transform your character",
+    steps: [
+      {
+        title: "Take the Archetype Survey",
+        content: "Complete the 28-question Napoleon Hill character assessment. Answer honestly — 'Shadow' options reveal growth areas. Your responses determine your dominant Director archetype."
+      },
+      {
+        title: "Understand Your Archetype",
+        content: "Discover which of the 12 Director archetypes you embody: Sovereign, Master Builder, Wayfinder, Alchemist, Divine Analyst, Truth Keeper, Sacred Judge, Protector, Harmonizer, Weaver, or Still Center."
+      },
+      {
+        title: "Review Light & Shadow States",
+        content: "Each archetype has a Light state (your strengths) and Shadow state (growth areas). Understanding both is essential for transformation."
+      },
+      {
+        title: "Use the Character Scorecard",
+        content: "Track your character development daily. Rate yourself on key traits required for your Chief Aim and see your progress over time."
+      },
+      {
+        title: "Weekly Character Summary",
+        content: "Review your weekly transformation progress, including trait averages, consistency patterns, and AI-generated insights."
+      },
+      {
+        title: "Transformation Coach",
+        content: "Get AI-powered coaching tailored to your archetype and Chief Aim. The coach identifies gaps between who you are and who you need to become."
+      },
+      {
+        title: "Annual Self-Analysis",
+        content: "Complete Napoleon Hill's year-end self-analysis with 40+ questions. Shadow behavior options ensure honest reflection. Export as PDF for your records."
+      }
+    ],
+    tips: [
+      "Shadow answers reveal your biggest growth opportunities — don't avoid them",
+      "Retake the survey after major life changes to see how you've evolved",
+      "Your archetype influences the Director AI coaching style recommendations",
+      "The Character Scorecard is separate from the Daily Scorecard — use both"
     ]
   },
   {
@@ -243,7 +286,7 @@ const tutorialSections: TutorialSection[] = [
       },
       {
         title: "Execute Your Three Things",
-        content: "Your dashboard shows your 3 priority tasks. Check them off as you complete them throughout the day."
+        content: "Your dashboard shows your 3 priority tasks. Check them off as you complete them throughout the day. If you don't complete a task, select an excuse reason for behavioral tracking."
       },
       {
         title: "Evening Scorecard",
@@ -252,12 +295,46 @@ const tutorialSections: TutorialSection[] = [
       {
         title: "Build Your Streak",
         content: "Consecutive days of completed scorecards build your streak. The streak banner on your dashboard celebrates your consistency."
+      },
+      {
+        title: "View Excuse Analytics",
+        content: "Visit the Actions page to see patterns in your incomplete tasks. The Excuse Analytics dashboard reveals your most common barriers."
       }
     ],
     tips: [
       "Perfect scores (12/12) earn bonus credits",
       "Be honest on your scorecard - it's a tool for growth, not ego",
-      "Review your weekly scores to identify patterns"
+      "Review your weekly scores to identify patterns",
+      "The excuse tracking helps identify recurring blockers"
+    ]
+  },
+  {
+    id: "journal",
+    icon: <FileText className="w-6 h-6" />,
+    title: "Director's Journal",
+    description: "Record your experiences and gain AI-powered insights",
+    steps: [
+      {
+        title: "Write Daily Entries",
+        content: "Use the Director's Journal to record your thoughts, wins, challenges, and reflections. Tag entries and track your mood."
+      },
+      {
+        title: "Get AI Analysis",
+        content: "Each entry can be analyzed by AI to identify patterns, limiting beliefs, and growth opportunities aligned with your Chief Aim."
+      },
+      {
+        title: "Track Mood Trends",
+        content: "The Mood Trend Chart visualizes your emotional patterns over time, helping you identify what drives your best days."
+      },
+      {
+        title: "Sync to Notion",
+        content: "Enable Notion auto-sync to automatically backup all journal entries to your Notion workspace."
+      }
+    ],
+    tips: [
+      "Journal in the evening to capture the full day's experience",
+      "Use tags consistently to track recurring themes",
+      "Review past entries when the AI analyzes patterns"
     ]
   },
   {
@@ -281,12 +358,17 @@ const tutorialSections: TutorialSection[] = [
       {
         title: "Add ElevenLabs",
         content: "Connect your personal ElevenLabs API key to access your cloned voices for the Voice Changer feature."
+      },
+      {
+        title: "Configure Reminders",
+        content: "Set custom reminder times for morning rituals, journal prompts, and evening scorecards. View your reminder history in Settings."
       }
     ],
     tips: [
       "All integrations are managed in Settings → Integrations",
       "Notion sync includes your Chief Aim components for backup",
-      "Social posts include inspirational hashtags automatically"
+      "Social posts include inspirational hashtags automatically",
+      "Web Push notifications work as a backup if Slack/Telegram aren't configured"
     ]
   },
   {
@@ -301,7 +383,7 @@ const tutorialSections: TutorialSection[] = [
       },
       {
         title: "Vote for Mind Movies",
-        content: "Browse community submissions and vote for your favorites. Top-voted movies are featured as 'Movie of the Week'."
+        content: "Browse community submissions in the Director's Corner and vote for your favorites. Top-voted movies are featured as 'Movie of the Week'."
       },
       {
         title: "Earn Recognition",
@@ -309,7 +391,7 @@ const tutorialSections: TutorialSection[] = [
       },
       {
         title: "Annual Awards Ceremony",
-        content: "Visit the Awards Ceremony page to see yearly winners across categories like Best Mind Movie, Longest Streak, and Top Director Score."
+        content: "Visit the Awards Ceremony page (/awards) to see yearly winners across categories like Best Mind Movie, Longest Streak, Most Transformative Director, and Rising Star."
       }
     ],
     tips: [
