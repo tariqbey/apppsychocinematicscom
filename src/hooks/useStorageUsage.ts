@@ -18,38 +18,46 @@ export function useStorageUsage() {
   const [usage, setUsage] = useState<StorageUsage | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
+  // Recursively list all files in a bucket folder
+  const listAllFiles = async (bucket: string, path: string): Promise<number> => {
+    let totalSize = 0;
+    
+    try {
+      const { data: items } = await supabase.storage
+        .from(bucket)
+        .list(path, { limit: 1000 });
+
+      if (!items) return 0;
+
+      for (const item of items) {
+        if (item.id === null) {
+          // This is a folder, recurse into it
+          const subPath = path ? `${path}/${item.name}` : item.name;
+          totalSize += await listAllFiles(bucket, subPath);
+        } else if (item.metadata?.size) {
+          // This is a file with size metadata
+          totalSize += item.metadata.size;
+        }
+      }
+    } catch (err) {
+      console.warn(`Error listing ${bucket}/${path}:`, err);
+    }
+
+    return totalSize;
+  };
+
   const calculateUsage = useCallback(async () => {
     if (!user) return null;
 
     setIsLoading(true);
     try {
-      let totalBytes = 0;
+      // Recursively calculate storage for both buckets
+      const [mindMoviesSize, generatedMediaSize] = await Promise.all([
+        listAllFiles("mind-movies", user.id),
+        listAllFiles("generated-media", user.id),
+      ]);
 
-      // Check mind-movies bucket
-      const { data: mindMovies } = await supabase.storage
-        .from("mind-movies")
-        .list(user.id, { limit: 1000 });
-
-      if (mindMovies) {
-        for (const file of mindMovies) {
-          if (file.metadata?.size) {
-            totalBytes += file.metadata.size;
-          }
-        }
-      }
-
-      // Check generated-media bucket
-      const { data: generatedMedia } = await supabase.storage
-        .from("generated-media")
-        .list(user.id, { limit: 1000 });
-
-      if (generatedMedia) {
-        for (const file of generatedMedia) {
-          if (file.metadata?.size) {
-            totalBytes += file.metadata.size;
-          }
-        }
-      }
+      const totalBytes = mindMoviesSize + generatedMediaSize;
 
       const totalMB = totalBytes / (1024 * 1024);
       const totalGB = totalBytes / (1024 * 1024 * 1024);

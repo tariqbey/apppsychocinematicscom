@@ -7,6 +7,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Image, Video, Clock, AlertCircle, Loader2, Download, Trash2, HardDrive, X, ChevronLeft, ChevronRight, RefreshCw, Mic2, Clapperboard, Music, Plus, ArrowUpDown } from "lucide-react";
 import { useMediaGeneration, GeneratedMedia } from "@/hooks/useMediaGeneration";
+import { useStorageUsage } from "@/hooks/useStorageUsage";
 import { formatDistanceToNow } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -33,7 +34,6 @@ function formatBytes(bytes: number): string {
 export function MediaLibrary({ filter = "all", onSelect, onAddToTimeline, onAddMultipleToTimeline }: MediaLibraryProps) {
   const [history, setHistory] = useState<GeneratedMedia[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [storageUsed, setStorageUsed] = useState(0);
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
   const [lightboxMedia, setLightboxMedia] = useState<GeneratedMedia | null>(null);
   const [showVoiceChanger, setShowVoiceChanger] = useState(false);
@@ -45,11 +45,15 @@ export function MediaLibrary({ filter = "all", onSelect, onAddToTimeline, onAddM
   const { toast } = useToast();
   const { user, loading: authLoading } = useAuth();
 
+  // Use real storage calculation
+  const { usage, calculateUsage, isLoading: storageLoading } = useStorageUsage();
+
   // Load history when user becomes available
   useEffect(() => {
     if (authLoading) return;
     if (user?.id) {
       loadHistory();
+      calculateUsage();
     } else {
       setIsLoading(false);
       setHistory([]);
@@ -60,18 +64,11 @@ export function MediaLibrary({ filter = "all", onSelect, onAddToTimeline, onAddM
     setIsLoading(true);
     const data = await fetchGenerationHistory();
     setHistory(data);
-    
-    // Estimate storage based on media count (rough estimate: 2MB per image, 50MB per video)
-    const estimatedStorage = data.reduce((acc, item) => {
-      if (item.status === "completed" && item.media_url) {
-        return acc + (item.media_type === "image" ? 2 * 1024 * 1024 : 50 * 1024 * 1024);
-      }
-      return acc;
-    }, 0);
-    setStorageUsed(estimatedStorage);
-    
     setIsLoading(false);
   };
+
+  // Use real storage from hook or fallback to 0
+  const storageUsed = usage?.totalBytes ?? 0;
 
   const handleDownload = async (media: GeneratedMedia, e?: React.MouseEvent) => {
     e?.stopPropagation();
@@ -116,9 +113,8 @@ export function MediaLibrary({ filter = "all", onSelect, onAddToTimeline, onAddM
 
       setHistory((prev) => prev.filter((item) => item.id !== media.id));
       
-      // Update storage estimate
-      const removedSize = media.media_type === "image" ? 2 * 1024 * 1024 : 50 * 1024 * 1024;
-      setStorageUsed((prev) => Math.max(0, prev - removedSize));
+      // Recalculate real storage after deletion
+      calculateUsage();
       
       // Close lightbox if the deleted item was being viewed
       if (lightboxMedia?.id === media.id) {
@@ -128,7 +124,7 @@ export function MediaLibrary({ filter = "all", onSelect, onAddToTimeline, onAddM
       const mediaTypeLabel = media.media_type === "image" ? "Image" : media.media_type === "video" ? "Video" : "Audio";
       toast({
         title: "Deleted",
-        description: `${mediaTypeLabel} removed. Saved ~${formatBytes(removedSize)} of storage.`,
+        description: `${mediaTypeLabel} removed from library.`,
       });
     } catch (error) {
       toast({

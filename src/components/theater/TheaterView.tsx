@@ -314,7 +314,7 @@ export const TheaterView = ({ onClose }: TheaterViewProps) => {
                             <Volume2 className="w-4 h-4 sm:w-5 sm:h-5" />
                           )}
                         </Button>
-                        <span className="text-xs sm:text-sm text-muted-foreground">
+                        <span className="text-xs sm:text-sm text-white font-mono bg-black/50 px-2 py-0.5 rounded">
                           {formatTime(currentTime)} / {formatTime(duration)}
                         </span>
                       </div>
