@@ -143,32 +143,23 @@ export function useMindMovieScript() {
 
     setIsGenerating(true);
     try {
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-storyboard`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-          },
-          body: JSON.stringify({
-            chiefAim,
-            visualStyle,
-            userDescription,
-            existingScenes: existingScenes || undefined,
-            addMoreScenes: existingScenes ? true : false,
-            transformationAnalysis: transformationAnalysis || undefined,
-          }),
-        }
-      );
+      // Use supabase.functions.invoke to automatically use the authenticated session token
+      const { data, error } = await supabase.functions.invoke("generate-storyboard", {
+        body: {
+          chiefAim,
+          visualStyle,
+          userDescription,
+          existingScenes: existingScenes || undefined,
+          addMoreScenes: existingScenes ? true : false,
+          transformationAnalysis: transformationAnalysis || undefined,
+        },
+      });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to generate storyboard");
+      if (error) {
+        throw new Error(error.message || "Failed to generate storyboard");
       }
 
-      const storyboard = await response.json();
-      return storyboard as { title: string; scenes: Scene[] };
+      return data as { title: string; scenes: Scene[] };
     } catch (error) {
       console.error("Error generating storyboard:", error);
       toast.error(error instanceof Error ? error.message : "Failed to generate storyboard");
