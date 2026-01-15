@@ -4,12 +4,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Check, Trash2, ExternalLink, Eye, EyeOff, Mic2 } from "lucide-react";
+import { Loader2, Check, Trash2, ExternalLink, Eye, EyeOff, Mic2, MessageSquare, FileText, Send } from "lucide-react";
 import { useUserIntegrations } from "@/hooks/useUserIntegrations";
+import { IntegrationCard } from "./IntegrationCard";
+import { SocialMediaConnections } from "./SocialMediaConnections";
+import type { Json } from "@/integrations/supabase/types";
 
 export function IntegrationsTab() {
   const { integrations, loading, saveIntegration, deleteIntegration, getIntegration } = useUserIntegrations();
   
+  // ElevenLabs specific state (keeping existing functionality)
   const [elevenLabsKey, setElevenLabsKey] = useState("");
   const [showKey, setShowKey] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -35,6 +39,15 @@ export function IntegrationsTab() {
     setDeleting(false);
   };
 
+  // Generic save/delete handlers for other integrations
+  const handleSaveIntegration = async (serviceName: string, apiKey: string, additionalSettings?: Record<string, string>) => {
+    return await saveIntegration(serviceName, apiKey, additionalSettings as Json);
+  };
+
+  const handleDeleteIntegration = async (serviceName: string) => {
+    return await deleteIntegration(serviceName);
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-8">
@@ -44,134 +57,222 @@ export function IntegrationsTab() {
   }
 
   return (
-    <div className="space-y-6">
-      {/* ElevenLabs Integration */}
-      <Card className="bg-card border-border">
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-primary/10">
-                <Mic2 className="h-5 w-5 text-primary" />
-              </div>
-              <div>
-                <CardTitle className="text-lg">ElevenLabs</CardTitle>
-                <CardDescription>Voice cloning and text-to-speech</CardDescription>
-              </div>
-            </div>
-            {hasElevenLabsKey && (
-              <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/30">
-                <Check className="h-3 w-3 mr-1" />
-                Connected
-              </Badge>
-            )}
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {hasElevenLabsKey ? (
-            <div className="space-y-4">
-              <div className="p-4 rounded-lg bg-muted/30 border border-border/50">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium">API Key Configured</p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Your ElevenLabs API key is securely stored
-                    </p>
-                  </div>
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={handleDeleteElevenLabs}
-                    disabled={deleting}
-                  >
-                    {deleting ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <>
-                        <Trash2 className="h-4 w-4 mr-2" />
-                        Remove
-                      </>
-                    )}
-                  </Button>
+    <div className="space-y-8">
+      {/* Productivity & Notifications Section */}
+      <div className="space-y-4">
+        <div>
+          <h3 className="text-lg font-semibold text-foreground">Productivity & Notifications</h3>
+          <p className="text-sm text-muted-foreground">Connect your favorite tools for seamless workflow integration</p>
+        </div>
+
+        {/* Slack Integration */}
+        <IntegrationCard
+          name="Slack"
+          description="Send reminders and notifications to your Slack workspace"
+          icon={MessageSquare}
+          isConnected={!!getIntegration("slack")?.api_key}
+          onSave={(key, settings) => handleSaveIntegration("slack", key, settings)}
+          onDelete={() => handleDeleteIntegration("slack")}
+          inputLabel="Bot Token"
+          inputPlaceholder="xoxb-your-slack-bot-token..."
+          additionalFields={[
+            { key: "channel_id", label: "Channel ID", placeholder: "C0123456789" },
+          ]}
+          helpUrl="https://api.slack.com/apps"
+          helpSteps={[
+            "Create a new Slack app at api.slack.com/apps",
+            "Add Bot Token Scopes: chat:write, channels:read",
+            "Install the app to your workspace",
+            "Copy the Bot User OAuth Token",
+          ]}
+          note="Daily reminders and achievement notifications will be sent to your specified Slack channel."
+        />
+
+        {/* Notion Integration */}
+        <IntegrationCard
+          name="Notion"
+          description="Sync your journal entries and goals to Notion"
+          icon={FileText}
+          isConnected={!!getIntegration("notion")?.api_key}
+          onSave={(key, settings) => handleSaveIntegration("notion", key, settings)}
+          onDelete={() => handleDeleteIntegration("notion")}
+          inputLabel="Integration Token"
+          inputPlaceholder="secret_your-notion-token..."
+          additionalFields={[
+            { key: "database_id", label: "Database ID (optional)", placeholder: "Your Notion database ID..." },
+          ]}
+          helpUrl="https://www.notion.so/my-integrations"
+          helpSteps={[
+            "Go to notion.so/my-integrations",
+            "Create a new integration",
+            "Copy the Internal Integration Token",
+            "Share your database with the integration",
+          ]}
+          note="Your journal entries, Chief Aim, and daily scores can be synced to Notion pages."
+        />
+
+        {/* Telegram Integration */}
+        <IntegrationCard
+          name="Telegram"
+          description="Receive notifications and reminders via Telegram"
+          icon={Send}
+          isConnected={!!getIntegration("telegram")?.api_key}
+          onSave={(key, settings) => handleSaveIntegration("telegram", key, settings)}
+          onDelete={() => handleDeleteIntegration("telegram")}
+          inputLabel="Bot Token"
+          inputPlaceholder="123456789:ABCdefGHIjklMNOpqrsTUVwxyz..."
+          additionalFields={[
+            { key: "chat_id", label: "Chat ID", placeholder: "Your Telegram chat ID..." },
+          ]}
+          helpUrl="https://core.telegram.org/bots#creating-a-new-bot"
+          helpSteps={[
+            "Message @BotFather on Telegram",
+            "Send /newbot and follow the prompts",
+            "Copy the bot token provided",
+            "Start a chat with your bot and get your chat ID",
+          ]}
+          note="Morning ritual reminders, evening scorecard prompts, and achievement alerts will be sent via Telegram."
+        />
+      </div>
+
+      {/* Voice & Audio Section */}
+      <div className="space-y-4">
+        <div>
+          <h3 className="text-lg font-semibold text-foreground">Voice & Audio</h3>
+          <p className="text-sm text-muted-foreground">Advanced voice features and audio processing</p>
+        </div>
+
+        {/* ElevenLabs Integration (keeping existing) */}
+        <Card className="bg-card border-border">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-primary/10">
+                  <Mic2 className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <CardTitle className="text-lg">ElevenLabs</CardTitle>
+                  <CardDescription>Voice cloning and text-to-speech</CardDescription>
                 </div>
               </div>
-              <p className="text-sm text-muted-foreground">
-                Your personal ElevenLabs API key will be used for voice changing and TTS features, 
-                allowing you to access your cloned voices and custom voice library.
-              </p>
+              {hasElevenLabsKey && (
+                <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/30">
+                  <Check className="h-3 w-3 mr-1" />
+                  Connected
+                </Badge>
+              )}
             </div>
-          ) : (
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="elevenlabs-key">API Key</Label>
-                <div className="flex gap-2">
-                  <div className="relative flex-1">
-                    <Input
-                      id="elevenlabs-key"
-                      type={showKey ? "text" : "password"}
-                      placeholder="Enter your ElevenLabs API key..."
-                      value={elevenLabsKey}
-                      onChange={(e) => setElevenLabsKey(e.target.value)}
-                      className="pr-10"
-                    />
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {hasElevenLabsKey ? (
+              <div className="space-y-4">
+                <div className="p-4 rounded-lg bg-muted/30 border border-border/50">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium">API Key Configured</p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Your ElevenLabs API key is securely stored
+                      </p>
+                    </div>
                     <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="absolute right-0 top-0 h-full px-3"
-                      onClick={() => setShowKey(!showKey)}
+                      variant="destructive"
+                      size="sm"
+                      onClick={handleDeleteElevenLabs}
+                      disabled={deleting}
                     >
-                      {showKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      {deleting ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <>
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Remove
+                        </>
+                      )}
                     </Button>
                   </div>
-                  <Button
-                    onClick={handleSaveElevenLabs}
-                    disabled={saving || !elevenLabsKey.trim()}
-                  >
-                    {saving ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      "Save"
-                    )}
-                  </Button>
                 </div>
-              </div>
-              
-              <div className="p-3 rounded-lg bg-muted/30 border border-border/50">
                 <p className="text-sm text-muted-foreground">
-                  <strong>How to get your API key:</strong>
+                  Your personal ElevenLabs API key will be used for voice changing and TTS features, 
+                  allowing you to access your cloned voices and custom voice library.
                 </p>
-                <ol className="text-sm text-muted-foreground mt-2 space-y-1 list-decimal list-inside">
-                  <li>Go to your ElevenLabs account settings</li>
-                  <li>Navigate to the API section</li>
-                  <li>Copy your API key and paste it above</li>
-                </ol>
-                <a
-                  href="https://elevenlabs.io/app/settings/api-keys"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 text-sm text-primary hover:underline mt-2"
-                >
-                  <ExternalLink className="h-3 w-3" />
-                  Get your API key
-                </a>
               </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="elevenlabs-key">API Key</Label>
+                  <div className="flex gap-2">
+                    <div className="relative flex-1">
+                      <Input
+                        id="elevenlabs-key"
+                        type={showKey ? "text" : "password"}
+                        placeholder="Enter your ElevenLabs API key..."
+                        value={elevenLabsKey}
+                        onChange={(e) => setElevenLabsKey(e.target.value)}
+                        className="pr-10"
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="absolute right-0 top-0 h-full px-3"
+                        onClick={() => setShowKey(!showKey)}
+                      >
+                        {showKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </Button>
+                    </div>
+                    <Button
+                      onClick={handleSaveElevenLabs}
+                      disabled={saving || !elevenLabsKey.trim()}
+                    >
+                      {saving ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        "Save"
+                      )}
+                    </Button>
+                  </div>
+                </div>
+                
+                <div className="p-3 rounded-lg bg-muted/30 border border-border/50">
+                  <p className="text-sm font-medium text-muted-foreground">
+                    How to get your API key:
+                  </p>
+                  <ol className="text-sm text-muted-foreground mt-2 space-y-1 list-decimal list-inside">
+                    <li>Go to your ElevenLabs account settings</li>
+                    <li>Navigate to the API section</li>
+                    <li>Copy your API key and paste it above</li>
+                  </ol>
+                  <a
+                    href="https://elevenlabs.io/app/settings/api-keys"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-sm text-primary hover:underline mt-2"
+                  >
+                    <ExternalLink className="h-3 w-3" />
+                    Get your API key
+                  </a>
+                </div>
 
-              <p className="text-xs text-muted-foreground">
-                Adding your own API key allows you to use your personal cloned voices and 
-                access your full voice library. Your key is stored securely and only used 
-                for voice-related features.
-              </p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                <p className="text-xs text-muted-foreground">
+                  Adding your own API key allows you to use your personal cloned voices and 
+                  access your full voice library. Your key is stored securely and only used 
+                  for voice-related features.
+                </p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
 
-      {/* Future Integrations Placeholder */}
-      <Card className="bg-card border-border border-dashed">
-        <CardContent className="py-8 text-center">
-          <p className="text-muted-foreground">More integrations coming soon...</p>
-        </CardContent>
-      </Card>
+      {/* Social Media Connections Section */}
+      <div className="space-y-4">
+        <div>
+          <h3 className="text-lg font-semibold text-foreground">Social Media</h3>
+          <p className="text-sm text-muted-foreground">Connect accounts to share your manifestations with automatic branding</p>
+        </div>
+        
+        <SocialMediaConnections />
+      </div>
     </div>
   );
 }
