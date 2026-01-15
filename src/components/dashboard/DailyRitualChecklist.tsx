@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Check, Play, FileText, Target, ClipboardCheck, Sparkles, LightbulbIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { InfoTooltip } from "@/components/ui/info-tooltip";
@@ -23,6 +24,7 @@ interface DailyRitualChecklistProps {
 
 export const DailyRitualChecklist = ({ onTheaterClick, onScorecardClick }: DailyRitualChecklistProps) => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [rituals, setRituals] = useState<RitualItem[]>([
     {
       id: "morning",
@@ -156,6 +158,8 @@ export const DailyRitualChecklist = ({ onTheaterClick, onScorecardClick }: Daily
       onTheaterClick();
     } else if (id === "evening") {
       onScorecardClick();
+    } else if (id === "actions") {
+      navigate("/actions");
     }
     toggleRitual(id);
   };

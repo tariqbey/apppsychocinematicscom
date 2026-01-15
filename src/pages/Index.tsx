@@ -1,4 +1,5 @@
 import { useState, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import { Header } from "@/components/layout/Header";
 import { LandingPage } from "@/components/landing/LandingPage";
 import { ProductionStatus } from "@/components/dashboard/ProductionStatus";
@@ -12,7 +13,6 @@ import { DailyScorecard } from "@/components/scorecard/DailyScorecard";
 import { ChiefAimWizard } from "@/components/chief-aim/ChiefAimWizard";
 import { MindMovieScriptWizard, TimelineExportData } from "@/components/mind-movie/MindMovieScriptWizard";
 import { MovieVault } from "@/components/mind-movie/MovieVault";
-import { ThreeThings } from "@/components/tasks/ThreeThings";
 import { DirectorsJournal } from "@/components/journal/DirectorsJournal";
 import { AuthModal } from "@/components/auth/AuthModal";
 import { OnboardingModal, useOnboarding } from "@/components/onboarding/OnboardingModal";
@@ -20,11 +20,12 @@ import { useAuth } from "@/hooks/useAuth";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { useGamification } from "@/hooks/useGamification";
 import { useMindMovies, MindMovie } from "@/hooks/useMindMovies";
-import { Film, Loader2, Wand2, Sparkles, Bot, Clapperboard, FolderOpen, BookOpen } from "lucide-react";
+import { Film, Loader2, Wand2, Sparkles, Bot, Clapperboard, FolderOpen, BookOpen, Target } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { InfoTooltip } from "@/components/ui/info-tooltip";
 
 const Index = () => {
+  const navigate = useNavigate();
   const [showTheater, setShowTheater] = useState(false);
   const [showEditBay, setShowEditBay] = useState(false);
   const [showScorecard, setShowScorecard] = useState(false);
@@ -234,8 +235,30 @@ const Index = () => {
             </div>
           </button>
 
-          {/* Three Things - Daily Task Manager */}
-          <ThreeThings />
+          {/* Action Execution Card - Links to dedicated page */}
+          <button
+            onClick={() => navigate("/actions")}
+            className="w-full glass-card p-6 cinematic-border animate-slide-up group hover:border-primary/50 transition-all duration-300 text-left"
+          >
+            <div className="flex items-center gap-4">
+              <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-primary/20 to-primary/40 flex items-center justify-center group-hover:from-primary/30 group-hover:to-primary/50 transition-all duration-300">
+                <Target className="w-7 h-7 text-primary" />
+              </div>
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-1">
+                  <h3 className="text-xl font-display tracking-wide group-hover:text-primary transition-colors">Action Execution</h3>
+                  <InfoTooltip content="Focus on just 3 priority tasks per day that move you toward your Chief Aim. Track your excuse patterns and build accountability." />
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Your 3 daily priorities • Excuse tracking • Accountability analytics
+                </p>
+              </div>
+              <div className="hidden sm:flex items-center gap-2 text-sm text-muted-foreground group-hover:text-primary transition-colors">
+                <span>Open Actions</span>
+                <span className="text-lg">→</span>
+              </div>
+            </div>
+          </button>
 
           {/* Two Column Layout */}
           <div className="grid md:grid-cols-2 gap-6">
