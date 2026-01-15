@@ -4,13 +4,13 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { 
   Target, Plus, Trash2, Loader2, Sparkles, ChevronLeft, ChevronRight,
-  Calendar, RefreshCw, X, AlertCircle, BarChart3, Check, XCircle
+  Calendar, RefreshCw, X, AlertCircle, BarChart3, Check, XCircle, Flame
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { useToast } from "@/hooks/use-toast";
-import { format, startOfWeek, addDays, isSameDay, isToday } from "date-fns";
+import { format, startOfWeek, addDays, isSameDay, isToday, subDays } from "date-fns";
 import { InfoTooltip } from "@/components/ui/info-tooltip";
 import {
   Dialog,
@@ -38,10 +38,16 @@ interface Suggestion {
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
 const INCOMPLETE_REASONS = [
-  { id: "procrastinating", label: "I was bullshitting, I was procrastinating today" },
-  { id: "others_movie", label: "I got caught up in someone else's movie" },
-  { id: "ran_out_of_time", label: "I ran out of time" },
+  { id: "procrastinating", label: "I was bullshitting, I was procrastinating today", shortLabel: "Procrastinating" },
+  { id: "others_movie", label: "I got caught up in someone else's movie", shortLabel: "Someone else's movie" },
+  { id: "ran_out_of_time", label: "I ran out of time", shortLabel: "Ran out of time" },
 ];
+
+const getExcuseLabel = (reasonId: string | null | undefined): string | null => {
+  if (!reasonId) return null;
+  const reason = INCOMPLETE_REASONS.find(r => r.id === reasonId);
+  return reason?.shortLabel || null;
+};
 
 interface ThreeThingsProps {
   showAnalyticsDefault?: boolean;
@@ -58,15 +64,81 @@ export function ThreeThings({ showAnalyticsDefault = false }: ThreeThingsProps) 
   const [excuseDialogOpen, setExcuseDialogOpen] = useState(false);
   const [taskToUncheck, setTaskToUncheck] = useState<Task | null>(null);
   const [showAnalytics, setShowAnalytics] = useState(showAnalyticsDefault);
+  const [taskStreak, setTaskStreak] = useState(0);
   const { user } = useAuth();
   const { profile } = useUserProfile();
   const { toast } = useToast();
+
+  // Load streak on mount
+  useEffect(() => {
+    if (user) {
+      loadTaskStreak();
+    }
+  }, [user]);
 
   useEffect(() => {
     if (user) {
       loadTasks();
     }
   }, [user, selectedDate]);
+
+  const loadTaskStreak = async () => {
+    if (!user) return;
+
+    // Get tasks for the last 90 days to calculate streak
+    const startDate = format(subDays(new Date(), 90), "yyyy-MM-dd");
+    const { data, error } = await supabase
+      .from("daily_tasks")
+      .select("task_date, is_completed")
+      .eq("user_id", user.id)
+      .gte("task_date", startDate)
+      .order("task_date", { ascending: false });
+
+    if (error || !data) {
+      console.error("Error loading streak:", error);
+      return;
+    }
+
+    // Group tasks by date
+    const tasksByDate: Record<string, { total: number; completed: number }> = {};
+    data.forEach(task => {
+      if (!tasksByDate[task.task_date]) {
+        tasksByDate[task.task_date] = { total: 0, completed: 0 };
+      }
+      tasksByDate[task.task_date].total++;
+      if (task.is_completed) {
+        tasksByDate[task.task_date].completed++;
+      }
+    });
+
+    // Calculate streak (consecutive days with 3 tasks all completed)
+    let streak = 0;
+    let currentDate = subDays(new Date(), 1); // Start from yesterday (today might be incomplete)
+    
+    while (true) {
+      const dateStr = format(currentDate, "yyyy-MM-dd");
+      const dayData = tasksByDate[dateStr];
+      
+      // Day counts if it has exactly 3 tasks and all are completed
+      if (dayData && dayData.total === 3 && dayData.completed === 3) {
+        streak++;
+        currentDate = subDays(currentDate, 1);
+      } else if (dayData && dayData.total > 0) {
+        // Has tasks but not all 3 completed - streak broken
+        break;
+      } else {
+        // No tasks for this day - check if we should continue or break
+        // If we already have a streak, no tasks means break
+        if (streak > 0) break;
+        // If no streak yet, skip empty days
+        currentDate = subDays(currentDate, 1);
+        // But don't go back more than 7 days looking for start
+        if (subDays(new Date(), 7) > currentDate) break;
+      }
+    }
+
+    setTaskStreak(streak);
+  };
 
   const loadTasks = async () => {
     if (!user) return;
@@ -320,15 +392,25 @@ export function ThreeThings({ showAnalyticsDefault = false }: ThreeThingsProps) 
         </Button>
       </div>
 
-      {/* Selected Date Header */}
-      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-        <Calendar className="h-4 w-4" />
-        <span>{format(selectedDate, "EEEE, MMMM d, yyyy")}</span>
-        {isToday(selectedDate) && (
-          <span className="px-2 py-0.5 rounded bg-primary/20 text-primary text-xs font-medium">Today</span>
+      {/* Selected Date Header with Streak */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Calendar className="h-4 w-4" />
+          <span>{format(selectedDate, "EEEE, MMMM d, yyyy")}</span>
+          {isToday(selectedDate) && (
+            <span className="px-2 py-0.5 rounded bg-primary/20 text-primary text-xs font-medium">Today</span>
+          )}
+        </div>
+        
+        {/* Streak Counter */}
+        {taskStreak > 0 && (
+          <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-gradient-to-r from-orange-500/20 to-red-500/20 border border-orange-500/30">
+            <Flame className="h-4 w-4 text-orange-500" />
+            <span className="text-sm font-bold text-orange-500">{taskStreak}</span>
+            <span className="text-xs text-orange-500/80">day streak</span>
+          </div>
         )}
       </div>
-
       {/* Tasks List */}
       <div className="space-y-2">
         {isLoading ? (
@@ -342,72 +424,86 @@ export function ThreeThings({ showAnalyticsDefault = false }: ThreeThingsProps) 
             <p className="text-sm">Add up to 3 priorities</p>
           </div>
         ) : (
-          tasks.map((task, index) => (
-            <div
-              key={task.id}
-              className={`flex items-center gap-3 p-3 rounded-lg border transition-colors ${
-                task.is_completed
-                  ? "bg-primary/10 border-primary/30"
-                  : task.incomplete_reason
-                  ? "bg-destructive/10 border-destructive/30"
-                  : "bg-muted/50 border-border/50"
-              }`}
-            >
-              <span className="text-xs font-bold text-primary w-5">#{index + 1}</span>
-              <span className={`flex-1 ${task.is_completed ? "text-primary" : task.incomplete_reason ? "text-muted-foreground" : ""}`}>
-                {task.task_text}
-              </span>
-              
-              {/* Yes/No Buttons */}
-              <div className="flex items-center gap-1.5">
-                {task.is_completed ? (
-                  <div className="flex items-center gap-1.5 text-primary text-xs font-medium">
-                    <Check className="h-4 w-4" />
-                    <span>Done</span>
+          tasks.map((task, index) => {
+            const excuseLabel = getExcuseLabel(task.incomplete_reason);
+            
+            return (
+              <div
+                key={task.id}
+                className={`p-3 rounded-lg border transition-colors ${
+                  task.is_completed
+                    ? "bg-primary/10 border-primary/30"
+                    : task.incomplete_reason
+                    ? "bg-destructive/10 border-destructive/30"
+                    : "bg-muted/50 border-border/50"
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <span className="text-xs font-bold text-primary w-5">#{index + 1}</span>
+                  <span className={`flex-1 ${task.is_completed ? "text-primary" : task.incomplete_reason ? "text-muted-foreground" : ""}`}>
+                    {task.task_text}
+                  </span>
+                  
+                  {/* Yes/No Buttons */}
+                  <div className="flex items-center gap-1.5">
+                    {task.is_completed ? (
+                      <div className="flex items-center gap-1.5 text-primary text-xs font-medium">
+                        <Check className="h-4 w-4" />
+                        <span>Done</span>
+                      </div>
+                    ) : task.incomplete_reason ? (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 text-xs text-muted-foreground hover:text-primary"
+                        onClick={() => markTaskComplete(task)}
+                      >
+                        Mark Done
+                      </Button>
+                    ) : (
+                      <>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-7 px-2 text-xs border-primary/30 text-primary hover:bg-primary hover:text-primary-foreground"
+                          onClick={() => markTaskComplete(task)}
+                        >
+                          <Check className="h-3.5 w-3.5 mr-1" />
+                          Yes
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-7 px-2 text-xs border-destructive/30 text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                          onClick={() => markTaskIncomplete(task)}
+                        >
+                          <XCircle className="h-3.5 w-3.5 mr-1" />
+                          No
+                        </Button>
+                      </>
+                    )}
                   </div>
-                ) : task.incomplete_reason ? (
+
                   <Button
                     variant="ghost"
-                    size="sm"
-                    className="h-7 text-xs text-muted-foreground hover:text-primary"
-                    onClick={() => markTaskComplete(task)}
+                    size="icon"
+                    className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                    onClick={() => deleteTask(task.id)}
                   >
-                    Mark Done
+                    <Trash2 className="h-4 w-4" />
                   </Button>
-                ) : (
-                  <>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-7 px-2 text-xs border-primary/30 text-primary hover:bg-primary hover:text-primary-foreground"
-                      onClick={() => markTaskComplete(task)}
-                    >
-                      <Check className="h-3.5 w-3.5 mr-1" />
-                      Yes
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-7 px-2 text-xs border-destructive/30 text-destructive hover:bg-destructive hover:text-destructive-foreground"
-                      onClick={() => markTaskIncomplete(task)}
-                    >
-                      <XCircle className="h-3.5 w-3.5 mr-1" />
-                      No
-                    </Button>
-                  </>
+                </div>
+                
+                {/* Excuse Label */}
+                {excuseLabel && (
+                  <div className="mt-2 ml-8 flex items-center gap-1.5 text-xs text-destructive/80">
+                    <AlertCircle className="h-3 w-3" />
+                    <span>{excuseLabel}</span>
+                  </div>
                 )}
               </div>
-
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                onClick={() => deleteTask(task.id)}
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            </div>
-          ))
+            );
+          })
         )}
       </div>
 
