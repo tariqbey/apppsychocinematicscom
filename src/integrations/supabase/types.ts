@@ -356,6 +356,81 @@ export type Database = {
         }
         Relationships: []
       }
+      cycle_reviews: {
+        Row: {
+          act_number: number
+          ai_progress_report: string | null
+          archetype_at_end: string | null
+          archetype_at_start: string | null
+          archetype_shifted: boolean | null
+          avg_behavior_execution: number | null
+          avg_emotional_regulation: number | null
+          avg_forward_progress: number | null
+          avg_identity_alignment: number | null
+          avg_total_score: number | null
+          biggest_challenge: string | null
+          biggest_win: string | null
+          character_trait_averages: Json | null
+          commitment_for_next_cycle: string | null
+          created_at: string
+          cycle_number: number
+          days_completed: number | null
+          id: string
+          review_date: string
+          streak_during_cycle: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          act_number: number
+          ai_progress_report?: string | null
+          archetype_at_end?: string | null
+          archetype_at_start?: string | null
+          archetype_shifted?: boolean | null
+          avg_behavior_execution?: number | null
+          avg_emotional_regulation?: number | null
+          avg_forward_progress?: number | null
+          avg_identity_alignment?: number | null
+          avg_total_score?: number | null
+          biggest_challenge?: string | null
+          biggest_win?: string | null
+          character_trait_averages?: Json | null
+          commitment_for_next_cycle?: string | null
+          created_at?: string
+          cycle_number: number
+          days_completed?: number | null
+          id?: string
+          review_date?: string
+          streak_during_cycle?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          act_number?: number
+          ai_progress_report?: string | null
+          archetype_at_end?: string | null
+          archetype_at_start?: string | null
+          archetype_shifted?: boolean | null
+          avg_behavior_execution?: number | null
+          avg_emotional_regulation?: number | null
+          avg_forward_progress?: number | null
+          avg_identity_alignment?: number | null
+          avg_total_score?: number | null
+          biggest_challenge?: string | null
+          biggest_win?: string | null
+          character_trait_averages?: Json | null
+          commitment_for_next_cycle?: string | null
+          created_at?: string
+          cycle_number?: number
+          days_completed?: number | null
+          id?: string
+          review_date?: string
+          streak_during_cycle?: number | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       daily_rituals: {
         Row: {
           action_execution: boolean
@@ -965,7 +1040,10 @@ export type Database = {
           coaching_call_timezone: string | null
           created_at: string
           current_act: string | null
+          current_cycle: number | null
+          current_cycle_day: number | null
           current_streak: number | null
+          cycles_completed: number | null
           day_number: number | null
           director_character_name: string | null
           display_name: string | null
@@ -978,6 +1056,7 @@ export type Database = {
           phone_number: string | null
           push_notifications_enabled: boolean | null
           show_on_leaderboard: boolean
+          transformation_start_date: string | null
           updated_at: string
           user_id: string
         }
@@ -996,7 +1075,10 @@ export type Database = {
           coaching_call_timezone?: string | null
           created_at?: string
           current_act?: string | null
+          current_cycle?: number | null
+          current_cycle_day?: number | null
           current_streak?: number | null
+          cycles_completed?: number | null
           day_number?: number | null
           director_character_name?: string | null
           display_name?: string | null
@@ -1009,6 +1091,7 @@ export type Database = {
           phone_number?: string | null
           push_notifications_enabled?: boolean | null
           show_on_leaderboard?: boolean
+          transformation_start_date?: string | null
           updated_at?: string
           user_id: string
         }
@@ -1027,7 +1110,10 @@ export type Database = {
           coaching_call_timezone?: string | null
           created_at?: string
           current_act?: string | null
+          current_cycle?: number | null
+          current_cycle_day?: number | null
           current_streak?: number | null
+          cycles_completed?: number | null
           day_number?: number | null
           director_character_name?: string | null
           display_name?: string | null
@@ -1040,6 +1126,7 @@ export type Database = {
           phone_number?: string | null
           push_notifications_enabled?: boolean | null
           show_on_leaderboard?: boolean
+          transformation_start_date?: string | null
           updated_at?: string
           user_id?: string
         }
