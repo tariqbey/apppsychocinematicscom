@@ -8,6 +8,7 @@ import { AnnualSelfAnalysis } from "@/components/character/AnnualSelfAnalysis";
 import { CharacterEvolution } from "@/components/character/CharacterEvolution";
 import { CycleProgress } from "@/components/character/CycleProgress";
 import { CycleReviewWizard } from "@/components/character/CycleReviewWizard";
+import { TransformationRoadmap } from "@/components/character/TransformationRoadmap";
 import { useAuth } from "@/hooks/useAuth";
 import { useCycleTracking } from "@/hooks/useCycleTracking";
 import { Loader2, ArrowLeft, User2, Target, TrendingUp, Brain, Calendar, GitBranch, RotateCcw } from "lucide-react";
@@ -99,26 +100,29 @@ const Character = () => {
             <TabsContent value="cycles" className="space-y-6">
               <CycleProgress onStartReview={() => setShowCycleReview(true)} />
               
+              {/* Transformation Roadmap */}
+              <TransformationRoadmap />
+              
               {/* Cycle explanation card */}
               <div className="glass-card p-6 space-y-4">
-                <h3 className="text-lg font-display">How 21-Day Cycles Work</h3>
+                <h3 className="text-lg font-display">The 3-4-3 Transformation Structure</h3>
                 <div className="grid md:grid-cols-3 gap-4 text-sm">
-                  <div className="p-4 rounded-lg bg-muted/30 border border-border">
-                    <p className="font-medium text-gold mb-2">🔄 21-Day Cycle</p>
+                  <div className="p-4 rounded-lg bg-amber-500/10 border border-amber-500/30">
+                    <p className="font-medium text-amber-400 mb-2">🌅 Act I: Awakening</p>
                     <p className="text-muted-foreground">
-                      The fundamental unit of behavioral change. Each cycle has a theme and ends with a comprehensive review.
+                      3 cycles (63 days) to establish your foundation, build awareness, and set the stage for transformation.
                     </p>
                   </div>
-                  <div className="p-4 rounded-lg bg-muted/30 border border-border">
-                    <p className="font-medium text-amber-400 mb-2">🎬 3 Cycles = 1 Act</p>
+                  <div className="p-4 rounded-lg bg-gold/10 border border-gold/30">
+                    <p className="font-medium text-gold mb-2">⚡ Act II: Integration</p>
                     <p className="text-muted-foreground">
-                      Every 3 cycles (63 days) completes an Act in your transformation story: Foundation → Integration → Mastery.
+                      4 cycles (84 days) of deep work. The longest act where real behavioral change takes root.
                     </p>
                   </div>
-                  <div className="p-4 rounded-lg bg-muted/30 border border-border">
-                    <p className="font-medium text-green-400 mb-2">🏆 Cycle Review</p>
+                  <div className="p-4 rounded-lg bg-emerald-500/10 border border-emerald-500/30">
+                    <p className="font-medium text-emerald-400 mb-2">👑 Act III: Mastery</p>
                     <p className="text-muted-foreground">
-                      At day 21, review your scorecard averages, character evolution, and get AI analysis of your progress.
+                      3 cycles (63 days) to solidify your new identity and embody your transformed character.
                     </p>
                   </div>
                 </div>
