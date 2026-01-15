@@ -170,8 +170,11 @@ export function TimelineEditor({
   const [rangeSelection, setRangeSelection] = useState<{ start: number; end: number } | null>(null);
   const [snapPreviewLines, setSnapPreviewLines] = useState<SnapInfo[]>([]);
   const [showSaveToVault, setShowSaveToVault] = useState(false);
+  const [showExportReview, setShowExportReview] = useState(false);
   const [razorPreviewX, setRazorPreviewX] = useState<number | null>(null);
   const [lastExportedUrl, setLastExportedUrl] = useState<string | null>(null);
+  const [lastExportedBlob, setLastExportedBlob] = useState<Blob | null>(null);
+  const [lastExportedFileExt, setLastExportedFileExt] = useState<string>("mp4");
   const [isImporting, setIsImporting] = useState(false);
   const [importProgress, setImportProgress] = useState(0);
   const [visibleRange, setVisibleRange] = useState({ start: 0, end: 60 });
@@ -929,7 +932,7 @@ export function TimelineEditor({
     }
   }, [state.clips, state.duration, state.backgroundAudio, state.tracks, state.masterVolume, exportTimeline, onExport, toast, exportQuality]);
 
-  // Handle export and save to vault
+  // Handle export and save to vault (now goes through review dialog)
   const handleExportAndSave = useCallback(async () => {
     const result = await exportTimeline(
       state.clips,
@@ -940,9 +943,27 @@ export function TimelineEditor({
 
     if (result) {
       setLastExportedUrl(result.url);
-      setShowSaveToVault(true);
+      setLastExportedBlob(result.blob);
+      setLastExportedFileExt(result.fileExt);
+      setShowExportReview(true);
     }
   }, [state.clips, state.duration, state.backgroundAudio, state.tracks, state.masterVolume, exportTimeline, exportQuality]);
+
+  // Handle confirming save from review dialog
+  const handleConfirmSaveToVault = useCallback(() => {
+    setShowExportReview(false);
+    setShowSaveToVault(true);
+  }, []);
+
+  // Handle discard from review dialog
+  const handleDiscardExport = useCallback(() => {
+    if (lastExportedUrl) {
+      URL.revokeObjectURL(lastExportedUrl);
+    }
+    setLastExportedUrl(null);
+    setLastExportedBlob(null);
+    setShowExportReview(false);
+  }, [lastExportedUrl]);
 
   // Handle save to vault complete
   const handleSaveToVaultComplete = useCallback((movieId: string, savedUrl: string) => {
@@ -1481,6 +1502,17 @@ export function TimelineEditor({
       {/* Hidden inputs */}
       <input ref={fileInputRef} type="file" accept="video/*,image/*" multiple className="hidden" onChange={(e) => handleFileUpload(e.target.files)} />
       <input ref={audioInputRef} type="file" accept="audio/*" className="hidden" onChange={(e) => handleFileUpload(e.target.files, true)} />
+
+      {/* Export Review Dialog */}
+      <ExportReviewDialog
+        open={showExportReview}
+        onOpenChange={setShowExportReview}
+        exportedUrl={lastExportedUrl}
+        exportedBlob={lastExportedBlob}
+        fileExt={lastExportedFileExt}
+        onConfirmSaveToVault={handleConfirmSaveToVault}
+        onDiscard={handleDiscardExport}
+      />
 
       {/* Save to Vault Dialog */}
       <SaveToVaultDialog

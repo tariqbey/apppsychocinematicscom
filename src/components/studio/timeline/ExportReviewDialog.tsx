@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -10,12 +10,13 @@ import {
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { useToast } from "@/hooks/use-toast";
-import { Download, Save, Trash2, Volume2, VolumeX } from "lucide-react";
+import { Clock, Download, HardDrive, Save, Trash2, Volume2, VolumeX } from "lucide-react";
 
 interface ExportReviewDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   exportedUrl: string | null;
+  exportedBlob?: Blob | null;
   fileExt: string;
   onConfirmSaveToVault: () => void;
   onDiscard: () => void;
@@ -25,6 +26,7 @@ export function ExportReviewDialog({
   open,
   onOpenChange,
   exportedUrl,
+  exportedBlob,
   fileExt,
   onConfirmSaveToVault,
   onDiscard,
@@ -34,6 +36,22 @@ export function ExportReviewDialog({
 
   const [isMuted, setIsMuted] = useState(false);
   const [volume, setVolume] = useState(1);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+
+  const formatTime = useCallback((seconds: number): string => {
+    if (!isFinite(seconds) || isNaN(seconds) || seconds < 0) return "--:--";
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, "0")}`;
+  }, []);
+
+  const formatFileSize = useCallback((bytes: number): string => {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+    return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
+  }, []);
 
   const downloadName = useMemo(() => {
     const safeExt = fileExt?.replace(".", "") || "mp4";
@@ -44,6 +62,8 @@ export function ExportReviewDialog({
     if (!open) return;
     setIsMuted(false);
     setVolume(1);
+    setCurrentTime(0);
+    setDuration(0);
   }, [open]);
 
   useEffect(() => {
@@ -59,9 +79,24 @@ export function ExportReviewDialog({
       });
     };
 
+    const onTimeUpdate = () => setCurrentTime(video.currentTime);
+    const onLoadedMetadata = () => setDuration(video.duration);
+    const onDurationChange = () => {
+      if (isFinite(video.duration)) setDuration(video.duration);
+    };
+
     video.addEventListener("error", onError);
-    return () => video.removeEventListener("error", onError);
-  }, [toast, open]);
+    video.addEventListener("timeupdate", onTimeUpdate);
+    video.addEventListener("loadedmetadata", onLoadedMetadata);
+    video.addEventListener("durationchange", onDurationChange);
+
+    return () => {
+      video.removeEventListener("error", onError);
+      video.removeEventListener("timeupdate", onTimeUpdate);
+      video.removeEventListener("loadedmetadata", onLoadedMetadata);
+      video.removeEventListener("durationchange", onDurationChange);
+    };
+  }, [toast, open, exportedUrl]);
 
   const handleDownload = () => {
     if (!exportedUrl) return;
@@ -92,7 +127,7 @@ export function ExportReviewDialog({
         </DialogHeader>
 
         <div className="space-y-3">
-          <div className="aspect-video w-full overflow-hidden rounded-lg bg-muted">
+          <div className="relative aspect-video w-full overflow-hidden rounded-lg bg-muted">
             {exportedUrl ? (
               <video
                 ref={videoRef}
@@ -100,7 +135,7 @@ export function ExportReviewDialog({
                 className="h-full w-full"
                 controls
                 playsInline
-                preload="auto"
+                preload="metadata"
                 muted={isMuted}
                 onVolumeChange={(e) => {
                   const el = e.currentTarget;
@@ -111,6 +146,20 @@ export function ExportReviewDialog({
             ) : (
               <div className="h-full w-full flex items-center justify-center text-sm text-muted-foreground">
                 No export to preview.
+              </div>
+            )}
+          </div>
+
+          {/* Time and File Size Indicators */}
+          <div className="flex items-center justify-between text-xs text-muted-foreground">
+            <div className="flex items-center gap-1.5 bg-muted px-2 py-1 rounded font-mono">
+              <Clock className="w-3 h-3" />
+              <span>{formatTime(currentTime)} / {formatTime(duration)}</span>
+            </div>
+            {exportedBlob && (
+              <div className="flex items-center gap-1.5 bg-muted px-2 py-1 rounded font-mono">
+                <HardDrive className="w-3 h-3" />
+                <span>{formatFileSize(exportedBlob.size)}</span>
               </div>
             )}
           </div>
