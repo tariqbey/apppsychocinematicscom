@@ -1,11 +1,10 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { 
   Target, Plus, Trash2, Loader2, Sparkles, ChevronLeft, ChevronRight,
-  Calendar, RefreshCw, X, AlertCircle, BarChart3
+  Calendar, RefreshCw, X, AlertCircle, BarChart3, Check, XCircle
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -120,15 +119,7 @@ export function ThreeThings({ showAnalyticsDefault = false }: ThreeThingsProps) 
     }
   };
 
-  const toggleTask = async (task: Task) => {
-    // If task is completed and user is unchecking it, show excuse dialog
-    if (task.is_completed) {
-      setTaskToUncheck(task);
-      setExcuseDialogOpen(true);
-      return;
-    }
-
-    // If task is incomplete and user is checking it complete
+  const markTaskComplete = async (task: Task) => {
     const { error } = await supabase
       .from("daily_tasks")
       .update({ is_completed: true, incomplete_reason: null })
@@ -137,6 +128,11 @@ export function ThreeThings({ showAnalyticsDefault = false }: ThreeThingsProps) 
     if (!error) {
       setTasks(tasks.map(t => t.id === task.id ? { ...t, is_completed: true, incomplete_reason: null } : t));
     }
+  };
+
+  const markTaskIncomplete = (task: Task) => {
+    setTaskToUncheck(task);
+    setExcuseDialogOpen(true);
   };
 
   const handleExcuseSelect = async (reason: string) => {
@@ -351,18 +347,57 @@ export function ThreeThings({ showAnalyticsDefault = false }: ThreeThingsProps) 
               key={task.id}
               className={`flex items-center gap-3 p-3 rounded-lg border transition-colors ${
                 task.is_completed
-                  ? "bg-muted/30 border-border/30"
+                  ? "bg-primary/10 border-primary/30"
+                  : task.incomplete_reason
+                  ? "bg-destructive/10 border-destructive/30"
                   : "bg-muted/50 border-border/50"
               }`}
             >
               <span className="text-xs font-bold text-primary w-5">#{index + 1}</span>
-              <Checkbox
-                checked={task.is_completed}
-                onCheckedChange={() => toggleTask(task)}
-              />
-              <span className={`flex-1 ${task.is_completed ? "line-through text-muted-foreground" : ""}`}>
+              <span className={`flex-1 ${task.is_completed ? "text-primary" : task.incomplete_reason ? "text-muted-foreground" : ""}`}>
                 {task.task_text}
               </span>
+              
+              {/* Yes/No Buttons */}
+              <div className="flex items-center gap-1.5">
+                {task.is_completed ? (
+                  <div className="flex items-center gap-1.5 text-primary text-xs font-medium">
+                    <Check className="h-4 w-4" />
+                    <span>Done</span>
+                  </div>
+                ) : task.incomplete_reason ? (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 text-xs text-muted-foreground hover:text-primary"
+                    onClick={() => markTaskComplete(task)}
+                  >
+                    Mark Done
+                  </Button>
+                ) : (
+                  <>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-7 px-2 text-xs border-primary/30 text-primary hover:bg-primary hover:text-primary-foreground"
+                      onClick={() => markTaskComplete(task)}
+                    >
+                      <Check className="h-3.5 w-3.5 mr-1" />
+                      Yes
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-7 px-2 text-xs border-destructive/30 text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                      onClick={() => markTaskIncomplete(task)}
+                    >
+                      <XCircle className="h-3.5 w-3.5 mr-1" />
+                      No
+                    </Button>
+                  </>
+                )}
+              </div>
+
               <Button
                 variant="ghost"
                 size="icon"
