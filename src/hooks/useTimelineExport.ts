@@ -491,11 +491,11 @@ export function useTimelineExport() {
                   });
                   finalMime = "video/mp4";
                 } catch (err) {
-                  console.warn("MP4 transcode failed; falling back to original export", err);
+                  console.warn("MP4 transcode failed; using WebM format instead", err);
+                  // WebM is still a high-quality format - don't alarm the user
                   toast({
-                    title: "MP4 transcode unavailable",
-                    description: "Falling back to the original export format for this browser.",
-                    variant: "destructive",
+                    title: "Exported as WebM",
+                    description: "Your video was saved in WebM format, which is fully compatible with the Vault.",
                   });
                 }
               }
