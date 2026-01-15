@@ -10,7 +10,7 @@ interface StorageUsage {
   limitGB: number;
 }
 
-const STORAGE_LIMIT_GB = 5;
+const STORAGE_LIMIT_GB = 10;
 const STORAGE_LIMIT_BYTES = STORAGE_LIMIT_GB * 1024 * 1024 * 1024;
 
 export function useStorageUsage() {
