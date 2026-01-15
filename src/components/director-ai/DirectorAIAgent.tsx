@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { VoiceOrb } from "./VoiceOrb";
 import { VoiceWaveform } from "./VoiceWaveform";
 import { AgentTranscript, TranscriptMessage } from "./AgentTranscript";
+import { DirectorAISettings, VOICE_OPTIONS, PERSONALITY_PRESETS, VoiceOption, PersonalityPreset } from "./DirectorAISettings";
 import { useVoiceInput } from "@/hooks/useVoiceInput";
 import { useCoachingContext } from "@/hooks/useCoachingContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -25,6 +26,31 @@ interface DirectorAIAgentProps {
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/director-ai`;
 const TTS_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/elevenlabs-tts`;
+
+// Load saved preferences from localStorage
+const loadSavedVoice = (): VoiceOption => {
+  try {
+    const saved = localStorage.getItem("director-ai-voice");
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      const found = VOICE_OPTIONS.find(v => v.id === parsed.id);
+      if (found) return found;
+    }
+  } catch {}
+  return VOICE_OPTIONS[0]; // Default to George
+};
+
+const loadSavedPersonality = (): PersonalityPreset => {
+  try {
+    const saved = localStorage.getItem("director-ai-personality");
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      const found = PERSONALITY_PRESETS.find(p => p.id === parsed.id);
+      if (found) return found;
+    }
+  } catch {}
+  return PERSONALITY_PRESETS[0]; // Default to Swag Coach
+};
 
 // Generate context-aware opening based on user status
 const generateProactiveOpening = (context: ReturnType<typeof useCoachingContext>["context"]) => {
@@ -88,6 +114,23 @@ export function DirectorAIAgent({ isOpen, onClose, chiefAim }: DirectorAIAgentPr
   const [isMinimized, setIsMinimized] = useState(false);
   const [hasInitialized, setHasInitialized] = useState(false);
   const [voiceEnabled, setVoiceEnabled] = useState(false);
+  
+  // Voice and personality settings
+  const [selectedVoice, setSelectedVoice] = useState<VoiceOption>(loadSavedVoice);
+  const [selectedPersonality, setSelectedPersonality] = useState<PersonalityPreset>(loadSavedPersonality);
+  
+  // Save preferences when changed
+  const handleVoiceChange = useCallback((voice: VoiceOption) => {
+    setSelectedVoice(voice);
+    localStorage.setItem("director-ai-voice", JSON.stringify(voice));
+    toast.success(`Voice changed to ${voice.name}`);
+  }, []);
+  
+  const handlePersonalityChange = useCallback((personality: PersonalityPreset) => {
+    setSelectedPersonality(personality);
+    localStorage.setItem("director-ai-personality", JSON.stringify(personality));
+    toast.success(`Coaching style: ${personality.name}`);
+  }, []);
   
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const audioUrlRef = useRef<string | null>(null);
@@ -243,7 +286,7 @@ export function DirectorAIAgent({ isOpen, onClose, chiefAim }: DirectorAIAgentPr
         },
         body: JSON.stringify({
           text,
-          voiceId: "JBFqnCBsd6RMkjVDRZzb", // George - commanding voice
+          voiceId: selectedVoice.id, // Use selected voice
         }),
         signal: ttsAbortControllerRef.current.signal,
       });
@@ -499,6 +542,7 @@ export function DirectorAIAgent({ isOpen, onClose, chiefAim }: DirectorAIAgentPr
           messages: allMessages, 
           chiefAim: coachingContext?.chiefAim || chiefAim,
           userContext,
+          personalityStyle: selectedPersonality.style, // Send personality preference
         }),
         signal: abortControllerRef.current.signal,
       });
@@ -657,23 +701,35 @@ export function DirectorAIAgent({ isOpen, onClose, chiefAim }: DirectorAIAgentPr
       {/* Main container */}
       <div className="relative z-10 w-full h-full flex flex-col items-center justify-center p-6">
         {/* Header controls */}
-        <div className="absolute top-4 right-4 flex items-center gap-2">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setIsMinimized(true)}
-            className="text-muted-foreground hover:text-foreground"
-          >
-            <Minimize2 className="w-5 h-5" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onClose}
-            className="text-muted-foreground hover:text-foreground"
-          >
-            <X className="w-5 h-5" />
-          </Button>
+        <div className="absolute top-4 left-4 right-4 flex items-center justify-between">
+          {/* Settings on the left */}
+          <DirectorAISettings
+            selectedVoice={selectedVoice}
+            onVoiceChange={handleVoiceChange}
+            selectedPersonality={selectedPersonality}
+            onPersonalityChange={handlePersonalityChange}
+            disabled={isLoading || orbState === "speaking"}
+          />
+          
+          {/* Minimize/Close on the right */}
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setIsMinimized(true)}
+              className="text-muted-foreground hover:text-foreground"
+            >
+              <Minimize2 className="w-5 h-5" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onClose}
+              className="text-muted-foreground hover:text-foreground"
+            >
+              <X className="w-5 h-5" />
+            </Button>
+          </div>
         </div>
 
         {/* Title */}
