@@ -1,7 +1,7 @@
 import { useExcuseAnalytics } from "@/hooks/useExcuseAnalytics";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { Loader2, TrendingUp, AlertTriangle, Clock, Users, Zap, Target } from "lucide-react";
+import { Loader2, TrendingUp, AlertTriangle, Clock, Users, Zap, Target, Lightbulb, CheckCircle2 } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, PieChart, Pie, Legend } from "recharts";
 
 const EXCUSE_COLORS = {
@@ -15,6 +15,63 @@ const EXCUSE_ICONS = {
   others_movie: <Users className="h-4 w-4" />,
   ran_out_of_time: <Clock className="h-4 w-4" />,
 };
+
+interface CoachingTip {
+  title: string;
+  tips: string[];
+  affirmation: string;
+}
+
+const COACHING_TIPS: Record<string, CoachingTip> = {
+  procrastinating: {
+    title: "Overcoming Procrastination",
+    tips: [
+      "Break tasks into 2-minute micro-actions to reduce resistance",
+      "Use the 'Director's Chair' technique: visualize completing the task before starting",
+      "Set a timer for 25 minutes and commit to focused work (Pomodoro)",
+      "Ask yourself: 'What would the future version of me do right now?'",
+      "Remove distractions before starting—close tabs, silence notifications",
+    ],
+    affirmation: "You are the Director of your movie. Every scene you shoot moves your story forward. Action!",
+  },
+  others_movie: {
+    title: "Staying in Your Own Movie",
+    tips: [
+      "Practice saying 'Let me check my schedule' before committing to requests",
+      "Block 'Director Time' on your calendar for your priorities first",
+      "Remember: helping others is noble, but not at the cost of your Chief Aim",
+      "Use the CUT! technique when you feel pulled into someone else's drama",
+      "Set clear boundaries with a simple script: 'I'd love to help, but I have commitments today'",
+    ],
+    affirmation: "Your movie matters. You can't direct someone else's film and your own at the same time. Stay on set.",
+  },
+  ran_out_of_time: {
+    title: "Mastering Your Time",
+    tips: [
+      "Do your Three Things first thing in the morning before anything else",
+      "Time-block your day—assign specific hours to your priority tasks",
+      "Audit your day: where are the time leaks? Social media, meetings, browsing?",
+      "Use Parkinson's Law: give tasks tighter deadlines to increase focus",
+      "Plan tomorrow's Three Things the night before to hit the ground running",
+    ],
+    affirmation: "You have the same 24 hours as every successful director. It's not about finding time—it's about making time.",
+  },
+};
+
+function getCoachingTip(mostCommonExcuse: string | null, excuseCounts: { reason: string; count: number }[]): CoachingTip | null {
+  if (!mostCommonExcuse) return null;
+  
+  // Find the reason key from the label
+  const excuseEntry = excuseCounts.find(e => 
+    COACHING_TIPS[e.reason] && 
+    (e.reason === "procrastinating" && mostCommonExcuse === "Procrastinating") ||
+    (e.reason === "others_movie" && mostCommonExcuse === "Someone else's movie") ||
+    (e.reason === "ran_out_of_time" && mostCommonExcuse === "Ran out of time")
+  );
+  
+  if (!excuseEntry) return null;
+  return COACHING_TIPS[excuseEntry.reason];
+}
 
 export function ExcuseAnalytics() {
   const { analytics, isLoading } = useExcuseAnalytics(30);
@@ -43,8 +100,40 @@ export function ExcuseAnalytics() {
       color: EXCUSE_COLORS[e.reason as keyof typeof EXCUSE_COLORS],
     }));
 
+  const coachingTip = getCoachingTip(analytics.mostCommonExcuse, analytics.excuseCounts);
+
   return (
     <div className="space-y-4">
+      {/* Personalized Coaching Tips */}
+      {coachingTip && totalExcuses >= 3 && (
+        <Card className="glass-card border-gold/30 bg-gradient-to-br from-gold/5 to-transparent">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base font-display tracking-wide flex items-center gap-2">
+              <Lightbulb className="h-5 w-5 text-gold" />
+              Director's Coaching: {coachingTip.title}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Based on your patterns, here are personalized tips to help you stay on script:
+            </p>
+            <ul className="space-y-2">
+              {coachingTip.tips.slice(0, 3).map((tip, index) => (
+                <li key={index} className="flex items-start gap-2 text-sm">
+                  <CheckCircle2 className="h-4 w-4 text-gold mt-0.5 shrink-0" />
+                  <span>{tip}</span>
+                </li>
+              ))}
+            </ul>
+            <div className="mt-4 p-3 rounded-lg bg-gold/10 border border-gold/20">
+              <p className="text-sm italic text-gold">
+                "{coachingTip.affirmation}"
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Summary Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <Card className="glass-card border-border/50">
