@@ -131,6 +131,7 @@ export type Database = {
           id: string
           light_shadow_state: string | null
           survey_responses: Json
+          transformation_analysis: Json | null
           updated_at: string
           user_id: string
         }
@@ -141,6 +142,7 @@ export type Database = {
           id?: string
           light_shadow_state?: string | null
           survey_responses?: Json
+          transformation_analysis?: Json | null
           updated_at?: string
           user_id: string
         }
@@ -151,6 +153,49 @@ export type Database = {
           id?: string
           light_shadow_state?: string | null
           survey_responses?: Json
+          transformation_analysis?: Json | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      character_scorecards: {
+        Row: {
+          created_at: string
+          id: string
+          max_possible_score: number | null
+          reflection: string | null
+          required_character_name: string | null
+          scorecard_date: string
+          total_score: number | null
+          trait_scores: Json | null
+          traits: Json | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          max_possible_score?: number | null
+          reflection?: string | null
+          required_character_name?: string | null
+          scorecard_date?: string
+          total_score?: number | null
+          trait_scores?: Json | null
+          traits?: Json | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          max_possible_score?: number | null
+          reflection?: string | null
+          required_character_name?: string | null
+          scorecard_date?: string
+          total_score?: number | null
+          trait_scores?: Json | null
+          traits?: Json | null
           updated_at?: string
           user_id?: string
         }

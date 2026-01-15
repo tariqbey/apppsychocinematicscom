@@ -220,7 +220,44 @@ serve(async (req) => {
 ${userContext.chiefAimComplete 
   ? "✓ Chief Aim is COMPLETE - They have their Final Scene defined."
   : "⚠️ Chief Aim is INCOMPLETE - They need to define their Final Scene! This is Phase 1 priority."}
-${userContext.directorCharacterName ? `**Director Character Name:** ${userContext.directorCharacterName}` : ""}
+${userContext.directorCharacterName ? `**Director Character Name:** ${userContext.directorCharacterName}` : ""}`;
+
+      // Add Character Transformation Analysis if available
+      if (userContext.characterArchetype || userContext.transformationAnalysis) {
+        contextSection += `\n\n### CHARACTER TRANSFORMATION PROFILE`;
+        
+        if (userContext.characterArchetype) {
+          contextSection += `\n**Current Archetype:** ${userContext.characterArchetype}`;
+        }
+        
+        if (userContext.transformationAnalysis) {
+          const analysis = userContext.transformationAnalysis;
+          contextSection += `
+**Required Character:** ${analysis.requiredCharacter?.name || "Not yet defined"}
+**The Role:** ${analysis.script?.role || ""}
+**Character Arc:** ${analysis.script?.arc || ""}
+
+**TRAITS THEY MUST EMBODY:**
+${analysis.requiredCharacter?.traits?.map((t: string) => `- ${t}`).join("\n") || "Not defined"}
+
+**DAILY BEHAVIORS (Coach them on these!):**
+${analysis.requiredCharacter?.behaviors?.map((b: string) => `- ${b}`).join("\n") || "Not defined"}
+
+**WHAT MUST DIE (Old patterns to call out!):**
+${analysis.gap?.whatMustDie?.map((d: string) => `- ${d}`).join("\n") || "Not defined"}
+
+**BLIND SPOTS (They won't see these coming):**
+${analysis.currentSelf?.blindSpots?.map((b: string) => `- ${b}`).join("\n") || "Not defined"}
+
+**DAILY TRANSFORMATION PRACTICES:**
+${analysis.gap?.dailyPractices?.map((p: string) => `- ${p}`).join("\n") || "Not defined"}
+
+COACHING DIRECTIVE: Use this transformation profile actively! When they make excuses, reference WHAT MUST DIE. 
+When they succeed, connect it to the traits they're embodying. Remind them of WHO they must become, not just what they must do.`;
+        }
+      }
+
+      contextSection += `
 
 ### TODAY'S THREE THINGS
 ${userContext.tasksSetForToday 
@@ -246,7 +283,8 @@ ${userContext.filledScorecardToday
 1. ${!userContext.chiefAimComplete ? "URGENT: Help them complete their Chief Aim!" : "Chief Aim complete ✓"}
 2. ${!userContext.tasksSetForToday ? "Set today's Three Things" : (userContext.allTasksCompleted ? "All tasks done ✓" : "Check on task progress")}
 3. ${!userContext.watchedMindMovieToday && userContext.hasMindMovie ? "Encourage Mind Movie viewing" : "Mind Movie status OK ✓"}
-4. ${!userContext.filledScorecardToday ? "Remind about scorecard (end of day)" : "Scorecard done ✓"}`;
+4. ${!userContext.filledScorecardToday ? "Remind about scorecard (end of day)" : "Scorecard done ✓"}
+5. ${userContext.transformationAnalysis ? "Reference their character transformation - remind them WHO they must become!" : "Encourage them to complete Character Analysis"}`;
     } else if (!chiefAim) {
       contextSection += `\n\n## CHIEF AIM STATUS\n⚠️ The user has not yet defined their Definite Chief Aim. This is critical! Guide them toward Phase 1 (Pre-Production) to craft their Final Scene.`;
     }

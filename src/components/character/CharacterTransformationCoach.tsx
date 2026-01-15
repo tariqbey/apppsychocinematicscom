@@ -106,6 +106,13 @@ export function CharacterTransformationCoach({
       if (error) throw error;
       
       setAnalysis(data.analysis);
+      
+      // Save the transformation analysis to character_profiles for Director AI access
+      await supabase
+        .from("character_profiles")
+        .update({ transformation_analysis: data.analysis })
+        .eq("user_id", user.id);
+        
     } catch (error) {
       console.error("Error generating transformation plan:", error);
       toast.error("Failed to generate transformation analysis. Please try again.");

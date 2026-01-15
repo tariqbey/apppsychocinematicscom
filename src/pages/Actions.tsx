@@ -1,12 +1,13 @@
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Target, User, Calendar } from "lucide-react";
+import { ArrowLeft, Target, User, Calendar, Crown } from "lucide-react";
 import { Header } from "@/components/layout/Header";
 import { ThreeThings } from "@/components/tasks/ThreeThings";
 import { ExcuseAnalytics } from "@/components/tasks/ExcuseAnalytics";
 import { CharacterCentral } from "@/components/character/CharacterCentral";
 import { AnnualSelfAnalysis } from "@/components/character/AnnualSelfAnalysis";
+import { CharacterScorecard } from "@/components/character/CharacterScorecard";
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -14,6 +15,7 @@ export default function Actions() {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
   const [showAnnualAnalysis, setShowAnnualAnalysis] = useState(false);
+  const [showCharacterScorecard, setShowCharacterScorecard] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -64,14 +66,25 @@ export default function Actions() {
 
         {/* Character Central Section */}
         <div className="space-y-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-gold/20 to-amber-500/20 flex items-center justify-center">
-              <User className="w-5 h-5 text-gold" />
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-gold/20 to-amber-500/20 flex items-center justify-center">
+                <User className="w-5 h-5 text-gold" />
+              </div>
+              <div>
+                <h2 className="text-xl font-display tracking-wide">Character Central</h2>
+                <p className="text-sm text-muted-foreground">Discover & develop your director archetype</p>
+              </div>
             </div>
-            <div>
-              <h2 className="text-xl font-display tracking-wide">Character Central</h2>
-              <p className="text-sm text-muted-foreground">Discover & develop your director archetype</p>
-            </div>
+            <Button 
+              variant="outline" 
+              onClick={() => setShowCharacterScorecard(true)}
+              className="gap-2 border-gold/50 text-gold hover:bg-gold/10"
+            >
+              <Crown className="h-4 w-4" />
+              <span className="hidden sm:inline">Character Scorecard</span>
+              <span className="sm:hidden">Score</span>
+            </Button>
           </div>
           <CharacterCentral />
         </div>
@@ -122,6 +135,11 @@ export default function Actions() {
       {/* Annual Self-Analysis Modal */}
       {showAnnualAnalysis && (
         <AnnualSelfAnalysis onClose={() => setShowAnnualAnalysis(false)} />
+      )}
+
+      {/* Character Scorecard Modal */}
+      {showCharacterScorecard && (
+        <CharacterScorecard onClose={() => setShowCharacterScorecard(false)} />
       )}
     </div>
   );
