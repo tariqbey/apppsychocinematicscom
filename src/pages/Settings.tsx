@@ -12,6 +12,7 @@ import { Link } from "react-router-dom";
 import { format } from "date-fns";
 import { IntegrationsTab } from "@/components/settings/IntegrationsTab";
 import { NotificationSettings } from "@/components/notifications/NotificationSettings";
+import { ReminderScheduler } from "@/components/notifications/ReminderScheduler";
 
 export default function Settings() {
   const { user, loading: authLoading } = useAuth();
@@ -281,13 +282,15 @@ export default function Settings() {
             <div className="space-y-6">
               <Card className="bg-card border-border">
                 <CardHeader>
-                  <CardTitle>Notifications</CardTitle>
-                  <CardDescription>Manage how you receive reminders</CardDescription>
+                  <CardTitle>Push Notifications</CardTitle>
+                  <CardDescription>Enable browser notifications for reminders</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <NotificationSettings />
                 </CardContent>
               </Card>
+
+              <ReminderScheduler />
 
               <Card className="bg-card border-border">
                 <CardHeader>

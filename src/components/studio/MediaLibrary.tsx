@@ -5,7 +5,7 @@ import { Progress } from "@/components/ui/progress";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Image, Video, Clock, AlertCircle, Loader2, Download, Trash2, HardDrive, X, ChevronLeft, ChevronRight, RefreshCw, Mic2, Clapperboard, Music, Plus, ArrowUpDown } from "lucide-react";
+import { Image, Video, Clock, AlertCircle, Loader2, Download, Trash2, HardDrive, X, ChevronLeft, ChevronRight, RefreshCw, Mic2, Clapperboard, Music, Plus, ArrowUpDown, Share2 } from "lucide-react";
 import { useMediaGeneration, GeneratedMedia } from "@/hooks/useMediaGeneration";
 import { useStorageUsage } from "@/hooks/useStorageUsage";
 import { formatDistanceToNow } from "date-fns";
@@ -13,6 +13,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { VoiceChanger } from "./VoiceChanger";
+import { ShareMenu } from "@/components/sharing/ShareMenu";
+import { ShareToCommunityDialog } from "@/components/sharing/ShareToCommunityDialog";
 
 interface MediaLibraryProps {
   filter?: "image" | "video" | "all";
@@ -41,6 +43,7 @@ export function MediaLibrary({ filter = "all", onSelect, onAddToTimeline, onAddM
   const [sortBy, setSortBy] = useState<"date" | "type">("date");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [filterType, setFilterType] = useState<"all" | "video" | "image" | "audio">("all");
+  const [shareDialogMedia, setShareDialogMedia] = useState<GeneratedMedia | null>(null);
   const { fetchGenerationHistory } = useMediaGeneration();
   const { toast } = useToast();
   const { user, loading: authLoading } = useAuth();
@@ -341,6 +344,17 @@ export function MediaLibrary({ filter = "all", onSelect, onAddToTimeline, onAddM
                         <Mic2 className="h-4 w-4 mr-2" />
                         Voice
                       </Button>
+                    )}
+                    {/* Share Button */}
+                    {lightboxMedia.media_url && (lightboxMedia.media_type === "image" || lightboxMedia.media_type === "video") && (
+                      <ShareMenu
+                        mediaUrl={lightboxMedia.media_url}
+                        mediaType={lightboxMedia.media_type}
+                        title={lightboxMedia.prompt?.slice(0, 100) || "My creation"}
+                        onShareToCommunity={() => {
+                          setShareDialogMedia(lightboxMedia);
+                        }}
+                      />
                     )}
                     <Button
                       size="sm"
@@ -668,6 +682,17 @@ export function MediaLibrary({ filter = "all", onSelect, onAddToTimeline, onAddM
             ))}
           </div>
         </ScrollArea>
+      )}
+
+      {/* Share to Community Dialog */}
+      {shareDialogMedia && shareDialogMedia.media_url && (
+        <ShareToCommunityDialog
+          isOpen={!!shareDialogMedia}
+          onClose={() => setShareDialogMedia(null)}
+          mediaUrl={shareDialogMedia.media_url}
+          mediaType={shareDialogMedia.media_type as "image" | "video"}
+          defaultCaption={shareDialogMedia.prompt || ""}
+        />
       )}
     </div>
   );
