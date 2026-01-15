@@ -19,7 +19,7 @@ export function CycleProgress({ onStartReview, compact = false }: CycleProgressP
     getActName, 
     getCycleName,
     DAYS_PER_CYCLE,
-    CYCLES_PER_ACT
+    getCyclesPerAct
   } = useCycleTracking();
 
   if (loading) {
@@ -92,7 +92,7 @@ export function CycleProgress({ onStartReview, compact = false }: CycleProgressP
     );
   }
 
-  const cycleWithinAct = ((cycleInfo.currentCycle - 1) % CYCLES_PER_ACT) + 1;
+  const cyclesInCurrentAct = cycleInfo?.cyclesInCurrentAct || getCyclesPerAct(cycleInfo?.currentAct || 1);
 
   return (
     <Card className="glass-card border-gold/30">
@@ -143,27 +143,45 @@ export function CycleProgress({ onStartReview, compact = false }: CycleProgressP
               <span className="text-sm font-medium">{getActName(cycleInfo.currentAct)}</span>
             </div>
             <span className="text-sm text-muted-foreground">
-              Cycle {cycleWithinAct} of {CYCLES_PER_ACT}
+              Cycle {cycleInfo.cycleWithinAct} of {cyclesInCurrentAct}
             </span>
           </div>
           
           {/* Act cycle indicators */}
           <div className="flex gap-2">
-            {Array.from({ length: CYCLES_PER_ACT }).map((_, i) => (
+            {Array.from({ length: cyclesInCurrentAct }).map((_, i) => (
               <div 
                 key={i} 
                 className={`flex-1 h-2 rounded-full ${
-                  i < cycleWithinAct - 1 
+                  i < cycleInfo.cycleWithinAct - 1 
                     ? "bg-gold" 
-                    : i === cycleWithinAct - 1 
+                    : i === cycleInfo.cycleWithinAct - 1 
                       ? "bg-gradient-to-r from-gold to-gold/30" 
                       : "bg-muted"
                 }`}
-                style={i === cycleWithinAct - 1 ? { 
+                style={i === cycleInfo.cycleWithinAct - 1 ? { 
                   background: `linear-gradient(to right, hsl(var(--gold)) ${cycleInfo.cycleProgress}%, hsl(var(--muted)) ${cycleInfo.cycleProgress}%)` 
                 } : undefined}
               />
             ))}
+          </div>
+          
+          {/* Dynamic labels based on act */}
+          <div className="flex justify-between text-xs text-muted-foreground">
+            {cyclesInCurrentAct === 3 ? (
+              <>
+                <span>Foundation</span>
+                <span>Integration</span>
+                <span>Mastery</span>
+              </>
+            ) : (
+              <>
+                <span>Foundation</span>
+                <span>Deep Work</span>
+                <span>Integration</span>
+                <span>Mastery</span>
+              </>
+            )}
           </div>
           
           <div className="flex justify-between text-xs text-muted-foreground">
@@ -187,7 +205,9 @@ export function CycleProgress({ onStartReview, compact = false }: CycleProgressP
           </div>
           <div className="p-3 rounded-lg bg-muted/20">
             <Target className="h-4 w-4 mx-auto mb-1 text-green-400" />
-            <p className="text-lg font-bold">{Math.floor(cycleInfo.cyclesCompleted / CYCLES_PER_ACT)}</p>
+            <p className="text-lg font-bold">
+              {cycleInfo.cyclesCompleted >= 10 ? 3 : cycleInfo.cyclesCompleted >= 7 ? 2 : cycleInfo.cyclesCompleted >= 3 ? 1 : 0}
+            </p>
             <p className="text-xs text-muted-foreground">Acts Complete</p>
           </div>
         </div>

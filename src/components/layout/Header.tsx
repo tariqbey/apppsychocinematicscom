@@ -66,7 +66,7 @@ export const Header = () => {
             <img 
               src={psychoCinematicsLogo} 
               alt="Psycho-Cinematics" 
-              className="h-12 w-auto"
+              className="h-[96px] w-[96px] object-contain"
             />
           </Link>
 
