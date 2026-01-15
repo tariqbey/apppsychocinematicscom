@@ -11,6 +11,7 @@ import { User, Bell, Shield, ArrowLeft, CreditCard, Crown, Zap, Calendar, Extern
 import { Link } from "react-router-dom";
 import { format } from "date-fns";
 import { IntegrationsTab } from "@/components/settings/IntegrationsTab";
+import { NotificationSettings } from "@/components/notifications/NotificationSettings";
 
 export default function Settings() {
   const { user, loading: authLoading } = useAuth();
@@ -277,15 +278,27 @@ export default function Settings() {
           </TabsContent>
 
           <TabsContent value="preferences">
-            <Card className="bg-card border-border">
-              <CardHeader>
-                <CardTitle>Preferences</CardTitle>
-                <CardDescription>Customize your experience</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground">Preference settings coming soon.</p>
-              </CardContent>
-            </Card>
+            <div className="space-y-6">
+              <Card className="bg-card border-border">
+                <CardHeader>
+                  <CardTitle>Notifications</CardTitle>
+                  <CardDescription>Manage how you receive reminders</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <NotificationSettings />
+                </CardContent>
+              </Card>
+
+              <Card className="bg-card border-border">
+                <CardHeader>
+                  <CardTitle>Display Preferences</CardTitle>
+                  <CardDescription>Customize your experience</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-muted-foreground text-sm">More preference settings coming soon.</p>
+                </CardContent>
+              </Card>
+            </div>
           </TabsContent>
 
           <TabsContent value="integrations">
