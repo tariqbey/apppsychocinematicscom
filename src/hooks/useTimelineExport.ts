@@ -121,7 +121,8 @@ async function transcodeToMp4Cfr(
   const inputName = `input-${Date.now()}.bin`;
   const outputName = `output-${Date.now()}.mp4`;
 
-  const crf = resolution === "4K" ? "30" : resolution === "1080p" ? "28" : "27";
+  // Higher CRF = smaller file; 28-32 gives good quality at smaller size
+  const crf = resolution === "4K" ? "32" : resolution === "1080p" ? "30" : "28";
 
   // Track progress if supported by ffmpeg instance.
   try {
@@ -141,7 +142,7 @@ async function transcodeToMp4Cfr(
   await ffmpeg.writeFile(inputName, await fetchFile(inputBlob));
 
   const commandVariants: string[][] = [
-    // Best: H.264 + AAC, constant frame rate, faststart
+    // Best: H.264 + AAC, constant frame rate, faststart, optimized for small size
     [
       "-hide_banner",
       "-y",
@@ -156,15 +157,19 @@ async function transcodeToMp4Cfr(
       "-pix_fmt",
       "yuv420p",
       "-preset",
-      "veryfast",
+      "medium",
       "-crf",
       crf,
+      "-tune",
+      "film",
       "-movflags",
       "+faststart",
       "-c:a",
       "aac",
       "-b:a",
-      "128k",
+      "96k",
+      "-ac",
+      "2",
       outputName,
     ],
     // Fallback: OpenH264
@@ -182,7 +187,7 @@ async function transcodeToMp4Cfr(
       "-pix_fmt",
       "yuv420p",
       "-preset",
-      "veryfast",
+      "medium",
       "-crf",
       crf,
       "-movflags",
@@ -190,7 +195,9 @@ async function transcodeToMp4Cfr(
       "-c:a",
       "aac",
       "-b:a",
-      "128k",
+      "96k",
+      "-ac",
+      "2",
       outputName,
     ],
     // Fallback: MPEG-4 Part 2 (widely supported, less efficient)
@@ -206,13 +213,15 @@ async function transcodeToMp4Cfr(
       "-c:v",
       "mpeg4",
       "-q:v",
-      "6",
+      "8",
       "-movflags",
       "+faststart",
       "-c:a",
       "aac",
       "-b:a",
-      "128k",
+      "96k",
+      "-ac",
+      "2",
       outputName,
     ],
   ];
@@ -438,11 +447,11 @@ export function useTimelineExport() {
 
         const recorderMimeType = recorderMimeCandidates.find((t) => MediaRecorder.isTypeSupported(t));
 
-        // Bitrate settings per resolution (only affects the initial recording; MP4 transcode uses CRF)
+        // Bitrate settings per resolution - optimized for smaller files (transcode uses CRF for final size)
         const bitrates: Record<string, number> = {
-          "720p": 5000000,
-          "1080p": 8000000,
-          "4K": 25000000,
+          "720p": 2500000,
+          "1080p": 4000000,
+          "4K": 12000000,
         };
 
         const recorder = new MediaRecorder(combinedStream, {
