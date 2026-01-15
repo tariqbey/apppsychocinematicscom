@@ -981,6 +981,15 @@ export type Database = {
       }
     }
     Functions: {
+      allocate_credits_atomic: {
+        Args: {
+          p_credits: number
+          p_description: string
+          p_session_id: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
       get_leaderboard: {
         Args: never
         Returns: {
