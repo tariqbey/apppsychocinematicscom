@@ -98,15 +98,26 @@ serve(async (req) => {
       { auth: { persistSession: false } }
     );
 
-    // Check if this session was already processed (idempotency check)
-    const { data: existingTransaction } = await supabaseClient
-      .from("credit_transactions")
-      .select("id")
-      .eq("stripe_session_id", sessionId)
-      .single();
+    // Use atomic RPC function to prevent race conditions
+    // The function handles duplicate detection via unique constraint on stripe_session_id
+    const { data: result, error: rpcError } = await supabaseClient.rpc('allocate_credits_atomic', {
+      p_user_id: userId,
+      p_session_id: sessionId,
+      p_credits: pack.credits,
+      p_description: `Purchased ${pack.credits} credits`
+    });
 
-    if (existingTransaction) {
-      logStep("Session already processed", { sessionId: sessionId?.substring(0, 20) });
+    if (rpcError) {
+      logStep("Error in atomic credit allocation", { error: rpcError.message });
+      return new Response(JSON.stringify({ error: "Unable to process credits", code: "E1003" }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Check if already processed (caught by unique constraint)
+    if (result?.alreadyProcessed) {
+      logStep("Session already processed (atomic)", { sessionId: sessionId?.substring(0, 20) });
       return new Response(JSON.stringify({
         success: true,
         alreadyProcessed: true,
@@ -117,66 +128,7 @@ serve(async (req) => {
       });
     }
 
-    // Get current balance
-    const { data: creditsData, error: creditsError } = await supabaseClient
-      .from("production_credits")
-      .select("*")
-      .eq("user_id", userId)
-      .single();
-
-    if (creditsError || !creditsData) {
-      // Create new record if doesn't exist
-      const { error: insertError } = await supabaseClient
-        .from("production_credits")
-        .insert({
-          user_id: userId,
-          monthly_credits: 0,
-          purchased_credits: pack.credits,
-          monthly_allowance_limit: 1000,
-          monthly_allowance_used: 0
-        });
-
-      if (insertError) {
-        logStep("Error creating credits record", { error: insertError.message });
-        return new Response(JSON.stringify({ error: "Unable to process credits", code: "E1003" }), {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-    } else {
-      // Add credits to purchased_credits
-      const currentPurchased = Math.round(parseFloat(creditsData.purchased_credits || 0));
-      const newPurchased = currentPurchased + pack.credits;
-
-      const { error: updateError } = await supabaseClient
-        .from("production_credits")
-        .update({
-          purchased_credits: newPurchased
-        })
-        .eq("user_id", userId);
-
-      if (updateError) {
-        logStep("Error updating credits", { error: updateError.message });
-        return new Response(JSON.stringify({ error: "Unable to update credits", code: "E1003" }), {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-    }
-
-    // Log the transaction
-    await supabaseClient
-      .from("credit_transactions")
-      .insert({
-        user_id: userId,
-        amount: pack.credits,
-        api_cost_usd: 0,
-        transaction_type: "purchase",
-        description: `Purchased ${pack.credits} credits`,
-        stripe_session_id: sessionId
-      });
-
-    logStep("Purchase confirmed", { 
+    logStep("Purchase confirmed (atomic)", { 
       userId: userId.substring(0, 8) + "...", 
       credits: pack.credits 
     });
