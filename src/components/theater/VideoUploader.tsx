@@ -71,12 +71,12 @@ export const VideoUploader = ({
       return;
     }
 
-    // Validate file size (1GB max)
-    if (file.size > 1024 * 1024 * 1024) {
+    // Validate file size (5GB max)
+    if (file.size > 5 * 1024 * 1024 * 1024) {
       toast({
         variant: "destructive",
         title: "File too large",
-        description: "Maximum file size is 1GB.",
+        description: "Maximum file size is 5GB.",
       });
       return;
     }
@@ -211,7 +211,7 @@ export const VideoUploader = ({
                   </p>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  MP4, WebM, MOV, AVI • Max 1GB
+                  MP4, WebM, MOV, AVI • Max 5GB
                 </p>
               </div>
             )}
