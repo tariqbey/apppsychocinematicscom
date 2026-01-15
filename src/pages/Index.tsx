@@ -13,13 +13,14 @@ import { ChiefAimWizard } from "@/components/chief-aim/ChiefAimWizard";
 import { MindMovieScriptWizard, TimelineExportData } from "@/components/mind-movie/MindMovieScriptWizard";
 import { MovieVault } from "@/components/mind-movie/MovieVault";
 import { ThreeThings } from "@/components/tasks/ThreeThings";
+import { DirectorsJournal } from "@/components/journal/DirectorsJournal";
 import { AuthModal } from "@/components/auth/AuthModal";
 import { OnboardingModal, useOnboarding } from "@/components/onboarding/OnboardingModal";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { useGamification } from "@/hooks/useGamification";
 import { useMindMovies, MindMovie } from "@/hooks/useMindMovies";
-import { Film, Loader2, Wand2, Sparkles, Bot, Clapperboard, FolderOpen } from "lucide-react";
+import { Film, Loader2, Wand2, Sparkles, Bot, Clapperboard, FolderOpen, BookOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { InfoTooltip } from "@/components/ui/info-tooltip";
 
@@ -35,6 +36,7 @@ const Index = () => {
   const [selectedMovieId, setSelectedMovieId] = useState<string | undefined>();
   const [editBayInitialPrompt, setEditBayInitialPrompt] = useState<string | undefined>();
   const [timelineExportData, setTimelineExportData] = useState<TimelineExportData | undefined>();
+  const [showJournal, setShowJournal] = useState(false);
 
   const { user, loading: authLoading } = useAuth();
   const { profile, loading: profileLoading, updateProfile } = useUserProfile();
@@ -206,6 +208,32 @@ const Index = () => {
             )}
           </div>
 
+          {/* Director's Journal Card */}
+          <button
+            onClick={() => setShowJournal(true)}
+            className="w-full glass-card p-6 cinematic-border animate-slide-up group hover:border-purple-500/50 transition-all duration-300 text-left"
+          >
+            <div className="flex items-center gap-4">
+              <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-purple-500/20 to-pink-500/20 flex items-center justify-center group-hover:from-purple-500/30 group-hover:to-pink-500/30 transition-all duration-300">
+                <BookOpen className="w-7 h-7 text-purple-400" />
+              </div>
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-1">
+                  <h3 className="text-xl font-display tracking-wide group-hover:text-purple-400 transition-colors">Director's Journal</h3>
+                  <Sparkles className="w-4 h-4 text-purple-400/60" />
+                  <InfoTooltip content="Record your experiences, breakthroughs, and challenges. Get AI-powered feedback on your progress and accountability reports to track your transformation journey." />
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Record your journey • AI insights & accountability tracking
+                </p>
+              </div>
+              <div className="hidden sm:flex items-center gap-2 text-sm text-muted-foreground group-hover:text-purple-400 transition-colors">
+                <span>Open Journal</span>
+                <span className="text-lg">→</span>
+              </div>
+            </div>
+          </button>
+
           {/* Three Things - Daily Task Manager */}
           <ThreeThings />
 
@@ -326,6 +354,12 @@ const Index = () => {
           userId={user.id}
         />
       </>
+
+      {/* Director's Journal */}
+      <DirectorsJournal
+        isOpen={showJournal}
+        onClose={() => setShowJournal(false)}
+      />
 
       {/* Auth Modal */}
       <AuthModal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} />
