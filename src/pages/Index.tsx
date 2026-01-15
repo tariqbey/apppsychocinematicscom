@@ -20,7 +20,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { useGamification } from "@/hooks/useGamification";
 import { useMindMovies, MindMovie } from "@/hooks/useMindMovies";
-import { Film, Loader2, Wand2, Sparkles, Bot, Clapperboard, FolderOpen, BookOpen, Target, User2 } from "lucide-react";
+import { Loader2, Wand2, Sparkles, Bot, Clapperboard, FolderOpen, BookOpen, Target, User2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { InfoTooltip } from "@/components/ui/info-tooltip";
 
@@ -107,32 +107,46 @@ const Index = () => {
 
   // Check for openWizard URL parameter (from Character Builder)
   useEffect(() => {
-    if (searchParams.get('openWizard') === 'true' && user) {
-      // Clear the URL parameter
-      setSearchParams({});
-      
-      // Check for stored transformation data
-      const storedAnalysis = sessionStorage.getItem('transformationAnalysis');
-      const storedChiefAim = sessionStorage.getItem('chiefAimForScript');
-      
-      if (storedAnalysis && storedChiefAim) {
-        try {
-          const analysis = JSON.parse(storedAnalysis);
-          const chiefAimData = JSON.parse(storedChiefAim);
-          setTransformationDataForWizard({ analysis, chiefAim: chiefAimData });
-          
-          // Clear session storage
-          sessionStorage.removeItem('transformationAnalysis');
-          sessionStorage.removeItem('chiefAimForScript');
-        } catch (e) {
-          console.error('Failed to parse transformation data:', e);
+    const openWizardFromCharacter = async () => {
+      if (searchParams.get('openWizard') === 'true' && user) {
+        // Clear the URL parameter first
+        setSearchParams({});
+        
+        // Check for stored transformation data
+        const storedAnalysis = sessionStorage.getItem('transformationAnalysis');
+        const storedChiefAim = sessionStorage.getItem('chiefAimForScript');
+        
+        let transformationData = null;
+        if (storedAnalysis && storedChiefAim) {
+          try {
+            const analysis = JSON.parse(storedAnalysis);
+            const chiefAimData = JSON.parse(storedChiefAim);
+            transformationData = { analysis, chiefAim: chiefAimData };
+            
+            // Clear session storage
+            sessionStorage.removeItem('transformationAnalysis');
+            sessionStorage.removeItem('chiefAimForScript');
+          } catch (e) {
+            console.error('Failed to parse transformation data:', e);
+          }
+        }
+        
+        // Create the movie first
+        const movie = await createNewMovie();
+        if (movie) {
+          setSelectedMovieId(movie.id);
+          setShowMovieVault(false);
+          // Set transformation data BEFORE opening the wizard
+          if (transformationData) {
+            setTransformationDataForWizard(transformationData);
+          }
+          setShowMindMovieWizard(true);
         }
       }
-      
-      // Open the wizard
-      handleCreateNewMovie();
-    }
-  }, [searchParams, user, setSearchParams, handleCreateNewMovie]);
+    };
+    
+    openWizardFromCharacter();
+  }, [searchParams, user, setSearchParams, createNewMovie]);
 
   if (authLoading) {
     return (

@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, Target, Sparkles, AlertTriangle, ArrowRight, Crown, Swords, Shield, X, Film, Clapperboard } from "lucide-react";
+import { Loader2, Target, Sparkles, AlertTriangle, ArrowRight, Crown, Swords, Shield, X, Film, Clapperboard, Download, Check } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Archetype, ARCHETYPES } from "./archetypes";
@@ -158,12 +158,205 @@ export function CharacterTransformationCoach({
         .update({ transformation_analysis: data.analysis })
         .eq("user_id", user.id);
         
+      toast.success("Transformation analysis saved!");
     } catch (error) {
       console.error("Error generating transformation plan:", error);
       toast.error("Failed to generate transformation analysis. Please try again.");
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const generatePDF = (analysis: TransformationAnalysis, chiefAim: { what: string | null; byWhen: string | null; exchange: string | null; plan: string | null } | null, archetype: Archetype) => {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      toast.error("Please allow popups to download PDF");
+      return;
+    }
+    
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Character Transformation Analysis - ${analysis.requiredCharacter.name}</title>
+        <style>
+          * { margin: 0; padding: 0; box-sizing: border-box; }
+          body { 
+            font-family: 'Georgia', serif; 
+            padding: 40px; 
+            max-width: 800px; 
+            margin: 0 auto;
+            color: #333;
+            line-height: 1.6;
+          }
+          h1 { 
+            font-size: 28px; 
+            text-align: center; 
+            margin-bottom: 8px;
+            color: #1a1a1a;
+          }
+          h2 { 
+            font-size: 18px; 
+            margin: 24px 0 12px; 
+            color: #8B7355;
+            border-bottom: 2px solid #D4AF37;
+            padding-bottom: 4px;
+          }
+          h3 { 
+            font-size: 14px; 
+            margin: 16px 0 8px; 
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+          }
+          .subtitle { 
+            text-align: center; 
+            color: #666; 
+            margin-bottom: 24px;
+            font-style: italic;
+          }
+          .role-box {
+            background: linear-gradient(135deg, #f9f6f0 0%, #fff 100%);
+            border: 2px solid #D4AF37;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 24px 0;
+            text-align: center;
+          }
+          .role-name {
+            font-size: 24px;
+            font-weight: bold;
+            color: #8B7355;
+            margin-bottom: 8px;
+          }
+          .script-text {
+            font-style: italic;
+            font-size: 16px;
+            margin: 12px 0;
+          }
+          ul { margin-left: 20px; margin-bottom: 12px; }
+          li { margin-bottom: 6px; }
+          .green { color: #22863a; }
+          .red { color: #cb2431; }
+          .amber { color: #b08800; }
+          .gold { color: #8B7355; }
+          .section { margin-bottom: 24px; }
+          .two-column { display: flex; gap: 20px; }
+          .column { flex: 1; }
+          .chief-aim-box {
+            background: #f9f6f0;
+            border-left: 4px solid #D4AF37;
+            padding: 16px;
+            margin: 24px 0;
+            font-style: italic;
+          }
+          .footer {
+            margin-top: 40px;
+            text-align: center;
+            font-size: 12px;
+            color: #999;
+            border-top: 1px solid #eee;
+            padding-top: 20px;
+          }
+          @media print {
+            body { padding: 20px; }
+            .two-column { display: block; }
+            .column { margin-bottom: 16px; }
+          }
+        </style>
+      </head>
+      <body>
+        <h1>Character Transformation Analysis</h1>
+        <p class="subtitle">Your casting call for the Oscar-winning performance</p>
+        
+        <div class="role-box">
+          <div class="role-name">The Role: ${analysis.requiredCharacter.name}</div>
+          <p class="script-text">"${analysis.script.role}"</p>
+          <p style="font-size: 14px; color: #666;">${analysis.script.motivation}</p>
+          <p style="font-size: 13px; margin-top: 12px; color: #8B7355;"><strong>Your Arc:</strong> ${analysis.script.arc}</p>
+        </div>
+        
+        <div class="section">
+          <h2>Who You Are Now: The ${analysis.currentSelf.archetype}</h2>
+          
+          <h3 class="green">✓ Assets (Use These)</h3>
+          <ul>
+            ${analysis.currentSelf.strengths.map(s => `<li class="green">${s}</li>`).join('')}
+          </ul>
+          
+          <h3 class="red">✗ Liabilities (These Will Sabotage You)</h3>
+          <ul>
+            ${analysis.currentSelf.liabilities.map(l => `<li class="red">${l}</li>`).join('')}
+          </ul>
+          
+          <h3 class="amber">⚠ Blind Spots</h3>
+          <ul>
+            ${analysis.currentSelf.blindSpots.map(b => `<li class="amber">${b}</li>`).join('')}
+          </ul>
+        </div>
+        
+        <div class="section">
+          <h2>The Character You Must Become</h2>
+          
+          <h3 class="gold">Required Mindset</h3>
+          <p>${analysis.requiredCharacter.mindset}</p>
+          
+          <h3 class="gold">Character Traits to Embody</h3>
+          <ul>
+            ${analysis.requiredCharacter.traits.map(t => `<li>${t}</li>`).join('')}
+          </ul>
+          
+          <h3 class="gold">Daily Behaviors (Non-Negotiable)</h3>
+          <ul>
+            ${analysis.requiredCharacter.behaviors.map(b => `<li>${b}</li>`).join('')}
+          </ul>
+        </div>
+        
+        <div class="section">
+          <h2>The Transformation Gap</h2>
+          
+          <div class="two-column">
+            <div class="column">
+              <h3 class="red">💀 What Must Die</h3>
+              <ul>
+                ${analysis.gap.whatMustDie.map(d => `<li class="red">${d}</li>`).join('')}
+              </ul>
+            </div>
+            <div class="column">
+              <h3 class="green">🌱 What Must Emerge</h3>
+              <ul>
+                ${analysis.gap.whatMustEmerge.map(e => `<li class="green">${e}</li>`).join('')}
+              </ul>
+            </div>
+          </div>
+          
+          <h3>Daily Practices for Transformation</h3>
+          <ol>
+            ${analysis.gap.dailyPractices.map((p, i) => `<li><strong>${i + 1}.</strong> ${p}</li>`).join('')}
+          </ol>
+        </div>
+        
+        ${chiefAim?.what ? `
+        <div class="chief-aim-box">
+          <h3 style="margin-bottom: 8px; color: #8B7355;">Your Final Scene</h3>
+          <p>"${chiefAim.what}"</p>
+          ${chiefAim.byWhen ? `<p style="margin-top: 8px; font-size: 13px; color: #8B7355;">By: ${chiefAim.byWhen}</p>` : ''}
+        </div>
+        ` : ''}
+        
+        <div class="footer">
+          <p>Generated by Psycho-Cinematics™ Director's OS</p>
+          <p>Current Archetype: ${archetype.name} | Date: ${new Date().toLocaleDateString()}</p>
+        </div>
+      </body>
+      </html>
+    `);
+    
+    printWindow.document.close();
+    
+    setTimeout(() => {
+      printWindow.print();
+    }, 250);
   };
 
   if (loadingData) {
@@ -480,6 +673,28 @@ export function CharacterTransformationCoach({
                     <p className="text-xs text-muted-foreground">
                       This will open the Mind Movie Wizard with your character transformation pre-loaded
                     </p>
+                  </CardContent>
+                </Card>
+
+                {/* Save & Download Actions */}
+                <Card className="glass-card border-green-500/30">
+                  <CardContent className="py-4">
+                    <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                      <div className="flex items-center gap-2 text-green-400">
+                        <Check className="h-5 w-5" />
+                        <span className="text-sm font-medium">Analysis saved to your profile</span>
+                      </div>
+                      <Button 
+                        variant="outline" 
+                        className="gap-2"
+                        onClick={() => {
+                          generatePDF(analysis, chiefAim, archetype);
+                        }}
+                      >
+                        <Download className="h-4 w-4" />
+                        Download PDF
+                      </Button>
+                    </div>
                   </CardContent>
                 </Card>
 
