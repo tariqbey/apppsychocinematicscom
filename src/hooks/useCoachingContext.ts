@@ -9,6 +9,31 @@ interface Task {
   priority: number;
 }
 
+interface TransformationAnalysis {
+  currentSelf: {
+    archetype: string;
+    strengths: string[];
+    liabilities: string[];
+    blindSpots: string[];
+  };
+  requiredCharacter: {
+    name: string;
+    traits: string[];
+    behaviors: string[];
+    mindset: string;
+  };
+  gap: {
+    whatMustDie: string[];
+    whatMustEmerge: string[];
+    dailyPractices: string[];
+  };
+  script: {
+    role: string;
+    motivation: string;
+    arc: string;
+  };
+}
+
 interface CoachingContext {
   // Chief Aim
   chiefAim: {
@@ -19,6 +44,10 @@ interface CoachingContext {
   };
   chiefAimComplete: boolean;
   directorCharacterName: string | null;
+  
+  // Character Transformation
+  characterArchetype: string | null;
+  transformationAnalysis: TransformationAnalysis | null;
   
   // Tasks
   todaysTasks: Task[];
@@ -79,7 +108,7 @@ export const useCoachingContext = () => {
       const timeOfDay = getTimeOfDay();
 
       // Fetch all data in parallel
-      const [profileResult, tasksResult, scorecardResult, viewingResult] = await Promise.all([
+      const [profileResult, tasksResult, scorecardResult, viewingResult, characterProfileResult] = await Promise.all([
         supabase
           .from('user_profiles')
           .select('*')
@@ -102,13 +131,21 @@ export const useCoachingContext = () => {
           .select('*')
           .eq('user_id', user.id)
           .eq('view_date', today)
+          .limit(1),
+        supabase
+          .from('character_profiles')
+          .select('archetype, transformation_analysis')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false })
           .limit(1)
+          .maybeSingle()
       ]);
 
       const profile = profileResult.data;
       const tasks = tasksResult.data || [];
       const scorecard = scorecardResult.data;
       const viewedToday = (viewingResult.data?.length || 0) > 0;
+      const characterProfile = characterProfileResult.data;
 
       // Determine if Chief Aim is complete (has at least the "what")
       const chiefAimComplete = !!(profile?.chief_aim_what && profile.chief_aim_what.trim().length > 0);
@@ -123,6 +160,10 @@ export const useCoachingContext = () => {
         },
         chiefAimComplete,
         directorCharacterName: profile?.director_character_name || null,
+
+        // Character Transformation
+        characterArchetype: characterProfile?.archetype || null,
+        transformationAnalysis: characterProfile?.transformation_analysis as unknown as TransformationAnalysis | null,
 
         // Tasks
         todaysTasks: tasks.map(t => ({
