@@ -3,7 +3,6 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Play, Pause, Volume2, VolumeX, X, Maximize2 } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
-import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 
 interface MoviePreviewModalProps {
@@ -25,29 +24,36 @@ export function MoviePreviewModal({
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [volume, setVolume] = useState(1);
-  const [showControls, setShowControls] = useState(true);
-  const controlsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const { toast } = useToast();
 
-  // Reset state when modal opens
+  // Reset state when modal opens or URL changes
   useEffect(() => {
     if (open && videoRef.current) {
       videoRef.current.currentTime = 0;
       setCurrentTime(0);
       setIsPlaying(false);
+      setDuration(0);
     }
-  }, [open]);
+  }, [open, movieUrl]);
 
-  // Update time as video plays
+  // Video event listeners with robust duration detection
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
 
     const handleTimeUpdate = () => setCurrentTime(video.currentTime);
     
-    // Some WebM files don't report duration on loadedmetadata, so we listen for both
+    // Robust duration detection for WebM and other formats
     const handleDurationUpdate = () => {
-      const dur = video.duration;
+      let dur = video.duration;
+      
+      // If duration is not finite, try seekable ranges as fallback
+      if (!Number.isFinite(dur) || dur <= 0) {
+        if (video.seekable.length > 0) {
+          dur = video.seekable.end(video.seekable.length - 1);
+        }
+      }
+      
       if (dur && Number.isFinite(dur) && dur > 0) {
         setDuration(dur);
       }
@@ -63,7 +69,7 @@ export function MoviePreviewModal({
       });
     };
 
-    // Also check if duration is already available
+    // Check if duration is already available
     if (video.duration && Number.isFinite(video.duration) && video.duration > 0) {
       setDuration(video.duration);
     }
@@ -72,6 +78,7 @@ export function MoviePreviewModal({
     video.addEventListener("loadedmetadata", handleDurationUpdate);
     video.addEventListener("durationchange", handleDurationUpdate);
     video.addEventListener("canplay", handleDurationUpdate);
+    video.addEventListener("loadeddata", handleDurationUpdate);
     video.addEventListener("ended", handleEnded);
     video.addEventListener("error", handleError);
 
@@ -80,21 +87,11 @@ export function MoviePreviewModal({
       video.removeEventListener("loadedmetadata", handleDurationUpdate);
       video.removeEventListener("durationchange", handleDurationUpdate);
       video.removeEventListener("canplay", handleDurationUpdate);
+      video.removeEventListener("loadeddata", handleDurationUpdate);
       video.removeEventListener("ended", handleEnded);
       video.removeEventListener("error", handleError);
     };
   }, [toast, movieUrl]);
-
-  // Auto-hide controls
-  const resetControlsTimeout = () => {
-    setShowControls(true);
-    if (controlsTimeoutRef.current) {
-      clearTimeout(controlsTimeoutRef.current);
-    }
-    controlsTimeoutRef.current = setTimeout(() => {
-      if (isPlaying) setShowControls(false);
-    }, 3000);
-  };
 
   const togglePlay = () => {
     if (!videoRef.current) return;
@@ -104,7 +101,6 @@ export function MoviePreviewModal({
       videoRef.current.play();
     }
     setIsPlaying(!isPlaying);
-    resetControlsTimeout();
   };
 
   const toggleMute = () => {
@@ -121,9 +117,11 @@ export function MoviePreviewModal({
     setIsMuted(newVolume === 0);
   };
 
-  const handleSeek = (value: number[]) => {
-    if (!videoRef.current) return;
-    const newTime = (value[0] / 100) * duration;
+  const handleProgressClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!videoRef.current || !duration) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const percent = (e.clientX - rect.left) / rect.width;
+    const newTime = Math.max(0, Math.min(duration, percent * duration));
     videoRef.current.currentTime = newTime;
     setCurrentTime(newTime);
   };
@@ -142,6 +140,8 @@ export function MoviePreviewModal({
     return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
 
+  const progressPercent = duration > 0 ? (currentTime / duration) * 100 : 0;
+
   if (!movieUrl) return null;
 
   return (
@@ -158,48 +158,42 @@ export function MoviePreviewModal({
         </Button>
 
         {/* Video container */}
-        <div
-          className="relative aspect-video bg-black cursor-pointer"
-          onClick={togglePlay}
-          onMouseMove={resetControlsTimeout}
-          onMouseEnter={() => setShowControls(true)}
-        >
+        <div className="relative aspect-video bg-black">
           <video
             ref={videoRef}
             src={movieUrl}
-            className="w-full h-full object-contain"
+            className="w-full h-full object-contain cursor-pointer"
             playsInline
-            preload="auto"
+            preload="metadata"
             crossOrigin="anonymous"
-            onClick={(e) => e.stopPropagation()}
+            onClick={togglePlay}
           />
 
           {/* Play overlay (when paused) */}
           {!isPlaying && (
-            <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+            <div 
+              className="absolute inset-0 flex items-center justify-center bg-black/30 cursor-pointer"
+              onClick={togglePlay}
+            >
               <div className="w-16 h-16 rounded-full bg-primary/90 flex items-center justify-center">
                 <Play className="w-8 h-8 text-primary-foreground ml-1" />
               </div>
             </div>
           )}
 
-          {/* Controls */}
-          <div
-            className={cn(
-              "absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 to-transparent transition-opacity",
-              showControls ? "opacity-100" : "opacity-0"
-            )}
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Progress bar */}
-            <div className="mb-3">
-              <Slider
-                value={[duration > 0 ? (currentTime / duration) * 100 : 0]}
-                onValueChange={handleSeek}
-                max={100}
-                step={0.1}
-                className="cursor-pointer"
-              />
+          {/* ALWAYS VISIBLE Controls - no auto-hide */}
+          <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/90 via-black/60 to-transparent">
+            {/* Progress bar - custom click-to-seek */}
+            <div 
+              className="w-full h-2 bg-white/20 rounded-full cursor-pointer mb-3 group"
+              onClick={handleProgressClick}
+            >
+              <div 
+                className="h-full bg-gradient-to-r from-gold to-amber-soft rounded-full relative transition-all"
+                style={{ width: `${progressPercent}%` }}
+              >
+                <div className="absolute right-0 top-1/2 -translate-y-1/2 w-3 h-3 bg-gold rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-lg" />
+              </div>
             </div>
 
             {/* Controls row */}
@@ -207,7 +201,7 @@ export function MoviePreviewModal({
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8 text-white hover:text-white hover:bg-white/20"
+                className="h-8 w-8 text-white hover:text-gold hover:bg-white/20"
                 onClick={togglePlay}
               >
                 {isPlaying ? (
@@ -217,8 +211,8 @@ export function MoviePreviewModal({
                 )}
               </Button>
 
-              {/* Time display */}
-              <span className="text-xs text-white/80 font-mono">
+              {/* Time display - always visible */}
+              <span className="text-sm text-white/90 font-mono tabular-nums">
                 {formatTime(currentTime)} / {formatTime(duration)}
               </span>
 
@@ -229,7 +223,7 @@ export function MoviePreviewModal({
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-8 w-8 text-white hover:text-white hover:bg-white/20"
+                  className="h-8 w-8 text-white hover:text-gold hover:bg-white/20"
                   onClick={toggleMute}
                 >
                   {isMuted ? (
@@ -251,7 +245,7 @@ export function MoviePreviewModal({
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8 text-white hover:text-white hover:bg-white/20"
+                className="h-8 w-8 text-white hover:text-gold hover:bg-white/20"
                 onClick={handleFullscreen}
               >
                 <Maximize2 className="h-4 w-4" />
