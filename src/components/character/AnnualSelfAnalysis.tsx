@@ -5,7 +5,7 @@ import { Progress } from "@/components/ui/progress";
 import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-import { ChevronLeft, ChevronRight, Award, Calendar, CheckCircle2, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Award, Calendar, CheckCircle2, X, Download } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -281,6 +281,82 @@ export function AnnualSelfAnalysis({ onClose }: AnnualSelfAnalysisProps) {
     }
   };
 
+  const generatePDF = () => {
+    // Create a printable HTML document
+    const year = new Date().getFullYear();
+    const answeredQuestions = SELF_ANALYSIS_QUESTIONS.filter(q => responses[q.id]);
+    
+    const htmlContent = `
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Annual Self-Analysis ${year} - Psycho-Cinematics™</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600&display=swap');
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Inter', sans-serif; background: #0a0a0a; color: #e5e5e5; padding: 40px; }
+    .header { text-align: center; margin-bottom: 40px; border-bottom: 2px solid #D4AF37; padding-bottom: 30px; }
+    .logo { font-family: 'Bebas Neue', sans-serif; font-size: 28px; color: #D4AF37; letter-spacing: 2px; }
+    h1 { font-family: 'Bebas Neue', sans-serif; font-size: 36px; color: #D4AF37; margin: 20px 0 10px; }
+    .subtitle { color: #888; font-size: 14px; }
+    .quote { font-style: italic; color: #888; margin: 20px 0; font-size: 14px; }
+    .quote-author { color: #D4AF37; font-size: 12px; }
+    .section { margin: 30px 0; page-break-inside: avoid; }
+    .category { font-family: 'Bebas Neue', sans-serif; color: #D4AF37; font-size: 16px; letter-spacing: 1px; margin-bottom: 10px; border-bottom: 1px solid #333; padding-bottom: 5px; }
+    .question { font-weight: 500; margin-bottom: 8px; font-size: 14px; }
+    .answer { background: #1a1a1a; padding: 15px; border-radius: 8px; border-left: 3px solid #D4AF37; margin-bottom: 20px; }
+    .answer-text { color: #ccc; font-size: 13px; line-height: 1.6; }
+    .answer-scale { display: inline-block; background: #D4AF37; color: #000; padding: 4px 12px; border-radius: 20px; font-weight: 600; }
+    .answer-yesno { display: inline-block; padding: 4px 12px; border-radius: 20px; font-weight: 600; }
+    .answer-yes { background: #22c55e; color: #000; }
+    .answer-no { background: #ef4444; color: #fff; }
+    .footer { margin-top: 50px; text-align: center; color: #666; font-size: 12px; border-top: 1px solid #333; padding-top: 20px; }
+    @media print { body { background: #fff; color: #000; } .answer { background: #f5f5f5; border-left-color: #000; } }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="logo">PSYCHO-CINEMATICS™ DIRECTOR'S OS</div>
+    <h1>Annual Self-Analysis ${year}</h1>
+    <div class="subtitle">Personal Inventory Assessment based on Napoleon Hill</div>
+    <div class="quote">"Annual self-analysis will disclose whether advancement has been made, and if so, how much."</div>
+    <div class="quote-author">— Napoleon Hill, Think and Grow Rich</div>
+  </div>
+  
+  ${answeredQuestions.map(q => `
+    <div class="section">
+      <div class="category">${q.category}</div>
+      <div class="question">${q.question}</div>
+      <div class="answer">
+        ${q.type === 'text' 
+          ? `<div class="answer-text">${responses[q.id] || 'Not answered'}</div>`
+          : q.type === 'scale'
+          ? `<span class="answer-scale">${responses[q.id]}/10</span>`
+          : `<span class="answer-yesno ${responses[q.id] === 'yes' ? 'answer-yes' : 'answer-no'}">${responses[q.id]?.toUpperCase()}</span>`
+        }
+      </div>
+    </div>
+  `).join('')}
+  
+  <div class="footer">
+    <p>Generated on ${new Date().toLocaleDateString()} • Psycho-Cinematics™ Director's OS</p>
+    <p style="margin-top: 10px; color: #D4AF37;">"One goes ahead, stands still or goes backward in life. One's object should be, of course, to go ahead."</p>
+  </div>
+</body>
+</html>`;
+
+    // Open in new window for printing/saving as PDF
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      printWindow.document.write(htmlContent);
+      printWindow.document.close();
+      setTimeout(() => {
+        printWindow.print();
+      }, 500);
+    }
+    toast.success("PDF ready - use Print > Save as PDF");
+  };
+
   if (isComplete) {
     return (
       <div className="fixed inset-0 bg-background/95 backdrop-blur-sm z-50 overflow-y-auto">
@@ -308,7 +384,15 @@ export function AnnualSelfAnalysis({ onClose }: AnnualSelfAnalysisProps) {
                 </p>
               </div>
 
-              <div className="flex gap-3 justify-center">
+              <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                <Button 
+                  variant="outline" 
+                  onClick={generatePDF}
+                  className="gap-2"
+                >
+                  <Download className="h-4 w-4" />
+                  Export PDF
+                </Button>
                 <Button variant="outline" onClick={onClose}>
                   Review Later
                 </Button>
