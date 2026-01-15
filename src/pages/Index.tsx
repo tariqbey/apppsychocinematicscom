@@ -414,7 +414,12 @@ const Index = () => {
             setSelectedMovieId(undefined);
             setTransformationDataForWizard(null);
           }}
-          chiefAim={chiefAim}
+          chiefAim={transformationDataForWizard?.chiefAim ? {
+            what: transformationDataForWizard.chiefAim.what || "",
+            byWhen: transformationDataForWizard.chiefAim.byWhen || "",
+            exchange: transformationDataForWizard.chiefAim.exchange || "",
+            plan: transformationDataForWizard.chiefAim.plan || "",
+          } : chiefAim}
           movieId={selectedMovieId}
           onOpenEditBay={(prompt) => {
             setEditBayInitialPrompt(prompt);
