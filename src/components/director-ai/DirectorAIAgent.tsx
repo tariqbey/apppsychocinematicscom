@@ -208,7 +208,16 @@ export function DirectorAIAgent({ isOpen, onClose, chiefAim }: DirectorAIAgentPr
   }, [isOpen, stopListening]);
 
   const speakText = async (text: string) => {
+    // Capture the current request ID to detect if stop was called
+    const currentRequestId = ++ttsRequestIdRef.current;
+    
     try {
+      // Check if stop was already requested
+      if (stopRequestedRef.current) {
+        console.log("[DirectorAI] TTS blocked - stop was requested");
+        return;
+      }
+      
       // Stop listening while AI speaks
       stopListening();
       setOrbState("speaking");
@@ -239,6 +248,12 @@ export function DirectorAIAgent({ isOpen, onClose, chiefAim }: DirectorAIAgentPr
         signal: ttsAbortControllerRef.current.signal,
       });
 
+      // Check again after fetch - user might have clicked stop during request
+      if (stopRequestedRef.current || currentRequestId !== ttsRequestIdRef.current) {
+        console.log("[DirectorAI] TTS cancelled after fetch - stop was requested");
+        return;
+      }
+
       if (!response.ok) {
         const errorText = await response.text();
         console.error("[DirectorAI] TTS error:", response.status, errorText);
@@ -246,6 +261,13 @@ export function DirectorAIAgent({ isOpen, onClose, chiefAim }: DirectorAIAgentPr
       }
 
       const audioBlob = await response.blob();
+      
+      // Check again after blob - user might have clicked stop
+      if (stopRequestedRef.current || currentRequestId !== ttsRequestIdRef.current) {
+        console.log("[DirectorAI] TTS cancelled after blob - stop was requested");
+        return;
+      }
+      
       const audioUrl = URL.createObjectURL(audioBlob);
       audioUrlRef.current = audioUrl;
       
@@ -262,10 +284,16 @@ export function DirectorAIAgent({ isOpen, onClose, chiefAim }: DirectorAIAgentPr
         clearInterval(audioLevelIntervalRef.current);
       }
       audioLevelIntervalRef.current = setInterval(() => {
-        setAudioLevel(Math.random() * 0.5 + 0.3);
+        // Only update if not stopped
+        if (!stopRequestedRef.current) {
+          setAudioLevel(Math.random() * 0.5 + 0.3);
+        }
       }, 100);
       
       audio.onended = () => {
+        // Don't do anything if stop was requested
+        if (stopRequestedRef.current) return;
+        
         if (audioLevelIntervalRef.current) {
           clearInterval(audioLevelIntervalRef.current);
           audioLevelIntervalRef.current = null;
@@ -277,13 +305,20 @@ export function DirectorAIAgent({ isOpen, onClose, chiefAim }: DirectorAIAgentPr
           audioUrlRef.current = null;
         }
         
-        // Resume listening after TTS finishes
-        setTimeout(() => {
-          setVoiceEnabled(true);
-        }, 300);
+        // Resume listening after TTS finishes (only if not stopped)
+        if (!stopRequestedRef.current) {
+          setTimeout(() => {
+            if (!stopRequestedRef.current) {
+              setVoiceEnabled(true);
+            }
+          }, 300);
+        }
       };
       
       audio.onerror = () => {
+        // Don't do anything if stop was requested
+        if (stopRequestedRef.current) return;
+        
         if (audioLevelIntervalRef.current) {
           clearInterval(audioLevelIntervalRef.current);
           audioLevelIntervalRef.current = null;
@@ -294,11 +329,22 @@ export function DirectorAIAgent({ isOpen, onClose, chiefAim }: DirectorAIAgentPr
           URL.revokeObjectURL(audioUrlRef.current);
           audioUrlRef.current = null;
         }
-        // Resume listening even if TTS failed
-        setTimeout(() => {
-          setVoiceEnabled(true);
-        }, 300);
+        // Resume listening even if TTS failed (only if not stopped)
+        if (!stopRequestedRef.current) {
+          setTimeout(() => {
+            if (!stopRequestedRef.current) {
+              setVoiceEnabled(true);
+            }
+          }, 300);
+        }
       };
+      
+      // Final check before playing
+      if (stopRequestedRef.current || currentRequestId !== ttsRequestIdRef.current) {
+        console.log("[DirectorAI] TTS cancelled before play - stop was requested");
+        URL.revokeObjectURL(audioUrl);
+        return;
+      }
       
       await audio.play();
     } catch (error: any) {
@@ -308,10 +354,12 @@ export function DirectorAIAgent({ isOpen, onClose, chiefAim }: DirectorAIAgentPr
         console.error("TTS error:", error);
       }
       setOrbState("idle");
-      // Resume listening on error (unless aborted)
-      if (error?.name !== "AbortError") {
+      // Resume listening on error (unless aborted or stopped)
+      if (error?.name !== "AbortError" && !stopRequestedRef.current) {
         setTimeout(() => {
-          setVoiceEnabled(true);
+          if (!stopRequestedRef.current) {
+            setVoiceEnabled(true);
+          }
         }, 300);
       }
     } finally {
@@ -320,7 +368,13 @@ export function DirectorAIAgent({ isOpen, onClose, chiefAim }: DirectorAIAgentPr
   };
 
   const stopSpeaking = useCallback(() => {
-    console.log("[DirectorAI] stopSpeaking called - killing all audio");
+    console.log("[DirectorAI] stopSpeaking called - killing all audio immediately");
+    
+    // Mark as stopped FIRST to prevent any pending callbacks from resuming
+    stopRequestedRef.current = true;
+    
+    // Increment TTS request ID to invalidate any pending TTS
+    ttsRequestIdRef.current += 1;
     
     // Abort TTS fetch request immediately
     if (ttsAbortControllerRef.current) {
@@ -331,12 +385,16 @@ export function DirectorAIAgent({ isOpen, onClose, chiefAim }: DirectorAIAgentPr
     // Stop audio playback - be aggressive
     if (audioRef.current) {
       const audio = audioRef.current;
+      // Remove callbacks first to prevent any firing
+      audio.onended = null;
+      audio.onerror = null;
+      audio.onplay = null;
+      audio.onpause = null;
+      // Stop playback
       audio.pause();
       audio.currentTime = 0;
       audio.src = "";
       audio.load(); // Force browser to release the audio
-      audio.onended = null;
-      audio.onerror = null;
       audioRef.current = null;
     }
     
@@ -357,21 +415,30 @@ export function DirectorAIAgent({ isOpen, onClose, chiefAim }: DirectorAIAgentPr
   }, []);
 
   const stopConversation = useCallback(() => {
-    // Abort any in-flight fetch
+    console.log("[DirectorAI] STOP & EXIT - halting everything immediately");
+    
+    // Set stop flag FIRST - this blocks any pending operations
+    stopRequestedRef.current = true;
+    
+    // Abort any in-flight chat fetch
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
       abortControllerRef.current = null;
     }
-    // Stop TTS
+    
+    // Stop TTS and audio immediately
     stopSpeaking();
-    // Stop listening
+    
+    // Stop voice listening
     stopListening();
     setVoiceEnabled(false);
-    // Clear loading/processing state
+    
+    // Clear all processing state
     setIsLoading(false);
     setCurrentResponse("");
     setOrbState("idle");
     setPendingVoiceSubmit(null);
+    lastAutoSubmitRef.current = null;
   }, [stopSpeaking, stopListening]);
 
   const streamChat = useCallback(async (userMessage: string) => {
