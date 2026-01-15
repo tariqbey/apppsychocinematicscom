@@ -260,6 +260,21 @@ export const LandingPage = ({ onLogin }: LandingPageProps) => {
                 You're Not Just Watching Your Life. <br />
                 <span className="text-gold-gradient">You're Directing It.</span>
               </h1>
+
+              {/* Mobile Only: Hero Image between headline and subheadline */}
+              <div className="lg:hidden relative animate-slide-up flex flex-col items-center">
+                <h2 className="text-3xl md:text-4xl font-display tracking-[0.2em] text-gold-gradient mb-4 text-center">
+                  PSYCHO CINEMATICS
+                </h2>
+                <div className="relative">
+                  <div className="absolute inset-0 bg-gradient-to-br from-gold/30 to-transparent rounded-2xl blur-3xl" />
+                  <img 
+                    src={heroImage} 
+                    alt="The Director - Psycho-Cinematics" 
+                    className="relative w-full max-w-md mx-auto shadow-2xl shadow-black/50"
+                  />
+                </div>
+              </div>
               
               <p className="text-xl text-muted-foreground max-w-lg">
                 The world's first AI-powered identity transformation system. Create cinematic Mind Movies, get coached by an AI director who knows your goals, and track your transformation — all in one place.
@@ -297,8 +312,8 @@ export const LandingPage = ({ onLogin }: LandingPageProps) => {
               </div>
             </div>
             
-            {/* Right Image - Director Hero */}
-            <div className="relative animate-slide-up lg:scale-110 lg:-mr-12 flex flex-col items-center">
+            {/* Right Image - Director Hero (Desktop Only) */}
+            <div className="hidden lg:flex relative animate-slide-up lg:scale-110 lg:-mr-12 flex-col items-center">
               {/* PSYCHO CINEMATICS Title */}
               <h2 className="text-4xl md:text-5xl lg:text-6xl font-display tracking-[0.3em] text-gold-gradient mb-4 text-center">
                 PSYCHO CINEMATICS
