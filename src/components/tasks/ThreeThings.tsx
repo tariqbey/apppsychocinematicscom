@@ -44,7 +44,11 @@ const INCOMPLETE_REASONS = [
   { id: "ran_out_of_time", label: "I ran out of time" },
 ];
 
-export function ThreeThings() {
+interface ThreeThingsProps {
+  showAnalyticsDefault?: boolean;
+}
+
+export function ThreeThings({ showAnalyticsDefault = false }: ThreeThingsProps) {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date(), { weekStartsOn: 1 }));
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -54,7 +58,7 @@ export function ThreeThings() {
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [excuseDialogOpen, setExcuseDialogOpen] = useState(false);
   const [taskToUncheck, setTaskToUncheck] = useState<Task | null>(null);
-  const [showAnalytics, setShowAnalytics] = useState(false);
+  const [showAnalytics, setShowAnalytics] = useState(showAnalyticsDefault);
   const { user } = useAuth();
   const { profile } = useUserProfile();
   const { toast } = useToast();
