@@ -23,6 +23,7 @@ import { useMindMovies, MindMovie } from "@/hooks/useMindMovies";
 import { Loader2, Wand2, Sparkles, Bot, Clapperboard, FolderOpen, BookOpen, Target, User2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { InfoTooltip } from "@/components/ui/info-tooltip";
+import { toast } from "sonner";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -131,16 +132,25 @@ const Index = () => {
           }
         }
         
-        // Create the movie first
-        const movie = await createNewMovie();
-        if (movie) {
-          setSelectedMovieId(movie.id);
-          setShowMovieVault(false);
-          // Set transformation data BEFORE opening the wizard
-          if (transformationData) {
-            setTransformationDataForWizard(transformationData);
+        // Set transformation data BEFORE creating movie
+        if (transformationData) {
+          setTransformationDataForWizard(transformationData);
+        }
+        
+        // Create the movie
+        try {
+          const movie = await createNewMovie();
+          if (movie) {
+            setSelectedMovieId(movie.id);
+            setShowMovieVault(false);
+            setShowMindMovieWizard(true);
+          } else {
+            // Movie creation failed - show an error toast
+            toast.error("Failed to create Mind Movie. Please try again from the Movie Vault.");
           }
-          setShowMindMovieWizard(true);
+        } catch (error) {
+          console.error('Error creating movie from transformation:', error);
+          toast.error("An error occurred. Please try again.");
         }
       }
     };
