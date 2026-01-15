@@ -7,13 +7,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { User, Bell, Shield, ArrowLeft, CreditCard, Crown, Zap, Calendar, ExternalLink, Loader2, Plug } from "lucide-react";
+import { User, Bell, Shield, ArrowLeft, CreditCard, Crown, Zap, Calendar, ExternalLink, Loader2, Plug, Mic } from "lucide-react";
 import { Link } from "react-router-dom";
 import { format } from "date-fns";
 import { IntegrationsTab } from "@/components/settings/IntegrationsTab";
 import { NotificationSettings } from "@/components/notifications/NotificationSettings";
 import { AccessCodeRedemption } from "@/components/settings/AccessCodeRedemption";
 import { ReminderScheduler } from "@/components/notifications/ReminderScheduler";
+import { DirectorAIPreferences } from "@/components/settings/DirectorAIPreferences";
 
 export default function Settings() {
   const { user, loading: authLoading } = useAuth();
@@ -78,7 +79,7 @@ export default function Settings() {
         </div>
 
         <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
-          <TabsList className="bg-card border border-border">
+          <TabsList className="bg-card border border-border flex-wrap">
             <TabsTrigger value="account" className="data-[state=active]:bg-gold/20">
               <User className="h-4 w-4 mr-2" />
               Account
@@ -90,6 +91,10 @@ export default function Settings() {
             <TabsTrigger value="preferences" className="data-[state=active]:bg-gold/20">
               <Bell className="h-4 w-4 mr-2" />
               Preferences
+            </TabsTrigger>
+            <TabsTrigger value="director-ai" className="data-[state=active]:bg-gold/20">
+              <Mic className="h-4 w-4 mr-2" />
+              Director AI
             </TabsTrigger>
             <TabsTrigger value="integrations" className="data-[state=active]:bg-gold/20">
               <Plug className="h-4 w-4 mr-2" />
@@ -307,6 +312,10 @@ export default function Settings() {
                 </CardContent>
               </Card>
             </div>
+          </TabsContent>
+
+          <TabsContent value="director-ai">
+            <DirectorAIPreferences />
           </TabsContent>
 
           <TabsContent value="integrations">
