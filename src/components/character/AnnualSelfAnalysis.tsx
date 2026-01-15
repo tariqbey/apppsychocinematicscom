@@ -13,8 +13,9 @@ import { toast } from "sonner";
 interface AnalysisQuestion {
   id: string;
   question: string;
-  type: "text" | "scale" | "yesno";
+  type: "text" | "scale" | "yesno" | "behavior";
   category: string;
+  options?: { value: string; label: string; isNegative?: boolean }[];
 }
 
 const SELF_ANALYSIS_QUESTIONS: AnalysisQuestion[] = [
@@ -24,6 +25,34 @@ const SELF_ANALYSIS_QUESTIONS: AnalysisQuestion[] = [
     question: "Have I attained the goal which I established as my objective for this year?",
     type: "yesno",
     category: "Goal Achievement"
+  },
+  // Self-Talk Pattern (NEW - with negative options)
+  {
+    id: "setback_self_talk",
+    question: "How do I typically talk to myself when facing setbacks?",
+    type: "behavior",
+    category: "Self-Talk Patterns",
+    options: [
+      { value: "encouraging", label: "I encourage myself: 'This is a learning opportunity, I'll do better next time'" },
+      { value: "neutral", label: "I stay neutral: 'It happened, let's analyze and move on'" },
+      { value: "critical", label: "I'm hard on myself: 'You should have known better, don't let it happen again'", isNegative: true },
+      { value: "destructive", label: "I'm brutal: 'You're such an idiot, you always fuck things up'", isNegative: true },
+      { value: "victim", label: "I play victim: 'Nothing ever works out for me, why even try?'", isNegative: true }
+    ]
+  },
+  // Failure Response (NEW)
+  {
+    id: "failure_response",
+    question: "When I fail at something important, my first instinct is to:",
+    type: "behavior",
+    category: "Failure Response",
+    options: [
+      { value: "analyze", label: "Analyze what went wrong and create a better plan" },
+      { value: "persist", label: "Try again immediately with more intensity" },
+      { value: "blame_others", label: "Look for who or what else caused the failure", isNegative: true },
+      { value: "avoid", label: "Avoid thinking about it and distract myself", isNegative: true },
+      { value: "quit", label: "Give up on that goal entirely - it wasn't meant to be", isNegative: true }
+    ]
   },
   // Service Quality
   {
@@ -45,11 +74,39 @@ const SELF_ANALYSIS_QUESTIONS: AnalysisQuestion[] = [
     type: "scale",
     category: "Conduct"
   },
+  // Conflict Behavior (NEW)
+  {
+    id: "conflict_behavior",
+    question: "When someone criticizes my work or ideas, I typically:",
+    type: "behavior",
+    category: "Conflict Response",
+    options: [
+      { value: "listen", label: "Listen carefully and consider if they have valid points" },
+      { value: "discuss", label: "Engage in healthy debate to understand their perspective" },
+      { value: "defensive", label: "Get defensive and explain why they're wrong", isNegative: true },
+      { value: "attack", label: "Attack back - criticize something about them", isNegative: true },
+      { value: "shut_down", label: "Shut down and silently resent them", isNegative: true }
+    ]
+  },
   {
     id: "procrastination",
     question: "Have I permitted the habit of procrastination to decrease my efficiency, and if so, to what extent?",
     type: "text",
     category: "Efficiency"
+  },
+  // Procrastination Pattern (NEW)
+  {
+    id: "procrastination_excuse",
+    question: "When I catch myself procrastinating, what excuse do I most often tell myself?",
+    type: "behavior",
+    category: "Procrastination Patterns",
+    options: [
+      { value: "strategic", label: "I'm waiting for the right moment or more information" },
+      { value: "tired", label: "I'm too tired/stressed right now, I'll do it when I feel better", isNegative: true },
+      { value: "perfectionism", label: "I need everything to be perfect before I start", isNegative: true },
+      { value: "fear", label: "Deep down, I'm afraid of failing or being judged", isNegative: true },
+      { value: "denial", label: "It's not that important anyway / Someone else will handle it", isNegative: true }
+    ]
   },
   // Personal Growth
   {
@@ -64,11 +121,39 @@ const SELF_ANALYSIS_QUESTIONS: AnalysisQuestion[] = [
     type: "scale",
     category: "Persistence"
   },
+  // Giving Up Pattern (NEW)
+  {
+    id: "giving_up_pattern",
+    question: "When things get really hard and I want to give up, what do I usually do?",
+    type: "behavior",
+    category: "Persistence Patterns",
+    options: [
+      { value: "push_through", label: "Push through - I committed to this and I finish what I start" },
+      { value: "rest_return", label: "Take a strategic break, then return with fresh energy" },
+      { value: "half_effort", label: "Keep going but with less effort - just going through the motions", isNegative: true },
+      { value: "find_excuse", label: "Find a reasonable excuse to stop that makes me look justified", isNegative: true },
+      { value: "ghost", label: "Quietly disappear and hope no one notices", isNegative: true }
+    ]
+  },
   {
     id: "decisions",
     question: "Have I reached decisions promptly and definitely on all occasions?",
     type: "scale",
     category: "Decision Making"
+  },
+  // Decision Avoidance (NEW)
+  {
+    id: "decision_avoidance",
+    question: "When facing a difficult decision, I tend to:",
+    type: "behavior",
+    category: "Decision Making",
+    options: [
+      { value: "analyze_decide", label: "Gather necessary info, set a deadline, and decide" },
+      { value: "trust_gut", label: "Trust my intuition and commit quickly" },
+      { value: "overthink", label: "Overthink until the decision makes itself or disappears", isNegative: true },
+      { value: "delegate", label: "Let someone else decide so I don't have to be responsible", isNegative: true },
+      { value: "flip_flop", label: "Make a decision, then change my mind repeatedly", isNegative: true }
+    ]
   },
   // Basic Fears
   {
@@ -76,6 +161,20 @@ const SELF_ANALYSIS_QUESTIONS: AnalysisQuestion[] = [
     question: "Have I permitted any one or more of the six basic fears (poverty, criticism, ill health, loss of love, old age, death) to decrease my efficiency?",
     type: "text",
     category: "Fear Management"
+  },
+  // Fear Response (NEW)
+  {
+    id: "fear_response",
+    question: "When fear starts influencing my decisions, I typically:",
+    type: "behavior",
+    category: "Fear Management",
+    options: [
+      { value: "acknowledge_act", label: "Acknowledge the fear and take action anyway" },
+      { value: "analyze_fear", label: "Analyze if the fear is rational and address root causes" },
+      { value: "pretend", label: "Pretend I'm not afraid and push it down", isNegative: true },
+      { value: "let_control", label: "Let the fear control my choices - better safe than sorry", isNegative: true },
+      { value: "lash_out", label: "Get angry or irritable to mask the fear", isNegative: true }
+    ]
   },
   {
     id: "caution_balance",
@@ -90,6 +189,20 @@ const SELF_ANALYSIS_QUESTIONS: AnalysisQuestion[] = [
     type: "text",
     category: "Relationships"
   },
+  // Relationship Accountability (NEW)
+  {
+    id: "relationship_accountability",
+    question: "When a relationship (personal or professional) goes sour, I usually:",
+    type: "behavior",
+    category: "Relationships",
+    options: [
+      { value: "self_reflect", label: "Honestly examine my role in the breakdown" },
+      { value: "communicate", label: "Initiate an honest conversation to repair it" },
+      { value: "blame_them", label: "Focus on what THEY did wrong - it's mostly their fault", isNegative: true },
+      { value: "cut_off", label: "Cut them off completely without explanation", isNegative: true },
+      { value: "gossip", label: "Talk to others about how wronged I was", isNegative: true }
+    ]
+  },
   {
     id: "energy_concentration",
     question: "Have I dissipated any of my energy through lack of concentration of effort?",
@@ -103,6 +216,20 @@ const SELF_ANALYSIS_QUESTIONS: AnalysisQuestion[] = [
     type: "scale",
     category: "Open-mindedness"
   },
+  // Disagreement Response (NEW)
+  {
+    id: "disagreement_response",
+    question: "When someone has a completely different worldview or opinion than me, I:",
+    type: "behavior",
+    category: "Open-mindedness",
+    options: [
+      { value: "curious", label: "Get genuinely curious about how they see things" },
+      { value: "respectful", label: "Respectfully share my view while hearing theirs" },
+      { value: "dismiss", label: "Politely dismiss them - they just don't get it", isNegative: true },
+      { value: "argue", label: "Try to prove them wrong and show them the 'truth'", isNegative: true },
+      { value: "judge", label: "Internally judge them as stupid, naive, or ignorant", isNegative: true }
+    ]
+  },
   {
     id: "service_improvement",
     question: "In what way have I improved my ability to render service?",
@@ -115,6 +242,20 @@ const SELF_ANALYSIS_QUESTIONS: AnalysisQuestion[] = [
     question: "Have I been intemperate in any of my habits?",
     type: "text",
     category: "Self-Control"
+  },
+  // Ego Pattern (NEW)
+  {
+    id: "ego_pattern",
+    question: "When I achieve something significant, how do I typically behave?",
+    type: "behavior",
+    category: "Ego Management",
+    options: [
+      { value: "grateful", label: "Feel grateful and acknowledge those who helped" },
+      { value: "humble", label: "Stay humble and focus on the next goal" },
+      { value: "boast", label: "Make sure everyone knows about my achievement", isNegative: true },
+      { value: "superior", label: "Feel superior to those who haven't achieved the same", isNegative: true },
+      { value: "entitled", label: "Expect special treatment and recognition", isNegative: true }
+    ]
   },
   {
     id: "egotism",
@@ -135,6 +276,20 @@ const SELF_ANALYSIS_QUESTIONS: AnalysisQuestion[] = [
     type: "text",
     category: "Analysis"
   },
+  // Honesty Pattern (NEW)
+  {
+    id: "honesty_pattern",
+    question: "When being fully honest might hurt me or make me look bad, I:",
+    type: "behavior",
+    category: "Integrity",
+    options: [
+      { value: "full_truth", label: "Tell the full truth anyway - my integrity is non-negotiable" },
+      { value: "diplomatic", label: "Find a diplomatic way to be honest without being brutal" },
+      { value: "omit", label: "Leave out the parts that make me look bad", isNegative: true },
+      { value: "spin", label: "Spin the truth to protect my image", isNegative: true },
+      { value: "lie", label: "Lie outright if the stakes are high enough", isNegative: true }
+    ]
+  },
   // Time & Budget
   {
     id: "budgeting",
@@ -154,12 +309,40 @@ const SELF_ANALYSIS_QUESTIONS: AnalysisQuestion[] = [
     type: "text",
     category: "Planning"
   },
+  // Money Behavior (NEW)
+  {
+    id: "money_behavior",
+    question: "When it comes to money and spending, my honest pattern is:",
+    type: "behavior",
+    category: "Financial Discipline",
+    options: [
+      { value: "disciplined", label: "I budget carefully and stick to my financial plan" },
+      { value: "balanced", label: "I'm generally responsible with occasional splurges" },
+      { value: "emotional", label: "I spend emotionally - retail therapy is real for me", isNegative: true },
+      { value: "avoidant", label: "I avoid looking at my finances - ignorance is bliss", isNegative: true },
+      { value: "irresponsible", label: "I spend what I have and figure it out later", isNegative: true }
+    ]
+  },
   // Conscience
   {
     id: "conscience_guilt",
     question: "Have I been guilty of any conduct which was not approved by my conscience?",
     type: "text",
     category: "Integrity"
+  },
+  // Conscience Override (NEW)
+  {
+    id: "conscience_override",
+    question: "When my conscience tells me something is wrong but it benefits me, I:",
+    type: "behavior",
+    category: "Moral Compass",
+    options: [
+      { value: "follow_conscience", label: "Follow my conscience every time - no exceptions" },
+      { value: "pause_reflect", label: "Pause and seriously reflect before deciding" },
+      { value: "rationalize", label: "Find ways to rationalize why it's okay this time", isNegative: true },
+      { value: "everyone_does", label: "Think 'everyone does it' and proceed", isNegative: true },
+      { value: "ignore", label: "Ignore my conscience - results matter more than feelings", isNegative: true }
+    ]
   },
   {
     id: "extra_service",
@@ -199,6 +382,21 @@ const SELF_ANALYSIS_QUESTIONS: AnalysisQuestion[] = [
     question: "What is my present rating on the fundamental principles of success? (Rate yourself fairly and frankly.)",
     type: "scale",
     category: "Success Principles"
+  },
+  // Final Honest Assessment (NEW)
+  {
+    id: "shadow_acknowledgment",
+    question: "Looking at my shadow behaviors this year, the pattern I most need to address is:",
+    type: "behavior",
+    category: "Shadow Work",
+    options: [
+      { value: "self_awareness", label: "I've been honest with myself - no major shadows to address" },
+      { value: "self_talk", label: "My negative self-talk and internal criticism" },
+      { value: "avoidance", label: "My pattern of avoidance and procrastination" },
+      { value: "dishonesty", label: "My tendency to be dishonest with myself or others", isNegative: true },
+      { value: "blame", label: "My habit of blaming others instead of taking responsibility", isNegative: true },
+      { value: "ego", label: "My ego and need to be right or superior", isNegative: true }
+    ]
   }
 ];
 
@@ -287,6 +485,36 @@ export function AnnualSelfAnalysis({ onClose, inline = false }: AnnualSelfAnalys
     const year = new Date().getFullYear();
     const answeredQuestions = SELF_ANALYSIS_QUESTIONS.filter(q => responses[q.id]);
     
+    const getBehaviorAnswerHTML = (q: AnalysisQuestion) => {
+      if (q.type !== 'behavior' || !q.options) return '';
+      const selectedOption = q.options.find(o => o.value === responses[q.id]);
+      if (!selectedOption) return 'Not answered';
+      const isNegative = selectedOption.isNegative;
+      return `<div class="answer-behavior ${isNegative ? 'negative' : 'positive'}">${isNegative ? '<span class="shadow-tag">SHADOW</span>' : ''}${selectedOption.label}</div>`;
+    };
+
+    const getAnswerHTML = (q: AnalysisQuestion) => {
+      if (q.type === 'text') {
+        return `<div class="answer-text">${responses[q.id] || 'Not answered'}</div>`;
+      } else if (q.type === 'scale') {
+        return `<span class="answer-scale">${responses[q.id]}/10</span>`;
+      } else if (q.type === 'behavior') {
+        return getBehaviorAnswerHTML(q);
+      } else {
+        return `<span class="answer-yesno ${responses[q.id] === 'yes' ? 'answer-yes' : 'answer-no'}">${responses[q.id]?.toUpperCase()}</span>`;
+      }
+    };
+
+    const questionsHTML = answeredQuestions.map(q => `
+      <div class="section">
+        <div class="category">${q.category}</div>
+        <div class="question">${q.question}</div>
+        <div class="answer">
+          ${getAnswerHTML(q)}
+        </div>
+      </div>
+    `).join('');
+    
     const htmlContent = `
 <!DOCTYPE html>
 <html>
@@ -311,6 +539,10 @@ export function AnnualSelfAnalysis({ onClose, inline = false }: AnnualSelfAnalys
     .answer-yesno { display: inline-block; padding: 4px 12px; border-radius: 20px; font-weight: 600; }
     .answer-yes { background: #22c55e; color: #000; }
     .answer-no { background: #ef4444; color: #fff; }
+    .answer-behavior { display: block; padding: 10px; border-radius: 6px; font-size: 13px; }
+    .answer-behavior.positive { background: rgba(212, 175, 55, 0.2); border-left: 3px solid #D4AF37; }
+    .answer-behavior.negative { background: rgba(239, 68, 68, 0.2); border-left: 3px solid #ef4444; }
+    .shadow-tag { display: inline-block; background: #ef4444; color: #fff; font-size: 10px; padding: 2px 6px; border-radius: 4px; margin-right: 8px; }
     .footer { margin-top: 50px; text-align: center; color: #666; font-size: 12px; border-top: 1px solid #333; padding-top: 20px; }
     @media print { body { background: #fff; color: #000; } .answer { background: #f5f5f5; border-left-color: #000; } }
   </style>
@@ -324,20 +556,7 @@ export function AnnualSelfAnalysis({ onClose, inline = false }: AnnualSelfAnalys
     <div class="quote-author">— Napoleon Hill, Think and Grow Rich</div>
   </div>
   
-  ${answeredQuestions.map(q => `
-    <div class="section">
-      <div class="category">${q.category}</div>
-      <div class="question">${q.question}</div>
-      <div class="answer">
-        ${q.type === 'text' 
-          ? `<div class="answer-text">${responses[q.id] || 'Not answered'}</div>`
-          : q.type === 'scale'
-          ? `<span class="answer-scale">${responses[q.id]}/10</span>`
-          : `<span class="answer-yesno ${responses[q.id] === 'yes' ? 'answer-yes' : 'answer-no'}">${responses[q.id]?.toUpperCase()}</span>`
-        }
-      </div>
-    </div>
-  `).join('')}
+  ${questionsHTML}
   
   <div class="footer">
     <p>Generated on ${new Date().toLocaleDateString()} • Psycho-Cinematics™ Director's OS</p>
@@ -509,6 +728,52 @@ export function AnnualSelfAnalysis({ onClose, inline = false }: AnnualSelfAnalys
               >
                 No
               </Button>
+            </div>
+          )}
+
+          {question.type === "behavior" && question.options && (
+            <div className="space-y-3">
+              <RadioGroup
+                value={responses[question.id] || ""}
+                onValueChange={(value) => {
+                  setResponses(prev => ({ ...prev, [question.id]: value }));
+                }}
+                className="space-y-3"
+              >
+                {question.options.map((option) => (
+                  <div key={option.value} className="flex items-start">
+                    <RadioGroupItem
+                      value={option.value}
+                      id={`behavior-${option.value}`}
+                      className="mt-1 peer sr-only"
+                    />
+                    <Label
+                      htmlFor={`behavior-${option.value}`}
+                      className={`flex-1 p-4 rounded-lg border cursor-pointer transition-all ${
+                        responses[question.id] === option.value
+                          ? option.isNegative
+                            ? "border-red-500/50 bg-red-500/10 text-foreground"
+                            : "border-gold bg-gold/10 text-foreground"
+                          : option.isNegative
+                          ? "border-red-500/20 hover:border-red-500/40 hover:bg-red-500/5"
+                          : "border-muted-foreground/20 hover:border-gold/50 hover:bg-muted/30"
+                      }`}
+                    >
+                      <div className="flex items-start gap-3">
+                        {option.isNegative && (
+                          <span className="text-red-400 text-xs font-medium shrink-0 mt-0.5">SHADOW</span>
+                        )}
+                        <span className={`text-sm ${option.isNegative ? "text-red-200/90" : ""}`}>
+                          {option.label}
+                        </span>
+                      </div>
+                    </Label>
+                  </div>
+                ))}
+              </RadioGroup>
+              <p className="text-xs text-muted-foreground text-center mt-4">
+                Be brutally honest — this is for your growth, not judgment.
+              </p>
             </div>
           )}
         </div>
