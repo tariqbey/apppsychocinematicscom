@@ -40,11 +40,21 @@ export const Header = () => {
   const isActivePath = (path: string) => location.pathname === path;
 
   const handleSignOut = async () => {
-    await signOut();
-    toast({
-      title: "Signed out",
-      description: "You've left the studio. See you next time, Director!",
-    });
+    try {
+      await signOut();
+      toast({
+        title: "Signed out",
+        description: "You've left the studio. See you next time, Director!",
+      });
+      navigate("/");
+    } catch (error) {
+      console.error("Sign out error:", error);
+      toast({
+        variant: "destructive",
+        title: "Error signing out",
+        description: "Please try again.",
+      });
+    }
   };
 
   return (
