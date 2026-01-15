@@ -72,7 +72,20 @@ export function useMindMovies() {
 
   const createNewMovie = useCallback(
     async (title?: string) => {
-      if (!user) {
+      // NOTE: This hook has its own `useAuth()` instance. During initial load, `user`
+      // can be temporarily null even though the session exists. Fall back to the
+      // current session to avoid race-condition failures (especially when opening
+      // the wizard via URL params).
+      let userId = user?.id;
+
+      if (!userId) {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        if (!error) {
+          userId = session?.user?.id;
+        }
+      }
+
+      if (!userId) {
         toast.error("Please sign in to create a movie");
         return null;
       }
@@ -82,7 +95,7 @@ export function useMindMovies() {
         const { data, error } = await supabase
           .from("mind_movie_scripts")
           .insert({
-            user_id: user.id,
+            user_id: userId,
             title: title || `New Mind Movie ${new Date().toLocaleDateString()}`,
             status: "draft",
             is_active: false,

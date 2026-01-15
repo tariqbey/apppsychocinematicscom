@@ -109,39 +109,50 @@ const Index = () => {
   // Check for openWizard URL parameter (from Character Builder)
   useEffect(() => {
     const openWizardFromCharacter = async () => {
-      // Only proceed when we have the openWizard param AND user is loaded (not during auth loading)
-      if (searchParams.get('openWizard') !== 'true' || authLoading || !user) {
+      if (searchParams.get("openWizard") !== "true") return;
+
+      // Wait until auth has fully resolved.
+      if (authLoading) return;
+
+      // If the user isn't signed in, the landing page will render; still show a helpful message.
+      if (!user) {
+        toast.error("Please sign in to create your transformation script.");
         return;
       }
-      
-      // Clear the URL parameter first
+
+      // Pull transformation payload from sessionStorage (set by CharacterTransformationCoach).
+      const storedAnalysis = sessionStorage.getItem("transformationAnalysis");
+      const storedChiefAim = sessionStorage.getItem("chiefAimForScript");
+
+      if (!storedAnalysis || !storedChiefAim) {
+        // Clear the URL param so we don't keep retrying on every render.
+        setSearchParams({});
+        toast.error("Couldn't find your transformation data. Go back to Character → Transform and click the button again.");
+        return;
+      }
+
+      let transformationData: { analysis: unknown; chiefAim: { what: string | null; byWhen: string | null; exchange: string | null; plan: string | null } } | null = null;
+      try {
+        const analysis = JSON.parse(storedAnalysis);
+        const chiefAimData = JSON.parse(storedChiefAim);
+        transformationData = { analysis, chiefAim: chiefAimData };
+      } catch (e) {
+        console.error("Failed to parse transformation data:", e);
+        setSearchParams({});
+        toast.error("Your transformation data was corrupted. Please click the button again.");
+        return;
+      }
+
+      // Clear session storage once we've successfully parsed it.
+      sessionStorage.removeItem("transformationAnalysis");
+      sessionStorage.removeItem("chiefAimForScript");
+
+      // Clear the URL parameter so refreshes don't keep re-opening.
       setSearchParams({});
-      
-      // Check for stored transformation data
-      const storedAnalysis = sessionStorage.getItem('transformationAnalysis');
-      const storedChiefAim = sessionStorage.getItem('chiefAimForScript');
-      
-      let transformationData = null;
-      if (storedAnalysis && storedChiefAim) {
-        try {
-          const analysis = JSON.parse(storedAnalysis);
-          const chiefAimData = JSON.parse(storedChiefAim);
-          transformationData = { analysis, chiefAim: chiefAimData };
-          
-          // Clear session storage
-          sessionStorage.removeItem('transformationAnalysis');
-          sessionStorage.removeItem('chiefAimForScript');
-        } catch (e) {
-          console.error('Failed to parse transformation data:', e);
-        }
-      }
-      
-      // Set transformation data BEFORE creating movie
-      if (transformationData) {
-        setTransformationDataForWizard(transformationData);
-      }
-      
-      // Create the movie
+
+      // Set transformation data BEFORE creating movie.
+      setTransformationDataForWizard(transformationData);
+
       try {
         const movie = await createNewMovie();
         if (movie) {
@@ -150,15 +161,14 @@ const Index = () => {
           setShowMindMovieWizard(true);
           toast.success("Mind Movie Wizard opened with your transformation data!");
         } else {
-          // Movie creation failed - show an error toast
           toast.error("Failed to create Mind Movie. Please try again from the Movie Vault.");
         }
       } catch (error) {
-        console.error('Error creating movie from transformation:', error);
+        console.error("Error creating movie from transformation:", error);
         toast.error("An error occurred. Please try again.");
       }
     };
-    
+
     openWizardFromCharacter();
   }, [searchParams, user, authLoading, setSearchParams, createNewMovie]);
 
