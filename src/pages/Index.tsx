@@ -20,7 +20,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { useGamification } from "@/hooks/useGamification";
 import { useMindMovies, MindMovie } from "@/hooks/useMindMovies";
-import { Film, Loader2, Wand2, Sparkles, Bot, Clapperboard, FolderOpen, BookOpen, Target } from "lucide-react";
+import { Film, Loader2, Wand2, Sparkles, Bot, Clapperboard, FolderOpen, BookOpen, Target, User2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { InfoTooltip } from "@/components/ui/info-tooltip";
 
@@ -208,6 +208,32 @@ const Index = () => {
               </Button>
             )}
           </div>
+
+          {/* Character Builder Card */}
+          <button
+            onClick={() => navigate("/character")}
+            className="w-full glass-card p-6 cinematic-border animate-slide-up group hover:border-cyan-500/50 transition-all duration-300 text-left"
+          >
+            <div className="flex items-center gap-4">
+              <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-cyan-500/20 to-teal-500/20 flex items-center justify-center group-hover:from-cyan-500/30 group-hover:to-teal-500/30 transition-all duration-300">
+                <User2 className="w-7 h-7 text-cyan-400" />
+              </div>
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-1">
+                  <h3 className="text-xl font-display tracking-wide group-hover:text-cyan-400 transition-colors">Character Builder</h3>
+                  <Sparkles className="w-4 h-4 text-cyan-400/60" />
+                  <InfoTooltip content="Discover your Director archetype, define required character traits, and track daily alignment. Build the identity needed to achieve your Chief Aim." />
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Discover your archetype • Daily trait scorecard • Transformation tracking
+                </p>
+              </div>
+              <div className="hidden sm:flex items-center gap-2 text-sm text-muted-foreground group-hover:text-cyan-400 transition-colors">
+                <span>Build Character</span>
+                <span className="text-lg">→</span>
+              </div>
+            </div>
+          </button>
 
           {/* Director's Journal Card */}
           <button

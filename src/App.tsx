@@ -17,6 +17,7 @@ import AdminDashboard from "./pages/AdminDashboard";
 import AwardsCeremony from "./pages/AwardsCeremony";
 import Settings from "./pages/Settings";
 import Actions from "./pages/Actions";
+import Character from "./pages/Character";
 import NotFound from "./pages/NotFound";
 import { RequireAdmin } from "./components/auth/RequireAdmin";
 
@@ -45,6 +46,7 @@ const App = () => (
           <Route path="/awards" element={<AwardsCeremony />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/actions" element={<Actions />} />
+          <Route path="/character" element={<Character />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
