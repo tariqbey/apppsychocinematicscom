@@ -156,13 +156,9 @@ export function ThreeThings() {
     setSuggestions([]);
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/suggest-tasks`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-        },
-        body: JSON.stringify({
+      // Use supabase.functions.invoke which automatically handles auth
+      const { data, error } = await supabase.functions.invoke("suggest-tasks", {
+        body: {
           chiefAim: {
             what: profile?.chief_aim_what,
             byWhen: profile?.chief_aim_by_when,
@@ -171,13 +167,11 @@ export function ThreeThings() {
           },
           existingTasks: tasks.map(t => t.task_text),
           dayOfWeek: format(selectedDate, "EEEE"),
-        }),
+        },
       });
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to get suggestions");
+      if (error) {
+        throw new Error(error.message || "Failed to get suggestions");
       }
 
       if (data.suggestions) {
