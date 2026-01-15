@@ -5,7 +5,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { 
   Target, Plus, Trash2, Loader2, Sparkles, ChevronLeft, ChevronRight,
-  Calendar, RefreshCw, X
+  Calendar, RefreshCw, X, AlertCircle
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -13,6 +13,13 @@ import { useUserProfile } from "@/hooks/useUserProfile";
 import { useToast } from "@/hooks/use-toast";
 import { format, startOfWeek, addDays, isSameDay, isToday } from "date-fns";
 import { InfoTooltip } from "@/components/ui/info-tooltip";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 
 interface Task {
   id: string;
@@ -20,6 +27,7 @@ interface Task {
   is_completed: boolean;
   priority: number;
   task_date: string;
+  incomplete_reason?: string | null;
 }
 
 interface Suggestion {
@@ -29,6 +37,12 @@ interface Suggestion {
 
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
+const INCOMPLETE_REASONS = [
+  { id: "procrastinating", label: "I was bullshitting, I was procrastinating today" },
+  { id: "others_movie", label: "I got caught up in someone else's movie" },
+  { id: "ran_out_of_time", label: "I ran out of time" },
+];
+
 export function ThreeThings() {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date(), { weekStartsOn: 1 }));
@@ -37,6 +51,8 @@ export function ThreeThings() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSuggesting, setIsSuggesting] = useState(false);
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
+  const [excuseDialogOpen, setExcuseDialogOpen] = useState(false);
+  const [taskToUncheck, setTaskToUncheck] = useState<Task | null>(null);
   const { user } = useAuth();
   const { profile } = useUserProfile();
   const { toast } = useToast();
@@ -99,14 +115,43 @@ export function ThreeThings() {
   };
 
   const toggleTask = async (task: Task) => {
+    // If task is completed and user is unchecking it, show excuse dialog
+    if (task.is_completed) {
+      setTaskToUncheck(task);
+      setExcuseDialogOpen(true);
+      return;
+    }
+
+    // If task is incomplete and user is checking it complete
     const { error } = await supabase
       .from("daily_tasks")
-      .update({ is_completed: !task.is_completed })
+      .update({ is_completed: true, incomplete_reason: null })
       .eq("id", task.id);
 
     if (!error) {
-      setTasks(tasks.map(t => t.id === task.id ? { ...t, is_completed: !t.is_completed } : t));
+      setTasks(tasks.map(t => t.id === task.id ? { ...t, is_completed: true, incomplete_reason: null } : t));
     }
+  };
+
+  const handleExcuseSelect = async (reason: string) => {
+    if (!taskToUncheck) return;
+
+    const { error } = await supabase
+      .from("daily_tasks")
+      .update({ is_completed: false, incomplete_reason: reason })
+      .eq("id", taskToUncheck.id);
+
+    if (!error) {
+      setTasks(tasks.map(t => t.id === taskToUncheck.id ? { ...t, is_completed: false, incomplete_reason: reason } : t));
+    }
+
+    setExcuseDialogOpen(false);
+    setTaskToUncheck(null);
+  };
+
+  const cancelExcuseDialog = () => {
+    setExcuseDialogOpen(false);
+    setTaskToUncheck(null);
   };
 
   const deleteTask = async (taskId: string) => {
@@ -379,6 +424,33 @@ export function ThreeThings() {
           </ScrollArea>
         </div>
       )}
+
+      {/* Excuse Selection Dialog */}
+      <Dialog open={excuseDialogOpen} onOpenChange={(open) => !open && cancelExcuseDialog()}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertCircle className="h-5 w-5 text-gold" />
+              Why didn't you complete this?
+            </DialogTitle>
+            <DialogDescription>
+              Be honest with yourself. Select the reason:
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 pt-4">
+            {INCOMPLETE_REASONS.map((reason) => (
+              <Button
+                key={reason.id}
+                variant="outline"
+                className="w-full justify-start text-left h-auto py-4 px-4 hover:bg-gold/10 hover:border-gold/30"
+                onClick={() => handleExcuseSelect(reason.id)}
+              >
+                <span className="text-sm leading-relaxed">{reason.label}</span>
+              </Button>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

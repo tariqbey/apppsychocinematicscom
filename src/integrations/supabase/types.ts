@@ -354,6 +354,7 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          incomplete_reason: string | null
           is_completed: boolean
           priority: number
           task_date: string
@@ -364,6 +365,7 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
+          incomplete_reason?: string | null
           is_completed?: boolean
           priority?: number
           task_date?: string
@@ -374,6 +376,7 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
+          incomplete_reason?: string | null
           is_completed?: boolean
           priority?: number
           task_date?: string
