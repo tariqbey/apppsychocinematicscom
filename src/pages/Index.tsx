@@ -1,5 +1,5 @@
-import { useState, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useCallback, useEffect } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Header } from "@/components/layout/Header";
 import { LandingPage } from "@/components/landing/LandingPage";
 import { ProductionStatus } from "@/components/dashboard/ProductionStatus";
@@ -26,6 +26,7 @@ import { InfoTooltip } from "@/components/ui/info-tooltip";
 
 const Index = () => {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [showTheater, setShowTheater] = useState(false);
   const [showEditBay, setShowEditBay] = useState(false);
   const [showScorecard, setShowScorecard] = useState(false);
@@ -38,7 +39,10 @@ const Index = () => {
   const [editBayInitialPrompt, setEditBayInitialPrompt] = useState<string | undefined>();
   const [timelineExportData, setTimelineExportData] = useState<TimelineExportData | undefined>();
   const [showJournal, setShowJournal] = useState(false);
-
+  const [transformationDataForWizard, setTransformationDataForWizard] = useState<{
+    analysis: unknown;
+    chiefAim: { what: string | null; byWhen: string | null; exchange: string | null; plan: string | null };
+  } | null>(null);
   const { user, loading: authLoading } = useAuth();
   const { profile, loading: profileLoading, updateProfile } = useUserProfile();
   const { refreshData, checkAndAwardBadges } = useGamification();
@@ -100,6 +104,35 @@ const Index = () => {
     profile?.chief_aim_exchange && 
     profile?.chief_aim_plan
   );
+
+  // Check for openWizard URL parameter (from Character Builder)
+  useEffect(() => {
+    if (searchParams.get('openWizard') === 'true' && user) {
+      // Clear the URL parameter
+      setSearchParams({});
+      
+      // Check for stored transformation data
+      const storedAnalysis = sessionStorage.getItem('transformationAnalysis');
+      const storedChiefAim = sessionStorage.getItem('chiefAimForScript');
+      
+      if (storedAnalysis && storedChiefAim) {
+        try {
+          const analysis = JSON.parse(storedAnalysis);
+          const chiefAimData = JSON.parse(storedChiefAim);
+          setTransformationDataForWizard({ analysis, chiefAim: chiefAimData });
+          
+          // Clear session storage
+          sessionStorage.removeItem('transformationAnalysis');
+          sessionStorage.removeItem('chiefAimForScript');
+        } catch (e) {
+          console.error('Failed to parse transformation data:', e);
+        }
+      }
+      
+      // Open the wizard
+      handleCreateNewMovie();
+    }
+  }, [searchParams, user, setSearchParams, handleCreateNewMovie]);
 
   if (authLoading) {
     return (
@@ -341,6 +374,7 @@ const Index = () => {
           onClose={() => {
             setShowMindMovieWizard(false);
             setSelectedMovieId(undefined);
+            setTransformationDataForWizard(null);
           }}
           chiefAim={chiefAim}
           movieId={selectedMovieId}
@@ -350,6 +384,7 @@ const Index = () => {
             setShowMindMovieWizard(false);
           }}
           onAddToTimeline={handleAddToTimeline}
+          transformationAnalysis={transformationDataForWizard?.analysis}
         />
       )}
 

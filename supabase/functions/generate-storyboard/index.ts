@@ -37,14 +37,54 @@ serve(async (req) => {
       );
     }
 
-    const { chiefAim, visualStyle, userDescription, existingScenes, addMoreScenes } = await req.json();
+    const { chiefAim, visualStyle, userDescription, existingScenes, addMoreScenes, transformationAnalysis } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     
     if (!LOVABLE_API_KEY) {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
-    const systemPrompt = `You are a Mind Movie Storyboard Director, an expert in visual storytelling and the Psycho-Cinematics methodology. Your role is to help users create powerful visual storyboards for their Mind Movies - short visualization videos that program the subconscious mind for success.
+    // Build a rich, cinematic system prompt based on whether we have transformation data
+    const hasTransformation = transformationAnalysis?.requiredCharacter?.name;
+    
+    const systemPrompt = hasTransformation 
+      ? `You are an Oscar-winning screenwriter and Mind Movie director. You don't just create scenes—you craft TRANSFORMATION STORIES that burn into the subconscious.
+
+Your mission: Turn the user's character transformation journey into a VISCERAL, CINEMATIC experience. This isn't a slideshow. This is the movie of their life they'll watch every morning until their neural pathways rewire.
+
+THE CHARACTER ARC:
+The user must transform from "${transformationAnalysis.currentSelf?.archetype || 'their current self'}" into "${transformationAnalysis.requiredCharacter.name}".
+
+REQUIRED TRAITS TO EMBED IN EVERY SCENE:
+${transformationAnalysis.requiredCharacter.traits?.map((t: string) => `• ${t}`).join('\n') || 'Not specified'}
+
+BEHAVIORS THE CHARACTER MUST DEMONSTRATE:
+${transformationAnalysis.requiredCharacter.behaviors?.map((b: string) => `• ${b}`).join('\n') || 'Not specified'}
+
+THE MINDSET SHIFT:
+${transformationAnalysis.requiredCharacter.mindset || 'Not specified'}
+
+WHAT MUST DIE (Show the old self being left behind):
+${transformationAnalysis.gap?.whatMustDie?.map((d: string) => `💀 ${d}`).join('\n') || 'Not specified'}
+
+WHAT MUST EMERGE (Show these qualities rising):
+${transformationAnalysis.gap?.whatMustEmerge?.map((e: string) => `🌱 ${e}`).join('\n') || 'Not specified'}
+
+SCREENWRITING RULES:
+1. SHOW, DON'T TELL. No generic "person achieving goals" scenes. Be SPECIFIC. Be VIVID.
+2. Each scene must demonstrate a REQUIRED TRAIT in action—not abstractly, but through a concrete moment
+3. Include AFFIRMATION TEXT that will appear on screen—write it like dialogue, not a fortune cookie
+4. The affirmations must feel like the character's internal voice—confident, specific, first-person
+5. Build emotional momentum—start with determination, move through challenge, crescendo into triumph
+6. The FINAL SCENE must show the complete manifestation—the Oscar-winning moment
+
+FOR AI IMAGE GENERATION:
+- Cinematic 16:9 aspect ratio
+- Specify lighting (golden hour, dramatic shadows, studio lighting)
+- Camera angles (low angle for power, close-up for emotion, wide for establishing)
+- Include the protagonist in most scenes—describe their posture, expression, energy
+- Use terms: photorealistic, cinematic, shallow depth of field, volumetric lighting`
+      : `You are a Mind Movie Storyboard Director, an expert in visual storytelling and the Psycho-Cinematics methodology. Your role is to help users create powerful visual storyboards for their Mind Movies - short visualization videos that program the subconscious mind for success.
 
 A Mind Movie should:
 1. Start with the user's current state or the beginning of their journey
@@ -61,8 +101,11 @@ Generate prompts that are optimized for AI image generation:
 - Specify aspect ratio as 16:9 for video frames
 - Include emotional tone and atmosphere`;
 
-    const userPrompt = addMoreScenes && existingScenes?.length > 0 
-      ? `Add 3 MORE scenes to extend this Mind Movie storyboard.
+    // Build the user prompt with transformation context if available
+    let userPrompt: string;
+    
+    if (addMoreScenes && existingScenes?.length > 0) {
+      userPrompt = `Add 3 MORE scenes to extend this Mind Movie storyboard.
 
 Current scene count: ${existingScenes.length}
 Last scene title: "${existingScenes[existingScenes.length - 1]?.title || 'Unknown'}"
@@ -71,8 +114,44 @@ Chief Aim: ${chiefAim?.what || "Not specified"}
 By When: ${chiefAim?.byWhen || "Not specified"}
 Visual Style: ${visualStyle || "Cinematic"}
 
-Create 3 NEW scenes that continue the story toward the triumphant finale. Number them starting from 1.`
-      : `Create a storyboard for a Mind Movie based on this Definite Chief Aim:
+Create 3 NEW scenes that continue the story toward the triumphant finale. Number them starting from 1.`;
+    } else if (hasTransformation) {
+      userPrompt = `WRITE THE SCREENPLAY for this transformation journey:
+
+═══════════════════════════════════════════════
+THE FINAL SCENE (Where we're headed):
+${chiefAim?.what || "Not specified"}
+Deadline: ${chiefAim?.byWhen || "Not specified"}
+═══════════════════════════════════════════════
+
+THE CHARACTER TRANSFORMATION:
+From: ${transformationAnalysis.currentSelf?.archetype || 'Current self'}
+To: ${transformationAnalysis.requiredCharacter.name}
+
+THE ROLE THEY'RE PLAYING:
+"${transformationAnalysis.script?.role || 'Not specified'}"
+
+THE ARC:
+${transformationAnalysis.script?.arc || 'Not specified'}
+
+VISUAL STYLE: ${visualStyle || "Cinematic and inspiring"}
+ADDITIONAL DIRECTION: ${userDescription || "None provided"}
+
+═══════════════════════════════════════════════
+CREATE 6-8 SCENES that:
+1. Open with a powerful moment showing the character CHOOSING to transform
+2. Show them PRACTICING the required traits in specific situations
+3. Include a moment of CHALLENGE where old patterns try to return—and they overcome
+4. Build to the TRIUMPHANT FINALE showing complete manifestation
+
+Each scene needs:
+- A vivid visual that demonstrates a required character trait
+- An affirmation that sounds like the character's confident internal voice
+- Emotional escalation toward the climax
+
+Make it so good they'll want to watch it every single day.`;
+    } else {
+      userPrompt = `Create a storyboard for a Mind Movie based on this Definite Chief Aim:
 
 WHAT I WANT: ${chiefAim?.what || "Not specified"}
 BY WHEN: ${chiefAim?.byWhen || "Not specified"}
@@ -84,6 +163,7 @@ VISUAL STYLE PREFERENCE: ${visualStyle || "Cinematic and inspiring"}
 USER'S DESCRIPTION OF THEIR VISION: ${userDescription || "Not provided"}
 
 Generate 5-8 scenes that tell the story of achieving this goal. Each scene should build toward the final triumphant visualization.`;
+    }
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",

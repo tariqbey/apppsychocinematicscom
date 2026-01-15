@@ -117,7 +117,24 @@ export function useMindMovieScript() {
     chiefAim: { what?: string; byWhen?: string; exchange?: string; plan?: string },
     visualStyle: string,
     userDescription: string,
-    existingScenes?: Scene[]
+    existingScenes?: Scene[],
+    transformationAnalysis?: {
+      currentSelf?: { archetype?: string };
+      requiredCharacter?: {
+        name?: string;
+        traits?: string[];
+        behaviors?: string[];
+        mindset?: string;
+      };
+      gap?: {
+        whatMustDie?: string[];
+        whatMustEmerge?: string[];
+      };
+      script?: {
+        role?: string;
+        arc?: string;
+      };
+    }
   ) => {
     if (!user) {
       toast.error("Please sign in to generate a storyboard");
@@ -140,6 +157,7 @@ export function useMindMovieScript() {
             userDescription,
             existingScenes: existingScenes || undefined,
             addMoreScenes: existingScenes ? true : false,
+            transformationAnalysis: transformationAnalysis || undefined,
           }),
         }
       );

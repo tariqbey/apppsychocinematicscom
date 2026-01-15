@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { X, ChevronLeft, ChevronRight, Sparkles, Save, Clapperboard, Palette, Layout, Wand2, Music, Check, RefreshCw, Plus, User, ChevronDown, Trash2, HelpCircle, ExternalLink, Film, Zap, Loader2, CheckSquare, Square } from "lucide-react";
+import { X, ChevronLeft, ChevronRight, Sparkles, Save, Clapperboard, Palette, Layout, Wand2, Music, Check, RefreshCw, Plus, User, ChevronDown, Trash2, HelpCircle, ExternalLink, Film, Zap, Loader2, CheckSquare, Square, Crown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
@@ -90,6 +90,23 @@ interface MindMovieScriptWizardProps {
   movieId?: string;
   onOpenEditBay?: (prompt: string) => void;
   onAddToTimeline?: (data: TimelineExportData) => void;
+  transformationAnalysis?: {
+    currentSelf?: { archetype?: string };
+    requiredCharacter?: {
+      name?: string;
+      traits?: string[];
+      behaviors?: string[];
+      mindset?: string;
+    };
+    gap?: {
+      whatMustDie?: string[];
+      whatMustEmerge?: string[];
+    };
+    script?: {
+      role?: string;
+      arc?: string;
+    };
+  };
 }
 
 const VISUAL_STYLES = [
@@ -108,6 +125,7 @@ export function MindMovieScriptWizard({
   movieId,
   onOpenEditBay,
   onAddToTimeline,
+  transformationAnalysis,
 }: MindMovieScriptWizardProps) {
   const [step, setStep] = useState(1);
   const [visualStyle, setVisualStyle] = useState("cinematic");
@@ -238,7 +256,13 @@ export function MindMovieScriptWizard({
       setIsAddingScenes(true);
     }
     const existingScenes = addScenes ? generatedScenes : undefined;
-    const result = await generateStoryboard(chiefAim, visualStyle, userDescription, existingScenes);
+    const result = await generateStoryboard(
+      chiefAim, 
+      visualStyle, 
+      userDescription, 
+      existingScenes,
+      transformationAnalysis
+    );
     if (result) {
       if (addScenes && generatedScenes.length > 0) {
         // Merge new scenes with existing, adjusting order numbers
@@ -688,10 +712,44 @@ export function MindMovieScriptWizard({
             {/* Step 1: Foundation */}
             {step === 1 && (
               <div className="space-y-6">
+                {/* Transformation Script Mode Indicator */}
+                {transformationAnalysis?.requiredCharacter?.name && (
+                  <div className="p-4 rounded-xl bg-gradient-to-r from-gold/10 via-amber-500/10 to-gold/10 border border-gold/30">
+                    <div className="flex items-start gap-3">
+                      <div className="w-10 h-10 rounded-full bg-gold/20 flex items-center justify-center shrink-0">
+                        <Crown className="w-5 h-5 text-gold" />
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="font-semibold text-gold">Transformation Script Mode</h3>
+                        <p className="text-sm text-muted-foreground">
+                          Creating a cinematic journey featuring <span className="text-gold font-medium">{transformationAnalysis.requiredCharacter.name}</span> — 
+                          the character you must become to achieve your Chief Aim. Every scene will embed the traits and behaviors you need to embody.
+                        </p>
+                        {transformationAnalysis.requiredCharacter.traits && (
+                          <div className="flex flex-wrap gap-2 mt-2">
+                            {transformationAnalysis.requiredCharacter.traits.slice(0, 4).map((trait, i) => (
+                              <span key={i} className="px-2 py-0.5 text-xs rounded-full bg-gold/20 text-gold border border-gold/30">
+                                {trait}
+                              </span>
+                            ))}
+                            {(transformationAnalysis.requiredCharacter.traits.length || 0) > 4 && (
+                              <span className="text-xs text-muted-foreground">
+                                +{(transformationAnalysis.requiredCharacter.traits.length || 0) - 4} more
+                              </span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 <div>
                   <h2 className="text-2xl font-bold mb-2">Set Your Visual Foundation</h2>
                   <p className="text-muted-foreground">
-                    We'll use your Definite Chief Aim to create a personalized storyboard.
+                    {transformationAnalysis?.requiredCharacter?.name 
+                      ? "We'll use your transformation analysis and Chief Aim to craft a powerful screenplay."
+                      : "We'll use your Definite Chief Aim to create a personalized storyboard."}
                   </p>
                 </div>
 

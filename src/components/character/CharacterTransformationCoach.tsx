@@ -1,13 +1,13 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, Target, Sparkles, AlertTriangle, ArrowRight, Crown, Swords, Shield, X } from "lucide-react";
+import { Loader2, Target, Sparkles, AlertTriangle, ArrowRight, Crown, Swords, Shield, X, Film, Clapperboard } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Archetype, ARCHETYPES } from "./archetypes";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
-
+import { useNavigate } from "react-router-dom";
 interface TransformationAnalysis {
   currentSelf: {
     archetype: string;
@@ -38,14 +38,17 @@ interface CharacterTransformationCoachProps {
   scores?: Record<string, number>;
   onClose?: () => void;
   inline?: boolean;
+  onCreateMindMovie?: (analysis: TransformationAnalysis, chiefAim: { what: string | null; byWhen: string | null; exchange: string | null; plan: string | null }) => void;
 }
 
 export function CharacterTransformationCoach({ 
   archetype: archetypeProp, 
   scores: scoresProp, 
   onClose,
-  inline = false
+  inline = false,
+  onCreateMindMovie
 }: CharacterTransformationCoachProps) {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const [analysis, setAnalysis] = useState<TransformationAnalysis | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -431,6 +434,54 @@ export function CharacterTransformationCoach({
                     </CardContent>
                   </Card>
                 )}
+
+                {/* Create Your Transformation Script CTA */}
+                <Card className="glass-card border-2 border-gold/50 bg-gradient-to-br from-gold/10 via-transparent to-amber-500/10 overflow-hidden">
+                  <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-gold/5 via-transparent to-transparent" />
+                  <CardHeader className="relative text-center pb-2">
+                    <div className="w-16 h-16 rounded-full bg-gradient-to-br from-gold/30 to-amber-500/30 flex items-center justify-center mx-auto mb-4 animate-pulse">
+                      <Clapperboard className="w-8 h-8 text-gold" />
+                    </div>
+                    <CardTitle className="text-2xl font-display tracking-wide text-gold-gradient">
+                      Now, Let's Write Your Script
+                    </CardTitle>
+                    <p className="text-muted-foreground mt-2 max-w-md mx-auto">
+                      You know who you need to become. Now let's create the cinematic scenes and affirmations 
+                      that will burn this new identity into your subconscious.
+                    </p>
+                  </CardHeader>
+                  <CardContent className="relative space-y-4 text-center">
+                    <div className="p-4 rounded-lg bg-black/20 border border-gold/20 max-w-lg mx-auto">
+                      <p className="text-sm text-muted-foreground">
+                        The AI will craft a visual screenplay featuring <span className="text-gold font-medium">{analysis.requiredCharacter.name}</span> — 
+                        scenes that show you embodying each required trait, affirmations that sound like your character's 
+                        confident inner voice, and a triumphant finale that shows your complete transformation.
+                      </p>
+                    </div>
+                    <Button 
+                      size="lg"
+                      className="gap-3 bg-gradient-to-r from-gold via-amber-500 to-gold hover:from-amber-500 hover:via-gold hover:to-amber-500 text-black font-semibold shadow-lg shadow-gold/25 hover:shadow-gold/40 transition-all duration-300"
+                      onClick={() => {
+                        if (onCreateMindMovie && chiefAim) {
+                          onCreateMindMovie(analysis, chiefAim);
+                        } else {
+                          // Store the transformation analysis in sessionStorage and navigate
+                          sessionStorage.setItem('transformationAnalysis', JSON.stringify(analysis));
+                          sessionStorage.setItem('chiefAimForScript', JSON.stringify(chiefAim));
+                          navigate('/?openWizard=true');
+                          toast.success("Opening Mind Movie Script Wizard...");
+                        }
+                      }}
+                    >
+                      <Film className="h-5 w-5" />
+                      Create Your Transformation Script
+                      <ArrowRight className="h-5 w-5" />
+                    </Button>
+                    <p className="text-xs text-muted-foreground">
+                      This will open the Mind Movie Wizard with your character transformation pre-loaded
+                    </p>
+                  </CardContent>
+                </Card>
 
                 {/* Bottom Quote */}
                 <div className="text-center py-6">
