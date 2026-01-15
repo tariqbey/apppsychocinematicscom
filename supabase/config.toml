@@ -50,3 +50,6 @@ verify_jwt = false
 
 [functions.generate-mind-movie-music]
 verify_jwt = false
+
+[functions.analyze-journal]
+verify_jwt = false

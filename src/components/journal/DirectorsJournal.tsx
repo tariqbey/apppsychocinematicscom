@@ -1,0 +1,476 @@
+import { useState, useEffect } from "react";
+import { X, Plus, BookOpen, Sparkles, TrendingUp, Target, Loader2, ChevronDown, ChevronUp, Trash2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { useJournal, JournalEntry, MOOD_OPTIONS, TAG_OPTIONS } from "@/hooks/useJournal";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
+
+interface DirectorsJournalProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+export function DirectorsJournal({ isOpen, onClose }: DirectorsJournalProps) {
+  const {
+    entries,
+    isLoading,
+    isAnalyzing,
+    fetchEntries,
+    createEntry,
+    deleteEntry,
+    analyzeEntry,
+    getProgressReport,
+    getAccountabilityReport,
+  } = useJournal();
+
+  const [activeTab, setActiveTab] = useState("write");
+  const [title, setTitle] = useState("");
+  const [content, setContent] = useState("");
+  const [selectedMood, setSelectedMood] = useState<string | null>(null);
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [expandedEntry, setExpandedEntry] = useState<string | null>(null);
+  const [progressReport, setProgressReport] = useState<string | null>(null);
+  const [accountabilityReport, setAccountabilityReport] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (isOpen) {
+      fetchEntries();
+    }
+  }, [isOpen, fetchEntries]);
+
+  const handleSubmit = async () => {
+    if (!content.trim()) return;
+
+    const entry = await createEntry({
+      title: title.trim() || undefined,
+      content: content.trim(),
+      mood: selectedMood || undefined,
+      tags: selectedTags.length > 0 ? selectedTags : undefined,
+    });
+
+    if (entry) {
+      setTitle("");
+      setContent("");
+      setSelectedMood(null);
+      setSelectedTags([]);
+      setActiveTab("entries");
+    }
+  };
+
+  const handleAnalyze = async (entryId: string) => {
+    await analyzeEntry(entryId);
+  };
+
+  const handleProgressReport = async () => {
+    const report = await getProgressReport();
+    if (report) setProgressReport(report);
+  };
+
+  const handleAccountabilityReport = async () => {
+    const report = await getAccountabilityReport();
+    if (report) setAccountabilityReport(report);
+  };
+
+  const toggleTag = (tag: string) => {
+    setSelectedTags(prev =>
+      prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]
+    );
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 bg-background/95 backdrop-blur-sm flex flex-col animate-fade-in">
+      {/* Header */}
+      <div className="flex items-center justify-between p-4 border-b border-border">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+            <BookOpen className="w-5 h-5 text-white" />
+          </div>
+          <div>
+            <h2 className="text-xl font-display tracking-wide">Director's Journal</h2>
+            <p className="text-sm text-muted-foreground">
+              Record your journey • AI-powered insights
+            </p>
+          </div>
+        </div>
+        <Button variant="ghost" size="icon" onClick={onClose}>
+          <X className="w-5 h-5" />
+        </Button>
+      </div>
+
+      {/* Content */}
+      <div className="flex-1 overflow-hidden">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col">
+          <div className="px-4 pt-4">
+            <TabsList className="grid w-full max-w-md grid-cols-3">
+              <TabsTrigger value="write" className="gap-2">
+                <Plus className="w-4 h-4" />
+                Write
+              </TabsTrigger>
+              <TabsTrigger value="entries" className="gap-2">
+                <BookOpen className="w-4 h-4" />
+                Entries
+              </TabsTrigger>
+              <TabsTrigger value="insights" className="gap-2">
+                <Sparkles className="w-4 h-4" />
+                Insights
+              </TabsTrigger>
+            </TabsList>
+          </div>
+
+          {/* Write Tab */}
+          <TabsContent value="write" className="flex-1 p-4 overflow-auto">
+            <div className="max-w-2xl mx-auto space-y-6">
+              <Card className="p-6 space-y-4">
+                <Input
+                  placeholder="Entry title (optional)"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  className="text-lg font-medium"
+                />
+
+                <Textarea
+                  placeholder="What's on your mind, Director? Record your experiences, breakthroughs, challenges, and insights..."
+                  value={content}
+                  onChange={(e) => setContent(e.target.value)}
+                  className="min-h-[200px] resize-none"
+                />
+
+                {/* Mood Selection */}
+                <div>
+                  <p className="text-sm font-medium mb-2">How are you feeling?</p>
+                  <div className="flex flex-wrap gap-2">
+                    {MOOD_OPTIONS.map((mood) => (
+                      <button
+                        key={mood.value}
+                        onClick={() => setSelectedMood(selectedMood === mood.value ? null : mood.value)}
+                        className={cn(
+                          "px-3 py-1.5 rounded-full text-sm transition-all",
+                          selectedMood === mood.value
+                            ? "bg-primary text-primary-foreground"
+                            : "bg-muted hover:bg-muted/80"
+                        )}
+                      >
+                        {mood.emoji} {mood.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Tags */}
+                <div>
+                  <p className="text-sm font-medium mb-2">Tags</p>
+                  <div className="flex flex-wrap gap-2">
+                    {TAG_OPTIONS.map((tag) => (
+                      <button
+                        key={tag}
+                        onClick={() => toggleTag(tag)}
+                        className={cn(
+                          "px-3 py-1 rounded-full text-xs transition-all",
+                          selectedTags.includes(tag)
+                            ? "bg-gold text-primary-foreground"
+                            : "bg-muted hover:bg-muted/80"
+                        )}
+                      >
+                        #{tag}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <Button
+                  onClick={handleSubmit}
+                  disabled={!content.trim()}
+                  className="w-full"
+                  variant="gold"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Save Entry
+                </Button>
+              </Card>
+            </div>
+          </TabsContent>
+
+          {/* Entries Tab */}
+          <TabsContent value="entries" className="flex-1 overflow-hidden">
+            <ScrollArea className="h-full p-4">
+              <div className="max-w-2xl mx-auto space-y-4">
+                {isLoading ? (
+                  <div className="flex items-center justify-center py-12">
+                    <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+                  </div>
+                ) : entries.length === 0 ? (
+                  <div className="text-center py-12">
+                    <BookOpen className="w-12 h-12 text-muted-foreground/50 mx-auto mb-4" />
+                    <h3 className="font-medium mb-2">No entries yet</h3>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      Start recording your journey to unlock AI insights
+                    </p>
+                    <Button onClick={() => setActiveTab("write")} variant="gold">
+                      <Plus className="w-4 h-4 mr-2" />
+                      Write Your First Entry
+                    </Button>
+                  </div>
+                ) : (
+                  entries.map((entry) => (
+                    <JournalEntryCard
+                      key={entry.id}
+                      entry={entry}
+                      isExpanded={expandedEntry === entry.id}
+                      onToggle={() => setExpandedEntry(expandedEntry === entry.id ? null : entry.id)}
+                      onAnalyze={() => handleAnalyze(entry.id)}
+                      onDelete={() => deleteEntry(entry.id)}
+                      isAnalyzing={isAnalyzing}
+                    />
+                  ))
+                )}
+              </div>
+            </ScrollArea>
+          </TabsContent>
+
+          {/* Insights Tab */}
+          <TabsContent value="insights" className="flex-1 overflow-auto p-4">
+            <div className="max-w-2xl mx-auto space-y-6">
+              {/* Weekly Progress Report */}
+              <Card className="p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center">
+                      <TrendingUp className="w-5 h-5 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="font-medium">Weekly Progress Report</h3>
+                      <p className="text-sm text-muted-foreground">AI analysis of your last 7 days</p>
+                    </div>
+                  </div>
+                  <Button
+                    onClick={handleProgressReport}
+                    disabled={isAnalyzing}
+                    variant="outline"
+                  >
+                    {isAnalyzing ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <>
+                        <Sparkles className="w-4 h-4 mr-2" />
+                        Generate
+                      </>
+                    )}
+                  </Button>
+                </div>
+                {progressReport && (
+                  <div className="mt-4 p-4 bg-muted/50 rounded-lg">
+                    <p className="text-sm whitespace-pre-wrap">{progressReport}</p>
+                  </div>
+                )}
+              </Card>
+
+              {/* Accountability Report */}
+              <Card className="p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-orange-500 to-red-500 flex items-center justify-center">
+                      <Target className="w-5 h-5 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="font-medium">Accountability Check</h3>
+                      <p className="text-sm text-muted-foreground">30-day pattern analysis</p>
+                    </div>
+                  </div>
+                  <Button
+                    onClick={handleAccountabilityReport}
+                    disabled={isAnalyzing}
+                    variant="outline"
+                  >
+                    {isAnalyzing ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <>
+                        <Sparkles className="w-4 h-4 mr-2" />
+                        Generate
+                      </>
+                    )}
+                  </Button>
+                </div>
+                {accountabilityReport && (
+                  <div className="mt-4 p-4 bg-muted/50 rounded-lg">
+                    <p className="text-sm whitespace-pre-wrap">{accountabilityReport}</p>
+                  </div>
+                )}
+              </Card>
+
+              {/* Stats Overview */}
+              <Card className="p-6">
+                <h3 className="font-medium mb-4">Journal Stats</h3>
+                <div className="grid grid-cols-3 gap-4 text-center">
+                  <div>
+                    <p className="text-3xl font-bold text-gold">{entries.length}</p>
+                    <p className="text-xs text-muted-foreground">Total Entries</p>
+                  </div>
+                  <div>
+                    <p className="text-3xl font-bold text-gold">
+                      {entries.filter(e => e.ai_analysis).length}
+                    </p>
+                    <p className="text-xs text-muted-foreground">AI Analyzed</p>
+                  </div>
+                  <div>
+                    <p className="text-3xl font-bold text-gold">
+                      {new Set(entries.flatMap(e => e.tags || [])).size}
+                    </p>
+                    <p className="text-xs text-muted-foreground">Topics Explored</p>
+                  </div>
+                </div>
+              </Card>
+            </div>
+          </TabsContent>
+        </Tabs>
+      </div>
+    </div>
+  );
+}
+
+interface JournalEntryCardProps {
+  entry: JournalEntry;
+  isExpanded: boolean;
+  onToggle: () => void;
+  onAnalyze: () => void;
+  onDelete: () => void;
+  isAnalyzing: boolean;
+}
+
+function JournalEntryCard({
+  entry,
+  isExpanded,
+  onToggle,
+  onAnalyze,
+  onDelete,
+  isAnalyzing,
+}: JournalEntryCardProps) {
+  const moodInfo = MOOD_OPTIONS.find(m => m.value === entry.mood);
+
+  return (
+    <Card className="overflow-hidden">
+      <button
+        onClick={onToggle}
+        className="w-full p-4 text-left flex items-start justify-between gap-4 hover:bg-muted/50 transition-colors"
+      >
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-1">
+            {moodInfo && <span>{moodInfo.emoji}</span>}
+            <h3 className="font-medium truncate">
+              {entry.title || format(new Date(entry.created_at), "EEEE, MMMM d")}
+            </h3>
+          </div>
+          <p className="text-sm text-muted-foreground line-clamp-2">
+            {entry.content}
+          </p>
+          <div className="flex items-center gap-2 mt-2">
+            <span className="text-xs text-muted-foreground">
+              {format(new Date(entry.created_at), "MMM d, yyyy 'at' h:mm a")}
+            </span>
+            {entry.ai_analysis && (
+              <Badge variant="secondary" className="text-xs">
+                <Sparkles className="w-3 h-3 mr-1" />
+                Analyzed
+              </Badge>
+            )}
+          </div>
+        </div>
+        {isExpanded ? (
+          <ChevronUp className="w-5 h-5 text-muted-foreground shrink-0" />
+        ) : (
+          <ChevronDown className="w-5 h-5 text-muted-foreground shrink-0" />
+        )}
+      </button>
+
+      {isExpanded && (
+        <div className="px-4 pb-4 border-t border-border pt-4 space-y-4">
+          {/* Full content */}
+          <div>
+            <p className="text-sm whitespace-pre-wrap">{entry.content}</p>
+          </div>
+
+          {/* Tags */}
+          {entry.tags && entry.tags.length > 0 && (
+            <div className="flex flex-wrap gap-1">
+              {entry.tags.map((tag) => (
+                <Badge key={tag} variant="outline" className="text-xs">
+                  #{tag}
+                </Badge>
+              ))}
+            </div>
+          )}
+
+          {/* AI Analysis */}
+          {entry.ai_analysis ? (
+            <div className="p-4 bg-gradient-to-br from-purple-500/10 to-pink-500/10 rounded-lg border border-purple-500/20">
+              <div className="flex items-center gap-2 mb-2">
+                <Sparkles className="w-4 h-4 text-purple-400" />
+                <span className="text-sm font-medium">AI Insights</span>
+              </div>
+              <p className="text-sm whitespace-pre-wrap">{entry.ai_analysis}</p>
+            </div>
+          ) : (
+            <Button
+              onClick={onAnalyze}
+              disabled={isAnalyzing}
+              variant="outline"
+              size="sm"
+            >
+              {isAnalyzing ? (
+                <Loader2 className="w-4 h-4 animate-spin mr-2" />
+              ) : (
+                <Sparkles className="w-4 h-4 mr-2" />
+              )}
+              Get AI Feedback
+            </Button>
+          )}
+
+          {/* Delete */}
+          <div className="flex justify-end">
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-destructive">
+                  <Trash2 className="w-4 h-4 mr-1" />
+                  Delete
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Delete Entry?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This will permanently delete this journal entry. This action cannot be undone.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={onDelete} className="bg-destructive hover:bg-destructive/90">
+                    Delete
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
+        </div>
+      )}
+    </Card>
+  );
+}

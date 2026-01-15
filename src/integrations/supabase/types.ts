@@ -305,6 +305,45 @@ export type Database = {
         }
         Relationships: []
       }
+      journal_entries: {
+        Row: {
+          ai_analysis: string | null
+          ai_analyzed_at: string | null
+          content: string
+          created_at: string
+          id: string
+          mood: string | null
+          tags: string[] | null
+          title: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          ai_analysis?: string | null
+          ai_analyzed_at?: string | null
+          content: string
+          created_at?: string
+          id?: string
+          mood?: string | null
+          tags?: string[] | null
+          title?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          ai_analysis?: string | null
+          ai_analyzed_at?: string | null
+          content?: string
+          created_at?: string
+          id?: string
+          mood?: string | null
+          tags?: string[] | null
+          title?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       mind_movie_scripts: {
         Row: {
           chief_aim_snapshot: Json | null
