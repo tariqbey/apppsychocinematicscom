@@ -4,8 +4,9 @@ import { CharacterScorecard } from "@/components/character/CharacterScorecard";
 import { CharacterWeeklySummary } from "@/components/character/CharacterWeeklySummary";
 import { CharacterTransformationCoach } from "@/components/character/CharacterTransformationCoach";
 import { AnnualSelfAnalysis } from "@/components/character/AnnualSelfAnalysis";
+import { CharacterEvolution } from "@/components/character/CharacterEvolution";
 import { useAuth } from "@/hooks/useAuth";
-import { Loader2, ArrowLeft, User2, Target, TrendingUp, Brain, Calendar } from "lucide-react";
+import { Loader2, ArrowLeft, User2, Target, TrendingUp, Brain, Calendar, GitBranch } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useNavigate } from "react-router-dom";
@@ -58,10 +59,14 @@ const Character = () => {
 
           {/* Tabs Navigation */}
           <Tabs defaultValue="archetype" className="w-full">
-            <TabsList className="grid w-full grid-cols-5 mb-6">
+            <TabsList className="grid w-full grid-cols-6 mb-6">
               <TabsTrigger value="archetype" className="flex items-center gap-2">
                 <User2 className="w-4 h-4" />
                 <span className="hidden sm:inline">Archetype</span>
+              </TabsTrigger>
+              <TabsTrigger value="evolution" className="flex items-center gap-2">
+                <GitBranch className="w-4 h-4" />
+                <span className="hidden sm:inline">Evolution</span>
               </TabsTrigger>
               <TabsTrigger value="scorecard" className="flex items-center gap-2">
                 <Target className="w-4 h-4" />
@@ -83,6 +88,10 @@ const Character = () => {
 
             <TabsContent value="archetype" className="space-y-6">
               <CharacterCentral />
+            </TabsContent>
+
+            <TabsContent value="evolution" className="space-y-6">
+              <CharacterEvolution inline />
             </TabsContent>
 
             <TabsContent value="scorecard" className="space-y-6">
