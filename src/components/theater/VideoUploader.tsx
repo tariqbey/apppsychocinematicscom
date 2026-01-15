@@ -1,9 +1,10 @@
 import { useState, useRef } from "react";
-import { Upload, Film, Loader2, CheckCircle, X } from "lucide-react";
+import { Upload, Film, Loader2, CheckCircle, X, XCircle, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
+import { useChunkedUpload } from "@/hooks/useChunkedUpload";
 import { cn } from "@/lib/utils";
 
 interface VideoUploaderProps {
@@ -18,11 +19,12 @@ export const VideoUploader = ({
   onClose,
 }: VideoUploaderProps) => {
   const [isDragging, setIsDragging] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadComplete, setUploadComplete] = useState(false);
+  const [currentFile, setCurrentFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { user } = useAuth();
   const { toast } = useToast();
+  const { isUploading, progress, error, uploadFile, cancelUpload } = useChunkedUpload();
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -39,18 +41,18 @@ export const VideoUploader = ({
     setIsDragging(false);
     const files = e.dataTransfer.files;
     if (files.length > 0) {
-      await uploadFile(files[0]);
+      await handleUpload(files[0]);
     }
   };
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files && files.length > 0) {
-      await uploadFile(files[0]);
+      await handleUpload(files[0]);
     }
   };
 
-  const uploadFile = async (file: File) => {
+  const handleUpload = async (file: File) => {
     if (!user) {
       toast({
         variant: "destructive",
@@ -81,57 +83,86 @@ export const VideoUploader = ({
       return;
     }
 
-    setIsUploading(true);
-    setUploadProgress(0);
+    setCurrentFile(file);
+    setUploadComplete(false);
 
-    try {
-      const fileExt = file.name.split(".").pop();
-      const fileName = `${user.id}/mind-movie-${Date.now()}.${fileExt}`;
+    const fileExt = file.name.split(".").pop();
+    const fileName = `${user.id}/mind-movie-${Date.now()}.${fileExt}`;
 
-      // Simulate progress (Supabase doesn't provide progress callbacks)
-      const progressInterval = setInterval(() => {
-        setUploadProgress((prev) => Math.min(prev + 10, 90));
-      }, 200);
-
-      const { data, error } = await supabase.storage
-        .from("mind-movies")
-        .upload(fileName, file, {
-          cacheControl: "3600",
-          upsert: true,
+    const publicUrl = await uploadFile(file, fileName, {
+      bucket: "mind-movies",
+      onProgress: (p) => {
+        // Progress is handled by the hook
+      },
+      onError: (err) => {
+        toast({
+          variant: "destructive",
+          title: "Upload failed",
+          description: err.message || "Something went wrong. Please try again.",
         });
+      },
+    });
 
-      clearInterval(progressInterval);
-
-      if (error) throw error;
-
-      // Get public URL
-      const { data: urlData } = supabase.storage
-        .from("mind-movies")
-        .getPublicUrl(data.path);
-
-      setUploadProgress(100);
-
+    if (publicUrl) {
       // Update user profile with video URL
       await supabase
         .from("user_profiles")
-        .update({ mind_movie_url: urlData.publicUrl })
+        .update({ mind_movie_url: publicUrl })
         .eq("user_id", user.id);
 
+      setUploadComplete(true);
       toast({
         title: "Mind Movie Uploaded!",
         description: "Your vision is now ready for daily screening.",
       });
 
-      onUploadComplete(urlData.publicUrl);
-    } catch (error: any) {
-      console.error("Upload error:", error);
-      toast({
-        variant: "destructive",
-        title: "Upload failed",
-        description: error.message || "Something went wrong",
-      });
-    } finally {
-      setIsUploading(false);
+      onUploadComplete(publicUrl);
+    }
+  };
+
+  const handleRetry = () => {
+    if (currentFile) {
+      handleUpload(currentFile);
+    }
+  };
+
+  const handleCancelUpload = () => {
+    cancelUpload();
+    toast({
+      title: "Upload cancelled",
+      description: "You can try again anytime.",
+    });
+  };
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes < 1024 * 1024) {
+      return `${(bytes / 1024).toFixed(1)} KB`;
+    } else if (bytes < 1024 * 1024 * 1024) {
+      return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+    } else {
+      return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
+    }
+  };
+
+  const estimateTimeRemaining = () => {
+    if (!currentFile || progress === 0 || progress >= 100) return null;
+    
+    // Rough estimate based on typical upload speeds
+    const uploadedBytes = (progress / 100) * currentFile.size;
+    const remainingBytes = currentFile.size - uploadedBytes;
+    
+    // Assume average upload speed of 5 Mbps
+    const avgSpeedBps = 5 * 1024 * 1024 / 8;
+    const secondsRemaining = remainingBytes / avgSpeedBps;
+    
+    if (secondsRemaining < 60) {
+      return `~${Math.ceil(secondsRemaining)} seconds remaining`;
+    } else if (secondsRemaining < 3600) {
+      return `~${Math.ceil(secondsRemaining / 60)} minutes remaining`;
+    } else {
+      const hours = Math.floor(secondsRemaining / 3600);
+      const mins = Math.ceil((secondsRemaining % 3600) / 60);
+      return `~${hours}h ${mins}m remaining`;
     }
   };
 
@@ -177,19 +208,45 @@ export const VideoUploader = ({
               className="hidden"
             />
 
-            {isUploading ? (
+            {error ? (
+              <div className="space-y-4">
+                <XCircle className="w-12 h-12 text-destructive mx-auto" />
+                <p className="text-foreground font-medium">Upload Failed</p>
+                <p className="text-sm text-muted-foreground">{error.message}</p>
+                <Button variant="gold" size="sm" onClick={handleRetry} className="mt-2">
+                  <RefreshCw className="w-4 h-4 mr-2" />
+                  Try Again
+                </Button>
+              </div>
+            ) : isUploading ? (
               <div className="space-y-4">
                 <Loader2 className="w-12 h-12 text-gold mx-auto animate-spin" />
                 <p className="text-foreground font-medium">Uploading your vision...</p>
-                <div className="w-full h-2 bg-secondary rounded-full overflow-hidden">
+                {currentFile && (
+                  <p className="text-xs text-muted-foreground">
+                    {formatFileSize(currentFile.size)}
+                  </p>
+                )}
+                <div className="w-full h-3 bg-secondary rounded-full overflow-hidden">
                   <div
                     className="h-full bg-gradient-to-r from-gold to-amber-soft transition-all duration-300"
-                    style={{ width: `${uploadProgress}%` }}
+                    style={{ width: `${progress}%` }}
                   />
                 </div>
-                <p className="text-sm text-muted-foreground">{uploadProgress}%</p>
+                <p className="text-sm font-medium text-gold">{progress}%</p>
+                {estimateTimeRemaining() && (
+                  <p className="text-xs text-muted-foreground">{estimateTimeRemaining()}</p>
+                )}
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={handleCancelUpload}
+                  className="text-muted-foreground hover:text-destructive"
+                >
+                  Cancel Upload
+                </Button>
               </div>
-            ) : uploadProgress === 100 ? (
+            ) : uploadComplete ? (
               <div className="space-y-4">
                 <CheckCircle className="w-12 h-12 text-green-500 mx-auto" />
                 <p className="text-foreground font-medium">Upload Complete!</p>
@@ -228,9 +285,9 @@ export const VideoUploader = ({
         {/* Footer */}
         <div className="p-6 border-t border-border flex justify-end gap-3">
           <Button variant="cinematic" onClick={onClose}>
-            Cancel
+            {isUploading ? "Close" : "Cancel"}
           </Button>
-          {uploadProgress === 100 && (
+          {uploadComplete && (
             <Button variant="gold" onClick={onClose}>
               Done
             </Button>
