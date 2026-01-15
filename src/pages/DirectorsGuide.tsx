@@ -49,7 +49,9 @@ import {
   Instagram,
   Twitter,
   Facebook,
-  Mic2
+  Mic2,
+  RotateCcw,
+  Map
 } from "lucide-react";
 import { Header } from "@/components/layout/Header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -130,7 +132,7 @@ const tutorialSections: TutorialSection[] = [
       },
       {
         title: "Transformation Coach",
-        content: "Get AI-powered coaching tailored to your archetype and Chief Aim. The coach identifies gaps between who you are and who you need to become."
+        content: "Get AI-powered coaching tailored to your archetype and Chief Aim. The coach identifies gaps between who you are and who you need to become. Click 'Create Your Transformation Script' to generate a Mind Movie based on your required character."
       },
       {
         title: "Annual Self-Analysis",
@@ -141,7 +143,47 @@ const tutorialSections: TutorialSection[] = [
       "Shadow answers reveal your biggest growth opportunities — don't avoid them",
       "Retake the survey after major life changes to see how you've evolved",
       "Your archetype influences the Director AI coaching style recommendations",
-      "The Character Scorecard is separate from the Daily Scorecard — use both"
+      "The Character Scorecard is separate from the Daily Scorecard — use both",
+      "Use the Transformation Coach to create a Mind Movie script based on your required character"
+    ]
+  },
+  {
+    id: "transformation-cycles",
+    icon: <RotateCcw className="w-6 h-6" />,
+    title: "21-Day Transformation Cycles",
+    description: "The science-backed rhythm for lasting behavioral change",
+    steps: [
+      {
+        title: "Understand the 21-Day Principle",
+        content: "Research shows it takes approximately 21 days to form new neural pathways and habits. Each 21-day cycle is a focused period for embedding one aspect of your transformation."
+      },
+      {
+        title: "Start Your Transformation",
+        content: "Go to Character Builder → 21 Days tab and click 'Start Day 1' to begin your transformation journey. This sets your start date and begins tracking your progress."
+      },
+      {
+        title: "The 3-4-3 Act Structure",
+        content: "Your full transformation spans 210 days across 3 Acts: Act I (3 cycles/63 days) for Awakening, Act II (4 cycles/84 days) for Integration, and Act III (3 cycles/63 days) for Mastery."
+      },
+      {
+        title: "Track Your Daily Progress",
+        content: "The Cycle Progress card shows your current day within the cycle, days until review, and overall act progress. Use the Transformation Roadmap to see your entire journey at a glance."
+      },
+      {
+        title: "Complete Cycle Reviews",
+        content: "On Day 21 of each cycle, complete a Cycle Review. This includes scorecard averages, character archetype comparison, AI progress analysis, and personal reflection."
+      },
+      {
+        title: "Monitor Archetype Shifts",
+        content: "Retake the Character Survey at the end of each cycle. The system tracks whether your archetype has shifted, showing your evolution from cycle to cycle."
+      }
+    ],
+    tips: [
+      "Consistency beats intensity — show up every day of the 21-day cycle",
+      "Each act builds on the previous — don't skip ahead",
+      "Act II (Integration) is the longest because deep change takes time",
+      "Use the Roadmap to visualize your progress across all 10 cycles",
+      "Celebrate completing each cycle — they're major milestones"
     ]
   },
   {
@@ -410,7 +452,23 @@ const faqs = [
   },
   {
     question: "How does the 7-Phase Framework work?",
-    answer: "The framework guides you through: 1) The Awakening - realizing you can change, 2) The Vision - defining your Chief Aim, 3) The Script - writing your new story, 4) Pre-Production - building habits and systems, 5) Principal Photography - taking daily action, 6) Post-Production - refining and adjusting, 7) The Premiere - achieving and celebrating your goal."
+    answer: "The framework guides you through: 1) The Awakening - realizing you can change, 2) The Vision - defining your Chief Aim, 3) The Script - writing your new story, 4) Pre-Production - building habits and systems, 5) Principal Photography - taking daily action, 6) Post-Production - refining and adjusting, 7) The Premiere - achieving and celebrating your goal. This is complemented by the 21-Day Cycle system that structures your daily practice."
+  },
+  {
+    question: "What is the 21-Day Transformation Cycle?",
+    answer: "The 21-Day Cycle is the fundamental unit of behavioral change. Research shows it takes approximately 21 days to form new neural pathways. Each cycle focuses on embedding specific habits and character traits, ending with a comprehensive review of your progress."
+  },
+  {
+    question: "What is the 3-4-3 Act Structure?",
+    answer: "Your transformation journey spans 210 days (10 cycles) across 3 Acts: Act I 'The Awakening' (3 cycles, 63 days) establishes your foundation, Act II 'The Integration' (4 cycles, 84 days) is the longest act for deep behavioral change, and Act III 'The Mastery' (3 cycles, 63 days) solidifies your new identity."
+  },
+  {
+    question: "How do I start my 21-Day Transformation?",
+    answer: "Go to Character Builder → 21 Days tab and click 'Start Day 1'. This sets your official transformation start date and begins tracking your progress through the cycles and acts. The Transformation Roadmap shows your entire 210-day journey at a glance."
+  },
+  {
+    question: "What happens at the end of each 21-day cycle?",
+    answer: "On Day 21, you complete a Cycle Review that includes: 1) Scorecard averages for the cycle, 2) Character archetype comparison (before/after), 3) AI-generated progress analysis, 4) Personal reflection on biggest wins and challenges, and 5) Commitment for the next cycle."
   },
   {
     question: "What's included in the subscription?",
