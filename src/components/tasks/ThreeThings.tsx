@@ -20,6 +20,8 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { ExcuseAnalytics } from "./ExcuseAnalytics";
+import { WeeklyComparison } from "./WeeklyComparison";
+import { StreakMilestone, useStreakMilestone } from "./StreakMilestone";
 
 interface Task {
   id: string;
@@ -357,12 +359,18 @@ export function ThreeThings({ showAnalyticsDefault = false }: ThreeThingsProps) 
         </div>
       </div>
 
+      {/* Weekly Comparison */}
+      <WeeklyComparison />
+
       {/* Analytics Panel */}
       {showAnalytics && (
         <div className="animate-slide-up">
           <ExcuseAnalytics />
         </div>
       )}
+
+      {/* Streak Milestone Celebration */}
+      {taskStreak > 0 && <StreakMilestoneTrigger streak={taskStreak} />}
 
       {/* Week Navigation */}
       <div className="flex items-center justify-between">
@@ -609,4 +617,13 @@ export function ThreeThings({ showAnalyticsDefault = false }: ThreeThingsProps) 
       </Dialog>
     </div>
   );
+}
+
+// Separate component for milestone to use hook properly
+function StreakMilestoneTrigger({ streak }: { streak: number }) {
+  const { showMilestone, closeMilestone } = useStreakMilestone(streak);
+  
+  if (!showMilestone) return null;
+  
+  return <StreakMilestone streak={streak} onClose={closeMilestone} />;
 }
