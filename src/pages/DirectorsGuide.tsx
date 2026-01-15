@@ -30,7 +30,25 @@ import {
   CirclePlay,
   Settings,
   MessageSquare,
-  GraduationCap
+  GraduationCap,
+  Share2,
+  Bell,
+  FileText,
+  Send,
+  Plug,
+  Scissors,
+  LayoutGrid,
+  Timer,
+  TrendingUp,
+  Globe,
+  Layers,
+  Save,
+  Download,
+  ExternalLink,
+  Instagram,
+  Twitter,
+  Facebook,
+  Mic2
 } from "lucide-react";
 import { Header } from "@/components/layout/Header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -71,11 +89,16 @@ const tutorialSections: TutorialSection[] = [
       {
         title: "Explore the Dashboard",
         content: "Your dashboard is mission control. Here you'll see your Chief Aim, daily tasks, streak progress, and quick access to all studio tools."
+      },
+      {
+        title: "Connect Integrations",
+        content: "Visit Settings → Integrations to connect Notion, Slack, Telegram, ElevenLabs, and social media for a seamless workflow experience."
       }
     ],
     tips: [
       "Complete your profile to unlock the full experience",
-      "Enable notifications to stay on track with your daily rituals"
+      "Enable notifications to stay on track with your daily rituals",
+      "Connect Notion to automatically sync your journal and scorecards"
     ]
   },
   {
@@ -115,19 +138,19 @@ const tutorialSections: TutorialSection[] = [
     steps: [
       {
         title: "Use the Script Wizard",
-        content: "Launch the Mind Movie Script Wizard to create an AI-generated storyboard based on your Chief Aim. It will generate scenes, visuals, and even a custom soundtrack."
+        content: "Launch the Mind Movie Script Wizard to create an AI-generated storyboard based on your Chief Aim. It generates scenes, visuals, and even a custom soundtrack."
       },
       {
-        title: "Download Your Assets",
-        content: "Download all your generated images and video clips from the Media Library. These are the raw building blocks of your Mind Movie."
+        title: "Generate & Download Assets",
+        content: "Use 'Auto-Generate All' to create images and videos for each scene. Download all assets from the Media Library."
       },
       {
-        title: "Edit in Professional Software",
-        content: "Import your downloaded assets into a video editor like Final Cut Pro, Adobe Premiere Pro, CapCut, or DaVinci Resolve. Stitch the images and clips together, add transitions, and sync with your AI-generated soundtrack."
+        title: "Use Timeline Editor or External Software",
+        content: "Use the built-in Timeline Editor to stitch your assets together, or export to Final Cut Pro, CapCut, or DaVinci Resolve for advanced editing."
       },
       {
         title: "Upload Your Final Mind Movie",
-        content: "Once edited, upload your completed Mind Movie to The Theater. You can watch it here on the platform or on VR headsets for an immersive experience."
+        content: "Once edited, upload your completed Mind Movie to The Theater via the Movie Vault. Watch it daily for maximum impact."
       },
       {
         title: "Daily Viewing Ritual",
@@ -136,8 +159,8 @@ const tutorialSections: TutorialSection[] = [
     ],
     tips: [
       "Keep your Mind Movie under 5 minutes for maximum impact",
-      "Use CapCut (free) if you're new to video editing",
-      "Watch on a VR headset for maximum immersion and impact",
+      "Use the Timeline Editor for quick edits without leaving the platform",
+      "Watch on a VR headset for maximum immersion",
       "Your viewing streak appears on the dashboard - aim for 90+ days"
     ]
   },
@@ -153,25 +176,25 @@ const tutorialSections: TutorialSection[] = [
       },
       {
         title: "Generate Images",
-        content: "Use text prompts to create images of your future self and goals. You can upload reference photos for personal likeness integration."
+        content: "Use text prompts to create images of your future self and goals. Upload reference photos for personal likeness integration."
       },
       {
         title: "Create Videos",
-        content: "Generate AI videos using Veo 3 (with audio), Wan 2.1, or Kling v1.0. Videos support image-to-video and video-to-video transformations."
+        content: "Generate AI videos using Veo 3 (with audio), Wan 2.1, or Kling v1.0. Videos support text-to-video, image-to-video and video-to-video."
       },
       {
-        title: "Download Your Assets",
-        content: "All generated content is saved to your Media Library (5GB limit). Download your images and video clips - you'll need them for your Mind Movie."
+        title: "Use the Timeline Editor",
+        content: "Access the Timeline tab for a professional non-linear video editor with multi-track support, transitions, and audio mixing."
       },
       {
-        title: "Assemble in Video Editor",
-        content: "Use professional editing software (Final Cut Pro, Premiere Pro, CapCut, DaVinci Resolve) to stitch your AI-generated assets into a cohesive Mind Movie with transitions and music."
+        title: "Export Your Creation",
+        content: "Export in 720p, 1080p, or 4K. Review your export before saving to the Movie Vault or downloading."
       }
     ],
     tips: [
       "Check credit costs before generating - videos use more credits than images",
-      "Download assets regularly to free up storage space",
-      "CapCut is a great free option for beginners to edit their Mind Movie"
+      "Use the Voice Changer to add professional narration to your videos",
+      "The Timeline Editor supports undo/redo, razor cuts, and multi-select"
     ]
   },
   {
@@ -190,7 +213,7 @@ const tutorialSections: TutorialSection[] = [
       },
       {
         title: "Use the CUT! Technique",
-        content: "When you're spiraling into negative thoughts, the AI can guide you through the 4-step reset: Recognize, Cut, Reset (3 breaths), and Resume with aligned action."
+        content: "When spiraling into negative thoughts, the AI guides you through the 4-step reset: Recognize, Cut, Reset (3 breaths), and Resume with aligned action."
       },
       {
         title: "Get Daily Suggestions",
@@ -231,10 +254,39 @@ const tutorialSections: TutorialSection[] = [
       "Be honest on your scorecard - it's a tool for growth, not ego",
       "Review your weekly scores to identify patterns"
     ]
+  },
+  {
+    id: "integrations",
+    icon: <Plug className="w-6 h-6" />,
+    title: "Integrations & Sharing",
+    description: "Connect external tools for a seamless workflow",
+    steps: [
+      {
+        title: "Connect Notion",
+        content: "Sync your journal entries, Chief Aim, and daily scorecards automatically to your Notion workspace for permanent records."
+      },
+      {
+        title: "Set Up Slack/Telegram Notifications",
+        content: "Receive morning ritual reminders, evening scorecard prompts, and achievement notifications directly in Slack or Telegram."
+      },
+      {
+        title: "Connect Social Media",
+        content: "Link Facebook, Instagram, X (Twitter), and TikTok to share your wins and manifestations with automatic 'Posted from Psycho-Cinematics' branding."
+      },
+      {
+        title: "Add ElevenLabs",
+        content: "Connect your personal ElevenLabs API key to access your cloned voices for the Voice Changer feature."
+      }
+    ],
+    tips: [
+      "All integrations are managed in Settings → Integrations",
+      "Notion sync includes your Chief Aim components for backup",
+      "Social posts include inspirational hashtags automatically"
+    ]
   }
 ];
 
-// Combined FAQs from both pages
+// Combined FAQs
 const faqs = [
   {
     question: "What is Psycho-Cinematics™?",
@@ -246,27 +298,47 @@ const faqs = [
   },
   {
     question: "What's included in the subscription?",
-    answer: "The $29/month subscription includes 1,000 monthly credits for AI generation, unlimited access to Director AI coaching, Mind Movie tools, the Edit Bay studio, daily tracking features, and community access. You also get a 3-day free trial with 250 credits to explore."
+    answer: "The $29/month subscription includes 1,000 monthly credits for AI generation, unlimited access to Director AI coaching, Mind Movie tools, the Edit Bay studio, Timeline Editor, daily tracking features, and community access. You also get a 3-day free trial with 250 credits to explore."
   },
   {
-    question: "How do I get the best results from AI image/video generation?",
-    answer: "Be specific and descriptive in your prompts. Include details about setting, lighting, mood, and style. For personal likeness, upload clear reference photos. Start with images before creating videos, as you can use image-to-video to animate your best images."
+    question: "How do I use the Timeline Editor?",
+    answer: "The Timeline Editor is a professional non-linear video editor. Import media from your library, use the Razor tool (C) to cut clips, drag to reorder, adjust audio levels per clip or track, add fade-in/out effects, and export in up to 4K quality. Use keyboard shortcuts: V for Select, C for Razor, R for Range, H for Hand, and A to add audio."
+  },
+  {
+    question: "How do I connect Notion?",
+    answer: "Go to Settings → Integrations → Notion. Create an integration at notion.so/my-integrations, copy your token, then share your target database with the integration. Your journal entries, Chief Aim, and scorecards will sync automatically."
+  },
+  {
+    question: "How do I set up Slack/Telegram notifications?",
+    answer: "For Slack: Create a bot at api.slack.com/apps, add chat:write scope, install to workspace, copy the Bot Token and Channel ID. For Telegram: Message @BotFather, create a new bot, copy the token and your chat ID. Enter these in Settings → Integrations."
+  },
+  {
+    question: "How do I share directly to social media?",
+    answer: "Connect your social accounts in Settings → Integrations → Social Media. Once connected, use the Share menu on any content to post directly. Posts automatically include 'Posted from Psycho-Cinematics' branding and relevant hashtags."
   },
   {
     question: "What is the CUT! technique?",
     answer: "CUT! is a 4-step mental reset technique for when you catch yourself in negative thought patterns: 1) Recognize - notice the off-script thought, 2) Cut - mentally yell 'CUT!' to stop the scene, 3) Reset - take 3 deep breaths and reconnect with your Director self, 4) Resume - take an aligned action that matches your Chief Aim identity."
   },
   {
+    question: "How do I get the best results from AI generation?",
+    answer: "Be specific and descriptive in your prompts. Include details about setting, lighting, mood, and style. For personal likeness, upload clear reference photos. Start with images before creating videos, as you can use image-to-video to animate your best images."
+  },
+  {
     question: "How long should I watch my Mind Movie?",
-    answer: "Ideally, watch your Mind Movie every morning right after waking (when your mind is most suggestible) and every evening before sleep. Keep the video under 5 minutes for maximum focus. Consistency matters more than duration - a 90-day streak is transformational."
+    answer: "Watch your Mind Movie every morning right after waking (when your mind is most suggestible) and every evening before sleep. Keep the video under 5 minutes for maximum focus. Consistency matters more than duration - a 90-day streak is transformational."
   },
   {
     question: "How many credits do I get per month?",
     answer: "Subscribers receive 1,000 credits monthly ($10 value). You can purchase additional credits in packs of $10 (1,000), $20 (2,200 with bonus), or $30 (3,500 with bonus). Credits never expire."
   },
   {
-    question: "What's the difference between Production Credits and Engagement Credits?",
-    answer: "Production Credits ($0.01 each) are used for AI generation — images, videos, music. Engagement Credits are earned through daily activity and contribute to your leaderboard ranking and awards."
+    question: "How do I use the Voice Changer?",
+    answer: "In the Edit Bay, select a video and open the Voice Changer panel. Choose an ElevenLabs voice (or connect your own API key for cloned voices), and the system will transform the video's audio. The result is automatically merged and saved."
+  },
+  {
+    question: "Can I export my Mind Movie?",
+    answer: "Yes! Use the Timeline Editor to assemble your scenes, then click 'Export Movie'. Choose your resolution (720p, 1080p, or 4K), review the export, and save to the Movie Vault or download directly."
   },
   {
     question: "Can I cancel my subscription?",
@@ -445,7 +517,7 @@ const DirectorsGuide = () => {
               <TabsList className="flex flex-wrap justify-center gap-2 h-auto bg-transparent">
                 <TabsTrigger value="getting-started" className="gap-2">
                   <Play className="w-4 h-4" />
-                  Getting Started
+                  Start
                 </TabsTrigger>
                 <TabsTrigger value="chief-aim" className="gap-2">
                   <Target className="w-4 h-4" />
@@ -454,6 +526,10 @@ const DirectorsGuide = () => {
                 <TabsTrigger value="edit-bay" className="gap-2">
                   <Palette className="w-4 h-4" />
                   Edit Bay
+                </TabsTrigger>
+                <TabsTrigger value="timeline" className="gap-2">
+                  <Layers className="w-4 h-4" />
+                  Timeline
                 </TabsTrigger>
                 <TabsTrigger value="mind-movie" className="gap-2">
                   <Film className="w-4 h-4" />
@@ -465,7 +541,11 @@ const DirectorsGuide = () => {
                 </TabsTrigger>
                 <TabsTrigger value="daily-rituals" className="gap-2">
                   <Calendar className="w-4 h-4" />
-                  Daily Rituals
+                  Rituals
+                </TabsTrigger>
+                <TabsTrigger value="integrations" className="gap-2">
+                  <Plug className="w-4 h-4" />
+                  Integrations
                 </TabsTrigger>
               </TabsList>
 
@@ -548,9 +628,9 @@ const DirectorsGuide = () => {
                         <li className="flex gap-4">
                           <span className="w-8 h-8 rounded-full bg-gold text-background font-bold flex items-center justify-center shrink-0">3</span>
                           <div>
-                            <p className="font-medium">Set Your Three Things</p>
+                            <p className="font-medium">Connect Your Integrations</p>
                             <p className="text-sm text-muted-foreground">
-                              Each morning, lock in 3 priority tasks that move you toward your Chief Aim.
+                              Visit Settings → Integrations to connect Notion, Slack, Telegram, and social accounts.
                             </p>
                           </div>
                         </li>
@@ -700,10 +780,118 @@ const DirectorsGuide = () => {
                         <Volume2 className="w-5 h-5 text-green-400" />
                         Voice Changer
                       </h4>
-                      <p className="text-sm text-muted-foreground">
+                      <p className="text-sm text-muted-foreground mb-3">
                         Transform your video's audio using ElevenLabs voices. Perfect for adding professional 
                         narration or affirmations to your visualizations.
                       </p>
+                      <div className="p-3 rounded-lg bg-green-500/10 border border-green-500/30">
+                        <p className="text-sm text-muted-foreground">
+                          <strong className="text-green-400">Tip:</strong> Connect your own ElevenLabs API key in Settings → Integrations to use your cloned voices.
+                        </p>
+                      </div>
+                    </div>
+
+                    <Separator />
+
+                    <div>
+                      <h4 className="font-semibold mb-4 flex items-center gap-2">
+                        <LayoutGrid className="w-5 h-5 text-amber-400" />
+                        Media Library
+                      </h4>
+                      <p className="text-sm text-muted-foreground">
+                        All generated assets are saved to your Media Library (10GB limit). Filter by type, sort by date, 
+                        and multi-select items to import into the Timeline Editor.
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              {/* Timeline Editor */}
+              <TabsContent value="timeline" className="space-y-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Layers className="w-6 h-6 text-gold" />
+                      Timeline Editor
+                    </CardTitle>
+                    <CardDescription>
+                      Professional non-linear video editing right in your browser
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    <div className="p-4 rounded-xl bg-gold/10 border border-gold/30">
+                      <h4 className="font-semibold text-gold mb-2">Overview</h4>
+                      <p className="text-sm text-muted-foreground">
+                        The Timeline Editor is a full-featured video editor with multi-track support, razor cuts, 
+                        audio mixing, fade effects, and export up to 4K resolution. No external software needed.
+                      </p>
+                    </div>
+
+                    <div>
+                      <h4 className="font-semibold mb-4">Keyboard Shortcuts</h4>
+                      <div className="grid sm:grid-cols-2 gap-3">
+                        <div className="p-3 rounded-lg bg-muted/30 border border-border/50 flex items-center gap-3">
+                          <kbd className="px-2 py-1 rounded bg-background border text-xs font-mono">V</kbd>
+                          <span className="text-sm">Select Tool</span>
+                        </div>
+                        <div className="p-3 rounded-lg bg-muted/30 border border-border/50 flex items-center gap-3">
+                          <kbd className="px-2 py-1 rounded bg-background border text-xs font-mono">C</kbd>
+                          <span className="text-sm">Razor Tool (Cut)</span>
+                        </div>
+                        <div className="p-3 rounded-lg bg-muted/30 border border-border/50 flex items-center gap-3">
+                          <kbd className="px-2 py-1 rounded bg-background border text-xs font-mono">R</kbd>
+                          <span className="text-sm">Range Select</span>
+                        </div>
+                        <div className="p-3 rounded-lg bg-muted/30 border border-border/50 flex items-center gap-3">
+                          <kbd className="px-2 py-1 rounded bg-background border text-xs font-mono">H</kbd>
+                          <span className="text-sm">Hand Tool (Pan)</span>
+                        </div>
+                        <div className="p-3 rounded-lg bg-muted/30 border border-border/50 flex items-center gap-3">
+                          <kbd className="px-2 py-1 rounded bg-background border text-xs font-mono">A</kbd>
+                          <span className="text-sm">Add Audio</span>
+                        </div>
+                        <div className="p-3 rounded-lg bg-muted/30 border border-border/50 flex items-center gap-3">
+                          <kbd className="px-2 py-1 rounded bg-background border text-xs font-mono">Space</kbd>
+                          <span className="text-sm">Play/Pause</span>
+                        </div>
+                        <div className="p-3 rounded-lg bg-muted/30 border border-border/50 flex items-center gap-3">
+                          <kbd className="px-2 py-1 rounded bg-background border text-xs font-mono">⌘/Ctrl + Z</kbd>
+                          <span className="text-sm">Undo</span>
+                        </div>
+                        <div className="p-3 rounded-lg bg-muted/30 border border-border/50 flex items-center gap-3">
+                          <kbd className="px-2 py-1 rounded bg-background border text-xs font-mono">⌘/Ctrl + S</kbd>
+                          <span className="text-sm">Save Project</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <Separator />
+
+                    <div>
+                      <h4 className="font-semibold mb-4">Features</h4>
+                      <ul className="space-y-3 text-sm text-muted-foreground">
+                        <li className="flex items-start gap-2">
+                          <Scissors className="w-4 h-4 text-gold mt-0.5" />
+                          <span><strong>Razor Tool:</strong> Click anywhere on a clip to cut it precisely. Gold scissors cursor shows where you'll cut.</span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <Volume2 className="w-4 h-4 text-gold mt-0.5" />
+                          <span><strong>Audio Mixing:</strong> Adjust volume per clip, per track, or master level. Solo/mute tracks for fine-tuning.</span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <Music className="w-4 h-4 text-gold mt-0.5" />
+                          <span><strong>Fade Effects:</strong> Add fade-in/out to audio clips up to 5 seconds (or half clip length).</span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <Save className="w-4 h-4 text-gold mt-0.5" />
+                          <span><strong>Project Save:</strong> Save your timeline to continue editing later. Load previous projects anytime.</span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <Download className="w-4 h-4 text-gold mt-0.5" />
+                          <span><strong>Export:</strong> Render in 720p, 1080p, or 4K. Review before saving to Movie Vault or downloading.</span>
+                        </li>
+                      </ul>
                     </div>
                   </CardContent>
                 </Card>
@@ -731,39 +919,11 @@ const DirectorsGuide = () => {
                         The AI generates a complete storyboard based on your Chief Aim, creating scene-by-scene 
                         visual prompts that you can approve, edit, or regenerate.
                       </p>
-                    </div>
-
-                    <Separator />
-
-                    <div>
-                      <h4 className="font-semibold mb-4 flex items-center gap-2">
-                        <Music className="w-5 h-5 text-pink-400" />
-                        AI Soundtrack Generator
-                      </h4>
-                      <p className="text-sm text-muted-foreground mb-3">
-                        Choose from 50+ music genres across 10 categories. The AI generates personalized lyrics 
-                        from your Chief Aim and creates a custom motivational track.
-                      </p>
-                    </div>
-
-                    <Separator />
-
-                    <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/30">
-                      <h4 className="font-semibold mb-3 flex items-center gap-2 text-amber-400">
-                        <Film className="w-5 h-5" />
-                        Important: Assembling Your Mind Movie
-                      </h4>
-                      <p className="text-sm text-muted-foreground mb-3">
-                        Once you've generated your images, videos, and soundtrack, you'll need to <strong>download them and assemble your final Mind Movie using video editing software</strong>. This is a crucial creative step.
-                      </p>
-                      <div className="space-y-2 text-sm text-muted-foreground">
-                        <p><strong>Recommended editors:</strong></p>
-                        <ul className="list-disc list-inside space-y-1 ml-2">
-                          <li><strong>Final Cut Pro</strong> — Professional, Mac only</li>
-                          <li><strong>Adobe Premiere Pro</strong> — Industry standard</li>
-                          <li><strong>CapCut</strong> — Free, beginner-friendly</li>
-                          <li><strong>DaVinci Resolve</strong> — Free, powerful</li>
-                        </ul>
+                      <div className="p-3 rounded-lg bg-purple-500/10 border border-purple-500/30">
+                        <p className="text-sm text-muted-foreground">
+                          <strong className="text-purple-400">Auto-Generate All:</strong> One click to generate images for all scenes, 
+                          then videos, then import everything into the Timeline Editor.
+                        </p>
                       </div>
                     </div>
 
@@ -771,15 +931,38 @@ const DirectorsGuide = () => {
 
                     <div>
                       <h4 className="font-semibold mb-4 flex items-center gap-2">
-                        <CirclePlay className="w-5 h-5 text-amber-400" />
+                        <Music className="w-5 h-5 text-pink-400" />
+                        Custom Soundtrack
+                      </h4>
+                      <p className="text-sm text-muted-foreground mb-3">
+                        Generate AI music in 50+ genres across 10 categories. Choose vocal gender, add lyrics 
+                        based on your Chief Aim, or use a custom Suno Persona ID.
+                      </p>
+                    </div>
+
+                    <Separator />
+
+                    <div>
+                      <h4 className="font-semibold mb-4 flex items-center gap-2">
+                        <CirclePlay className="w-5 h-5 text-blue-400" />
+                        Movie Vault
+                      </h4>
+                      <p className="text-sm text-muted-foreground mb-3">
+                        Manage multiple Mind Movies. Set one as "active" for your daily viewing ritual. 
+                        Preview, rename, duplicate, or delete projects from the vault.
+                      </p>
+                    </div>
+
+                    <Separator />
+
+                    <div>
+                      <h4 className="font-semibold mb-4 flex items-center gap-2">
+                        <Play className="w-5 h-5 text-green-400" />
                         The Theater
                       </h4>
-                      <p className="text-sm text-muted-foreground mb-2">
-                        After editing, upload your completed Mind Movie to The Theater. The system tracks your viewing streak — 
-                        watch daily for 90+ days to create lasting subconscious change.
-                      </p>
                       <p className="text-sm text-muted-foreground">
-                        <strong>VR Compatible:</strong> Watch your Mind Movie on VR headsets for an even more immersive visualization experience.
+                        Watch your active Mind Movie in a focused, cinematic experience. The Theater tracks 
+                        your daily viewing streak and integrates with your morning "Three Things" workflow.
                       </p>
                     </div>
                   </CardContent>
@@ -792,45 +975,51 @@ const DirectorsGuide = () => {
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                       <Bot className="w-6 h-6 text-gold" />
-                      Director AI — Your Personal Coach
+                      Director AI Coach
                     </CardTitle>
                     <CardDescription>
-                      A Jarvis-like voice assistant trained in the Psycho-Cinematics methodology
+                      Your personal Jarvis-like voice coach trained in Psycho-Cinematics™
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-6">
                     <div className="p-4 rounded-xl bg-gold/10 border border-gold/30">
-                      <h4 className="font-semibold text-gold mb-2 flex items-center gap-2">
-                        <Mic className="w-5 h-5" />
-                        Voice-First Coaching
-                      </h4>
+                      <h4 className="font-semibold text-gold mb-2">How It Works</h4>
                       <p className="text-sm text-muted-foreground">
-                        Speak naturally to Director AI and receive personalized coaching based on your Chief Aim, 
-                        daily progress, and the 7-Phase Framework. The AI remembers your conversation history.
+                        Director AI knows your Chief Aim, tracks your daily progress, and provides personalized 
+                        coaching based on the Psycho-Cinematics methodology. Use voice or text to communicate.
                       </p>
                     </div>
 
                     <div>
-                      <h4 className="font-semibold mb-3 flex items-center gap-2">
-                        <Zap className="w-5 h-5 text-red-400" />
-                        The CUT! Technique
-                      </h4>
-                      <ol className="text-sm text-muted-foreground space-y-2">
-                        <li><strong>1. Recognize</strong> — Notice the off-script thought</li>
-                        <li><strong>2. Cut</strong> — Mentally yell "CUT!" to stop the scene</li>
-                        <li><strong>3. Reset</strong> — Take 3 deep breaths, reconnect with your Director self</li>
-                        <li><strong>4. Resume</strong> — Take an aligned action that matches your Chief Aim</li>
-                      </ol>
+                      <h4 className="font-semibold mb-4">Features</h4>
+                      <ul className="space-y-3 text-sm text-muted-foreground">
+                        <li className="flex items-start gap-2">
+                          <Mic className="w-4 h-4 text-gold mt-0.5" />
+                          <span><strong>Voice Mode:</strong> Speak naturally and receive voice responses. Perfect for hands-free coaching.</span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <MessageSquare className="w-4 h-4 text-gold mt-0.5" />
+                          <span><strong>Persistent Memory:</strong> The AI remembers your conversation history for continuity.</span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <Lightbulb className="w-4 h-4 text-gold mt-0.5" />
+                          <span><strong>Director's Suggestions:</strong> Get 3 daily tasks aligned with your Chief Aim and current phase.</span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <Zap className="w-4 h-4 text-gold mt-0.5" />
+                          <span><strong>CUT! Technique:</strong> When you're spiraling, the AI guides you through the 4-step mental reset.</span>
+                        </li>
+                      </ul>
                     </div>
 
-                    <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/30">
-                      <h5 className="font-semibold text-amber-500 mb-2">What to Ask Director AI</h5>
-                      <ul className="text-sm text-muted-foreground space-y-1">
-                        <li>• "Help me overcome my fear of [specific fear]"</li>
-                        <li>• "I'm procrastinating — what's really going on?"</li>
-                        <li>• "Walk me through the CUT! technique"</li>
-                        <li>• "Suggest my Three Things for today"</li>
-                      </ul>
+                    <div className="p-4 rounded-lg bg-muted/30 border border-border/50">
+                      <h5 className="font-semibold mb-2">The CUT! Technique</h5>
+                      <ol className="text-sm text-muted-foreground space-y-2">
+                        <li><strong>1. Recognize</strong> — Notice the off-script thought or negative pattern</li>
+                        <li><strong>2. Cut</strong> — Mentally yell "CUT!" to stop the scene</li>
+                        <li><strong>3. Reset</strong> — Take 3 deep breaths, reconnect with your Director self</li>
+                        <li><strong>4. Resume</strong> — Take an aligned action that matches your Chief Aim identity</li>
+                      </ol>
                     </div>
                   </CardContent>
                 </Card>
@@ -842,36 +1031,27 @@ const DirectorsGuide = () => {
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                       <Calendar className="w-6 h-6 text-gold" />
-                      Daily Rituals & Accountability
+                      Daily Rituals & Scorecard
                     </CardTitle>
                     <CardDescription>
-                      The daily practices that compound into life-changing transformation
+                      Build unstoppable momentum with consistent daily practice
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-6">
                     <div>
-                      <h4 className="font-semibold mb-4 flex items-center gap-2">
-                        <Sparkles className="w-5 h-5 text-amber-400" />
-                        Morning Ritual (10-15 minutes)
-                      </h4>
-                      <ol className="text-sm text-muted-foreground space-y-3">
-                        <li className="flex gap-3">
-                          <span className="w-6 h-6 rounded-full bg-gold/20 text-gold text-xs font-bold flex items-center justify-center shrink-0">1</span>
-                          <div>
-                            <p className="font-medium text-foreground">Read Your Chief Aim Aloud</p>
-                          </div>
+                      <h4 className="font-semibold mb-4">Morning Ritual</h4>
+                      <ol className="space-y-3 text-sm text-muted-foreground">
+                        <li className="flex items-start gap-2">
+                          <span className="w-5 h-5 rounded-full bg-gold/20 text-gold text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">1</span>
+                          <span>Read your Definite Chief Aim aloud</span>
                         </li>
-                        <li className="flex gap-3">
-                          <span className="w-6 h-6 rounded-full bg-gold/20 text-gold text-xs font-bold flex items-center justify-center shrink-0">2</span>
-                          <div>
-                            <p className="font-medium text-foreground">Watch Your Mind Movie</p>
-                          </div>
+                        <li className="flex items-start gap-2">
+                          <span className="w-5 h-5 rounded-full bg-gold/20 text-gold text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">2</span>
+                          <span>Watch your Mind Movie in The Theater</span>
                         </li>
-                        <li className="flex gap-3">
-                          <span className="w-6 h-6 rounded-full bg-gold/20 text-gold text-xs font-bold flex items-center justify-center shrink-0">3</span>
-                          <div>
-                            <p className="font-medium text-foreground">Set Your Three Things</p>
-                          </div>
+                        <li className="flex items-start gap-2">
+                          <span className="w-5 h-5 rounded-full bg-gold/20 text-gold text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">3</span>
+                          <span>Set your "Three Things" — 3 priority tasks for the day</span>
                         </li>
                       </ol>
                     </div>
@@ -879,27 +1059,198 @@ const DirectorsGuide = () => {
                     <Separator />
 
                     <div>
-                      <h4 className="font-semibold mb-3 flex items-center gap-2">
-                        <Trophy className="w-5 h-5 text-gold" />
-                        Daily Director Scorecard
-                      </h4>
+                      <h4 className="font-semibold mb-4">Evening Scorecard</h4>
                       <p className="text-sm text-muted-foreground mb-4">
-                        End each day by rating yourself 0-3 on four categories:
+                        Rate yourself 0-3 on each category. Be honest — this is a tool for growth, not ego.
                       </p>
                       <div className="grid sm:grid-cols-2 gap-3">
                         <div className="p-3 rounded-lg bg-muted/30 border border-border/50">
                           <p className="font-medium text-sm">Identity Alignment</p>
+                          <p className="text-xs text-muted-foreground">Did you think/act as your future self?</p>
                         </div>
                         <div className="p-3 rounded-lg bg-muted/30 border border-border/50">
                           <p className="font-medium text-sm">Behavior Execution</p>
+                          <p className="text-xs text-muted-foreground">Did you complete your Three Things?</p>
                         </div>
                         <div className="p-3 rounded-lg bg-muted/30 border border-border/50">
                           <p className="font-medium text-sm">Emotional Regulation</p>
+                          <p className="text-xs text-muted-foreground">Did you manage your state effectively?</p>
                         </div>
                         <div className="p-3 rounded-lg bg-muted/30 border border-border/50">
                           <p className="font-medium text-sm">Forward Progress</p>
+                          <p className="text-xs text-muted-foreground">Did you move closer to your Chief Aim?</p>
                         </div>
                       </div>
+                    </div>
+
+                    <div className="p-3 rounded-lg bg-gold/10 border border-gold/30">
+                      <p className="text-sm text-muted-foreground">
+                        <strong className="text-gold">Streak Power:</strong> Consecutive days build your streak. 
+                        A 90-day streak is transformational — your subconscious will have fully adopted your new identity.
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              {/* Integrations */}
+              <TabsContent value="integrations" className="space-y-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Plug className="w-6 h-6 text-gold" />
+                      Integrations Guide
+                    </CardTitle>
+                    <CardDescription>
+                      Connect external tools for a seamless productivity workflow
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    <p className="text-sm text-muted-foreground">
+                      All integrations are managed in <strong>Settings → Integrations</strong>. Each integration 
+                      requires API credentials from the respective service.
+                    </p>
+
+                    <Separator />
+
+                    {/* Notion */}
+                    <div>
+                      <h4 className="font-semibold mb-3 flex items-center gap-2">
+                        <FileText className="w-5 h-5 text-foreground" />
+                        Notion — Journal & Scorecard Sync
+                      </h4>
+                      <p className="text-sm text-muted-foreground mb-3">
+                        Automatically export your journal entries, daily scorecards, and Chief Aim to a Notion database.
+                      </p>
+                      <div className="p-4 rounded-lg bg-muted/30 border border-border/50 space-y-3">
+                        <p className="text-sm font-medium">Setup Steps:</p>
+                        <ol className="text-sm text-muted-foreground space-y-2 list-decimal list-inside">
+                          <li>Go to <a href="https://www.notion.so/my-integrations" target="_blank" rel="noopener noreferrer" className="text-gold hover:underline">notion.so/my-integrations</a></li>
+                          <li>Click "New integration" and give it a name (e.g., "Psycho-Cinematics")</li>
+                          <li>Copy the "Internal Integration Token"</li>
+                          <li>In Notion, open your target database and click "..." → "Add connections" → select your integration</li>
+                          <li>Paste the token in Settings → Integrations → Notion</li>
+                        </ol>
+                      </div>
+                    </div>
+
+                    <Separator />
+
+                    {/* Slack */}
+                    <div>
+                      <h4 className="font-semibold mb-3 flex items-center gap-2">
+                        <MessageSquare className="w-5 h-5 text-foreground" />
+                        Slack — Notifications & Reminders
+                      </h4>
+                      <p className="text-sm text-muted-foreground mb-3">
+                        Receive morning ritual reminders, evening scorecard prompts, and achievement alerts in Slack.
+                      </p>
+                      <div className="p-4 rounded-lg bg-muted/30 border border-border/50 space-y-3">
+                        <p className="text-sm font-medium">Setup Steps:</p>
+                        <ol className="text-sm text-muted-foreground space-y-2 list-decimal list-inside">
+                          <li>Go to <a href="https://api.slack.com/apps" target="_blank" rel="noopener noreferrer" className="text-gold hover:underline">api.slack.com/apps</a> and create a new app</li>
+                          <li>Under "OAuth & Permissions", add scopes: <code className="text-xs bg-background px-1 rounded">chat:write</code>, <code className="text-xs bg-background px-1 rounded">channels:read</code></li>
+                          <li>Install the app to your workspace</li>
+                          <li>Copy the "Bot User OAuth Token" (starts with xoxb-)</li>
+                          <li>Get your Channel ID (right-click channel → "View channel details")</li>
+                          <li>Paste both in Settings → Integrations → Slack</li>
+                        </ol>
+                      </div>
+                    </div>
+
+                    <Separator />
+
+                    {/* Telegram */}
+                    <div>
+                      <h4 className="font-semibold mb-3 flex items-center gap-2">
+                        <Send className="w-5 h-5 text-foreground" />
+                        Telegram — Mobile Notifications
+                      </h4>
+                      <p className="text-sm text-muted-foreground mb-3">
+                        Get push notifications on your phone via Telegram for all reminders and achievements.
+                      </p>
+                      <div className="p-4 rounded-lg bg-muted/30 border border-border/50 space-y-3">
+                        <p className="text-sm font-medium">Setup Steps:</p>
+                        <ol className="text-sm text-muted-foreground space-y-2 list-decimal list-inside">
+                          <li>Message <code className="text-xs bg-background px-1 rounded">@BotFather</code> on Telegram</li>
+                          <li>Send <code className="text-xs bg-background px-1 rounded">/newbot</code> and follow the prompts to create your bot</li>
+                          <li>Copy the bot token provided</li>
+                          <li>Start a chat with your new bot and send any message</li>
+                          <li>Get your Chat ID by messaging <code className="text-xs bg-background px-1 rounded">@userinfobot</code></li>
+                          <li>Paste both in Settings → Integrations → Telegram</li>
+                        </ol>
+                      </div>
+                    </div>
+
+                    <Separator />
+
+                    {/* ElevenLabs */}
+                    <div>
+                      <h4 className="font-semibold mb-3 flex items-center gap-2">
+                        <Mic2 className="w-5 h-5 text-foreground" />
+                        ElevenLabs — Voice Cloning
+                      </h4>
+                      <p className="text-sm text-muted-foreground mb-3">
+                        Use your own cloned voices in the Voice Changer and Director AI TTS.
+                      </p>
+                      <div className="p-4 rounded-lg bg-muted/30 border border-border/50 space-y-3">
+                        <p className="text-sm font-medium">Setup Steps:</p>
+                        <ol className="text-sm text-muted-foreground space-y-2 list-decimal list-inside">
+                          <li>Go to <a href="https://elevenlabs.io/app/settings/api-keys" target="_blank" rel="noopener noreferrer" className="text-gold hover:underline">ElevenLabs API Keys</a></li>
+                          <li>Create or copy your API key</li>
+                          <li>Paste in Settings → Integrations → ElevenLabs</li>
+                        </ol>
+                        <p className="text-xs text-muted-foreground mt-2">
+                          Note: With your own key, voice usage is billed to your ElevenLabs account.
+                        </p>
+                      </div>
+                    </div>
+
+                    <Separator />
+
+                    {/* Social Media */}
+                    <div>
+                      <h4 className="font-semibold mb-3 flex items-center gap-2">
+                        <Share2 className="w-5 h-5 text-foreground" />
+                        Social Media — Direct Posting
+                      </h4>
+                      <p className="text-sm text-muted-foreground mb-3">
+                        Share wins, manifestations, and insights directly to Facebook, Instagram, X (Twitter), and TikTok 
+                        with automatic "Posted from Psycho-Cinematics" branding.
+                      </p>
+                      <div className="grid sm:grid-cols-2 gap-3">
+                        <div className="p-3 rounded-lg bg-blue-500/10 border border-blue-500/30">
+                          <div className="flex items-center gap-2 mb-1">
+                            <Facebook className="w-4 h-4 text-blue-500" />
+                            <span className="font-medium text-sm">Facebook</span>
+                          </div>
+                          <p className="text-xs text-muted-foreground">Requires access token and optional Page ID</p>
+                        </div>
+                        <div className="p-3 rounded-lg bg-pink-500/10 border border-pink-500/30">
+                          <div className="flex items-center gap-2 mb-1">
+                            <Instagram className="w-4 h-4 text-pink-500" />
+                            <span className="font-medium text-sm">Instagram</span>
+                          </div>
+                          <p className="text-xs text-muted-foreground">Via Facebook API, requires token and user ID</p>
+                        </div>
+                        <div className="p-3 rounded-lg bg-sky-500/10 border border-sky-500/30">
+                          <div className="flex items-center gap-2 mb-1">
+                            <Twitter className="w-4 h-4 text-sky-400" />
+                            <span className="font-medium text-sm">X (Twitter)</span>
+                          </div>
+                          <p className="text-xs text-muted-foreground">Requires API key, secret, and access tokens</p>
+                        </div>
+                        <div className="p-3 rounded-lg bg-neutral-500/10 border border-neutral-500/30">
+                          <div className="flex items-center gap-2 mb-1">
+                            <Globe className="w-4 h-4" />
+                            <span className="font-medium text-sm">TikTok</span>
+                          </div>
+                          <p className="text-xs text-muted-foreground">Requires access token and Open ID</p>
+                        </div>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-3">
+                        Note: Instagram and TikTok have limited API support — content may be copied for manual posting.
+                      </p>
                     </div>
                   </CardContent>
                 </Card>
@@ -908,7 +1259,7 @@ const DirectorsGuide = () => {
           </TabsContent>
 
           {/* FAQ Tab */}
-          <TabsContent value="faq">
+          <TabsContent value="faq" className="space-y-6">
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -916,7 +1267,7 @@ const DirectorsGuide = () => {
                   Frequently Asked Questions
                 </CardTitle>
                 <CardDescription>
-                  Quick answers to common questions about the platform
+                  Quick answers to common questions about Psycho-Cinematics™
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -937,16 +1288,16 @@ const DirectorsGuide = () => {
           </TabsContent>
         </Tabs>
 
-        {/* Help CTA */}
-        <Card className="mt-12 border-gold/20 bg-gradient-to-br from-gold/5 to-transparent">
+        {/* Still Have Questions */}
+        <Card className="mt-12 border-gold/30 bg-gradient-to-br from-gold/5 to-transparent">
           <CardContent className="py-8 text-center">
-            <MessageSquare className="w-10 h-10 text-gold mx-auto mb-3" />
-            <h3 className="font-display text-2xl mb-2">Still Have Questions?</h3>
+            <Bot className="w-12 h-12 text-gold mx-auto mb-4" />
+            <h3 className="text-xl font-semibold mb-2">Still Have Questions?</h3>
             <p className="text-muted-foreground mb-4">
-              Talk to your AI Director coach for personalized guidance
+              Talk to Director AI — your personal coach trained in Psycho-Cinematics™
             </p>
             <Link to="/">
-              <Button variant="gold" className="gap-2">
+              <Button className="gap-2">
                 <Mic className="w-4 h-4" />
                 Talk to Director AI
               </Button>
