@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Film, Plus, Play, Star, Trash2, Copy, Edit3, Check, Loader2, X, Clapperboard, Eye, HardDrive, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -207,6 +207,36 @@ function MovieCard({
 }: MovieCardProps) {
   const hasVideo = !!movie.movie_url;
   const hasScenes = movie.scenes && movie.scenes.length > 0;
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [duration, setDuration] = useState<number | null>(null);
+
+  // Get video duration when component mounts
+  useEffect(() => {
+    if (!hasVideo || !movie.movie_url) return;
+    
+    const video = document.createElement('video');
+    video.preload = 'metadata';
+    video.src = movie.movie_url;
+    
+    const handleLoadedMetadata = () => {
+      if (video.duration && Number.isFinite(video.duration)) {
+        setDuration(video.duration);
+      }
+    };
+    
+    video.addEventListener('loadedmetadata', handleLoadedMetadata);
+    
+    return () => {
+      video.removeEventListener('loadedmetadata', handleLoadedMetadata);
+      video.src = '';
+    };
+  }, [hasVideo, movie.movie_url]);
+
+  const formatDuration = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
 
   return (
     <Card
@@ -219,6 +249,7 @@ function MovieCard({
       <div className="aspect-video bg-gradient-to-br from-muted to-muted/50 relative">
         {hasVideo ? (
           <video
+            ref={videoRef}
             src={movie.movie_url!}
             className="w-full h-full object-cover"
             muted
@@ -233,6 +264,13 @@ function MovieCard({
         ) : (
           <div className="absolute inset-0 flex items-center justify-center">
             <Film className="w-12 h-12 text-muted-foreground/30" />
+          </div>
+        )}
+
+        {/* Duration badge - bottom right corner */}
+        {hasVideo && duration !== null && (
+          <div className="absolute bottom-2 right-2 px-1.5 py-0.5 rounded bg-black/80 text-white text-xs font-mono tabular-nums">
+            {formatDuration(duration)}
           </div>
         )}
 
