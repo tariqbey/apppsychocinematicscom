@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
-import { Check, Play, FileText, Target, ClipboardCheck, Sparkles } from "lucide-react";
+import { Check, Play, FileText, Target, ClipboardCheck, Sparkles, LightbulbIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { InfoTooltip } from "@/components/ui/info-tooltip";
+import { TutorialTipCard } from "@/components/community/TutorialTipCard";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { format } from "date-fns";
@@ -160,8 +161,8 @@ export const DailyRitualChecklist = ({ onTheaterClick, onScorecardClick }: Daily
   };
 
   return (
-    <div className="glass-card p-4 sm:p-6 cinematic-border animate-slide-up" style={{ animationDelay: "0.1s" }}>
-      <div className="flex items-center justify-between mb-4 sm:mb-6">
+    <div className="glass-card p-4 sm:p-6 cinematic-border animate-slide-up space-y-4" style={{ animationDelay: "0.1s" }}>
+      <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2 sm:gap-3">
           <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-gold" />
           <h3 className="text-lg sm:text-xl font-display tracking-wide">Daily Ritual</h3>
@@ -172,8 +173,21 @@ export const DailyRitualChecklist = ({ onTheaterClick, onScorecardClick }: Daily
         </span>
       </div>
 
+      {/* Tutorial Tip */}
+      <TutorialTipCard
+        id="daily-ritual-tips"
+        title="Master Your Daily Ritual"
+        variant="gold"
+        icon={<LightbulbIcon className="w-5 h-5" />}
+        tips={[
+          "Morning: Watch your Mind Movie first thing to prime your subconscious",
+          "Midday: Execute your 3 key tasks that move you toward your Chief Aim",
+          "Evening: Complete your scorecard honestly - accountability drives transformation",
+        ]}
+      />
+
       {/* Progress bar */}
-      <div className="h-1 bg-secondary rounded-full mb-4 sm:mb-6 overflow-hidden">
+      <div className="h-1 bg-secondary rounded-full overflow-hidden">
         <div
           className="h-full bg-gradient-to-r from-gold to-amber-soft transition-all duration-500"
           style={{ width: `${progress}%` }}

@@ -14,6 +14,53 @@ export type Database = {
   }
   public: {
     Tables: {
+      annual_awards: {
+        Row: {
+          award_category: string
+          award_year: number
+          awarded_at: string | null
+          created_at: string
+          id: string
+          metadata: Json | null
+          movie_id: string | null
+          total_score: number | null
+          total_votes: number | null
+          user_id: string
+        }
+        Insert: {
+          award_category: string
+          award_year: number
+          awarded_at?: string | null
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          movie_id?: string | null
+          total_score?: number | null
+          total_votes?: number | null
+          user_id: string
+        }
+        Update: {
+          award_category?: string
+          award_year?: number
+          awarded_at?: string | null
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          movie_id?: string | null
+          total_score?: number | null
+          total_votes?: number | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "annual_awards_movie_id_fkey"
+            columns: ["movie_id"]
+            isOneToOne: false
+            referencedRelation: "mind_movie_scripts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       chat_messages: {
         Row: {
           content: string
@@ -76,6 +123,59 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      community_movies: {
+        Row: {
+          chief_aim_preview: string | null
+          description: string | null
+          id: string
+          is_public: boolean | null
+          movie_id: string
+          movie_url: string
+          submitted_at: string
+          thumbnail_url: string | null
+          title: string
+          updated_at: string
+          user_id: string
+          votes_count: number | null
+        }
+        Insert: {
+          chief_aim_preview?: string | null
+          description?: string | null
+          id?: string
+          is_public?: boolean | null
+          movie_id: string
+          movie_url: string
+          submitted_at?: string
+          thumbnail_url?: string | null
+          title: string
+          updated_at?: string
+          user_id: string
+          votes_count?: number | null
+        }
+        Update: {
+          chief_aim_preview?: string | null
+          description?: string | null
+          id?: string
+          is_public?: boolean | null
+          movie_id?: string
+          movie_url?: string
+          submitted_at?: string
+          thumbnail_url?: string | null
+          title?: string
+          updated_at?: string
+          user_id?: string
+          votes_count?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "community_movies_movie_id_fkey"
+            columns: ["movie_id"]
+            isOneToOne: true
+            referencedRelation: "mind_movie_scripts"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       credit_transactions: {
         Row: {
@@ -260,6 +360,65 @@ export type Database = {
         }
         Relationships: []
       }
+      featured_content: {
+        Row: {
+          created_at: string
+          description: string | null
+          feature_period_end: string
+          feature_period_start: string
+          feature_type: string
+          id: string
+          is_active: boolean | null
+          movie_id: string | null
+          movie_url: string | null
+          thumbnail_url: string | null
+          title: string
+          total_votes: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          feature_period_end: string
+          feature_period_start: string
+          feature_type: string
+          id?: string
+          is_active?: boolean | null
+          movie_id?: string | null
+          movie_url?: string | null
+          thumbnail_url?: string | null
+          title: string
+          total_votes?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          feature_period_end?: string
+          feature_period_start?: string
+          feature_type?: string
+          id?: string
+          is_active?: boolean | null
+          movie_id?: string | null
+          movie_url?: string | null
+          thumbnail_url?: string | null
+          title?: string
+          total_votes?: number | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "featured_content_movie_id_fkey"
+            columns: ["movie_id"]
+            isOneToOne: false
+            referencedRelation: "mind_movie_scripts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       generated_media: {
         Row: {
           created_at: string
@@ -397,6 +556,41 @@ export type Database = {
           visual_style?: string | null
         }
         Relationships: []
+      }
+      movie_votes: {
+        Row: {
+          created_at: string
+          id: string
+          movie_id: string
+          user_id: string
+          vote_period: string
+          vote_type: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          movie_id: string
+          user_id: string
+          vote_period: string
+          vote_type: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          movie_id?: string
+          user_id?: string
+          vote_period?: string
+          vote_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "movie_votes_movie_id_fkey"
+            columns: ["movie_id"]
+            isOneToOne: false
+            referencedRelation: "mind_movie_scripts"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       post_comments: {
         Row: {
