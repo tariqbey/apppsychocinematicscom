@@ -109,54 +109,58 @@ const Index = () => {
   // Check for openWizard URL parameter (from Character Builder)
   useEffect(() => {
     const openWizardFromCharacter = async () => {
-      if (searchParams.get('openWizard') === 'true' && user) {
-        // Clear the URL parameter first
-        setSearchParams({});
-        
-        // Check for stored transformation data
-        const storedAnalysis = sessionStorage.getItem('transformationAnalysis');
-        const storedChiefAim = sessionStorage.getItem('chiefAimForScript');
-        
-        let transformationData = null;
-        if (storedAnalysis && storedChiefAim) {
-          try {
-            const analysis = JSON.parse(storedAnalysis);
-            const chiefAimData = JSON.parse(storedChiefAim);
-            transformationData = { analysis, chiefAim: chiefAimData };
-            
-            // Clear session storage
-            sessionStorage.removeItem('transformationAnalysis');
-            sessionStorage.removeItem('chiefAimForScript');
-          } catch (e) {
-            console.error('Failed to parse transformation data:', e);
-          }
-        }
-        
-        // Set transformation data BEFORE creating movie
-        if (transformationData) {
-          setTransformationDataForWizard(transformationData);
-        }
-        
-        // Create the movie
+      // Only proceed when we have the openWizard param AND user is loaded (not during auth loading)
+      if (searchParams.get('openWizard') !== 'true' || authLoading || !user) {
+        return;
+      }
+      
+      // Clear the URL parameter first
+      setSearchParams({});
+      
+      // Check for stored transformation data
+      const storedAnalysis = sessionStorage.getItem('transformationAnalysis');
+      const storedChiefAim = sessionStorage.getItem('chiefAimForScript');
+      
+      let transformationData = null;
+      if (storedAnalysis && storedChiefAim) {
         try {
-          const movie = await createNewMovie();
-          if (movie) {
-            setSelectedMovieId(movie.id);
-            setShowMovieVault(false);
-            setShowMindMovieWizard(true);
-          } else {
-            // Movie creation failed - show an error toast
-            toast.error("Failed to create Mind Movie. Please try again from the Movie Vault.");
-          }
-        } catch (error) {
-          console.error('Error creating movie from transformation:', error);
-          toast.error("An error occurred. Please try again.");
+          const analysis = JSON.parse(storedAnalysis);
+          const chiefAimData = JSON.parse(storedChiefAim);
+          transformationData = { analysis, chiefAim: chiefAimData };
+          
+          // Clear session storage
+          sessionStorage.removeItem('transformationAnalysis');
+          sessionStorage.removeItem('chiefAimForScript');
+        } catch (e) {
+          console.error('Failed to parse transformation data:', e);
         }
+      }
+      
+      // Set transformation data BEFORE creating movie
+      if (transformationData) {
+        setTransformationDataForWizard(transformationData);
+      }
+      
+      // Create the movie
+      try {
+        const movie = await createNewMovie();
+        if (movie) {
+          setSelectedMovieId(movie.id);
+          setShowMovieVault(false);
+          setShowMindMovieWizard(true);
+          toast.success("Mind Movie Wizard opened with your transformation data!");
+        } else {
+          // Movie creation failed - show an error toast
+          toast.error("Failed to create Mind Movie. Please try again from the Movie Vault.");
+        }
+      } catch (error) {
+        console.error('Error creating movie from transformation:', error);
+        toast.error("An error occurred. Please try again.");
       }
     };
     
     openWizardFromCharacter();
-  }, [searchParams, user, setSearchParams, createNewMovie]);
+  }, [searchParams, user, authLoading, setSearchParams, createNewMovie]);
 
   if (authLoading) {
     return (

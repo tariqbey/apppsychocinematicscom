@@ -62,7 +62,7 @@ export function CharacterTransformationCoach({
     plan: string | null;
   } | null>(null);
 
-  // Fetch archetype and scores from database if not provided
+  // Fetch archetype, scores, and chief aim from database if not provided
   useEffect(() => {
     const fetchArchetypeData = async () => {
       if (!user || archetypeProp) {
@@ -71,6 +71,7 @@ export function CharacterTransformationCoach({
       }
 
       try {
+        // Fetch character profile data
         const { data: profileData } = await supabase
           .from("character_profiles")
           .select("archetype, archetype_score, transformation_analysis")
@@ -88,6 +89,22 @@ export function CharacterTransformationCoach({
           if (profileData.transformation_analysis) {
             setAnalysis(profileData.transformation_analysis as unknown as TransformationAnalysis);
           }
+        }
+
+        // Also fetch the user's Chief Aim so it's available for the button
+        const { data: userProfileData } = await supabase
+          .from("user_profiles")
+          .select("chief_aim_what, chief_aim_by_when, chief_aim_exchange, chief_aim_plan")
+          .eq("user_id", user.id)
+          .single();
+
+        if (userProfileData?.chief_aim_what) {
+          setChiefAim({
+            what: userProfileData.chief_aim_what,
+            byWhen: userProfileData.chief_aim_by_when,
+            exchange: userProfileData.chief_aim_exchange,
+            plan: userProfileData.chief_aim_plan
+          });
         }
       } catch (error) {
         console.error("Error fetching archetype data:", error);
@@ -655,7 +672,13 @@ export function CharacterTransformationCoach({
                       size="lg"
                       className="gap-3 bg-gradient-to-r from-gold via-amber-500 to-gold hover:from-amber-500 hover:via-gold hover:to-amber-500 text-black font-semibold shadow-lg shadow-gold/25 hover:shadow-gold/40 transition-all duration-300"
                       onClick={() => {
-                        if (onCreateMindMovie && chiefAim) {
+                        // Validate we have chief aim before proceeding
+                        if (!chiefAim?.what) {
+                          toast.error("Please define your Definite Chief Aim first before creating your transformation script.");
+                          return;
+                        }
+                        
+                        if (onCreateMindMovie) {
                           onCreateMindMovie(analysis, chiefAim);
                         } else {
                           // Store the transformation analysis in sessionStorage and navigate
