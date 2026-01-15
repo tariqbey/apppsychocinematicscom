@@ -10,7 +10,9 @@ import {
   ArrowLeft,
   Eye,
   EyeOff,
-  CreditCard
+  CreditCard,
+  Key,
+  Shield
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
@@ -28,6 +30,8 @@ export default function Signup() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
+  const [accessCode, setAccessCode] = useState("");
+  const [showAccessCode, setShowAccessCode] = useState(false);
   const { signUp } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -79,12 +83,55 @@ export default function Signup() {
       // Create the account first
       await signUp(email, password);
       
+      // If access code is provided, try to redeem it
+      if (accessCode.trim()) {
+        // Wait a moment for the session to be established
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        const { data, error } = await supabase.rpc('redeem_access_code', {
+          p_code: accessCode.trim()
+        });
+
+        if (error) {
+          console.error("Error redeeming code:", error);
+          // Code failed but account was created, redirect to checkout
+          toast({
+            variant: "destructive",
+            title: "Invalid Access Code",
+            description: "Account created, but the access code was invalid. Redirecting to payment...",
+          });
+          await redirectToCheckout();
+          return;
+        }
+
+        const result = data as { success: boolean; error?: string; role?: string };
+
+        if (result.success) {
+          toast({
+            title: "Welcome, Director!",
+            description: `Full access granted with ${result.role} privileges!`,
+          });
+          // Navigate to dashboard instead of checkout
+          navigate("/");
+          return;
+        } else {
+          // Code was invalid, proceed to checkout
+          toast({
+            variant: "destructive",
+            title: "Invalid Access Code",
+            description: result.error || "Redirecting to payment...",
+          });
+          await redirectToCheckout();
+          return;
+        }
+      }
+      
+      // No access code provided, proceed to checkout
       toast({
         title: "Account Created!",
         description: "Redirecting to payment...",
       });
 
-      // Now redirect to Stripe checkout
       await redirectToCheckout();
     } catch (error: any) {
       // Check if user already exists
@@ -301,6 +348,36 @@ export default function Signup() {
                     </div>
                   </div>
 
+                  {/* Access Code (Collapsible) */}
+                  <div className="space-y-2">
+                    <button
+                      type="button"
+                      onClick={() => setShowAccessCode(!showAccessCode)}
+                      className="flex items-center gap-2 text-sm text-gold hover:text-gold/80 transition-colors"
+                    >
+                      <Key className="w-4 h-4" />
+                      {showAccessCode ? "Hide access code" : "Have an access code?"}
+                    </button>
+                    
+                    {showAccessCode && (
+                      <div className="relative animate-in slide-in-from-top-2 duration-200">
+                        <Key className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                        <input
+                          type="text"
+                          value={accessCode}
+                          onChange={(e) => setAccessCode(e.target.value)}
+                          placeholder="Enter access code (optional)"
+                          className="w-full bg-secondary rounded-lg pl-11 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-gold/50 placeholder:text-muted-foreground"
+                          disabled={isLoading}
+                        />
+                        <p className="text-xs text-muted-foreground mt-1">
+                          <Shield className="w-3 h-3 inline mr-1" />
+                          Access codes grant full membership without payment
+                        </p>
+                      </div>
+                    )}
+                  </div>
+
                   {/* Terms Agreement */}
                   <div className="flex items-start gap-3">
                     <input
@@ -332,6 +409,11 @@ export default function Signup() {
                         <Loader2 className="w-5 h-5 animate-spin mr-2" />
                         Creating Account...
                       </>
+                    ) : accessCode.trim() ? (
+                      <>
+                        <Shield className="w-5 h-5 mr-2" />
+                        Create Account with Access Code
+                      </>
                     ) : (
                       <>
                         <CreditCard className="w-5 h-5 mr-2" />
@@ -342,7 +424,10 @@ export default function Signup() {
 
                   {/* Note */}
                   <p className="text-xs text-center text-muted-foreground">
-                    You won't be charged during your 3-day free trial. Cancel anytime.
+                    {accessCode.trim() 
+                      ? "Your access code will grant full membership instantly."
+                      : "You won't be charged during your 3-day free trial. Cancel anytime."
+                    }
                   </p>
                 </form>
 
