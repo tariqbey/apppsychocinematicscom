@@ -123,6 +123,39 @@ export type Database = {
           },
         ]
       }
+      character_profiles: {
+        Row: {
+          archetype: string
+          archetype_score: Json
+          created_at: string
+          id: string
+          light_shadow_state: string | null
+          survey_responses: Json
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          archetype: string
+          archetype_score?: Json
+          created_at?: string
+          id?: string
+          light_shadow_state?: string | null
+          survey_responses?: Json
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          archetype?: string
+          archetype_score?: Json
+          created_at?: string
+          id?: string
+          light_shadow_state?: string | null
+          survey_responses?: Json
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       chat_messages: {
         Row: {
           content: string
