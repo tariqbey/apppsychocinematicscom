@@ -9,6 +9,7 @@ import { CharacterCentral } from "@/components/character/CharacterCentral";
 import { AnnualSelfAnalysis } from "@/components/character/AnnualSelfAnalysis";
 import { CharacterScorecard } from "@/components/character/CharacterScorecard";
 import { CharacterWeeklySummary } from "@/components/character/CharacterWeeklySummary";
+import { EpisodesList } from "@/components/episodes/EpisodesList";
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -64,6 +65,9 @@ export default function Actions() {
 
         {/* Three Things - Daily Task Manager */}
         <ThreeThings showAnalyticsDefault={true} />
+
+        {/* Episodes Section */}
+        <EpisodesList />
 
         {/* Character Central Section */}
         <div className="space-y-4">

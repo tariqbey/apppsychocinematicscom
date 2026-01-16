@@ -16,11 +16,14 @@ import { MovieVault } from "@/components/mind-movie/MovieVault";
 import { DirectorsJournal } from "@/components/journal/DirectorsJournal";
 import { AuthModal } from "@/components/auth/AuthModal";
 import { OnboardingModal, useOnboarding } from "@/components/onboarding/OnboardingModal";
+import { ActiveEpisodeBanner } from "@/components/episodes/ActiveEpisodeBanner";
+import { EpisodeWizard } from "@/components/episodes/EpisodeWizard";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { useGamification } from "@/hooks/useGamification";
 import { useMindMovies, MindMovie } from "@/hooks/useMindMovies";
-import { Loader2, Wand2, Sparkles, Bot, Clapperboard, FolderOpen, BookOpen, Target, User2 } from "lucide-react";
+import { useEpisodes } from "@/hooks/useEpisodes";
+import { Loader2, Wand2, Sparkles, Bot, Clapperboard, FolderOpen, BookOpen, Target, User2, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { InfoTooltip } from "@/components/ui/info-tooltip";
 import { toast } from "sonner";
@@ -49,6 +52,8 @@ const Index = () => {
   const { refreshData, checkAndAwardBadges } = useGamification();
   const { showOnboarding, completeOnboarding, closeOnboarding } = useOnboarding(user?.id);
   const { createNewMovie } = useMindMovies();
+  const { activeEpisode, loading: episodesLoading } = useEpisodes();
+  const [showEpisodeWizard, setShowEpisodeWizard] = useState(false);
 
   const handleCreateNewMovie = useCallback(async () => {
     const movie = await createNewMovie();
@@ -210,6 +215,28 @@ const Index = () => {
 
           {/* Streak Banner */}
           <StreakBanner streak={streak} bestStreak={bestStreak} />
+
+          {/* Active Episode Banner */}
+          {activeEpisode && (
+            <ActiveEpisodeBanner episode={activeEpisode} />
+          )}
+
+          {/* New Episode Button (when no active episode) */}
+          {!activeEpisode && !episodesLoading && chiefAimComplete && (
+            <button
+              onClick={() => setShowEpisodeWizard(true)}
+              className="w-full glass-card p-4 cinematic-border animate-slide-up group hover:border-amber-500/50 transition-all duration-300 text-left flex items-center gap-4"
+            >
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-500/20 to-orange-600/20 flex items-center justify-center">
+                <Zap className="w-6 h-6 text-amber-500" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-medium group-hover:text-amber-500 transition-colors">Start a New Episode</h3>
+                <p className="text-sm text-muted-foreground">Short-term sprint aligned with your Chief Aim</p>
+              </div>
+              <span className="text-amber-500 hidden sm:block">+ Create</span>
+            </button>
+          )}
 
           {/* Edit Bay Card */}
           <button
@@ -497,6 +524,11 @@ const Index = () => {
         onClose={closeOnboarding}
         onComplete={completeOnboarding}
       />
+
+      {/* Episode Wizard */}
+      {showEpisodeWizard && (
+        <EpisodeWizard onClose={() => setShowEpisodeWizard(false)} />
+      )}
     </div>
   );
 };
