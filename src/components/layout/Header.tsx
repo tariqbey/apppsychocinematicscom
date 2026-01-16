@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import { Settings, User, LogOut, Trophy, Users, MessageSquare, Shield, GraduationCap } from "lucide-react";
+import { Settings, User, LogOut, Trophy, Users, MessageSquare, Shield, GraduationCap, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -74,8 +74,20 @@ export const Header = () => {
             </Link>
           </div>
 
-          {/* Help Navigation - Always Visible */}
+          {/* Navigation - Always Visible */}
           <nav className="hidden md:flex items-center gap-1 mr-4">
+            {user && (
+              <Link to="/episodes">
+                <Button 
+                  variant={isActivePath('/episodes') ? 'secondary' : 'ghost'} 
+                  size="sm" 
+                  className={`gap-2 ${isActivePath('/episodes') ? 'bg-amber-500/10 text-amber-500' : 'text-muted-foreground hover:text-foreground'}`}
+                >
+                  <Zap className="w-4 h-4" />
+                  Episodes
+                </Button>
+              </Link>
+            )}
             <Link to="/guide">
               <Button 
                 variant={isActivePath('/guide') || isActivePath('/tutorial') || isActivePath('/user-manual') ? 'secondary' : 'ghost'} 
