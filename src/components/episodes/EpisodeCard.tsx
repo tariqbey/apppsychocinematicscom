@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Zap, Calendar, CheckCircle, Pause, Play, Trash2, ChevronDown, ChevronUp } from "lucide-react";
+import { Zap, Calendar, CheckCircle, Pause, Play, Trash2, ChevronDown, ChevronUp, Film } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { useEpisodes, Episode } from "@/hooks/useEpisodes";
@@ -8,9 +8,10 @@ import { format } from "date-fns";
 interface EpisodeCardProps {
   episode: Episode;
   variant?: "compact" | "full";
+  onCreateMindMovie?: (episode: Episode) => void;
 }
 
-export function EpisodeCard({ episode, variant = "compact" }: EpisodeCardProps) {
+export function EpisodeCard({ episode, variant = "compact", onCreateMindMovie }: EpisodeCardProps) {
   const { completeEpisode, pauseEpisode, resumeEpisode, deleteEpisode, getDaysRemaining, getProgress } = useEpisodes();
   const [expanded, setExpanded] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -155,8 +156,8 @@ export function EpisodeCard({ episode, variant = "compact" }: EpisodeCardProps) 
       </div>
 
       {/* Actions (when expanded) */}
-      {expanded && episode.status !== "completed" && episode.status !== "abandoned" && (
-        <div className="flex items-center gap-2 mt-4 pt-3 border-t border-border">
+      {expanded && episode.status !== "abandoned" && (
+        <div className="flex items-center gap-2 mt-4 pt-3 border-t border-border flex-wrap">
           {episode.status === "active" && (
             <Button
               size="sm"
@@ -168,24 +169,48 @@ export function EpisodeCard({ episode, variant = "compact" }: EpisodeCardProps) 
               Complete
             </Button>
           )}
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={handlePauseResume}
-            disabled={loading}
-          >
-            {episode.status === "paused" ? (
-              <>
-                <Play className="w-4 h-4 mr-1" />
-                Resume
-              </>
-            ) : (
-              <>
-                <Pause className="w-4 h-4 mr-1" />
-                Pause
-              </>
-            )}
-          </Button>
+          
+          {/* Create Mind Movie Button */}
+          {onCreateMindMovie && !episode.mind_movie_script_id && episode.status !== "completed" && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="border-gold/30 text-gold hover:bg-gold/10"
+              onClick={() => onCreateMindMovie(episode)}
+            >
+              <Film className="w-4 h-4 mr-1" />
+              Create Movie
+            </Button>
+          )}
+          
+          {episode.mind_movie_script_id && (
+            <span className="text-xs text-green-400 flex items-center gap-1">
+              <Film className="w-3 h-3" />
+              Movie Created
+            </span>
+          )}
+
+          {episode.status !== "completed" && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handlePauseResume}
+              disabled={loading}
+            >
+              {episode.status === "paused" ? (
+                <>
+                  <Play className="w-4 h-4 mr-1" />
+                  Resume
+                </>
+              ) : (
+                <>
+                  <Pause className="w-4 h-4 mr-1" />
+                  Pause
+                </>
+              )}
+            </Button>
+          )}
+          
           <Button
             size="sm"
             variant="ghost"
