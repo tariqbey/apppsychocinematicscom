@@ -242,8 +242,14 @@ export function ThreeThings({ showAnalyticsDefault = false }: ThreeThingsProps) 
   };
 
   const addSuggestion = async (suggestion: Suggestion) => {
-    if (!user) return;
+    console.log("[ThreeThings] addSuggestion called", { suggestion, tasksLength: tasks.length, user: !!user });
+
+    if (!user) {
+      console.warn("[ThreeThings] No user, aborting addSuggestion");
+      return;
+    }
     if (tasks.length >= 3) {
+      console.warn("[ThreeThings] Max tasks reached");
       toast({
         title: "Maximum 3 tasks",
         description: "Delete a task first to add this suggestion.",
@@ -253,6 +259,8 @@ export function ThreeThings({ showAnalyticsDefault = false }: ThreeThingsProps) 
     }
 
     const dateStr = format(selectedDate, "yyyy-MM-dd");
+    console.log("[ThreeThings] Inserting task for", dateStr);
+
     const { data, error } = await supabase
       .from("daily_tasks")
       .insert({
@@ -264,7 +272,11 @@ export function ThreeThings({ showAnalyticsDefault = false }: ThreeThingsProps) 
       .select()
       .single();
 
-    if (!error && data) {
+    if (error) {
+      console.error("[ThreeThings] Insert error", error);
+      toast({ title: "Error", description: "Failed to add task", variant: "destructive" });
+    } else if (data) {
+      console.log("[ThreeThings] Insert success", data);
       setTasks([...tasks, data]);
       setSuggestions(suggestions.filter(s => s.task !== suggestion.task));
       toast({ title: "Task added", description: suggestion.task });
