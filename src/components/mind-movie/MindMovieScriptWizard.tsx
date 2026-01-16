@@ -79,6 +79,15 @@ export interface TimelineExportData {
   title?: string;
 }
 
+// Episode data for mini mind movies
+export interface EpisodeData {
+  id: string;
+  title: string;
+  objective: string;
+  deadline: string;
+  alignment_score?: number | null;
+}
+
 interface MindMovieScriptWizardProps {
   isOpen: boolean;
   onClose: () => void;
@@ -108,6 +117,10 @@ interface MindMovieScriptWizardProps {
       arc?: string;
     };
   };
+  // Episode mode props for mini mind movies
+  episodeMode?: boolean;
+  episode?: EpisodeData;
+  onEpisodeMovieCreated?: (scriptId: string) => void;
 }
 
 const VISUAL_STYLES = [
@@ -127,6 +140,9 @@ export function MindMovieScriptWizard({
   onOpenEditBay,
   onAddToTimeline,
   transformationAnalysis,
+  episodeMode = false,
+  episode,
+  onEpisodeMovieCreated,
 }: MindMovieScriptWizardProps) {
   const [step, setStep] = useState(1);
   const [visualStyle, setVisualStyle] = useState("cinematic");
@@ -263,13 +279,26 @@ export function MindMovieScriptWizard({
     // Combine with any additional user description
     const fullDescription = richDescription + (userDescription ? `\n\nADDITIONAL CONTEXT: ${userDescription}` : "");
     
+    // For episode mode, pre-fill with episode objective
+    const episodeDescription = episodeMode && episode 
+      ? `Episode Focus: ${episode.objective}\n\n${fullDescription}`
+      : fullDescription;
+    
     const existingScenes = addScenes ? generatedScenes : undefined;
     const result = await generateStoryboard(
       chiefAim, 
       visualStyle, 
-      fullDescription, 
+      episodeDescription, 
       existingScenes,
-      transformationAnalysis
+      transformationAnalysis,
+      episodeMode,
+      episode ? {
+        id: episode.id,
+        title: episode.title,
+        objective: episode.objective,
+        deadline: episode.deadline,
+        alignment_score: episode.alignment_score,
+      } : undefined
     );
     if (result) {
       if (addScenes && generatedScenes.length > 0) {
@@ -282,7 +311,7 @@ export function MindMovieScriptWizard({
         setGeneratedScenes([...generatedScenes, ...newScenes]);
         setGeneratedTitle(result.title || generatedTitle);
       } else {
-        setGeneratedTitle(result.title);
+        setGeneratedTitle(episodeMode ? `Episode: ${episode?.title || result.title}` : result.title);
         setGeneratedScenes(result.scenes);
       }
       // Stay on step 2 to show approval controls
@@ -291,13 +320,19 @@ export function MindMovieScriptWizard({
   };
 
   const handleApproveStoryboard = async () => {
-    await saveScript(
+    const savedScript = await saveScript(
       generatedTitle,
       generatedScenes,
       chiefAim,
       visualStyle,
       currentScript?.id
     );
+    
+    // If in episode mode and we saved successfully, notify parent
+    if (episodeMode && savedScript && onEpisodeMovieCreated) {
+      onEpisodeMovieCreated(savedScript.id);
+    }
+    
     setStep(3);
   };
 

@@ -37,17 +37,54 @@ serve(async (req) => {
       );
     }
 
-    const { chiefAim, visualStyle, userDescription, existingScenes, addMoreScenes, transformationAnalysis } = await req.json();
+    const { chiefAim, visualStyle, userDescription, existingScenes, addMoreScenes, transformationAnalysis, episodeMode, episodeData } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     
     if (!LOVABLE_API_KEY) {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
-    // Build a rich, cinematic system prompt based on whether we have transformation data
+    // Build a rich, cinematic system prompt based on mode and available data
     const hasTransformation = transformationAnalysis?.requiredCharacter?.name;
+    const isEpisodeMode = episodeMode && episodeData;
     
-    const systemPrompt = hasTransformation 
+    // Episode-focused system prompt for mini mind movies
+    const episodeSystemPrompt = `You are a Psycho-Cinematics™ Episode Director. Your specialty: creating SHORT, FOCUSED visualization sequences for specific sprints and objectives.
+
+This is NOT a full Mind Movie—it's an EPISODE MOVIE: a 3-5 scene mini-visualization focused on ONE specific objective that supports the user's larger Chief Aim.
+
+EPISODE CONTEXT:
+**Episode Title:** ${episodeData?.title || 'Untitled Episode'}
+**Episode Objective:** ${episodeData?.objective || 'Not specified'}
+**Deadline:** ${episodeData?.deadline || 'Not specified'}
+
+CONNECTION TO CHIEF AIM:
+${chiefAim?.what ? `Their Final Scene: ${chiefAim.what}` : 'Chief Aim not specified'}
+${episodeData?.alignment_score ? `Alignment Score: ${episodeData.alignment_score}%` : ''}
+
+EPISODE MOVIE RULES:
+1. EXACTLY 3-5 SCENES - This is a sprint visualization, not an epic
+2. FOCUS ON THE OBJECTIVE - Every scene must relate to the episode objective
+3. SHOW THE ACHIEVEMENT - The final scene shows the episode objective COMPLETED
+4. FAST PACING - 5-second scenes, high energy, immediate impact
+5. CONNECT TO CHIEF AIM - Subtly show how this episode advances the larger goal
+
+SCENE STRUCTURE:
+1. **The Commitment** - Show the user deciding to pursue this objective
+2. **In Action** - Show them executing with required character traits
+3. **The Challenge** - Optional: A moment of difficulty they push through
+4. **The Win** - The objective achieved, celebration moment
+5. **The Connection** - Optional: Link back to the Chief Aim / larger vision
+
+FOR AI IMAGE GENERATION:
+- Cinematic 16:9 aspect ratio
+- High energy, motivational lighting
+- Close-ups on determination and triumph
+- Include the protagonist demonstrating success`;
+    
+    const systemPrompt = isEpisodeMode 
+      ? episodeSystemPrompt
+      : hasTransformation 
       ? `You are an Oscar-winning screenwriter and Mind Movie director. You don't just create scenes—you craft TRANSFORMATION STORIES that burn into the subconscious.
 
 Your mission: Turn the user's character transformation journey into a VISCERAL, CINEMATIC experience. This isn't a slideshow. This is the movie of their life they'll watch every morning until their neural pathways rewire.
@@ -104,7 +141,25 @@ Generate prompts that are optimized for AI image generation:
     // Build the user prompt with transformation context if available
     let userPrompt: string;
     
-    if (addMoreScenes && existingScenes?.length > 0) {
+    if (isEpisodeMode) {
+      userPrompt = `CREATE AN EPISODE MOVIE for this sprint:
+
+═══════════════════════════════════════════════
+EPISODE: "${episodeData?.title || 'My Episode'}"
+OBJECTIVE: ${episodeData?.objective || 'Complete this episode'}
+DEADLINE: ${episodeData?.deadline || 'Soon'}
+═══════════════════════════════════════════════
+
+SUPPORTING THE CHIEF AIM:
+${chiefAim?.what || 'Not specified'}
+
+VISUAL STYLE: ${visualStyle || "Cinematic and energetic"}
+${userDescription ? `ADDITIONAL CONTEXT: ${userDescription}` : ''}
+
+CREATE 3-5 FOCUSED SCENES that visualize achieving this specific episode objective.
+Make it punchy, motivational, and immediately actionable.
+The user should feel compelled to take action RIGHT NOW after watching this.`;
+    } else if (addMoreScenes && existingScenes?.length > 0) {
       userPrompt = `Add 3 MORE scenes to extend this Mind Movie storyboard.
 
 Current scene count: ${existingScenes.length}

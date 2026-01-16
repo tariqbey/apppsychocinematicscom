@@ -44,7 +44,7 @@ serve(async (req) => {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
-    const { chiefAim, existingTasks, dayOfWeek } = await req.json();
+    const { chiefAim, existingTasks, dayOfWeek, activeEpisode } = await req.json();
 
     // Analyze the Chief Aim to determine user's current phase
     const aimAnalysis = analyzeChiefAimCompleteness(chiefAim || {});
@@ -65,6 +65,15 @@ ${PSYCHO_CINEMATICS_KNOWLEDGE}
 ${aimAnalysis.guidance}
 
 ### Today: ${dayOfWeek}
+${activeEpisode ? `
+### 🎬 ACTIVE EPISODE (Current Sprint Focus):
+**Title:** ${activeEpisode.title}
+**Objective:** ${activeEpisode.objective}
+**Days Remaining:** ${activeEpisode.daysRemaining}${activeEpisode.daysRemaining < 0 ? ' (OVERDUE!)' : ''}
+${activeEpisode.alignmentScore ? `**Alignment with Chief Aim:** ${activeEpisode.alignmentScore}%` : ''}
+
+PRIORITY: At least 1-2 of the suggested tasks should directly advance this episode objective!
+` : ''}
 ${existingTasks?.length ? `\n### Already Planned:\n${existingTasks.map((t: string) => `- ${t}`).join("\n")}\n\nSuggest COMPLEMENTARY tasks that fill gaps or deepen their work.` : ""}
 
 ## YOUR TASK

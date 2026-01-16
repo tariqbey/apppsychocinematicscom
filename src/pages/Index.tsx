@@ -52,8 +52,15 @@ const Index = () => {
   const { refreshData, checkAndAwardBadges } = useGamification();
   const { showOnboarding, completeOnboarding, closeOnboarding } = useOnboarding(user?.id);
   const { createNewMovie } = useMindMovies();
-  const { activeEpisode, loading: episodesLoading } = useEpisodes();
+  const { activeEpisode, loading: episodesLoading, updateEpisode } = useEpisodes();
   const [showEpisodeWizard, setShowEpisodeWizard] = useState(false);
+  const [episodeForMovie, setEpisodeForMovie] = useState<{
+    id: string;
+    title: string;
+    objective: string;
+    deadline: string;
+    alignment_score?: number | null;
+  } | null>(null);
 
   const handleCreateNewMovie = useCallback(async () => {
     const movie = await createNewMovie();
@@ -78,8 +85,38 @@ const Index = () => {
   const handleAddToTimeline = useCallback((data: TimelineExportData) => {
     setTimelineExportData(data);
     setShowMindMovieWizard(false);
+    setEpisodeForMovie(null);
     setShowEditBay(true);
   }, []);
+
+  // Handler for creating episode mini movies
+  const handleCreateEpisodeMovie = useCallback(async () => {
+    if (!activeEpisode) return;
+    
+    const movie = await createNewMovie();
+    if (movie) {
+      setEpisodeForMovie({
+        id: activeEpisode.id,
+        title: activeEpisode.title,
+        objective: activeEpisode.objective,
+        deadline: activeEpisode.deadline,
+        alignment_score: activeEpisode.alignment_score,
+      });
+      setSelectedMovieId(movie.id);
+      setShowMovieVault(false);
+      setShowMindMovieWizard(true);
+    }
+  }, [activeEpisode, createNewMovie]);
+
+  // Handler for linking episode movie to episode
+  const handleEpisodeMovieCreated = useCallback(async (scriptId: string) => {
+    if (!episodeForMovie) return;
+    
+    await updateEpisode(episodeForMovie.id, {
+      mind_movie_script_id: scriptId,
+    });
+    setEpisodeForMovie(null);
+  }, [episodeForMovie, updateEpisode]);
 
   const handleSaveChiefAim = useCallback(async (aim: { what: string; byWhen: string; exchange: string; plan: string }) => {
     await updateProfile({
@@ -218,7 +255,10 @@ const Index = () => {
 
           {/* Active Episode Banner */}
           {activeEpisode && (
-            <ActiveEpisodeBanner episode={activeEpisode} />
+            <ActiveEpisodeBanner 
+              episode={activeEpisode} 
+              onCreateMindMovie={handleCreateEpisodeMovie}
+            />
           )}
 
           {/* New Episode Button (when no active episode) */}
@@ -440,6 +480,7 @@ const Index = () => {
             setShowMindMovieWizard(false);
             setSelectedMovieId(undefined);
             setTransformationDataForWizard(null);
+            setEpisodeForMovie(null);
           }}
           chiefAim={transformationDataForWizard?.chiefAim ? {
             what: transformationDataForWizard.chiefAim.what || "",
@@ -452,9 +493,13 @@ const Index = () => {
             setEditBayInitialPrompt(prompt);
             setShowEditBay(true);
             setShowMindMovieWizard(false);
+            setEpisodeForMovie(null);
           }}
           onAddToTimeline={handleAddToTimeline}
           transformationAnalysis={transformationDataForWizard?.analysis}
+          episodeMode={!!episodeForMovie}
+          episode={episodeForMovie || undefined}
+          onEpisodeMovieCreated={handleEpisodeMovieCreated}
         />
       )}
 

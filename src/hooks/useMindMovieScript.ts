@@ -134,6 +134,14 @@ export function useMindMovieScript() {
         role?: string;
         arc?: string;
       };
+    },
+    episodeMode?: boolean,
+    episodeData?: {
+      id: string;
+      title: string;
+      objective: string;
+      deadline: string;
+      alignment_score?: number | null;
     }
   ) => {
     if (!user) {
@@ -152,6 +160,8 @@ export function useMindMovieScript() {
           existingScenes: existingScenes || undefined,
           addMoreScenes: existingScenes ? true : false,
           transformationAnalysis: transformationAnalysis || undefined,
+          episodeMode: episodeMode || false,
+          episodeData: episodeData || undefined,
         },
       });
 

@@ -277,14 +277,48 @@ ${userContext.hasMindMovie
 ### DAILY SCORECARD
 ${userContext.filledScorecardToday 
   ? `✓ Scorecard completed today. Score: ${userContext.todaysScorecardScore}/12`
-  : "○ Scorecard not yet filled out today"}
+  : "○ Scorecard not yet filled out today"}`;
+
+      // Add Active Episode context if available
+      if (userContext.activeEpisode) {
+        const episode = userContext.activeEpisode;
+        const daysRemaining = episode.daysRemaining;
+        const statusText = daysRemaining < 0 
+          ? `⚠️ ${Math.abs(daysRemaining)} days OVERDUE - urgent focus needed!`
+          : daysRemaining === 0 
+            ? "📅 DUE TODAY - final push!"
+            : `${daysRemaining} days remaining`;
+        
+        const alignmentLevel = episode.alignmentScore >= 70 
+          ? "Strategic Priority (High alignment with Chief Aim)" 
+          : episode.alignmentScore >= 50 
+            ? "Supporting Role (Good alignment)" 
+            : "Background Task (Consider re-evaluating)";
+        
+        contextSection += `
+
+### 🎬 ACTIVE EPISODE (Current Sprint)
+**Title:** ${episode.title}
+**Objective:** ${episode.objective}
+**Deadline:** ${statusText}
+${episode.alignmentScore ? `**Alignment with Chief Aim:** ${episode.alignmentScore}% - ${alignmentLevel}` : ""}
+
+COACHING DIRECTIVE: This is their CURRENT FOCUS. When discussing near-term actions:
+- Connect daily tasks to episode completion
+- Reference both the episode objective AND the main Chief Aim
+- The episode is a stepping stone toward the Final Scene
+- If overdue, coach with urgency but without shame`;
+      }
+
+      contextSection += `
 
 ## COACHING PRIORITIES (in order)
 1. ${!userContext.chiefAimComplete ? "URGENT: Help them complete their Chief Aim!" : "Chief Aim complete ✓"}
-2. ${!userContext.tasksSetForToday ? "Set today's Three Things" : (userContext.allTasksCompleted ? "All tasks done ✓" : "Check on task progress")}
-3. ${!userContext.watchedMindMovieToday && userContext.hasMindMovie ? "Encourage Mind Movie viewing" : "Mind Movie status OK ✓"}
-4. ${!userContext.filledScorecardToday ? "Remind about scorecard (end of day)" : "Scorecard done ✓"}
-5. ${userContext.transformationAnalysis ? "Reference their character transformation - remind them WHO they must become!" : "Encourage them to complete Character Analysis"}`;
+2. ${userContext.activeEpisode ? `Active Episode: "${userContext.activeEpisode.title}" - ${userContext.activeEpisode.daysRemaining < 0 ? "OVERDUE!" : `${userContext.activeEpisode.daysRemaining} days left`}` : "No active episode"}
+3. ${!userContext.tasksSetForToday ? "Set today's Three Things" : (userContext.allTasksCompleted ? "All tasks done ✓" : "Check on task progress")}
+4. ${!userContext.watchedMindMovieToday && userContext.hasMindMovie ? "Encourage Mind Movie viewing" : "Mind Movie status OK ✓"}
+5. ${!userContext.filledScorecardToday ? "Remind about scorecard (end of day)" : "Scorecard done ✓"}
+6. ${userContext.transformationAnalysis ? "Reference their character transformation - remind them WHO they must become!" : "Encourage them to complete Character Analysis"}`;
     } else if (!chiefAim) {
       contextSection += `\n\n## CHIEF AIM STATUS\n⚠️ The user has not yet defined their Definite Chief Aim. This is critical! Guide them toward Phase 1 (Pre-Production) to craft their Final Scene.`;
     }

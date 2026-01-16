@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useVoiceInput } from "@/hooks/useVoiceInput";
+import { useEpisodes } from "@/hooks/useEpisodes";
 import { supabase } from "@/integrations/supabase/client";
 import {
   DropdownMenu,
@@ -62,6 +63,9 @@ export const DirectorAIChat = ({ isOpen, onToggle, chiefAim, userId }: DirectorA
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const previewAudioRef = useRef<HTMLAudioElement | null>(null);
   const hasLoadedHistory = useRef(false);
+  
+  // Get active episode for context
+  const { activeEpisode, getDaysRemaining } = useEpisodes();
 
   // Load chat history and generate summary on mount
   useEffect(() => {
@@ -344,6 +348,20 @@ export const DirectorAIChat = ({ isOpen, onToggle, chiefAim, userId }: DirectorA
         .filter((m) => m.id !== "welcome") // Exclude welcome message
         .map((m) => ({ role: m.role, content: m.content }));
 
+      // Build user context including active episode
+      const userContext: Record<string, unknown> = {};
+      
+      if (activeEpisode) {
+        userContext.activeEpisode = {
+          title: activeEpisode.title,
+          objective: activeEpisode.objective,
+          deadline: activeEpisode.deadline,
+          daysRemaining: getDaysRemaining(activeEpisode.deadline),
+          alignmentScore: activeEpisode.alignment_score,
+          status: activeEpisode.status,
+        };
+      }
+
       const response = await fetch(CHAT_URL, {
         method: "POST",
         headers: {
@@ -353,6 +371,7 @@ export const DirectorAIChat = ({ isOpen, onToggle, chiefAim, userId }: DirectorA
         body: JSON.stringify({
           messages: [...conversationHistory, { role: "user", content: userMessage }],
           chiefAim,
+          userContext,
         }),
       });
 
