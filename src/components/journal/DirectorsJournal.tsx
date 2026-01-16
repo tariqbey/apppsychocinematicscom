@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { X, Plus, BookOpen, Sparkles, TrendingUp, Target, Loader2, ChevronDown, ChevronUp, Trash2, Bell } from "lucide-react";
+import { X, Plus, BookOpen, Sparkles, TrendingUp, Target, Loader2, ChevronDown, ChevronUp, Trash2, Bell, Save, BookMarked, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
@@ -19,6 +19,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useJournal, JournalEntry, MOOD_OPTIONS, TAG_OPTIONS } from "@/hooks/useJournal";
+import { useSavedInsights, SavedInsight } from "@/hooks/useSavedInsights";
 import { MoodTrendChart } from "./MoodTrendChart";
 import { NotificationSettings } from "@/components/notifications/NotificationSettings";
 import { format } from "date-fns";
@@ -42,6 +43,14 @@ export function DirectorsJournal({ isOpen, onClose }: DirectorsJournalProps) {
     getAccountabilityReport,
   } = useJournal();
 
+  const {
+    insights: savedInsights,
+    isLoading: insightsLoading,
+    fetchInsights,
+    saveInsight,
+    deleteInsight,
+  } = useSavedInsights();
+
   const [activeTab, setActiveTab] = useState("write");
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
@@ -50,12 +59,15 @@ export function DirectorsJournal({ isOpen, onClose }: DirectorsJournalProps) {
   const [expandedEntry, setExpandedEntry] = useState<string | null>(null);
   const [progressReport, setProgressReport] = useState<string | null>(null);
   const [accountabilityReport, setAccountabilityReport] = useState<string | null>(null);
+  const [savingProgress, setSavingProgress] = useState(false);
+  const [savingAccountability, setSavingAccountability] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
       fetchEntries();
+      fetchInsights();
     }
-  }, [isOpen, fetchEntries]);
+  }, [isOpen, fetchEntries, fetchInsights]);
 
   const handleSubmit = async () => {
     if (!content.trim()) return;
@@ -85,9 +97,23 @@ export function DirectorsJournal({ isOpen, onClose }: DirectorsJournalProps) {
     if (report) setProgressReport(report);
   };
 
+  const handleSaveProgressReport = async () => {
+    if (!progressReport) return;
+    setSavingProgress(true);
+    await saveInsight("progress", `Weekly Progress Report - ${format(new Date(), "MMM d, yyyy")}`, progressReport);
+    setSavingProgress(false);
+  };
+
   const handleAccountabilityReport = async () => {
     const report = await getAccountabilityReport();
     if (report) setAccountabilityReport(report);
+  };
+
+  const handleSaveAccountabilityReport = async () => {
+    if (!accountabilityReport) return;
+    setSavingAccountability(true);
+    await saveInsight("accountability", `Accountability Check - ${format(new Date(), "MMM d, yyyy")}`, accountabilityReport);
+    setSavingAccountability(false);
   };
 
   const toggleTag = (tag: string) => {
@@ -122,7 +148,7 @@ export function DirectorsJournal({ isOpen, onClose }: DirectorsJournalProps) {
       <div className="flex-1 overflow-hidden">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col">
           <div className="px-4 pt-4">
-            <TabsList className="grid w-full max-w-md grid-cols-3">
+            <TabsList className="grid w-full max-w-lg grid-cols-4">
               <TabsTrigger value="write" className="gap-2">
                 <Plus className="w-4 h-4" />
                 Write
@@ -134,6 +160,10 @@ export function DirectorsJournal({ isOpen, onClose }: DirectorsJournalProps) {
               <TabsTrigger value="insights" className="gap-2">
                 <Sparkles className="w-4 h-4" />
                 Insights
+              </TabsTrigger>
+              <TabsTrigger value="saved" className="gap-2">
+                <BookMarked className="w-4 h-4" />
+                Saved
               </TabsTrigger>
             </TabsList>
           </div>
@@ -284,6 +314,20 @@ export function DirectorsJournal({ isOpen, onClose }: DirectorsJournalProps) {
                 {progressReport && (
                   <div className="mt-4 p-4 bg-muted/50 rounded-lg">
                     <p className="text-sm whitespace-pre-wrap">{progressReport}</p>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="mt-3 gap-2"
+                      onClick={handleSaveProgressReport}
+                      disabled={savingProgress}
+                    >
+                      {savingProgress ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Save className="w-4 h-4" />
+                      )}
+                      Save to Notes
+                    </Button>
                   </div>
                 )}
               </Card>
@@ -318,6 +362,20 @@ export function DirectorsJournal({ isOpen, onClose }: DirectorsJournalProps) {
                 {accountabilityReport && (
                   <div className="mt-4 p-4 bg-muted/50 rounded-lg">
                     <p className="text-sm whitespace-pre-wrap">{accountabilityReport}</p>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="mt-3 gap-2"
+                      onClick={handleSaveAccountabilityReport}
+                      disabled={savingAccountability}
+                    >
+                      {savingAccountability ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Save className="w-4 h-4" />
+                      )}
+                      Save to Notes
+                    </Button>
                   </div>
                 )}
               </Card>
@@ -359,6 +417,39 @@ export function DirectorsJournal({ isOpen, onClose }: DirectorsJournalProps) {
                 <NotificationSettings compact />
               </Card>
             </div>
+          </TabsContent>
+
+          {/* Saved Insights Tab */}
+          <TabsContent value="saved" className="flex-1 overflow-hidden">
+            <ScrollArea className="h-full p-4">
+              <div className="max-w-2xl mx-auto space-y-4">
+                {insightsLoading ? (
+                  <div className="flex items-center justify-center py-12">
+                    <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+                  </div>
+                ) : savedInsights.length === 0 ? (
+                  <div className="text-center py-12">
+                    <BookMarked className="w-12 h-12 text-muted-foreground/50 mx-auto mb-4" />
+                    <h3 className="font-medium mb-2">No Saved Insights</h3>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      Generate insights in the Insights tab and save them here to track your progress over time.
+                    </p>
+                    <Button onClick={() => setActiveTab("insights")} variant="gold">
+                      <Sparkles className="w-4 h-4 mr-2" />
+                      Generate Insights
+                    </Button>
+                  </div>
+                ) : (
+                  savedInsights.map((insight) => (
+                    <SavedInsightCard
+                      key={insight.id}
+                      insight={insight}
+                      onDelete={() => deleteInsight(insight.id)}
+                    />
+                  ))
+                )}
+              </div>
+            </ScrollArea>
           </TabsContent>
         </Tabs>
       </div>
@@ -477,6 +568,100 @@ function JournalEntryCard({
                   <AlertDialogTitle>Delete Entry?</AlertDialogTitle>
                   <AlertDialogDescription>
                     This will permanently delete this journal entry. This action cannot be undone.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={onDelete} className="bg-destructive hover:bg-destructive/90">
+                    Delete
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
+        </div>
+      )}
+    </Card>
+  );
+}
+
+interface SavedInsightCardProps {
+  insight: SavedInsight;
+  onDelete: () => void;
+}
+
+function SavedInsightCard({ insight, onDelete }: SavedInsightCardProps) {
+  const [expanded, setExpanded] = useState(false);
+
+  const getInsightIcon = () => {
+    switch (insight.insight_type) {
+      case "progress":
+        return <TrendingUp className="w-4 h-4 text-green-400" />;
+      case "accountability":
+        return <Target className="w-4 h-4 text-orange-400" />;
+      default:
+        return <FileText className="w-4 h-4 text-purple-400" />;
+    }
+  };
+
+  const getInsightLabel = () => {
+    switch (insight.insight_type) {
+      case "progress":
+        return "Progress Report";
+      case "accountability":
+        return "Accountability Check";
+      default:
+        return "Entry Analysis";
+    }
+  };
+
+  return (
+    <Card className="overflow-hidden">
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className="w-full p-4 text-left flex items-start justify-between gap-4 hover:bg-muted/50 transition-colors"
+      >
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-1">
+            {getInsightIcon()}
+            <Badge variant="secondary" className="text-xs">
+              {getInsightLabel()}
+            </Badge>
+          </div>
+          <h3 className="font-medium truncate">{insight.title}</h3>
+          <p className="text-sm text-muted-foreground line-clamp-2">
+            {insight.content}
+          </p>
+          <p className="text-xs text-muted-foreground mt-2">
+            {format(new Date(insight.created_at), "MMM d, yyyy 'at' h:mm a")}
+          </p>
+        </div>
+        {expanded ? (
+          <ChevronUp className="w-5 h-5 text-muted-foreground shrink-0" />
+        ) : (
+          <ChevronDown className="w-5 h-5 text-muted-foreground shrink-0" />
+        )}
+      </button>
+
+      {expanded && (
+        <div className="px-4 pb-4 border-t border-border pt-4 space-y-4">
+          <div className="p-4 bg-muted/50 rounded-lg">
+            <p className="text-sm whitespace-pre-wrap">{insight.content}</p>
+          </div>
+          
+          <div className="flex justify-end">
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive hover:bg-destructive/10">
+                  <Trash2 className="w-4 h-4 mr-1" />
+                  Delete
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent className="bg-background border-border">
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Delete saved insight?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This action cannot be undone. This insight will be permanently removed.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>

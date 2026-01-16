@@ -3,6 +3,7 @@ import { Zap, Calendar, CheckCircle, Pause, Play, Trash2, ChevronDown, ChevronUp
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { useEpisodes, Episode } from "@/hooks/useEpisodes";
+import { EpisodeMoviePreview } from "./EpisodeMoviePreview";
 import { format } from "date-fns";
 
 interface EpisodeCardProps {
@@ -87,6 +88,10 @@ export function EpisodeCard({ episode, variant = "compact", onCreateMindMovie }:
               }`}>
                 {episode.alignment_score}%
               </span>
+            )}
+            {/* Movie indicator shown inline */}
+            {episode.mind_movie_script_id && (
+              <EpisodeMoviePreview scriptId={episode.mind_movie_script_id} variant="badge" />
             )}
           </div>
 
@@ -183,11 +188,9 @@ export function EpisodeCard({ episode, variant = "compact", onCreateMindMovie }:
             </Button>
           )}
           
+          {/* Quick Preview Button for Episodes with Movies */}
           {episode.mind_movie_script_id && (
-            <span className="text-xs text-green-400 flex items-center gap-1">
-              <Film className="w-3 h-3" />
-              Movie Created
-            </span>
+            <EpisodeMoviePreview scriptId={episode.mind_movie_script_id} variant="button" />
           )}
 
           {episode.status !== "completed" && (

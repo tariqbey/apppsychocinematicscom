@@ -966,6 +966,33 @@ export type Database = {
         }
         Relationships: []
       }
+      saved_insights: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          insight_type: string
+          title: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          insight_type: string
+          title: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          insight_type?: string
+          title?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       timeline_projects: {
         Row: {
           created_at: string
