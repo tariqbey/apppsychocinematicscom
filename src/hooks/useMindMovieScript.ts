@@ -34,6 +34,8 @@ export interface MindMovieScript {
   song_lyrics?: string | null;
   music_style?: string | null;
   suno_task_id?: string | null;
+  // Reference photo for AI generation
+  reference_photo_url?: string | null;
 }
 
 export function useMindMovieScript() {
