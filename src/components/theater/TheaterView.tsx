@@ -37,6 +37,7 @@ export const TheaterView = ({ onClose }: TheaterViewProps) => {
   const [newTaskText, setNewTaskText] = useState("");
   const [isLoadingTasks, setIsLoadingTasks] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const playerRef = useRef<HTMLDivElement>(null);
   const { profile, updateProfile, recordViewing } = useUserProfile();
   const { user } = useAuth();
   const { toast } = useToast();
@@ -212,13 +213,46 @@ export const TheaterView = ({ onClose }: TheaterViewProps) => {
     }
   };
 
-  const toggleFullscreen = () => {
-    if (videoRef.current) {
-      if (document.fullscreenElement) {
-        document.exitFullscreen();
-      } else {
-        videoRef.current.requestFullscreen();
+  const toggleFullscreen = async () => {
+    const playerEl = playerRef.current;
+    const videoEl = videoRef.current;
+
+    // If we're already in fullscreen, exit.
+    if (document.fullscreenElement) {
+      try {
+        await document.exitFullscreen();
+      } catch {
+        // ignore
       }
+      return;
+    }
+
+    // Prefer fullscreen on the container so controls/layout fill the screen.
+    if (playerEl?.requestFullscreen) {
+      try {
+        await playerEl.requestFullscreen();
+        return;
+      } catch {
+        // fall through
+      }
+    }
+
+    // Fallback to video fullscreen when supported.
+    if (videoEl?.requestFullscreen) {
+      try {
+        await videoEl.requestFullscreen();
+        return;
+      } catch {
+        // fall through
+      }
+    }
+
+    // iOS Safari fallback: native video fullscreen.
+    const anyVideo = videoEl as unknown as { webkitEnterFullscreen?: () => void } | null;
+    try {
+      anyVideo?.webkitEnterFullscreen?.();
+    } catch {
+      // ignore
     }
   };
 
@@ -266,24 +300,18 @@ export const TheaterView = ({ onClose }: TheaterViewProps) => {
         </div>
 
         {/* Video Player Area - Responsive with full-width on mobile */}
-        <div className="flex-1 flex items-center justify-center p-2 sm:p-4 md:p-8 relative overflow-hidden">
-          <div className="w-full h-full sm:h-auto sm:max-w-5xl sm:aspect-video rounded-lg sm:rounded-xl bg-card border border-border overflow-hidden relative group">
+          <div className="flex-1 flex items-center justify-center p-2 sm:p-4 md:p-8 relative overflow-hidden">
+            <div ref={playerRef} className="theater-player w-full h-full sm:h-auto sm:max-w-5xl sm:aspect-video rounded-lg sm:rounded-xl bg-card border border-border overflow-hidden relative group">
             {videoUrl ? (
               <>
                 <video
                   ref={videoRef}
                   src={videoUrl}
-                  className="w-full h-full object-contain bg-black landscape:object-cover"
+                  className="theater-video w-full h-full object-contain bg-black"
                   playsInline
                   webkit-playsinline="true"
                   controls={false}
                   onClick={togglePlay}
-                  style={{ 
-                    maxHeight: '100%', 
-                    maxWidth: '100%',
-                    width: '100%',
-                    height: '100%'
-                  }}
                 />
 
                 {/* Video Controls Overlay - Always visible on mobile, hover on desktop */}
