@@ -1,14 +1,21 @@
-import { useState, useCallback, useMemo } from "react";
-import { Image, Film, RefreshCw, Loader2, CheckCircle, Zap, Play, ImagePlus, Video, Coins } from "lucide-react";
+import { useState, useCallback, useMemo, useRef } from "react";
+import { Image, Film, RefreshCw, Loader2, CheckCircle, Zap, Play, ImagePlus, Video, Coins, Upload, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useProductionCredits } from "@/hooks/useProductionCredits";
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
 import type { Scene } from "@/hooks/useMindMovieScript";
 import type { ImageGenerationParams, VideoGenerationParams } from "@/hooks/useMediaGeneration";
 import { toast } from "sonner";
-
 interface VisualsStepProps {
   scenes: Scene[];
   onUpdateScene: (order: number, updates: Partial<Scene>) => void;
@@ -30,11 +37,16 @@ export function VisualsStep({
 }: VisualsStepProps) {
   const [generatingImageForScene, setGeneratingImageForScene] = useState<number | null>(null);
   const [generatingVideoForScene, setGeneratingVideoForScene] = useState<number | null>(null);
+  const [uploadingImageForScene, setUploadingImageForScene] = useState<number | null>(null);
   const [isBatchGeneratingImages, setIsBatchGeneratingImages] = useState(false);
   const [isBatchGeneratingVideos, setIsBatchGeneratingVideos] = useState(false);
   const [batchProgress, setBatchProgress] = useState({ current: 0, total: 0, type: "" });
+  
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [pendingUploadScene, setPendingUploadScene] = useState<number | null>(null);
 
   const { estimateCreditCost } = useProductionCredits();
+  const { user } = useAuth();
 
   const sortedScenes = [...scenes].sort((a, b) => a.order - b.order);
   
@@ -74,6 +86,56 @@ export function VisualsStep({
       setGeneratingImageForScene(null);
     }
   }, [scenes, generateImage, onUpdateScene]);
+
+  const handleUploadSceneImage = useCallback(async (sceneOrder: number, file: File) => {
+    if (!user?.id) {
+      toast.error("Please sign in to upload images");
+      return;
+    }
+
+    setUploadingImageForScene(sceneOrder);
+    try {
+      const fileExt = file.name.split('.').pop()?.toLowerCase() || 'png';
+      const filePath = `${user.id}/storyboard/scene-${sceneOrder}-${Date.now()}.${fileExt}`;
+
+      const { data, error } = await supabase.storage
+        .from('generated-media')
+        .upload(filePath, file, { upsert: true });
+
+      if (error) throw error;
+
+      const { data: urlData } = supabase.storage
+        .from('generated-media')
+        .getPublicUrl(filePath);
+
+      if (urlData?.publicUrl) {
+        onUpdateScene(sceneOrder, { generatedImageUrl: urlData.publicUrl });
+        toast.success(`Image uploaded for Scene ${sceneOrder}!`);
+      }
+    } catch (error) {
+      console.error("Error uploading image:", error);
+      toast.error("Failed to upload image");
+    } finally {
+      setUploadingImageForScene(null);
+      setPendingUploadScene(null);
+    }
+  }, [user?.id, onUpdateScene]);
+
+  const triggerFileUpload = useCallback((sceneOrder: number) => {
+    setPendingUploadScene(sceneOrder);
+    fileInputRef.current?.click();
+  }, []);
+
+  const handleFileInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file && pendingUploadScene !== null) {
+      handleUploadSceneImage(pendingUploadScene, file);
+    }
+    // Reset file input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  }, [pendingUploadScene, handleUploadSceneImage]);
 
   const handleGenerateSceneVideo = useCallback(async (sceneOrder: number) => {
     const scene = scenes.find(s => s.order === sceneOrder);
@@ -180,14 +242,24 @@ export function VisualsStep({
     }
   }, [scenesWithoutVideos, generateVideo, onUpdateScene]);
 
-  const isBusy = isBatchGeneratingImages || isBatchGeneratingVideos || generatingImageForScene !== null || generatingVideoForScene !== null;
+  const isBusy = isBatchGeneratingImages || isBatchGeneratingVideos || generatingImageForScene !== null || generatingVideoForScene !== null || uploadingImageForScene !== null;
 
   return (
     <div className="space-y-6">
+      {/* Hidden file input for uploads */}
+      <input
+        type="file"
+        ref={fileInputRef}
+        onChange={handleFileInputChange}
+        accept="image/*"
+        className="hidden"
+      />
+      
       <div>
         <h2 className="text-2xl font-bold mb-2">Generate Visuals</h2>
         <p className="text-muted-foreground">
-          Generate images and videos for your {totalScenes} approved scene{totalScenes > 1 ? 's' : ''}.
+          Generate images and videos for your {totalScenes} approved scene{totalScenes > 1 ? 's' : ''}. 
+          You can also <span className="text-primary">upload your own reference images</span> for free!
         </p>
       </div>
 
@@ -363,6 +435,14 @@ export function VisualsStep({
                     </div>
                   </div>
                 )}
+                {uploadingImageForScene === scene.order && (
+                  <div className="absolute inset-0 bg-background/80 flex items-center justify-center">
+                    <div className="text-center">
+                      <Loader2 className="w-8 h-8 animate-spin text-green-500 mx-auto mb-2" />
+                      <span className="text-sm">Uploading image...</span>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Prompt Preview */}
@@ -372,22 +452,37 @@ export function VisualsStep({
 
               {/* Action Buttons */}
               <div className="flex gap-2">
-                <Button
-                  variant={scene.generatedImageUrl ? "outline" : "default"}
-                  size="sm"
-                  onClick={() => handleGenerateSceneImage(scene.order)}
-                  disabled={isBusy}
-                  className="flex-1 gap-1"
-                >
-                  {generatingImageForScene === scene.order ? (
-                    <Loader2 className="w-3 h-3 animate-spin" />
-                  ) : scene.generatedImageUrl ? (
-                    <RefreshCw className="w-3 h-3" />
-                  ) : (
-                    <Image className="w-3 h-3" />
-                  )}
-                  {scene.generatedImageUrl ? "Regen" : "Image"}
-                </Button>
+                {/* Image Dropdown */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant={scene.generatedImageUrl ? "outline" : "default"}
+                      size="sm"
+                      disabled={isBusy}
+                      className="flex-1 gap-1"
+                    >
+                      {generatingImageForScene === scene.order || uploadingImageForScene === scene.order ? (
+                        <Loader2 className="w-3 h-3 animate-spin" />
+                      ) : scene.generatedImageUrl ? (
+                        <RefreshCw className="w-3 h-3" />
+                      ) : (
+                        <Image className="w-3 h-3" />
+                      )}
+                      {scene.generatedImageUrl ? "Replace" : "Image"}
+                      <ChevronDown className="w-3 h-3 ml-1" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="bg-popover">
+                    <DropdownMenuItem onClick={() => handleGenerateSceneImage(scene.order)}>
+                      <ImagePlus className="w-4 h-4 mr-2" />
+                      Generate with AI
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => triggerFileUpload(scene.order)}>
+                      <Upload className="w-4 h-4 mr-2" />
+                      Upload Reference (Free)
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
                 
                 <Button
                   variant={scene.generatedVideoUrl ? "outline" : "secondary"}
