@@ -1703,10 +1703,16 @@ export function MindMovieScriptWizard({
             )}
 
             {step === 4 && (
-              <Button onClick={() => setStep(5)}>
-                Continue to Finalize
-                <Film className="w-4 h-4 ml-2" />
-              </Button>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={() => setStep(5)}>
+                  Skip Soundtrack
+                  <ChevronRight className="w-4 h-4 ml-1" />
+                </Button>
+                <Button onClick={() => setStep(5)}>
+                  Continue to Finalize
+                  <Film className="w-4 h-4 ml-2" />
+                </Button>
+              </div>
             )}
 
             {step === 5 && (
