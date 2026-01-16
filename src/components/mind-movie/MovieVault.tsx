@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef } from "react";
-import { Film, Plus, Play, Star, Trash2, Copy, Edit3, Check, Loader2, X, Clapperboard, Eye, HardDrive, Download, Share2 } from "lucide-react";
+import { Film, Plus, Play, Star, Trash2, Copy, Edit3, Check, Loader2, X, Clapperboard, Eye, HardDrive, Download, Share2, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Progress } from "@/components/ui/progress";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -20,9 +21,12 @@ import { useMindMovies, MindMovie } from "@/hooks/useMindMovies";
 import { useStorageUsage } from "@/hooks/useStorageUsage";
 import { MoviePreviewModal } from "./MoviePreviewModal";
 import { useFeaturedContent } from "@/hooks/useFeaturedContent";
+import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { toast } from "sonner";
+
+type VaultFilter = "all" | "main" | "episode";
 
 interface MovieVaultProps {
   isOpen: boolean;
@@ -39,13 +43,35 @@ export function MovieVault({ isOpen, onClose, onSelectMovie, onCreateNew }: Movi
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [settingActiveId, setSettingActiveId] = useState<string | null>(null);
   const [previewMovie, setPreviewMovie] = useState<MindMovie | null>(null);
+  const [vaultFilter, setVaultFilter] = useState<VaultFilter>("all");
+  const [episodeMovieIds, setEpisodeMovieIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (isOpen) {
       fetchAllMovies();
       calculateUsage();
+      // Fetch episode-linked movie IDs
+      const fetchEpisodeMovies = async () => {
+        const { data } = await supabase
+          .from("episodes")
+          .select("mind_movie_script_id")
+          .not("mind_movie_script_id", "is", null);
+        if (data) {
+          setEpisodeMovieIds(new Set(data.map(e => e.mind_movie_script_id!)));
+        }
+      };
+      fetchEpisodeMovies();
     }
   }, [isOpen, fetchAllMovies, calculateUsage]);
+
+  // Filter movies based on selected filter
+  const filteredMovies = movies.filter(movie => {
+    if (vaultFilter === "all") return true;
+    const isEpisodeMovie = episodeMovieIds.has(movie.id) || movie.title?.startsWith("Episode:");
+    if (vaultFilter === "episode") return isEpisodeMovie;
+    if (vaultFilter === "main") return !isEpisodeMovie;
+    return true;
+  });
 
   const handleSetActive = async (movieId: string) => {
     setSettingActiveId(movieId);
@@ -119,30 +145,58 @@ export function MovieVault({ isOpen, onClose, onSelectMovie, onCreateNew }: Movi
         </div>
       </div>
 
+      {/* Filter Tabs */}
+      <div className="px-4 border-b border-border">
+        <Tabs value={vaultFilter} onValueChange={(v) => setVaultFilter(v as VaultFilter)}>
+          <TabsList className="bg-transparent border-b-0">
+            <TabsTrigger value="all" className="data-[state=active]:bg-muted">
+              All Movies
+            </TabsTrigger>
+            <TabsTrigger value="main" className="data-[state=active]:bg-muted">
+              <Film className="w-3 h-3 mr-1.5" />
+              Main Movies
+            </TabsTrigger>
+            <TabsTrigger value="episode" className="data-[state=active]:bg-muted">
+              <Zap className="w-3 h-3 mr-1.5" />
+              Episode Movies
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
+      </div>
+
       {/* Content */}
       <ScrollArea className="flex-1 p-4">
         {isLoading ? (
           <div className="flex items-center justify-center py-12">
             <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
           </div>
-        ) : movies.length === 0 ? (
+        ) : filteredMovies.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-center">
             <Film className="w-16 h-16 text-muted-foreground/50 mb-4" />
-            <h3 className="text-lg font-medium mb-2">No Mind Movies Yet</h3>
+            <h3 className="text-lg font-medium mb-2">
+              {vaultFilter === "all" ? "No Mind Movies Yet" : 
+               vaultFilter === "episode" ? "No Episode Movies Yet" : "No Main Movies Yet"}
+            </h3>
             <p className="text-muted-foreground mb-6 max-w-md">
-              Create your first Mind Movie to visualize your goals and manifest your dreams.
+              {vaultFilter === "episode" 
+                ? "Create a Mind Movie from your episodes to visualize your short-term sprints."
+                : "Create your first Mind Movie to visualize your goals and manifest your dreams."
+              }
             </p>
-            <Button variant="gold" onClick={onCreateNew}>
-              <Plus className="w-4 h-4 mr-2" />
-              Create Your First Movie
-            </Button>
+            {vaultFilter !== "episode" && (
+              <Button variant="gold" onClick={onCreateNew}>
+                <Plus className="w-4 h-4 mr-2" />
+                Create Your First Movie
+              </Button>
+            )}
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {movies.map((movie) => (
+            {filteredMovies.map((movie) => (
               <MovieCard
                 key={movie.id}
                 movie={movie}
+                isEpisodeMovie={episodeMovieIds.has(movie.id) || movie.title?.startsWith("Episode:")}
                 isDeleting={deletingId === movie.id}
                 isSettingActive={settingActiveId === movie.id}
                 onSelect={() => onSelectMovie(movie)}
@@ -202,6 +256,7 @@ export function MovieVault({ isOpen, onClose, onSelectMovie, onCreateNew }: Movi
 
 interface MovieCardProps {
   movie: MindMovie;
+  isEpisodeMovie?: boolean;
   isDeleting: boolean;
   isSettingActive: boolean;
   onSelect: () => void;
@@ -215,6 +270,7 @@ interface MovieCardProps {
 
 function MovieCard({
   movie,
+  isEpisodeMovie,
   isDeleting,
   isSettingActive,
   onSelect,
@@ -299,6 +355,14 @@ function MovieCard({
           <div className="absolute top-2 left-2 flex items-center gap-1 px-2 py-1 rounded-md bg-gold/90 text-primary-foreground text-xs font-medium">
             <Star className="w-3 h-3 fill-current" />
             Active
+          </div>
+        )}
+
+        {/* Episode badge */}
+        {isEpisodeMovie && !movie.is_active && (
+          <div className="absolute top-2 left-2 flex items-center gap-1 px-2 py-1 rounded-md bg-amber-500/90 text-primary-foreground text-xs font-medium">
+            <Zap className="w-3 h-3" />
+            Episode
           </div>
         )}
 

@@ -7,16 +7,53 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useEpisodes } from "@/hooks/useEpisodes";
+import { useEpisodes, Episode } from "@/hooks/useEpisodes";
 import { EpisodeCard } from "./EpisodeCard";
 import { EpisodeWizard } from "./EpisodeWizard";
+import { MindMovieScriptWizard } from "@/components/mind-movie/MindMovieScriptWizard";
+import { supabase } from "@/integrations/supabase/client";
 
 type StatusFilter = "all" | "active" | "completed" | "paused" | "abandoned";
 
 export function EpisodesList() {
-  const { episodes, loading } = useEpisodes();
+  const { episodes, loading, updateEpisode } = useEpisodes();
   const [showWizard, setShowWizard] = useState(false);
   const [filter, setFilter] = useState<StatusFilter>("all");
+  const [movieWizardEpisode, setMovieWizardEpisode] = useState<Episode | null>(null);
+  const [chiefAim, setChiefAim] = useState<{ what?: string; byWhen?: string; exchange?: string; plan?: string }>({});
+
+  // Fetch chief aim for movie wizard
+  const fetchChiefAim = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    
+    const { data } = await supabase
+      .from("user_profiles")
+      .select("chief_aim_what, chief_aim_by_when, chief_aim_exchange, chief_aim_plan")
+      .eq("user_id", user.id)
+      .single();
+    
+    if (data) {
+      setChiefAim({
+        what: data.chief_aim_what || undefined,
+        byWhen: data.chief_aim_by_when || undefined,
+        exchange: data.chief_aim_exchange || undefined,
+        plan: data.chief_aim_plan || undefined,
+      });
+    }
+  };
+
+  const handleCreateMindMovie = async (episode: Episode) => {
+    await fetchChiefAim();
+    setMovieWizardEpisode(episode);
+  };
+
+  const handleEpisodeMovieCreated = async (scriptId: string) => {
+    if (movieWizardEpisode) {
+      await updateEpisode(movieWizardEpisode.id, { mind_movie_script_id: scriptId });
+      setMovieWizardEpisode(null);
+    }
+  };
 
   const filteredEpisodes = episodes.filter(ep => 
     filter === "all" ? true : ep.status === filter
@@ -113,7 +150,11 @@ export function EpisodesList() {
       ) : (
         <div className="grid gap-4">
           {filteredEpisodes.map((episode) => (
-            <EpisodeCard key={episode.id} episode={episode} />
+            <EpisodeCard 
+              key={episode.id} 
+              episode={episode} 
+              onCreateMindMovie={() => handleCreateMindMovie(episode)}
+            />
           ))}
         </div>
       )}
@@ -121,6 +162,24 @@ export function EpisodesList() {
       {/* Episode Wizard Modal */}
       {showWizard && (
         <EpisodeWizard onClose={() => setShowWizard(false)} />
+      )}
+
+      {/* Mind Movie Wizard for Episodes */}
+      {movieWizardEpisode && (
+        <MindMovieScriptWizard
+          isOpen={!!movieWizardEpisode}
+          onClose={() => setMovieWizardEpisode(null)}
+          chiefAim={chiefAim}
+          episodeMode={true}
+          episode={{
+            id: movieWizardEpisode.id,
+            title: movieWizardEpisode.title,
+            objective: movieWizardEpisode.objective,
+            deadline: movieWizardEpisode.deadline,
+            alignment_score: movieWizardEpisode.alignment_score,
+          }}
+          onEpisodeMovieCreated={handleEpisodeMovieCreated}
+        />
       )}
     </div>
   );
