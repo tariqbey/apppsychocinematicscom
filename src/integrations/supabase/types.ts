@@ -1084,10 +1084,12 @@ export type Database = {
           created_at: string
           created_by: string | null
           description: string | null
+          duration_seconds: number | null
           id: string
           is_active: boolean | null
           is_live: boolean | null
           name: string
+          source_type: string | null
           stream_url: string | null
           updated_at: string
         }
@@ -1095,10 +1097,12 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           description?: string | null
+          duration_seconds?: number | null
           id?: string
           is_active?: boolean | null
           is_live?: boolean | null
           name: string
+          source_type?: string | null
           stream_url?: string | null
           updated_at?: string
         }
@@ -1106,12 +1110,56 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           description?: string | null
+          duration_seconds?: number | null
           id?: string
           is_active?: boolean | null
           is_live?: boolean | null
           name?: string
+          source_type?: string | null
           stream_url?: string | null
           updated_at?: string
+        }
+        Relationships: []
+      }
+      radio_submissions: {
+        Row: {
+          admin_notes: string | null
+          artist_name: string | null
+          audio_url: string
+          id: string
+          media_id: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          submitted_at: string
+          track_title: string
+          user_id: string
+        }
+        Insert: {
+          admin_notes?: string | null
+          artist_name?: string | null
+          audio_url: string
+          id?: string
+          media_id: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          submitted_at?: string
+          track_title: string
+          user_id: string
+        }
+        Update: {
+          admin_notes?: string | null
+          artist_name?: string | null
+          audio_url?: string
+          id?: string
+          media_id?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          submitted_at?: string
+          track_title?: string
+          user_id?: string
         }
         Relationships: []
       }
