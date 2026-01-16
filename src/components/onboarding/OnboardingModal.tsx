@@ -8,7 +8,9 @@ import {
   ChevronLeft,
   Sparkles,
   X,
-  Check
+  Check,
+  Music,
+  Radio
 } from "lucide-react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -28,7 +30,7 @@ const onboardingSteps: OnboardingStep[] = [
     icon: <Sparkles className="w-12 h-12" />,
     title: "Welcome, Director!",
     description: "You're about to embark on a transformational journey. Psycho-Cinematics™ treats your life as a movie where YOU are both the Director and the star.",
-    tip: "This quick tour will show you the 4 key steps to get started."
+    tip: "This quick tour will show you the 5 key steps to get started."
   },
   {
     id: "chief-aim",
@@ -52,9 +54,16 @@ const onboardingSteps: OnboardingStep[] = [
     tip: "Aim for a 90-day viewing streak for maximum transformation."
   },
   {
+    id: "soundtrack",
+    icon: <Music className="w-12 h-12" />,
+    title: "Step 4: Generate Soundtracks & Listen",
+    description: "Create AI-powered custom soundtracks for your Mind Movie with 50+ genres. Tune into Director Radio for curated motivation music.",
+    tip: "Submit your best tracks to be featured on Director Radio!"
+  },
+  {
     id: "daily-ritual",
     icon: <Calendar className="w-12 h-12" />,
-    title: "Step 4: Daily Rituals",
+    title: "Step 5: Daily Rituals",
     description: "Each morning, read your Chief Aim, watch your Mind Movie, and set your Three Things. Each evening, complete your Director Scorecard.",
     tip: "Consistency is the key. Small daily actions compound into massive change."
   }
