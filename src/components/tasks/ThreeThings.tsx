@@ -242,14 +242,9 @@ export function ThreeThings({ showAnalyticsDefault = false }: ThreeThingsProps) 
   };
 
   const addSuggestion = async (suggestion: Suggestion) => {
-    console.log("[ThreeThings] addSuggestion called", { suggestion, tasksLength: tasks.length, user: !!user });
+    if (!user) return;
 
-    if (!user) {
-      console.warn("[ThreeThings] No user, aborting addSuggestion");
-      return;
-    }
     if (tasks.length >= 3) {
-      console.warn("[ThreeThings] Max tasks reached");
       toast({
         title: "Maximum 3 tasks",
         description: "Delete a task first to add this suggestion.",
@@ -259,7 +254,6 @@ export function ThreeThings({ showAnalyticsDefault = false }: ThreeThingsProps) 
     }
 
     const dateStr = format(selectedDate, "yyyy-MM-dd");
-    console.log("[ThreeThings] Inserting task for", dateStr);
 
     const { data, error } = await supabase
       .from("daily_tasks")
@@ -273,12 +267,13 @@ export function ThreeThings({ showAnalyticsDefault = false }: ThreeThingsProps) 
       .single();
 
     if (error) {
-      console.error("[ThreeThings] Insert error", error);
       toast({ title: "Error", description: "Failed to add task", variant: "destructive" });
-    } else if (data) {
-      console.log("[ThreeThings] Insert success", data);
+      return;
+    }
+
+    if (data) {
       setTasks([...tasks, data]);
-      setSuggestions(suggestions.filter(s => s.task !== suggestion.task));
+      setSuggestions(suggestions.filter((s) => s.task !== suggestion.task));
       toast({ title: "Task added", description: suggestion.task });
     }
   };
@@ -585,9 +580,11 @@ export function ThreeThings({ showAnalyticsDefault = false }: ThreeThingsProps) 
                     <Button
                       size="sm"
                       variant="outline"
-                      className="shrink-0 h-8 text-xs border-gold/30 hover:bg-gold/10"
+                      className={`shrink-0 h-8 text-xs border-gold/30 hover:bg-gold/10 ${
+                        tasks.length >= 3 ? "opacity-60" : ""
+                      }`}
                       onClick={() => addSuggestion(suggestion)}
-                      disabled={tasks.length >= 3}
+                      aria-disabled={tasks.length >= 3}
                     >
                       <Plus className="h-3 w-3 mr-1" />
                       Add
