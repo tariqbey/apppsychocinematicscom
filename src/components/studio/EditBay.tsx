@@ -14,15 +14,22 @@ export interface EditBayProps {
   onClose: () => void;
   initialPrompt?: string;
   timelineImportData?: TimelineExportData;
+  // Scene context for returning to script wizard
+  sceneContext?: {
+    sceneOrder: number;
+    sceneTitle: string;
+    onImageSaved?: (imageUrl: string, sceneOrder: number) => void;
+  };
 }
 
-export function EditBay({ onClose, initialPrompt, timelineImportData }: EditBayProps) {
+export function EditBay({ onClose, initialPrompt, timelineImportData, sceneContext }: EditBayProps) {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState(timelineImportData ? "timeline" : "image");
   const [galleryKey, setGalleryKey] = useState(0);
   const [pendingTimelineMedia, setPendingTimelineMedia] = useState<GeneratedMedia | null>(null);
   const [pendingTimelineMediaItems, setPendingTimelineMediaItems] = useState<GeneratedMedia[] | null>(null);
   const previousTab = useRef(activeTab);
+  const [lastGeneratedImageUrl, setLastGeneratedImageUrl] = useState<string | null>(null);
 
   const refreshGallery = () => {
     setGalleryKey(prev => prev + 1);
@@ -51,15 +58,37 @@ export function EditBay({ onClose, initialPrompt, timelineImportData }: EditBayP
 
   const handleImageGenerated = (url: string) => {
     refreshGallery();
-    toast({
-      title: "Image Generated!",
-      description: "Your image has been saved to the gallery.",
-      action: (
-        <Button variant="outline" size="sm" onClick={() => setActiveTab("gallery")}>
-          View Gallery
-        </Button>
-      ),
-    });
+    setLastGeneratedImageUrl(url);
+    
+    // If we have scene context, offer to save to scene
+    if (sceneContext?.onImageSaved) {
+      toast({
+        title: "Image Generated!",
+        description: `Ready to use for Scene ${sceneContext.sceneOrder}`,
+        action: (
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => {
+              sceneContext.onImageSaved?.(url, sceneContext.sceneOrder);
+              onClose();
+            }}
+          >
+            Save & Return to Script
+          </Button>
+        ),
+      });
+    } else {
+      toast({
+        title: "Image Generated!",
+        description: "Your image has been saved to the gallery.",
+        action: (
+          <Button variant="outline" size="sm" onClick={() => setActiveTab("gallery")}>
+            View Gallery
+          </Button>
+        ),
+      });
+    }
   };
 
   const handleAddToTimeline = (media: GeneratedMedia) => {
@@ -99,13 +128,31 @@ export function EditBay({ onClose, initialPrompt, timelineImportData }: EditBayP
           </div>
           <div>
             <h2 className="text-xl font-display tracking-wide">The Edit Bay</h2>
-            <p className="text-sm text-muted-foreground">AI Media Generation Studio</p>
+            <p className="text-sm text-muted-foreground">
+              {sceneContext 
+                ? `Generating for Scene ${sceneContext.sceneOrder}: ${sceneContext.sceneTitle}` 
+                : "AI Media Generation Studio"}
+            </p>
           </div>
         </div>
 
-        <Button variant="ghost" size="icon" onClick={onClose}>
-          <X className="w-5 h-5" />
-        </Button>
+        <div className="flex items-center gap-2">
+          {sceneContext && lastGeneratedImageUrl && (
+            <Button 
+              variant="default" 
+              size="sm"
+              onClick={() => {
+                sceneContext.onImageSaved?.(lastGeneratedImageUrl, sceneContext.sceneOrder);
+                onClose();
+              }}
+            >
+              Save & Return to Script
+            </Button>
+          )}
+          <Button variant="ghost" size="icon" onClick={onClose}>
+            <X className="w-5 h-5" />
+          </Button>
+        </div>
       </div>
 
       {/* Main Content */}

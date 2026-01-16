@@ -98,7 +98,7 @@ interface MindMovieScriptWizardProps {
     plan?: string;
   };
   movieId?: string;
-  onOpenEditBay?: (prompt: string) => void;
+  onOpenEditBay?: (prompt: string, sceneContext?: { sceneOrder: number; sceneTitle: string }) => void;
   onAddToTimeline?: (data: TimelineExportData) => void;
   transformationAnalysis?: {
     currentSelf?: { archetype?: string };
@@ -121,6 +121,8 @@ interface MindMovieScriptWizardProps {
   episodeMode?: boolean;
   episode?: EpisodeData;
   onEpisodeMovieCreated?: (scriptId: string) => void;
+  // For receiving saved images from EditBay
+  onSceneImageSaved?: (imageUrl: string, sceneOrder: number) => void;
 }
 
 const VISUAL_STYLES = [
@@ -352,9 +354,9 @@ export function MindMovieScriptWizard({
     );
   };
 
-  const handleGenerateInEditBay = (prompt: string) => {
+  const handleGenerateInEditBay = (prompt: string, sceneOrder: number, sceneTitle: string) => {
     if (onOpenEditBay) {
-      onOpenEditBay(prompt);
+      onOpenEditBay(prompt, { sceneOrder, sceneTitle });
       onClose();
     } else {
       navigator.clipboard.writeText(prompt);
