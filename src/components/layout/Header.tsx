@@ -25,6 +25,7 @@ import { GamificationPanel } from "@/components/gamification/GamificationPanel";
 import { Leaderboard } from "@/components/leaderboard/Leaderboard";
 import { ProductionCreditsDisplay } from "@/components/studio/ProductionCreditsDisplay";
 import psychoCinematicsLogo from "@/assets/psycho-cinematics-logo.png";
+import { MobileNavSheet } from "./MobileNavSheet";
 
 export const Header = () => {
   const [showAuthModal, setShowAuthModal] = useState(false);
@@ -61,14 +62,17 @@ export const Header = () => {
     <>
       <header className="fixed top-0 left-0 right-0 z-40 border-b border-border/50 bg-background/80 backdrop-blur-xl">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-          {/* Logo - smaller on mobile to prevent overlap with back button */}
-          <Link to="/" className="flex items-center gap-3 hover:opacity-90 transition-opacity shrink-0">
-            <img 
-              src={psychoCinematicsLogo} 
-              alt="Psycho-Cinematics" 
-              className="h-12 w-12 sm:h-16 sm:w-16 md:h-[96px] md:w-[96px] object-contain"
-            />
-          </Link>
+          <div className="flex items-center gap-2 min-w-0">
+            <MobileNavSheet isAuthenticated={!!user} isAdmin={isAdmin} />
+            {/* Logo - smaller on mobile to prevent overlap with back button */}
+            <Link to="/" className="flex items-center gap-3 hover:opacity-90 transition-opacity shrink-0">
+              <img 
+                src={psychoCinematicsLogo} 
+                alt="Psycho-Cinematics" 
+                className="h-12 w-12 sm:h-16 sm:w-16 md:h-[96px] md:w-[96px] object-contain"
+              />
+            </Link>
+          </div>
 
           {/* Help Navigation - Always Visible */}
           <nav className="hidden md:flex items-center gap-1 mr-4">
