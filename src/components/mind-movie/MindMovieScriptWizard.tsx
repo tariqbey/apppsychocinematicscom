@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { X, ChevronLeft, ChevronRight, Sparkles, Save, Clapperboard, Palette, Layout, Wand2, Music, Check, RefreshCw, Plus, User, ChevronDown, Trash2, HelpCircle, ExternalLink, Film, Zap, Loader2, CheckSquare, Square, Crown, ClipboardList } from "lucide-react";
+import { X, ChevronLeft, ChevronRight, Sparkles, Save, Clapperboard, Palette, Layout, Wand2, Music, Check, RefreshCw, Plus, User, ChevronDown, Trash2, HelpCircle, ExternalLink, Film, Zap, Loader2, CheckSquare, Square, Crown, ClipboardList, Image as ImageIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
@@ -26,6 +26,7 @@ import { CreditCostEstimate } from "./CreditCostEstimate";
 import { LyricsEditor } from "./LyricsEditor";
 import { SoundtrackPlayer } from "./SoundtrackPlayer";
 import { VisionQuestionnaire, buildDescriptionFromAnswers, DEFAULT_VISION_ANSWERS, type VisionAnswers } from "./VisionQuestionnaire";
+import { VisualsStep } from "./VisualsStep";
 import { useMindMovieScript, type Scene } from "@/hooks/useMindMovieScript";
 import { useMindMovieMusic, MUSIC_STYLES, type MusicStyle } from "@/hooks/useMindMovieMusic";
 import { useMediaGeneration } from "@/hooks/useMediaGeneration";
@@ -684,7 +685,7 @@ export function MindMovieScriptWizard({
 
   if (!isOpen) return null;
 
-  const totalSteps = 4;
+  const totalSteps = 5;
 
   // Lock body scroll when wizard is open
   useEffect(() => {
@@ -725,8 +726,9 @@ export function MindMovieScriptWizard({
               {[
                 { num: 1, label: "Foundation", icon: Palette },
                 { num: 2, label: "Generate", icon: Wand2 },
-                { num: 3, label: "Storyboard", icon: Layout },
+                { num: 3, label: "Visuals", icon: ImageIcon },
                 { num: 4, label: "Soundtrack", icon: Music },
+                { num: 5, label: "Finalize", icon: Film },
               ].map(({ num, label, icon: Icon }) => (
                 <div
                   key={num}
@@ -964,149 +966,17 @@ export function MindMovieScriptWizard({
               </div>
             )}
 
-            {/* Step 3: Storyboard */}
+            {/* Step 3: Visuals Generation */}
             {step === 3 && (
-              <div className="space-y-6">
-                <div className="flex items-center justify-between flex-wrap gap-4">
-                  <div>
-                    <h2 className="text-2xl font-bold">{generatedTitle || "Your Storyboard"}</h2>
-                    <p className="text-muted-foreground">
-                      {generatedScenes.length} scenes • Click to edit or copy prompts
-                      {lastAutoSave && (
-                        <span className="ml-2 text-xs text-muted-foreground/70">
-                          • Auto-saved {lastAutoSave.toLocaleTimeString()}
-                        </span>
-                      )}
-                    </p>
-                  </div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    {/* Credit Cost Estimate */}
-                    {onAddToTimeline && !isAutoGenerating && !isBatchRegenerating && (
-                      <CreditCostEstimate scenes={generatedScenes} />
-                    )}
-                    
-                    {/* Auto-Generate All Button */}
-                    {onAddToTimeline && (
-                      <Button 
-                        onClick={handleAutoGenerateAll}
-                        disabled={generatedScenes.length === 0 || isAutoGenerating || isBatchRegenerating}
-                        className="bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white"
-                      >
-                        {isAutoGenerating ? (
-                          <>
-                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                            Auto-Generating...
-                          </>
-                        ) : (
-                          <>
-                            <Zap className="w-4 h-4 mr-2" />
-                            Auto-Generate All
-                          </>
-                        )}
-                      </Button>
-                    )}
-                    {onAddToTimeline && (
-                      <Button 
-                        onClick={handleAddToTimeline} 
-                        variant="outline"
-                        disabled={generatedScenes.length === 0 || isAutoGenerating || isBatchRegenerating}
-                      >
-                        <Film className="w-4 h-4 mr-2" />
-                        Add to Timeline
-                      </Button>
-                    )}
-                    <Button onClick={handleSaveStoryboard} disabled={isLoading || isAutoGenerating || isBatchRegenerating}>
-                      <Save className="w-4 h-4 mr-2" />
-                      {isLoading ? "Saving..." : "Save Storyboard"}
-                    </Button>
-                  </div>
-                </div>
-
-                {/* Auto-Generate Progress */}
-                {isAutoGenerating && autoGenerateProgress.total > 0 && (
-                  <div className="p-4 rounded-lg bg-gradient-to-r from-amber-500/10 to-orange-600/10 border border-amber-500/30 space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span className="flex items-center gap-2 text-sm font-medium">
-                        <Zap className="w-4 h-4 text-amber-500" />
-                        {autoGenerateProgress.stage}
-                      </span>
-                      <span className="text-sm text-muted-foreground">
-                        {autoGenerateProgress.current} / {autoGenerateProgress.total}
-                      </span>
-                    </div>
-                    <Progress 
-                      value={(autoGenerateProgress.current / autoGenerateProgress.total) * 100} 
-                      className="h-2" 
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      This will generate images and videos for all scenes, then add them to the timeline automatically.
-                    </p>
-                  </div>
-                )}
-
-                {/* Batch Selection Controls */}
-                <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/30 border border-border/50">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleSelectAllScenes}
-                    disabled={isAutoGenerating || isBatchRegenerating}
-                  >
-                    {selectedScenes.length === generatedScenes.length ? (
-                      <>
-                        <Square className="w-4 h-4 mr-2" />
-                        Deselect All
-                      </>
-                    ) : (
-                      <>
-                        <CheckSquare className="w-4 h-4 mr-2" />
-                        Select All
-                      </>
-                    )}
-                  </Button>
-                  
-                  {selectedScenes.length > 0 && (
-                    <>
-                      <span className="text-sm text-muted-foreground">
-                        {selectedScenes.length} scene{selectedScenes.length > 1 ? 's' : ''} selected
-                      </span>
-                      <Button
-                        variant="default"
-                        size="sm"
-                        onClick={handleBatchRegenerate}
-                        disabled={isBatchRegenerating || isAutoGenerating}
-                        className="bg-primary"
-                      >
-                        {isBatchRegenerating ? (
-                          <>
-                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                            Regenerating...
-                          </>
-                        ) : (
-                          <>
-                            <RefreshCw className="w-4 h-4 mr-2" />
-                            Regenerate Selected Images
-                          </>
-                        )}
-                      </Button>
-                    </>
-                  )}
-                </div>
-
-                <DraggableStoryboardGrid
-                  scenes={generatedScenes}
-                  onUpdateScene={handleUpdateScene}
-                  onReorderScenes={handleReorderScenes}
-                  onGenerateInEditBay={handleGenerateInEditBay}
-                  onRegenerateScene={handleRegenerateScene}
-                  onDeleteScene={handleDeleteScene}
-                  regeneratingSceneOrder={regeneratingSceneOrder}
-                  isEditable={!isAutoGenerating && !isBatchRegenerating}
-                  selectedScenes={selectedScenes}
-                  onSelectScene={handleToggleSceneSelection}
-                  showSelection={true}
-                />
-              </div>
+              <VisualsStep
+                scenes={generatedScenes}
+                onUpdateScene={handleUpdateScene}
+                generateImage={generateImage}
+                generateVideo={generateVideo}
+                isGeneratingImage={isGeneratingImage}
+                isGeneratingVideo={isGeneratingVideo}
+                onOpenEditBay={onOpenEditBay ? handleGenerateInEditBay : undefined}
+              />
             )}
 
             {/* Step 4: Soundtrack */}
@@ -1664,6 +1534,115 @@ export function MindMovieScriptWizard({
                 )}
               </div>
             )}
+
+            {/* Step 5: Finalize */}
+            {step === 5 && (
+              <div className="space-y-6">
+                <div>
+                  <h2 className="text-2xl font-bold mb-2">Finalize Your Mind Movie</h2>
+                  <p className="text-muted-foreground">
+                    Review your complete Mind Movie and export to the Timeline Editor.
+                  </p>
+                </div>
+
+                {/* Summary */}
+                <Card className="bg-gradient-to-r from-amber-500/10 to-orange-600/10 border-amber-500/30">
+                  <CardContent className="p-6">
+                    <h3 className="text-xl font-bold mb-4">{generatedTitle || "Your Mind Movie"}</h3>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                      <div className="text-center">
+                        <p className="text-3xl font-bold text-primary">{generatedScenes.length}</p>
+                        <p className="text-sm text-muted-foreground">Scenes</p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-3xl font-bold text-blue-500">
+                          {generatedScenes.filter(s => s.generatedImageUrl).length}
+                        </p>
+                        <p className="text-sm text-muted-foreground">Images</p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-3xl font-bold text-purple-500">
+                          {generatedScenes.filter(s => s.generatedVideoUrl).length}
+                        </p>
+                        <p className="text-sm text-muted-foreground">Videos</p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-3xl font-bold text-green-500">
+                          {soundtrackUrl || songs.some(s => s.soundtrackUrl) ? "1" : "0"}
+                        </p>
+                        <p className="text-sm text-muted-foreground">Soundtrack</p>
+                      </div>
+                    </div>
+
+                    {/* Scene Thumbnails */}
+                    <div className="flex gap-2 overflow-x-auto pb-2">
+                      {generatedScenes.map((scene) => (
+                        <div 
+                          key={scene.order}
+                          className="shrink-0 w-24 h-16 rounded-lg overflow-hidden border border-border/50 relative"
+                        >
+                          {scene.generatedVideoUrl || scene.generatedImageUrl ? (
+                            <img 
+                              src={scene.generatedImageUrl || ""} 
+                              alt={scene.title}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <div className="w-full h-full bg-muted flex items-center justify-center">
+                              <span className="text-xs text-muted-foreground">{scene.order}</span>
+                            </div>
+                          )}
+                          <div className="absolute bottom-0 left-0 right-0 bg-black/60 px-1 py-0.5">
+                            <span className="text-xs text-white">{scene.duration}s</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Soundtrack Preview */}
+                {(soundtrackUrl || songs.some(s => s.soundtrackUrl)) && (
+                  <Card>
+                    <CardContent className="p-4">
+                      <h4 className="font-medium mb-3 flex items-center gap-2">
+                        <Music className="w-4 h-4" />
+                        Soundtrack
+                      </h4>
+                      <SoundtrackPlayer
+                        audioUrl={songs[0]?.soundtrackUrl || soundtrackUrl || ""}
+                        title={generatedTitle || "Mind Movie Anthem"}
+                        isGenerating={false}
+                      />
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Export Actions */}
+                <div className="flex flex-col sm:flex-row gap-4">
+                  {onAddToTimeline && (
+                    <Button 
+                      onClick={handleAddToTimeline}
+                      className="flex-1 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white h-12"
+                      size="lg"
+                    >
+                      <Film className="w-5 h-5 mr-2" />
+                      Add All to Timeline
+                    </Button>
+                  )}
+                  <Button 
+                    onClick={handleSaveStoryboard}
+                    variant="outline"
+                    className="flex-1 h-12"
+                    size="lg"
+                    disabled={isLoading}
+                  >
+                    <Save className="w-5 h-5 mr-2" />
+                    Save to Vault
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -1724,6 +1703,13 @@ export function MindMovieScriptWizard({
             )}
 
             {step === 4 && (
+              <Button onClick={() => setStep(5)}>
+                Continue to Finalize
+                <Film className="w-4 h-4 ml-2" />
+              </Button>
+            )}
+
+            {step === 5 && (
               <div className="flex gap-2">
                 {onAddToTimeline && (
                   <Button 
@@ -1732,7 +1718,7 @@ export function MindMovieScriptWizard({
                     className="bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700"
                   >
                     <Film className="w-4 h-4 mr-2" />
-                    Add All to Timeline
+                    Add to Timeline
                   </Button>
                 )}
                 <Button onClick={onClose} variant="outline">
