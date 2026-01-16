@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo, useRef } from "react";
-import { Image, Film, RefreshCw, Loader2, CheckCircle, Zap, Play, ImagePlus, Video, Coins, Upload, FolderUp, X, Trash2 } from "lucide-react";
+import { Image, Film, RefreshCw, Loader2, CheckCircle, Zap, Play, ImagePlus, Video, Coins, Upload, FolderUp, X, Trash2, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -10,6 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Scene } from "@/hooks/useMindMovieScript";
 import type { ImageGenerationParams, VideoGenerationParams } from "@/hooks/useMediaGeneration";
 import { toast } from "sonner";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 interface VisualsStepProps {
   scenes: Scene[];
   onUpdateScene: (order: number, updates: Partial<Scene>) => void;
@@ -38,6 +39,11 @@ export function VisualsStep({
   const [batchProgress, setBatchProgress] = useState({ current: 0, total: 0, type: "" });
   const [dragOverScene, setDragOverScene] = useState<number | null>(null);
   
+  // Reference photo for AI generation - puts user in scenes
+  const [referencePhoto, setReferencePhoto] = useState<string | null>(null);
+  const [uploadingReferencePhoto, setUploadingReferencePhoto] = useState(false);
+  const referencePhotoInputRef = useRef<HTMLInputElement>(null);
+  
   const fileInputRef = useRef<HTMLInputElement>(null);
   const bulkFileInputRef = useRef<HTMLInputElement>(null);
   const [pendingUploadScene, setPendingUploadScene] = useState<number | null>(null);
@@ -60,16 +66,71 @@ export function VisualsStep({
     return { imageCost, videoCost };
   }, [scenesWithoutImages.length, scenesWithoutVideos.length, estimateCreditCost]);
 
+  // Handle reference photo upload
+  const handleReferencePhotoUpload = useCallback(async (file: File) => {
+    if (!user?.id) {
+      toast.error("Please sign in to upload images");
+      return;
+    }
+
+    setUploadingReferencePhoto(true);
+    try {
+      const fileExt = file.name.split('.').pop()?.toLowerCase() || 'png';
+      const filePath = `${user.id}/reference-photo-${Date.now()}.${fileExt}`;
+
+      const { error } = await supabase.storage
+        .from('generated-media')
+        .upload(filePath, file, { upsert: true });
+
+      if (error) throw error;
+
+      const { data: urlData } = supabase.storage
+        .from('generated-media')
+        .getPublicUrl(filePath);
+
+      if (urlData?.publicUrl) {
+        setReferencePhoto(urlData.publicUrl);
+        toast.success("Reference photo uploaded! All AI-generated images will now feature you.");
+      }
+    } catch (error) {
+      console.error("Error uploading reference photo:", error);
+      toast.error("Failed to upload reference photo");
+    } finally {
+      setUploadingReferencePhoto(false);
+    }
+  }, [user?.id]);
+
+  const handleReferencePhotoInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.type.startsWith('image/')) {
+        handleReferencePhotoUpload(file);
+      } else {
+        toast.error("Please select an image file");
+      }
+    }
+    if (referencePhotoInputRef.current) {
+      referencePhotoInputRef.current.value = '';
+    }
+  }, [handleReferencePhotoUpload]);
+
   const handleGenerateSceneImage = useCallback(async (sceneOrder: number) => {
     const scene = scenes.find(s => s.order === sceneOrder);
     if (!scene) return;
     
     setGeneratingImageForScene(sceneOrder);
     try {
+      // Build prompt with reference photo instruction if available
+      let enhancedPrompt = scene.prompt;
+      if (referencePhoto) {
+        enhancedPrompt = `Generate this scene featuring the person from the reference photo as the main character. ${scene.prompt}`;
+      }
+      
       const imageUrl = await generateImage({
-        prompt: scene.prompt,
+        prompt: enhancedPrompt,
         aspect_ratio: "16:9",
-        resolution: "2k"
+        resolution: "2k",
+        images: referencePhoto ? [referencePhoto] : undefined
       });
 
       if (imageUrl) {
@@ -82,7 +143,7 @@ export function VisualsStep({
     } finally {
       setGeneratingImageForScene(null);
     }
-  }, [scenes, generateImage, onUpdateScene]);
+  }, [scenes, generateImage, onUpdateScene, referencePhoto]);
 
   const handleUploadSceneImage = useCallback(async (sceneOrder: number, file: File) => {
     if (!user?.id) {
@@ -278,10 +339,17 @@ export function VisualsStep({
         const scene = scenesWithoutImages[i];
         setBatchProgress({ current: i, total: scenesWithoutImages.length, type: "images" });
         
+        // Build prompt with reference photo instruction if available
+        let enhancedPrompt = scene.prompt;
+        if (referencePhoto) {
+          enhancedPrompt = `Generate this scene featuring the person from the reference photo as the main character. ${scene.prompt}`;
+        }
+        
         const imageUrl = await generateImage({
-          prompt: scene.prompt,
+          prompt: enhancedPrompt,
           aspect_ratio: "16:9",
-          resolution: "2k"
+          resolution: "2k",
+          images: referencePhoto ? [referencePhoto] : undefined
         });
 
         if (imageUrl) {
@@ -298,7 +366,7 @@ export function VisualsStep({
       setIsBatchGeneratingImages(false);
       setBatchProgress({ current: 0, total: 0, type: "" });
     }
-  }, [scenesWithoutImages, generateImage, onUpdateScene]);
+  }, [scenesWithoutImages, generateImage, onUpdateScene, referencePhoto]);
 
   const handleBatchGenerateVideos = useCallback(async () => {
     if (scenesWithoutVideos.length === 0) {
@@ -375,6 +443,14 @@ export function VisualsStep({
         multiple
         className="hidden"
       />
+      {/* Hidden file input for reference photo */}
+      <input
+        type="file"
+        ref={referencePhotoInputRef}
+        onChange={handleReferencePhotoInputChange}
+        accept="image/*"
+        className="hidden"
+      />
       
       <div>
         <h2 className="text-2xl font-bold mb-2">Generate Visuals</h2>
@@ -383,6 +459,70 @@ export function VisualsStep({
           You can also <span className="text-primary">upload your own reference images</span> for free!
         </p>
       </div>
+
+      {/* Reference Photo Section */}
+      <Card className="border-primary/30 bg-gradient-to-r from-primary/5 to-transparent">
+        <CardContent className="p-4">
+          <div className="flex items-center gap-4">
+            <div className="relative">
+              {referencePhoto ? (
+                <div className="relative">
+                  <Avatar className="w-16 h-16 border-2 border-primary">
+                    <AvatarImage src={referencePhoto} alt="Reference" className="object-cover" />
+                    <AvatarFallback><User className="w-6 h-6" /></AvatarFallback>
+                  </Avatar>
+                  <Button
+                    size="icon"
+                    variant="destructive"
+                    className="absolute -top-1 -right-1 h-5 w-5"
+                    onClick={() => setReferencePhoto(null)}
+                    disabled={isBusy}
+                  >
+                    <X className="w-3 h-3" />
+                  </Button>
+                </div>
+              ) : (
+                <div 
+                  className="w-16 h-16 rounded-full border-2 border-dashed border-muted-foreground/30 flex items-center justify-center cursor-pointer hover:border-primary/50 transition-colors"
+                  onClick={() => referencePhotoInputRef.current?.click()}
+                >
+                  {uploadingReferencePhoto ? (
+                    <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                  ) : (
+                    <User className="w-6 h-6 text-muted-foreground" />
+                  )}
+                </div>
+              )}
+            </div>
+            <div className="flex-1">
+              <h4 className="font-semibold flex items-center gap-2">
+                <User className="w-4 h-4 text-primary" />
+                Reference Photo {referencePhoto && <Badge variant="secondary" className="text-xs">Active</Badge>}
+              </h4>
+              <p className="text-sm text-muted-foreground">
+                {referencePhoto 
+                  ? "Your photo will be used in all AI-generated images. You'll appear in every scene!"
+                  : "Upload a photo of yourself to be featured in all AI-generated scene images."
+                }
+              </p>
+            </div>
+            <Button
+              variant={referencePhoto ? "outline" : "default"}
+              size="sm"
+              onClick={() => referencePhotoInputRef.current?.click()}
+              disabled={isBusy || uploadingReferencePhoto}
+              className="gap-2"
+            >
+              {uploadingReferencePhoto ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Upload className="w-4 h-4" />
+              )}
+              {referencePhoto ? "Change Photo" : "Upload Photo"}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Progress Summary */}
       <div className="grid grid-cols-2 gap-4">
