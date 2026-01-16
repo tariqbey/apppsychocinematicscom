@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo, useRef } from "react";
-import { Image, Film, RefreshCw, Loader2, CheckCircle, Zap, Play, ImagePlus, Video, Coins, Upload, ChevronDown } from "lucide-react";
+import { Image, Film, RefreshCw, Loader2, CheckCircle, Zap, Play, ImagePlus, Video, Coins, Upload, ChevronDown, FolderUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -40,9 +40,11 @@ export function VisualsStep({
   const [uploadingImageForScene, setUploadingImageForScene] = useState<number | null>(null);
   const [isBatchGeneratingImages, setIsBatchGeneratingImages] = useState(false);
   const [isBatchGeneratingVideos, setIsBatchGeneratingVideos] = useState(false);
+  const [isBatchUploading, setIsBatchUploading] = useState(false);
   const [batchProgress, setBatchProgress] = useState({ current: 0, total: 0, type: "" });
   
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const bulkFileInputRef = useRef<HTMLInputElement>(null);
   const [pendingUploadScene, setPendingUploadScene] = useState<number | null>(null);
 
   const { estimateCreditCost } = useProductionCredits();
@@ -136,6 +138,78 @@ export function VisualsStep({
       fileInputRef.current.value = '';
     }
   }, [pendingUploadScene, handleUploadSceneImage]);
+
+  const handleBulkUpload = useCallback(async (files: FileList) => {
+    if (!user?.id) {
+      toast.error("Please sign in to upload images");
+      return;
+    }
+
+    const fileArray = Array.from(files).filter(f => f.type.startsWith('image/'));
+    if (fileArray.length === 0) {
+      toast.error("No valid image files selected");
+      return;
+    }
+
+    // Sort files by name to maintain order
+    fileArray.sort((a, b) => a.name.localeCompare(b.name));
+
+    setIsBatchUploading(true);
+    setBatchProgress({ current: 0, total: Math.min(fileArray.length, sortedScenes.length), type: "uploads" });
+
+    try {
+      for (let i = 0; i < Math.min(fileArray.length, sortedScenes.length); i++) {
+        const file = fileArray[i];
+        const scene = sortedScenes[i];
+        
+        setBatchProgress({ current: i, total: Math.min(fileArray.length, sortedScenes.length), type: "uploads" });
+
+        const fileExt = file.name.split('.').pop()?.toLowerCase() || 'png';
+        const filePath = `${user.id}/storyboard/scene-${scene.order}-${Date.now()}.${fileExt}`;
+
+        const { error } = await supabase.storage
+          .from('generated-media')
+          .upload(filePath, file, { upsert: true });
+
+        if (error) {
+          console.error(`Error uploading file ${i + 1}:`, error);
+          continue;
+        }
+
+        const { data: urlData } = supabase.storage
+          .from('generated-media')
+          .getPublicUrl(filePath);
+
+        if (urlData?.publicUrl) {
+          onUpdateScene(scene.order, { generatedImageUrl: urlData.publicUrl });
+        }
+      }
+      
+      const uploadedCount = Math.min(fileArray.length, sortedScenes.length);
+      setBatchProgress({ current: uploadedCount, total: uploadedCount, type: "uploads" });
+      toast.success(`Uploaded ${uploadedCount} reference images!`);
+      
+      if (fileArray.length > sortedScenes.length) {
+        toast.info(`Note: Only ${sortedScenes.length} images were used (one per scene)`);
+      }
+    } catch (error) {
+      console.error("Bulk upload error:", error);
+      toast.error("Some uploads failed");
+    } finally {
+      setIsBatchUploading(false);
+      setBatchProgress({ current: 0, total: 0, type: "" });
+      if (bulkFileInputRef.current) {
+        bulkFileInputRef.current.value = '';
+      }
+    }
+  }, [user?.id, sortedScenes, onUpdateScene]);
+
+  const handleBulkFileInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files && files.length > 0) {
+      handleBulkUpload(files);
+    }
+  }, [handleBulkUpload]);
 
   const handleGenerateSceneVideo = useCallback(async (sceneOrder: number) => {
     const scene = scenes.find(s => s.order === sceneOrder);
@@ -242,16 +316,25 @@ export function VisualsStep({
     }
   }, [scenesWithoutVideos, generateVideo, onUpdateScene]);
 
-  const isBusy = isBatchGeneratingImages || isBatchGeneratingVideos || generatingImageForScene !== null || generatingVideoForScene !== null || uploadingImageForScene !== null;
+  const isBusy = isBatchGeneratingImages || isBatchGeneratingVideos || isBatchUploading || generatingImageForScene !== null || generatingVideoForScene !== null || uploadingImageForScene !== null;
 
   return (
     <div className="space-y-6">
-      {/* Hidden file input for uploads */}
+      {/* Hidden file input for single uploads */}
       <input
         type="file"
         ref={fileInputRef}
         onChange={handleFileInputChange}
         accept="image/*"
+        className="hidden"
+      />
+      {/* Hidden file input for bulk uploads */}
+      <input
+        type="file"
+        ref={bulkFileInputRef}
+        onChange={handleBulkFileInputChange}
+        accept="image/*"
+        multiple
         className="hidden"
       />
       
@@ -339,10 +422,30 @@ export function VisualsStep({
           )}
         </Button>
         
+        {/* Bulk Upload Button */}
+        <Button
+          onClick={() => bulkFileInputRef.current?.click()}
+          disabled={isBusy}
+          variant="outline"
+          className="gap-2"
+        >
+          {isBatchUploading ? (
+            <>
+              <Loader2 className="w-4 h-4 animate-spin" />
+              Uploading...
+            </>
+          ) : (
+            <>
+              <FolderUp className="w-4 h-4" />
+              Upload All (Free)
+            </>
+          )}
+        </Button>
+        
         {/* Credit Cost Estimates */}
         <div className="w-full mt-2 text-xs text-muted-foreground flex items-center gap-2">
           <Coins className="w-3 h-3" />
-          <span>Est. cost: ~{estimatedCosts.imageCost} credits for images | ~{estimatedCosts.videoCost} credits for videos</span>
+          <span>Est. cost: ~{estimatedCosts.imageCost} credits for images | ~{estimatedCosts.videoCost} credits for videos | Uploads: Free!</span>
         </div>
       </div>
 
@@ -351,7 +454,7 @@ export function VisualsStep({
         <div className="p-4 rounded-lg bg-primary/5 border border-primary/20 space-y-2">
           <div className="flex items-center justify-between">
             <span className="text-sm font-medium">
-              Generating {batchProgress.type}...
+              {batchProgress.type === "uploads" ? "Uploading" : "Generating"} {batchProgress.type}...
             </span>
             <span className="text-sm text-muted-foreground">
               {batchProgress.current + 1} / {batchProgress.total}
