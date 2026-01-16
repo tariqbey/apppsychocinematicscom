@@ -578,6 +578,65 @@ export type Database = {
         }
         Relationships: []
       }
+      episodes: {
+        Row: {
+          alignment_reasoning: string | null
+          alignment_score: number | null
+          completed_at: string | null
+          created_at: string
+          deadline: string
+          duration_type: string
+          id: string
+          mind_movie_script_id: string | null
+          objective: string
+          status: string
+          title: string
+          updated_at: string
+          user_id: string
+          vision_answers: Json | null
+        }
+        Insert: {
+          alignment_reasoning?: string | null
+          alignment_score?: number | null
+          completed_at?: string | null
+          created_at?: string
+          deadline: string
+          duration_type?: string
+          id?: string
+          mind_movie_script_id?: string | null
+          objective: string
+          status?: string
+          title: string
+          updated_at?: string
+          user_id: string
+          vision_answers?: Json | null
+        }
+        Update: {
+          alignment_reasoning?: string | null
+          alignment_score?: number | null
+          completed_at?: string | null
+          created_at?: string
+          deadline?: string
+          duration_type?: string
+          id?: string
+          mind_movie_script_id?: string | null
+          objective?: string
+          status?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+          vision_answers?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "episodes_mind_movie_script_id_fkey"
+            columns: ["mind_movie_script_id"]
+            isOneToOne: false
+            referencedRelation: "mind_movie_scripts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       featured_content: {
         Row: {
           created_at: string
