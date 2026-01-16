@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useRef } from "react";
+import { useState, useCallback, useMemo, useRef, useEffect } from "react";
 import { Image, Film, RefreshCw, Loader2, CheckCircle, Zap, Play, ImagePlus, Video, Coins, Upload, FolderUp, X, Trash2, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -19,6 +19,9 @@ interface VisualsStepProps {
   isGeneratingImage: boolean;
   isGeneratingVideo: boolean;
   onOpenEditBay?: (prompt: string, sceneOrder: number, sceneTitle: string) => void;
+  // Reference photo persistence
+  referencePhotoUrl?: string | null;
+  onSaveReferencePhoto?: (url: string | null) => void;
 }
 
 export function VisualsStep({
@@ -29,6 +32,8 @@ export function VisualsStep({
   isGeneratingImage,
   isGeneratingVideo,
   onOpenEditBay,
+  referencePhotoUrl,
+  onSaveReferencePhoto,
 }: VisualsStepProps) {
   const [generatingImageForScene, setGeneratingImageForScene] = useState<number | null>(null);
   const [generatingVideoForScene, setGeneratingVideoForScene] = useState<number | null>(null);
@@ -36,11 +41,12 @@ export function VisualsStep({
   const [isBatchGeneratingImages, setIsBatchGeneratingImages] = useState(false);
   const [isBatchGeneratingVideos, setIsBatchGeneratingVideos] = useState(false);
   const [isBatchUploading, setIsBatchUploading] = useState(false);
+  const [isRegeneratingAll, setIsRegeneratingAll] = useState(false);
   const [batchProgress, setBatchProgress] = useState({ current: 0, total: 0, type: "" });
   const [dragOverScene, setDragOverScene] = useState<number | null>(null);
   
-  // Reference photo for AI generation - puts user in scenes
-  const [referencePhoto, setReferencePhoto] = useState<string | null>(null);
+  // Reference photo for AI generation - initialize from prop
+  const [referencePhoto, setReferencePhoto] = useState<string | null>(referencePhotoUrl || null);
   const [uploadingReferencePhoto, setUploadingReferencePhoto] = useState(false);
   const referencePhotoInputRef = useRef<HTMLInputElement>(null);
   
@@ -50,6 +56,20 @@ export function VisualsStep({
 
   const { estimateCreditCost } = useProductionCredits();
   const { user } = useAuth();
+
+  // Initialize reference photo from prop when it changes
+  useEffect(() => {
+    if (referencePhotoUrl !== undefined) {
+      setReferencePhoto(referencePhotoUrl);
+    }
+  }, [referencePhotoUrl]);
+
+  // Auto-save reference photo when it changes
+  useEffect(() => {
+    if (onSaveReferencePhoto && referencePhoto !== referencePhotoUrl) {
+      onSaveReferencePhoto(referencePhoto);
+    }
+  }, [referencePhoto, onSaveReferencePhoto, referencePhotoUrl]);
 
   const sortedScenes = [...scenes].sort((a, b) => a.order - b.order);
   
@@ -63,8 +83,9 @@ export function VisualsStep({
   const estimatedCosts = useMemo(() => {
     const imageCost = estimateCreditCost("image", undefined, "2k") * scenesWithoutImages.length;
     const videoCost = estimateCreditCost("video", 8) * scenesWithoutVideos.length;
-    return { imageCost, videoCost };
-  }, [scenesWithoutImages.length, scenesWithoutVideos.length, estimateCreditCost]);
+    const regenerateAllCost = estimateCreditCost("image", undefined, "2k") * scenes.length;
+    return { imageCost, videoCost, regenerateAllCost };
+  }, [scenesWithoutImages.length, scenesWithoutVideos.length, scenes.length, estimateCreditCost]);
 
   // Handle reference photo upload
   const handleReferencePhotoUpload = useCallback(async (file: File) => {
@@ -422,7 +443,58 @@ export function VisualsStep({
     toast.success(`Cleared video for Scene ${sceneOrder}`);
   }, [onUpdateScene]);
 
-  const isBusy = isBatchGeneratingImages || isBatchGeneratingVideos || isBatchUploading || generatingImageForScene !== null || generatingVideoForScene !== null || uploadingImageForScene !== null;
+  // Regenerate All with Reference - clears all images and regenerates with reference photo
+  const handleRegenerateAllWithReference = useCallback(async () => {
+    if (!referencePhoto) {
+      toast.error("Please upload a reference photo first");
+      return;
+    }
+
+    setIsRegeneratingAll(true);
+    setBatchProgress({ current: 0, total: sortedScenes.length, type: "images" });
+
+    try {
+      // First, clear all existing images
+      for (const scene of sortedScenes) {
+        if (scene.generatedImageUrl || scene.generatedVideoUrl) {
+          onUpdateScene(scene.order, { 
+            generatedImageUrl: null, 
+            generatedVideoUrl: null 
+          });
+        }
+      }
+
+      // Then regenerate all with reference photo
+      for (let i = 0; i < sortedScenes.length; i++) {
+        const scene = sortedScenes[i];
+        setBatchProgress({ current: i, total: sortedScenes.length, type: "images" });
+        
+        const enhancedPrompt = `Generate this scene featuring the person from the reference photo as the main character. ${scene.prompt}`;
+        
+        const imageUrl = await generateImage({
+          prompt: enhancedPrompt,
+          aspect_ratio: "16:9",
+          resolution: "2k",
+          images: [referencePhoto]
+        });
+
+        if (imageUrl) {
+          onUpdateScene(scene.order, { generatedImageUrl: imageUrl });
+        }
+      }
+      
+      setBatchProgress({ current: sortedScenes.length, total: sortedScenes.length, type: "images" });
+      toast.success(`Regenerated all ${sortedScenes.length} scenes with your reference photo!`);
+    } catch (error) {
+      console.error("Regenerate all with reference error:", error);
+      toast.error("Some images failed to generate. Check your credits.");
+    } finally {
+      setIsRegeneratingAll(false);
+      setBatchProgress({ current: 0, total: 0, type: "" });
+    }
+  }, [referencePhoto, sortedScenes, generateImage, onUpdateScene]);
+
+  const isBusy = isBatchGeneratingImages || isBatchGeneratingVideos || isBatchUploading || isRegeneratingAll || generatingImageForScene !== null || generatingVideoForScene !== null || uploadingImageForScene !== null;
 
   return (
     <div className="space-y-6">
@@ -619,11 +691,37 @@ export function VisualsStep({
             </>
           )}
         </Button>
+
+        {/* Regenerate All with Reference Button - only show when reference photo is set */}
+        {referencePhoto && (
+          <Button
+            onClick={handleRegenerateAllWithReference}
+            disabled={isBusy}
+            variant="outline"
+            className="gap-2 border-amber-500/50 text-amber-400 hover:bg-amber-500/10"
+          >
+            {isRegeneratingAll ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Regenerating...
+              </>
+            ) : (
+              <>
+                <RefreshCw className="w-4 h-4" />
+                Regenerate All with Reference
+              </>
+            )}
+          </Button>
+        )}
         
         {/* Credit Cost Estimates */}
         <div className="w-full mt-2 text-xs text-muted-foreground flex items-center gap-2">
           <Coins className="w-3 h-3" />
-          <span>Est. cost: ~{estimatedCosts.imageCost} credits for images | ~{estimatedCosts.videoCost} credits for videos | Uploads: Free!</span>
+          <span>
+            Est. cost: ~{estimatedCosts.imageCost} credits for images | ~{estimatedCosts.videoCost} credits for videos 
+            {referencePhoto && ` | ~${estimatedCosts.regenerateAllCost} credits to regenerate all`}
+            {" "}| Uploads: Free!
+          </span>
         </div>
       </div>
 

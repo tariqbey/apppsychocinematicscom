@@ -788,6 +788,7 @@ export type Database = {
           is_active: boolean | null
           movie_url: string | null
           music_style: string | null
+          reference_photo_url: string | null
           scenes: Json | null
           song_lyrics: string | null
           soundtrack_url: string | null
@@ -805,6 +806,7 @@ export type Database = {
           is_active?: boolean | null
           movie_url?: string | null
           music_style?: string | null
+          reference_photo_url?: string | null
           scenes?: Json | null
           song_lyrics?: string | null
           soundtrack_url?: string | null
@@ -822,6 +824,7 @@ export type Database = {
           is_active?: boolean | null
           movie_url?: string | null
           music_style?: string | null
+          reference_photo_url?: string | null
           scenes?: Json | null
           song_lyrics?: string | null
           soundtrack_url?: string | null

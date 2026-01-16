@@ -30,6 +30,7 @@ import { VisualsStep } from "./VisualsStep";
 import { useMindMovieScript, type Scene } from "@/hooks/useMindMovieScript";
 import { useMindMovieMusic, MUSIC_STYLES, type MusicStyle } from "@/hooks/useMindMovieMusic";
 import { useMediaGeneration } from "@/hooks/useMediaGeneration";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 const PERSONA_STORAGE_KEY = 'mind-movie-saved-personas';
@@ -162,6 +163,7 @@ export function MindMovieScriptWizard({
   const [selectedScenes, setSelectedScenes] = useState<number[]>([]);
   const [isBatchRegenerating, setIsBatchRegenerating] = useState(false);
   const [lastAutoSave, setLastAutoSave] = useState<Date | null>(null);
+  const [referencePhotoUrl, setReferencePhotoUrl] = useState<string | null>(null);
   
   const { 
     isGenerating, 
@@ -227,6 +229,7 @@ export function MindMovieScriptWizard({
           setGeneratedTitle(script.title || "");
           setGeneratedScenes(script.scenes);
           setVisualStyle(script.visual_style || "cinematic");
+          setReferencePhotoUrl(script.reference_photo_url || null);
           // Load existing music data
           loadExistingMusic({
             song_lyrics: script.song_lyrics,
@@ -242,6 +245,7 @@ export function MindMovieScriptWizard({
           setGeneratedScenes([]);
           setVisualStyle("cinematic");
           setUserDescription("");
+          setReferencePhotoUrl(null);
         }
       };
       loadScript();
@@ -348,6 +352,23 @@ export function MindMovieScriptWizard({
       currentScript?.id
     );
   };
+
+  // Save reference photo URL to database
+  const handleSaveReferencePhoto = useCallback(async (url: string | null) => {
+    if (!currentScript?.id) return;
+    
+    const { error } = await supabase
+      .from("mind_movie_scripts")
+      .update({ 
+        reference_photo_url: url,
+        updated_at: new Date().toISOString()
+      })
+      .eq("id", currentScript.id);
+      
+    if (!error) {
+      setReferencePhotoUrl(url);
+    }
+  }, [currentScript?.id]);
 
   const handleUpdateScene = (order: number, updates: Partial<Scene>) => {
     setGeneratedScenes((prev) =>
@@ -992,6 +1013,8 @@ export function MindMovieScriptWizard({
                 isGeneratingImage={isGeneratingImage}
                 isGeneratingVideo={isGeneratingVideo}
                 onOpenEditBay={onOpenEditBay ? handleGenerateInEditBay : undefined}
+                referencePhotoUrl={referencePhotoUrl}
+                onSaveReferencePhoto={handleSaveReferencePhoto}
               />
             )}
 
