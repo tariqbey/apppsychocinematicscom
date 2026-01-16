@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo, useRef } from "react";
-import { Image, Film, RefreshCw, Loader2, CheckCircle, Zap, Play, ImagePlus, Video, Coins, Upload, FolderUp } from "lucide-react";
+import { Image, Film, RefreshCw, Loader2, CheckCircle, Zap, Play, ImagePlus, Video, Coins, Upload, FolderUp, X, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -340,6 +340,20 @@ export function VisualsStep({
     }
   }, [scenesWithoutVideos, generateVideo, onUpdateScene]);
 
+  // Clear/Delete handlers
+  const handleClearSceneImage = useCallback((sceneOrder: number) => {
+    onUpdateScene(sceneOrder, { 
+      generatedImageUrl: null, 
+      generatedVideoUrl: null  // Also clear video since it depends on image
+    });
+    toast.success(`Cleared image for Scene ${sceneOrder}`);
+  }, [onUpdateScene]);
+
+  const handleClearSceneVideo = useCallback((sceneOrder: number) => {
+    onUpdateScene(sceneOrder, { generatedVideoUrl: null });
+    toast.success(`Cleared video for Scene ${sceneOrder}`);
+  }, [onUpdateScene]);
+
   const isBusy = isBatchGeneratingImages || isBatchGeneratingVideos || isBatchUploading || generatingImageForScene !== null || generatingVideoForScene !== null || uploadingImageForScene !== null;
 
   return (
@@ -540,15 +554,31 @@ export function VisualsStep({
                   }
                 }}
               >
-                {scene.generatedVideoUrl ? (
-                  <video 
-                    src={scene.generatedVideoUrl} 
-                    className="w-full h-full object-cover"
-                    controls
-                    muted
-                    playsInline
-                    onClick={(e) => e.stopPropagation()}
-                  />
+              {scene.generatedVideoUrl ? (
+                  <div className="relative w-full h-full">
+                    <video 
+                      src={scene.generatedVideoUrl} 
+                      className="w-full h-full object-cover"
+                      controls
+                      muted
+                      playsInline
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                    {/* Delete video button */}
+                    <Button
+                      size="icon"
+                      variant="destructive"
+                      className="absolute top-2 right-2 h-7 w-7 opacity-80 hover:opacity-100"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleClearSceneVideo(scene.order);
+                      }}
+                      disabled={isBusy}
+                      title="Delete video"
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
                 ) : scene.generatedImageUrl ? (
                   <div className="relative w-full h-full group">
                     <img 
@@ -556,21 +586,20 @@ export function VisualsStep({
                       alt={scene.title} 
                       className="w-full h-full object-cover"
                     />
-                    {/* Replace overlay on hover */}
-                    <div 
-                      className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2"
-                      onClick={(e) => e.stopPropagation()}
+                    {/* Delete image button - always visible */}
+                    <Button
+                      size="icon"
+                      variant="destructive"
+                      className="absolute top-2 right-2 h-7 w-7 opacity-80 hover:opacity-100"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleClearSceneImage(scene.order);
+                      }}
+                      disabled={isBusy}
+                      title="Delete image"
                     >
-                      <Button 
-                        size="sm" 
-                        variant="secondary"
-                        onClick={() => triggerFileUpload(scene.order)}
-                        disabled={isBusy}
-                      >
-                        <Upload className="w-3 h-3 mr-1" />
-                        Replace
-                      </Button>
-                    </div>
+                      <X className="w-4 h-4" />
+                    </Button>
                   </div>
                 ) : (
                   <div className={`absolute inset-0 flex flex-col items-center justify-center cursor-pointer transition-all ${
@@ -611,8 +640,22 @@ export function VisualsStep({
                 )}
               </div>
 
-              {/* Two Clear Action Buttons */}
-              <div className="grid grid-cols-2 gap-2">
+              {/* Action Buttons - Different layout based on image state */}
+              <div className={`grid gap-2 ${scene.generatedImageUrl ? 'grid-cols-3' : 'grid-cols-2'}`}>
+                {scene.generatedImageUrl && (
+                  /* Clear Button - only when image exists */
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleClearSceneImage(scene.order)}
+                    disabled={isBusy}
+                    className="gap-1 text-destructive hover:text-destructive hover:bg-destructive/10"
+                  >
+                    <Trash2 className="w-3 h-3" />
+                    Clear
+                  </Button>
+                )}
+                
                 {/* Generate AI Image Button */}
                 <Button
                   variant={scene.generatedImageUrl ? "outline" : "default"}
@@ -626,7 +669,7 @@ export function VisualsStep({
                   ) : (
                     <ImagePlus className="w-3 h-3" />
                   )}
-                  {scene.generatedImageUrl ? "Regen AI" : "Generate AI"}
+                  {scene.generatedImageUrl ? "Regen" : "Generate AI"}
                 </Button>
                 
                 {/* Upload Image Button */}
@@ -642,7 +685,7 @@ export function VisualsStep({
                   ) : (
                     <Upload className="w-3 h-3" />
                   )}
-                  Upload (Free)
+                  {scene.generatedImageUrl ? "Replace" : "Upload"}
                 </Button>
               </div>
 
@@ -654,6 +697,18 @@ export function VisualsStep({
               {/* Video Button - only after image exists */}
               {scene.generatedImageUrl && (
                 <div className="flex gap-2">
+                  {scene.generatedVideoUrl && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleClearSceneVideo(scene.order)}
+                      disabled={isBusy}
+                      className="gap-1 text-destructive hover:text-destructive hover:bg-destructive/10"
+                      title="Clear video"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </Button>
+                  )}
                   <Button
                     variant={scene.generatedVideoUrl ? "outline" : "secondary"}
                     size="sm"
