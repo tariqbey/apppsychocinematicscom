@@ -92,6 +92,12 @@ export default function Episodes() {
     setMovieWizardEpisode(episode);
   };
 
+  // Handle editing existing mind movie from EpisodeCard
+  const handleEditMindMovie = (episode: Episode) => {
+    // Open the wizard with the existing script ID - it will load at the Visuals step
+    setMovieWizardEpisode(episode);
+  };
+
   // Handle episode movie created
   const handleEpisodeMovieCreated = async (scriptId: string) => {
     if (movieWizardEpisode) {
@@ -233,6 +239,7 @@ export default function Episodes() {
                           episode={episode} 
                           variant="full"
                           onCreateMindMovie={() => handleCardCreateMindMovie(episode)}
+                          onEditMindMovie={() => handleEditMindMovie(episode)}
                           onDelete={deleteEpisode}
                           onComplete={completeEpisode}
                           onPause={pauseEpisode}
@@ -257,6 +264,7 @@ export default function Episodes() {
                           episode={episode} 
                           variant="compact"
                           onCreateMindMovie={() => handleCardCreateMindMovie(episode)}
+                          onEditMindMovie={() => handleEditMindMovie(episode)}
                           onDelete={deleteEpisode}
                           onComplete={completeEpisode}
                           onPause={pauseEpisode}
@@ -280,6 +288,7 @@ export default function Episodes() {
                           episode={episode} 
                           variant="compact"
                           onCreateMindMovie={() => handleCardCreateMindMovie(episode)}
+                          onEditMindMovie={() => handleEditMindMovie(episode)}
                           onDelete={deleteEpisode}
                           onComplete={completeEpisode}
                           onPause={pauseEpisode}
@@ -334,6 +343,7 @@ export default function Episodes() {
           }}
           chiefAim={chiefAim}
           episodeMode={true}
+          movieId={movieWizardEpisode.mind_movie_script_id || undefined}
           episode={{
             id: movieWizardEpisode.id,
             title: movieWizardEpisode.title,

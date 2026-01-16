@@ -1,15 +1,9 @@
 import { useState, useCallback, useMemo, useRef } from "react";
-import { Image, Film, RefreshCw, Loader2, CheckCircle, Zap, Play, ImagePlus, Video, Coins, Upload, ChevronDown, FolderUp } from "lucide-react";
+import { Image, Film, RefreshCw, Loader2, CheckCircle, Zap, Play, ImagePlus, Video, Coins, Upload, FolderUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { useProductionCredits } from "@/hooks/useProductionCredits";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -498,8 +492,19 @@ export function VisualsStep({
                 </Badge>
               </div>
 
-              {/* Preview Area */}
-              <div className="aspect-video rounded-lg overflow-hidden bg-muted/50 relative">
+              {/* Upload / Preview Area - Clear Drop Zone */}
+              <div 
+                className={`aspect-video rounded-lg overflow-hidden relative border-2 border-dashed transition-all ${
+                  scene.generatedImageUrl || scene.generatedVideoUrl 
+                    ? "border-transparent" 
+                    : "border-muted-foreground/30 hover:border-primary/50 bg-muted/30"
+                }`}
+                onClick={() => {
+                  if (!scene.generatedImageUrl && !scene.generatedVideoUrl && !isBusy) {
+                    triggerFileUpload(scene.order);
+                  }
+                }}
+              >
                 {scene.generatedVideoUrl ? (
                   <video 
                     src={scene.generatedVideoUrl} 
@@ -507,17 +512,36 @@ export function VisualsStep({
                     controls
                     muted
                     playsInline
+                    onClick={(e) => e.stopPropagation()}
                   />
                 ) : scene.generatedImageUrl ? (
-                  <img 
-                    src={scene.generatedImageUrl} 
-                    alt={scene.title} 
-                    className="w-full h-full object-cover"
-                  />
+                  <div className="relative w-full h-full group">
+                    <img 
+                      src={scene.generatedImageUrl} 
+                      alt={scene.title} 
+                      className="w-full h-full object-cover"
+                    />
+                    {/* Replace overlay on hover */}
+                    <div 
+                      className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <Button 
+                        size="sm" 
+                        variant="secondary"
+                        onClick={() => triggerFileUpload(scene.order)}
+                        disabled={isBusy}
+                      >
+                        <Upload className="w-3 h-3 mr-1" />
+                        Replace
+                      </Button>
+                    </div>
+                  </div>
                 ) : (
-                  <div className="absolute inset-0 flex flex-col items-center justify-center text-muted-foreground">
-                    <Image className="w-8 h-8 mb-2 opacity-50" />
-                    <span className="text-xs">No image yet</span>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center text-muted-foreground cursor-pointer">
+                    <Upload className="w-8 h-8 mb-2 opacity-50" />
+                    <span className="text-sm font-medium">Click to upload image</span>
+                    <span className="text-xs opacity-70">or drag & drop (Free)</span>
                   </div>
                 )}
                 
@@ -542,10 +566,45 @@ export function VisualsStep({
                   <div className="absolute inset-0 bg-background/80 flex items-center justify-center">
                     <div className="text-center">
                       <Loader2 className="w-8 h-8 animate-spin text-green-500 mx-auto mb-2" />
-                      <span className="text-sm">Uploading image...</span>
+                      <span className="text-sm">Uploading...</span>
                     </div>
                   </div>
                 )}
+              </div>
+
+              {/* Two Clear Action Buttons */}
+              <div className="grid grid-cols-2 gap-2">
+                {/* Generate AI Image Button */}
+                <Button
+                  variant={scene.generatedImageUrl ? "outline" : "default"}
+                  size="sm"
+                  onClick={() => handleGenerateSceneImage(scene.order)}
+                  disabled={isBusy}
+                  className="gap-1"
+                >
+                  {generatingImageForScene === scene.order ? (
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                  ) : (
+                    <ImagePlus className="w-3 h-3" />
+                  )}
+                  {scene.generatedImageUrl ? "Regen AI" : "Generate AI"}
+                </Button>
+                
+                {/* Upload Image Button */}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => triggerFileUpload(scene.order)}
+                  disabled={isBusy}
+                  className="gap-1"
+                >
+                  {uploadingImageForScene === scene.order ? (
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                  ) : (
+                    <Upload className="w-3 h-3" />
+                  )}
+                  Upload (Free)
+                </Button>
               </div>
 
               {/* Prompt Preview */}
@@ -553,70 +612,39 @@ export function VisualsStep({
                 {scene.prompt}
               </p>
 
-              {/* Action Buttons */}
-              <div className="flex gap-2">
-                {/* Image Dropdown */}
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      variant={scene.generatedImageUrl ? "outline" : "default"}
-                      size="sm"
-                      disabled={isBusy}
-                      className="flex-1 gap-1"
-                    >
-                      {generatingImageForScene === scene.order || uploadingImageForScene === scene.order ? (
-                        <Loader2 className="w-3 h-3 animate-spin" />
-                      ) : scene.generatedImageUrl ? (
-                        <RefreshCw className="w-3 h-3" />
-                      ) : (
-                        <Image className="w-3 h-3" />
-                      )}
-                      {scene.generatedImageUrl ? "Replace" : "Image"}
-                      <ChevronDown className="w-3 h-3 ml-1" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start" className="bg-popover">
-                    <DropdownMenuItem onClick={() => handleGenerateSceneImage(scene.order)}>
-                      <ImagePlus className="w-4 h-4 mr-2" />
-                      Generate with AI
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => triggerFileUpload(scene.order)}>
-                      <Upload className="w-4 h-4 mr-2" />
-                      Upload Reference (Free)
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-                
-                <Button
-                  variant={scene.generatedVideoUrl ? "outline" : "secondary"}
-                  size="sm"
-                  onClick={() => handleGenerateSceneVideo(scene.order)}
-                  disabled={isBusy || !scene.generatedImageUrl}
-                  className="flex-1 gap-1"
-                  title={!scene.generatedImageUrl ? "Generate image first" : undefined}
-                >
-                  {generatingVideoForScene === scene.order ? (
-                    <Loader2 className="w-3 h-3 animate-spin" />
-                  ) : scene.generatedVideoUrl ? (
-                    <RefreshCw className="w-3 h-3" />
-                  ) : (
-                    <Film className="w-3 h-3" />
-                  )}
-                  {scene.generatedVideoUrl ? "Regen" : "Video"}
-                </Button>
-                
-                {onOpenEditBay && (
+              {/* Video Button - only after image exists */}
+              {scene.generatedImageUrl && (
+                <div className="flex gap-2">
                   <Button
-                    variant="ghost"
+                    variant={scene.generatedVideoUrl ? "outline" : "secondary"}
                     size="sm"
-                    onClick={() => onOpenEditBay(scene.prompt, scene.order, scene.title)}
+                    onClick={() => handleGenerateSceneVideo(scene.order)}
                     disabled={isBusy}
-                    title="Open in Edit Bay"
+                    className="flex-1 gap-1"
                   >
-                    <Play className="w-3 h-3" />
+                    {generatingVideoForScene === scene.order ? (
+                      <Loader2 className="w-3 h-3 animate-spin" />
+                    ) : scene.generatedVideoUrl ? (
+                      <RefreshCw className="w-3 h-3" />
+                    ) : (
+                      <Film className="w-3 h-3" />
+                    )}
+                    {scene.generatedVideoUrl ? "Regen Video" : "Generate Video"}
                   </Button>
-                )}
-              </div>
+                  
+                  {onOpenEditBay && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => onOpenEditBay(scene.prompt, scene.order, scene.title)}
+                      disabled={isBusy}
+                      title="Open in Edit Bay"
+                    >
+                      <Play className="w-3 h-3" />
+                    </Button>
+                  )}
+                </div>
+              )}
             </CardContent>
           </Card>
         ))}

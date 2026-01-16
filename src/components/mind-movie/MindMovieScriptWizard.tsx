@@ -719,7 +719,7 @@ export function MindMovieScriptWizard({
           </Button>
         </div>
 
-        {/* Progress */}
+        {/* Progress - Clickable Steps */}
         <div className="px-4 py-3 border-b border-border/30">
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-6">
@@ -729,25 +729,41 @@ export function MindMovieScriptWizard({
                 { num: 3, label: "Visuals", icon: ImageIcon },
                 { num: 4, label: "Soundtrack", icon: Music },
                 { num: 5, label: "Finalize", icon: Film },
-              ].map(({ num, label, icon: Icon }) => (
-                <div
-                  key={num}
-                  className={`flex items-center gap-2 ${
-                    step >= num ? "text-primary" : "text-muted-foreground"
-                  }`}
-                >
-                  <div
-                    className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                      step >= num
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-muted text-muted-foreground"
-                    }`}
+              ].map(({ num, label, icon: Icon }) => {
+                // Determine if step is clickable (only go back, or go to steps with content)
+                const canNavigate = num < step || (num <= 3 && generatedScenes.length > 0) || (num === 4 && generatedScenes.length > 0) || (num === 5 && generatedScenes.length > 0);
+                const isCompleted = num < step;
+                
+                return (
+                  <button
+                    key={num}
+                    onClick={() => canNavigate && !isGenerating && setStep(num)}
+                    disabled={!canNavigate || isGenerating}
+                    className={`flex items-center gap-2 transition-all ${
+                      step >= num ? "text-primary" : "text-muted-foreground"
+                    } ${canNavigate && !isGenerating ? "cursor-pointer hover:opacity-80" : "cursor-not-allowed"}`}
                   >
-                    <Icon className="w-4 h-4" />
-                  </div>
-                  <span className="text-sm font-medium hidden sm:inline">{label}</span>
-                </div>
-              ))}
+                    <div
+                      className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${
+                        step === num
+                          ? "bg-primary text-primary-foreground ring-2 ring-primary/30 ring-offset-2 ring-offset-background"
+                          : isCompleted
+                            ? "bg-green-500 text-white"
+                            : step > num
+                              ? "bg-primary text-primary-foreground"
+                              : "bg-muted text-muted-foreground"
+                      }`}
+                    >
+                      {isCompleted ? (
+                        <Check className="w-4 h-4" />
+                      ) : (
+                        <Icon className="w-4 h-4" />
+                      )}
+                    </div>
+                    <span className="text-sm font-medium hidden sm:inline">{label}</span>
+                  </button>
+                );
+              })}
             </div>
           </div>
           <Progress value={(step / totalSteps) * 100} className="h-1" />
