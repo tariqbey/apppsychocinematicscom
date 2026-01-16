@@ -414,6 +414,39 @@ const tutorialSections: TutorialSection[] = [
     ]
   },
   {
+    id: "soundtrack-studio",
+    icon: <Music className="w-6 h-6" />,
+    title: "Soundtrack Studio",
+    description: "Create custom soundtracks and access Director Radio",
+    steps: [
+      {
+        title: "Access Soundtrack Studio",
+        content: "Click the 'Soundtrack Studio' card on your dashboard to enter the music creation and radio hub."
+      },
+      {
+        title: "Generate Custom Soundtracks",
+        content: "Use the Mind Movie Wizard's soundtrack generator to create AI-powered songs with 50+ genre options, vocal customization, and optional lyrics based on your Chief Aim."
+      },
+      {
+        title: "Listen to Director Radio",
+        content: "Browse curated playlists and featured tracks from the community. Listen to motivation-boosting music while you work on your transformation."
+      },
+      {
+        title: "Submit to Director Radio",
+        content: "In the Media Library, click 'Submit to Radio' on any audio track you've generated. Admins review submissions and add approved tracks to community playlists."
+      },
+      {
+        title: "Now Playing & Featured",
+        content: "The Director Radio card on your dashboard shows the current 'Now Playing' track. Tune in for curated transformation soundtracks."
+      }
+    ],
+    tips: [
+      "Generate soundtracks that match your Chief Aim energy for maximum impact",
+      "Submit your best audio creations to be featured on Director Radio",
+      "Use Director Radio as background motivation during your daily rituals"
+    ]
+  },
+  {
     id: "community",
     icon: <Users className="w-6 h-6" />,
     title: "Community & Awards",
@@ -541,6 +574,22 @@ const faqs = [
   {
     question: "Where can I see the Annual Awards?",
     answer: "Visit the Awards Ceremony page at /awards to see yearly statistics, category winners, and the leaderboards. Awards include Best Mind Movie, Longest Streak, Top Director Score, Most Movies Created, Community Favorite, and Rising Star."
+  },
+  {
+    question: "What is Director Radio?",
+    answer: "Director Radio is a curated music streaming feature within Psycho-Cinematics™. It includes admin-curated playlists, community-submitted tracks, and featured 'Now Playing' songs. Listen while you work on your transformation for motivation and focus."
+  },
+  {
+    question: "How do I submit my soundtrack to Director Radio?",
+    answer: "In the Media Library (Edit Bay → My Gallery), find any audio track you've generated. Click the 'Submit to Radio' button in the lightbox view. Add a track title and artist name, then submit. Admins will review and approve tracks for community playlists."
+  },
+  {
+    question: "Can I listen to podcasts on Director Radio?",
+    answer: "Yes! Director Radio supports external podcast and livestream URLs. Admins can add podcast feeds that appear alongside music playlists. Check the Streams section in the Radio Player for available podcasts."
+  },
+  {
+    question: "How do I generate a custom soundtrack?",
+    answer: "Use the Mind Movie Script Wizard → Soundtrack step. Choose from 50+ genres across 10 categories, select vocal gender, and optionally add custom lyrics based on your Chief Aim. Generate 1-2 songs at once with AI-powered music creation."
   }
 ];
 
