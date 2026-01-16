@@ -158,10 +158,10 @@ export function EpisodeProductionDashboard({
       })(),
       icon: Image,
       action: scriptData ? () => {
-        onClose();
-        onOpenMindMovieWizard();
+        // Open Edit Bay for visual generation
+        setShowEditBay(true);
       } : undefined,
-      actionLabel: "Open Studio",
+      actionLabel: "Open Edit Bay",
     },
     {
       id: "edit",
