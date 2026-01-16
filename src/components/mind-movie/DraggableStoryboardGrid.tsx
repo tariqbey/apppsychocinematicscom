@@ -6,7 +6,7 @@ interface DraggableStoryboardGridProps {
   scenes: Scene[];
   onUpdateScene?: (order: number, updates: Partial<Scene>) => void;
   onReorderScenes?: (newScenes: Scene[]) => void;
-  onGenerateInEditBay?: (prompt: string) => void;
+  onGenerateInEditBay?: (prompt: string, sceneOrder: number, sceneTitle: string) => void;
   onRegenerateScene?: (order: number) => void;
   onDeleteScene?: (order: number) => void;
   regeneratingSceneOrder?: number | null;

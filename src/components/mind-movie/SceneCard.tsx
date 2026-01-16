@@ -12,7 +12,7 @@ import type { Scene } from "@/hooks/useMindMovieScript";
 interface SceneCardProps {
   scene: Scene;
   onUpdate?: (updates: Partial<Scene>) => void;
-  onGenerateInEditBay?: (prompt: string) => void;
+  onGenerateInEditBay?: (prompt: string, sceneOrder: number, sceneTitle: string) => void;
   onRegenerate?: () => void;
   onDelete?: () => void;
   isRegenerating?: boolean;
@@ -235,7 +235,7 @@ export function SceneCard({
             {onGenerateInEditBay && (
               <Button
                 size="sm"
-                onClick={() => onGenerateInEditBay(scene.prompt)}
+                onClick={() => onGenerateInEditBay(scene.prompt, scene.order, scene.title)}
                 className="flex-1"
               >
                 <Sparkles className="w-3 h-3 mr-1" />

@@ -23,6 +23,7 @@ import { useUserProfile } from "@/hooks/useUserProfile";
 import { useGamification } from "@/hooks/useGamification";
 import { useMindMovies, MindMovie } from "@/hooks/useMindMovies";
 import { useEpisodes } from "@/hooks/useEpisodes";
+import { supabase } from "@/integrations/supabase/client";
 import { Loader2, Wand2, Sparkles, Bot, Clapperboard, FolderOpen, BookOpen, Target, User2, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { InfoTooltip } from "@/components/ui/info-tooltip";
@@ -41,6 +42,11 @@ const Index = () => {
   const [showMovieVault, setShowMovieVault] = useState(false);
   const [selectedMovieId, setSelectedMovieId] = useState<string | undefined>();
   const [editBayInitialPrompt, setEditBayInitialPrompt] = useState<string | undefined>();
+  const [editBaySceneContext, setEditBaySceneContext] = useState<{
+    sceneOrder: number;
+    sceneTitle: string;
+    movieId?: string;
+  } | undefined>();
   const [timelineExportData, setTimelineExportData] = useState<TimelineExportData | undefined>();
   const [showJournal, setShowJournal] = useState(false);
   const [transformationDataForWizard, setTransformationDataForWizard] = useState<{
@@ -282,6 +288,7 @@ const Index = () => {
           <button
             onClick={() => {
               setEditBayInitialPrompt(undefined);
+              setEditBaySceneContext(undefined);
               setShowEditBay(true);
             }}
             className="w-full glass-card p-6 cinematic-border animate-slide-up group hover:border-gold/50 transition-all duration-300 text-left"
@@ -449,10 +456,55 @@ const Index = () => {
           onClose={() => {
             setShowEditBay(false);
             setEditBayInitialPrompt(undefined);
+            setEditBaySceneContext(undefined);
             setTimelineExportData(undefined);
           }}
           initialPrompt={editBayInitialPrompt}
           timelineImportData={timelineExportData}
+          sceneContext={editBaySceneContext ? {
+            sceneOrder: editBaySceneContext.sceneOrder,
+            sceneTitle: editBaySceneContext.sceneTitle,
+            onImageSaved: async (imageUrl: string, sceneOrder: number) => {
+              // Update the scene in the database
+              if (editBaySceneContext.movieId) {
+                try {
+                  const { data: scriptData } = await supabase
+                    .from("mind_movie_scripts")
+                    .select("scenes")
+                    .eq("id", editBaySceneContext.movieId)
+                    .single();
+                  
+                  if (scriptData?.scenes && Array.isArray(scriptData.scenes)) {
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    const scenes = scriptData.scenes as any[];
+                    const updatedScenes = scenes.map((scene: any) => 
+                      scene.order === sceneOrder 
+                        ? { ...scene, generatedImageUrl: imageUrl }
+                        : scene
+                    );
+                    
+                    await supabase
+                      .from("mind_movie_scripts")
+                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                      .update({ scenes: updatedScenes as any })
+                      .eq("id", editBaySceneContext.movieId);
+                    
+                    toast.success(`Image saved to Scene ${sceneOrder}!`);
+                    
+                    // Reopen the wizard with the updated movie
+                    setShowEditBay(false);
+                    setEditBaySceneContext(undefined);
+                    setEditBayInitialPrompt(undefined);
+                    setSelectedMovieId(editBaySceneContext.movieId);
+                    setShowMindMovieWizard(true);
+                  }
+                } catch (error) {
+                  console.error("Error saving scene image:", error);
+                  toast.error("Failed to save image to scene");
+                }
+              }
+            },
+          } : undefined}
         />
       )}
 
@@ -489,8 +541,12 @@ const Index = () => {
             plan: transformationDataForWizard.chiefAim.plan || "",
           } : chiefAim}
           movieId={selectedMovieId}
-          onOpenEditBay={(prompt) => {
+          onOpenEditBay={(prompt, sceneContext) => {
             setEditBayInitialPrompt(prompt);
+            setEditBaySceneContext(sceneContext ? {
+              ...sceneContext,
+              movieId: selectedMovieId,
+            } : undefined);
             setShowEditBay(true);
             setShowMindMovieWizard(false);
             setEpisodeForMovie(null);
