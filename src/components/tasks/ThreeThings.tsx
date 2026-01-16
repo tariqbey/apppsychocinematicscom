@@ -1,10 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { 
-  Target, Plus, Trash2, Loader2, Sparkles, ChevronLeft, ChevronRight,
-  Calendar, RefreshCw, X, AlertCircle, BarChart3, Check, XCircle, Flame
+  Target, Plus, Loader2, Sparkles, ChevronLeft, ChevronRight,
+  Calendar, RefreshCw, X, AlertCircle, BarChart3, Flame, Check, XCircle, Trash2
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -22,6 +22,8 @@ import {
 import { ExcuseAnalytics } from "./ExcuseAnalytics";
 import { WeeklyComparison } from "./WeeklyComparison";
 import { StreakMilestone, useStreakMilestone } from "./StreakMilestone";
+import { ReplaceSuggestionDialog } from "./ReplaceSuggestionDialog";
+import { DraggableTaskItem } from "./DraggableTaskItem";
 
 interface Task {
   id: string;
@@ -67,6 +69,17 @@ export function ThreeThings({ showAnalyticsDefault = false }: ThreeThingsProps) 
   const [taskToUncheck, setTaskToUncheck] = useState<Task | null>(null);
   const [showAnalytics, setShowAnalytics] = useState(showAnalyticsDefault);
   const [taskStreak, setTaskStreak] = useState(0);
+  
+  // Drag and drop state
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+  const touchStartY = useRef<number>(0);
+  const touchMoveIndex = useRef<number | null>(null);
+  
+  // Replace suggestion dialog state
+  const [replaceDialogOpen, setReplaceDialogOpen] = useState(false);
+  const [suggestionToReplace, setSuggestionToReplace] = useState<Suggestion | null>(null);
+  
   const { user } = useAuth();
   const { profile } = useUserProfile();
   const { toast } = useToast();
@@ -245,11 +258,9 @@ export function ThreeThings({ showAnalyticsDefault = false }: ThreeThingsProps) 
     if (!user) return;
 
     if (tasks.length >= 3) {
-      toast({
-        title: "Maximum 3 tasks",
-        description: "Delete a task first to add this suggestion.",
-        variant: "destructive",
-      });
+      // Open replace dialog instead of blocking
+      setSuggestionToReplace(suggestion);
+      setReplaceDialogOpen(true);
       return;
     }
 
@@ -276,6 +287,127 @@ export function ThreeThings({ showAnalyticsDefault = false }: ThreeThingsProps) 
       setSuggestions(suggestions.filter((s) => s.task !== suggestion.task));
       toast({ title: "Task added", description: suggestion.task });
     }
+  };
+
+  const handleReplaceSuggestion = async (taskIdToReplace: string) => {
+    if (!user || !suggestionToReplace) return;
+    
+    const taskToReplace = tasks.find(t => t.id === taskIdToReplace);
+    if (!taskToReplace) return;
+
+    // Delete the old task
+    const { error: deleteError } = await supabase
+      .from("daily_tasks")
+      .delete()
+      .eq("id", taskIdToReplace);
+
+    if (deleteError) {
+      toast({ title: "Error", description: "Failed to replace task", variant: "destructive" });
+      return;
+    }
+
+    // Insert the new suggestion with the same priority
+    const dateStr = format(selectedDate, "yyyy-MM-dd");
+    const { data, error: insertError } = await supabase
+      .from("daily_tasks")
+      .insert({
+        user_id: user.id,
+        task_text: suggestionToReplace.task,
+        task_date: dateStr,
+        priority: taskToReplace.priority,
+      })
+      .select()
+      .single();
+
+    if (insertError) {
+      toast({ title: "Error", description: "Failed to add replacement task", variant: "destructive" });
+      loadTasks(); // Reload to get consistent state
+      return;
+    }
+
+    if (data) {
+      setTasks(tasks.map(t => t.id === taskIdToReplace ? data : t));
+      setSuggestions(suggestions.filter((s) => s.task !== suggestionToReplace.task));
+      toast({ title: "Task replaced", description: suggestionToReplace.task });
+    }
+
+    setReplaceDialogOpen(false);
+    setSuggestionToReplace(null);
+  };
+
+  // Drag and drop handlers
+  const handleDragStart = (index: number) => {
+    setDragIndex(index);
+  };
+
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    if (dragIndex !== null && dragIndex !== index) {
+      setDragOverIndex(index);
+    }
+  };
+
+  const handleDragEnd = async () => {
+    if (dragIndex !== null && dragOverIndex !== null && dragIndex !== dragOverIndex) {
+      await reorderTasks(dragIndex, dragOverIndex);
+    }
+    setDragIndex(null);
+    setDragOverIndex(null);
+  };
+
+  const handleTouchStart = (index: number) => {
+    setDragIndex(index);
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (dragIndex === null) return;
+    
+    const touch = e.touches[0];
+    const elements = document.elementsFromPoint(touch.clientX, touch.clientY);
+    
+    for (const el of elements) {
+      const taskEl = el.closest('[data-task-index]');
+      if (taskEl) {
+        const index = parseInt(taskEl.getAttribute('data-task-index') || '-1', 10);
+        if (index >= 0 && index !== dragIndex) {
+          setDragOverIndex(index);
+          return;
+        }
+      }
+    }
+  };
+
+  const handleTouchEnd = async () => {
+    if (dragIndex !== null && dragOverIndex !== null && dragIndex !== dragOverIndex) {
+      await reorderTasks(dragIndex, dragOverIndex);
+    }
+    setDragIndex(null);
+    setDragOverIndex(null);
+  };
+
+  const reorderTasks = async (fromIndex: number, toIndex: number) => {
+    const newTasks = [...tasks];
+    const [movedTask] = newTasks.splice(fromIndex, 1);
+    newTasks.splice(toIndex, 0, movedTask);
+    
+    // Update priorities
+    const updatedTasks = newTasks.map((task, index) => ({
+      ...task,
+      priority: index + 1,
+    }));
+    
+    setTasks(updatedTasks);
+
+    // Update priorities in database
+    const updates = updatedTasks.map(task => 
+      supabase
+        .from("daily_tasks")
+        .update({ priority: task.priority })
+        .eq("id", task.id)
+    );
+
+    await Promise.all(updates);
+    toast({ title: "Tasks reordered", description: "Priorities updated" });
   };
 
   const getSuggestions = async () => {
@@ -426,7 +558,7 @@ export function ThreeThings({ showAnalyticsDefault = false }: ThreeThingsProps) 
           </div>
         )}
       </div>
-      {/* Tasks List */}
+      {/* Tasks List with Drag & Drop */}
       <div className="space-y-2">
         {isLoading ? (
           <div className="flex items-center justify-center py-8">
@@ -445,15 +577,37 @@ export function ThreeThings({ showAnalyticsDefault = false }: ThreeThingsProps) 
             return (
               <div
                 key={task.id}
-                className={`p-3 rounded-lg border transition-colors ${
+                data-task-index={index}
+                draggable
+                onDragStart={() => handleDragStart(index)}
+                onDragOver={(e) => handleDragOver(e, index)}
+                onDragEnd={handleDragEnd}
+                onTouchStart={() => handleTouchStart(index)}
+                onTouchMove={handleTouchMove}
+                onTouchEnd={handleTouchEnd}
+                className={`p-3 rounded-lg border transition-all cursor-grab active:cursor-grabbing ${
                   task.is_completed
                     ? "bg-primary/10 border-primary/30"
                     : task.incomplete_reason
                     ? "bg-destructive/10 border-destructive/30"
                     : "bg-muted/50 border-border/50"
+                } ${dragIndex === index ? "opacity-50 scale-95" : ""} ${
+                  dragOverIndex === index ? "border-gold border-2" : ""
                 }`}
               >
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2">
+                  {/* Drag Handle */}
+                  <div className="touch-none cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground">
+                    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <circle cx="9" cy="5" r="1" fill="currentColor" />
+                      <circle cx="9" cy="12" r="1" fill="currentColor" />
+                      <circle cx="9" cy="19" r="1" fill="currentColor" />
+                      <circle cx="15" cy="5" r="1" fill="currentColor" />
+                      <circle cx="15" cy="12" r="1" fill="currentColor" />
+                      <circle cx="15" cy="19" r="1" fill="currentColor" />
+                    </svg>
+                  </div>
+
                   <span className="text-xs font-bold text-primary w-5">#{index + 1}</span>
                   <span className={`flex-1 ${task.is_completed ? "text-primary" : task.incomplete_reason ? "text-muted-foreground" : ""}`}>
                     {task.task_text}
@@ -580,14 +734,11 @@ export function ThreeThings({ showAnalyticsDefault = false }: ThreeThingsProps) 
                     <Button
                       size="sm"
                       variant="outline"
-                      className={`shrink-0 h-8 text-xs border-gold/30 hover:bg-gold/10 ${
-                        tasks.length >= 3 ? "opacity-60" : ""
-                      }`}
+                      className="shrink-0 h-8 text-xs border-gold/30 hover:bg-gold/10"
                       onClick={() => addSuggestion(suggestion)}
-                      aria-disabled={tasks.length >= 3}
                     >
                       <Plus className="h-3 w-3 mr-1" />
-                      Add
+                      {tasks.length >= 3 ? "Replace" : "Add"}
                     </Button>
                   </div>
                   <p className="text-xs text-muted-foreground leading-relaxed">{suggestion.reason}</p>
@@ -624,6 +775,15 @@ export function ThreeThings({ showAnalyticsDefault = false }: ThreeThingsProps) 
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Replace Suggestion Dialog */}
+      <ReplaceSuggestionDialog
+        open={replaceDialogOpen}
+        onOpenChange={setReplaceDialogOpen}
+        tasks={tasks}
+        suggestionTask={suggestionToReplace?.task || ""}
+        onReplace={handleReplaceSuggestion}
+      />
     </div>
   );
 }
