@@ -24,10 +24,11 @@ import { useGamification } from "@/hooks/useGamification";
 import { useMindMovies, MindMovie } from "@/hooks/useMindMovies";
 import { useEpisodes } from "@/hooks/useEpisodes";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Wand2, Sparkles, Bot, Clapperboard, FolderOpen, BookOpen, Target, User2, Zap } from "lucide-react";
+import { Loader2, Wand2, Sparkles, Bot, Clapperboard, FolderOpen, BookOpen, Target, User2, Zap, Music, Radio } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { InfoTooltip } from "@/components/ui/info-tooltip";
 import { toast } from "sonner";
+import { DirectorRadioCard } from "@/components/radio/DirectorRadioCard";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -430,6 +431,35 @@ const Index = () => {
               </div>
             </div>
           </button>
+
+          {/* Soundtrack Studio Card */}
+          <button
+            onClick={() => navigate("/soundtrack")}
+            className="w-full glass-card p-6 cinematic-border animate-slide-up group hover:border-pink-500/50 transition-all duration-300 text-left"
+          >
+            <div className="flex items-center gap-4">
+              <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-pink-500/20 to-rose-500/20 flex items-center justify-center group-hover:from-pink-500/30 group-hover:to-rose-500/30 transition-all duration-300">
+                <Music className="w-7 h-7 text-pink-400" />
+              </div>
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-1">
+                  <h3 className="text-xl font-display tracking-wide group-hover:text-pink-400 transition-colors">Soundtrack Studio</h3>
+                  <Sparkles className="w-4 h-4 text-pink-400/60" />
+                  <InfoTooltip content="Create AI-generated music and lyrics for your Mind Movies. Choose from 50+ genres and styles to match your vision." />
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Create custom AI soundtracks • 50+ music genres • Save to library
+                </p>
+              </div>
+              <div className="hidden sm:flex items-center gap-2 text-sm text-muted-foreground group-hover:text-pink-400 transition-colors">
+                <span>Create Music</span>
+                <span className="text-lg">→</span>
+              </div>
+            </div>
+          </button>
+
+          {/* Director Radio Card */}
+          <DirectorRadioCard />
 
           {/* Two Column Layout */}
           <div className="grid md:grid-cols-2 gap-6">
