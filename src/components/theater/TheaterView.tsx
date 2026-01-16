@@ -217,6 +217,35 @@ export const TheaterView = ({ onClose }: TheaterViewProps) => {
     const playerEl = playerRef.current;
     const videoEl = videoRef.current;
 
+    // Detect iOS (iPhone, iPad, iPod, or iPad with desktop mode)
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
+                  (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+    // iOS Safari specific path - only webkitEnterFullscreen works on video elements
+    if (isIOS && videoEl) {
+      const anyVideo = videoEl as unknown as { 
+        webkitEnterFullscreen?: () => void;
+        webkitExitFullscreen?: () => void;
+        webkitDisplayingFullscreen?: boolean;
+      };
+      
+      if (anyVideo.webkitDisplayingFullscreen) {
+        try {
+          anyVideo.webkitExitFullscreen?.();
+        } catch {
+          // ignore
+        }
+      } else {
+        try {
+          anyVideo.webkitEnterFullscreen?.();
+        } catch {
+          // ignore
+        }
+      }
+      return;
+    }
+
+    // Standard path for Android/Desktop
     // If we're already in fullscreen, exit.
     if (document.fullscreenElement) {
       try {
@@ -245,14 +274,6 @@ export const TheaterView = ({ onClose }: TheaterViewProps) => {
       } catch {
         // fall through
       }
-    }
-
-    // iOS Safari fallback: native video fullscreen.
-    const anyVideo = videoEl as unknown as { webkitEnterFullscreen?: () => void } | null;
-    try {
-      anyVideo?.webkitEnterFullscreen?.();
-    } catch {
-      // ignore
     }
   };
 
