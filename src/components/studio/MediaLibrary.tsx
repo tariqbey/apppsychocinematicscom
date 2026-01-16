@@ -5,7 +5,7 @@ import { Progress } from "@/components/ui/progress";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Image, Video, Clock, AlertCircle, Loader2, Download, Trash2, HardDrive, X, ChevronLeft, ChevronRight, RefreshCw, Mic2, Clapperboard, Music, Plus, ArrowUpDown, Share2 } from "lucide-react";
+import { Image, Video, Clock, AlertCircle, Loader2, Download, Trash2, HardDrive, X, ChevronLeft, ChevronRight, RefreshCw, Mic2, Clapperboard, Music, Plus, ArrowUpDown, Share2, Radio } from "lucide-react";
 import { useMediaGeneration, GeneratedMedia } from "@/hooks/useMediaGeneration";
 import { useStorageUsage } from "@/hooks/useStorageUsage";
 import { formatDistanceToNow } from "date-fns";
@@ -15,6 +15,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { VoiceChanger } from "./VoiceChanger";
 import { ShareMenu } from "@/components/sharing/ShareMenu";
 import { ShareToCommunityDialog } from "@/components/sharing/ShareToCommunityDialog";
+import { SubmitToRadioDialog } from "./SubmitToRadioDialog";
 
 interface MediaLibraryProps {
   filter?: "image" | "video" | "all";
@@ -44,6 +45,7 @@ export function MediaLibrary({ filter = "all", onSelect, onAddToTimeline, onAddM
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [filterType, setFilterType] = useState<"all" | "video" | "image" | "audio">("all");
   const [shareDialogMedia, setShareDialogMedia] = useState<GeneratedMedia | null>(null);
+  const [radioSubmitMedia, setRadioSubmitMedia] = useState<GeneratedMedia | null>(null);
   const { fetchGenerationHistory } = useMediaGeneration();
   const { toast } = useToast();
   const { user, loading: authLoading } = useAuth();
@@ -355,6 +357,18 @@ export function MediaLibrary({ filter = "all", onSelect, onAddToTimeline, onAddM
                           setShareDialogMedia(lightboxMedia);
                         }}
                       />
+                    )}
+                    {/* Submit to Radio Button - Audio only */}
+                    {lightboxMedia.media_type === "audio" && lightboxMedia.media_url && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="border-gold/30 text-gold hover:bg-gold/10"
+                        onClick={() => setRadioSubmitMedia(lightboxMedia)}
+                      >
+                        <Radio className="h-4 w-4 mr-2" />
+                        Submit to Radio
+                      </Button>
                     )}
                     <Button
                       size="sm"
@@ -692,6 +706,17 @@ export function MediaLibrary({ filter = "all", onSelect, onAddToTimeline, onAddM
           mediaUrl={shareDialogMedia.media_url}
           mediaType={shareDialogMedia.media_type as "image" | "video"}
           defaultCaption={shareDialogMedia.prompt || ""}
+        />
+      )}
+
+      {/* Submit to Radio Dialog */}
+      {radioSubmitMedia && radioSubmitMedia.media_url && (
+        <SubmitToRadioDialog
+          isOpen={!!radioSubmitMedia}
+          onClose={() => setRadioSubmitMedia(null)}
+          mediaId={radioSubmitMedia.id}
+          mediaUrl={radioSubmitMedia.media_url}
+          defaultTitle={radioSubmitMedia.prompt || ""}
         />
       )}
     </div>
