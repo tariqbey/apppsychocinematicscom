@@ -253,11 +253,11 @@ const Index = () => {
           {/* Streak Banner */}
           <StreakBanner streak={streak} bestStreak={bestStreak} />
 
-          {/* Active Episode Banner */}
+          {/* Active Episode Banner - Clickable to navigate to Episodes page */}
           {activeEpisode && (
             <ActiveEpisodeBanner 
               episode={activeEpisode} 
-              onCreateMindMovie={handleCreateEpisodeMovie}
+              clickToNavigate={true}
             />
           )}
 
