@@ -30,7 +30,7 @@ interface EpisodeCharacterAnalysis {
 
 export default function Episodes() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const { profile } = useUserProfile();
   const { episodes, activeEpisode, loading, updateEpisode } = useEpisodes();
   
@@ -49,12 +49,12 @@ export default function Episodes() {
     plan: profile?.chief_aim_plan || ""
   };
 
-  // Redirect to landing if not logged in
+  // Redirect to landing if not logged in (only after auth state is loaded)
   useEffect(() => {
-    if (!user) {
+    if (!authLoading && !user) {
       navigate("/");
     }
-  }, [user, navigate]);
+  }, [user, authLoading, navigate]);
 
   // Handle opening production dashboard from URL or direct click
   const handleOpenProduction = (episode: Episode) => {
@@ -120,6 +120,15 @@ export default function Episodes() {
   const activeEpisodes = episodes.filter(e => e.status === "active");
   const completedEpisodes = episodes.filter(e => e.status === "completed");
   const otherEpisodes = episodes.filter(e => e.status === "paused" || e.status === "abandoned");
+
+  // Show loading while checking auth
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-background via-background to-muted/20 flex items-center justify-center">
+        <Sparkles className="w-10 h-10 text-gold animate-pulse" />
+      </div>
+    );
+  }
 
   if (!user) {
     return null;
