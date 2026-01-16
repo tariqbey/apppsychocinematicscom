@@ -13,24 +13,33 @@ serve(async (req) => {
   try {
     const { archetype, archetypeScores, chiefAim, userName } = await req.json();
 
+    // Safely extract archetype properties with defaults
+    const archetypeName = archetype?.name || "Unknown";
+    const strengths = Array.isArray(archetype?.strengths) ? archetype.strengths.join(", ") : "Not specified";
+    const weaknesses = Array.isArray(archetype?.weaknesses) ? archetype.weaknesses.join(", ") : "Not specified";
+    const lightExpression = archetype?.lightShadow?.light || "Not specified";
+    const shadowExpression = archetype?.lightShadow?.shadow || "Not specified";
+    const storyFuel = archetype?.storyFuel || "Not specified";
+    const conflictPattern = archetype?.conflictPattern || "Not specified";
+
     // Build the prompt for character transformation analysis
     const prompt = `You are a direct, no-BS character transformation coach based on the Psycho-Cinematics™ methodology. 
 
-The user "${userName || "Director"}" has completed a character assessment. Their primary archetype is "${archetype.name}".
+The user "${userName || "Director"}" has completed a character assessment. Their primary archetype is "${archetypeName}".
 
 ARCHETYPE PROFILE:
-- Strengths: ${archetype.strengths.join(", ")}
-- Weaknesses: ${archetype.weaknesses.join(", ")}
-- Light Expression: ${archetype.lightShadow.light}
-- Shadow Expression: ${archetype.lightShadow.shadow}
-- Core Story Fuel: ${archetype.storyFuel}
-- Conflict Pattern: ${archetype.conflictPattern}
+- Strengths: ${strengths}
+- Weaknesses: ${weaknesses}
+- Light Expression: ${lightExpression}
+- Shadow Expression: ${shadowExpression}
+- Core Story Fuel: ${storyFuel}
+- Conflict Pattern: ${conflictPattern}
 
 THEIR DEFINITE CHIEF AIM (Final Scene):
-What: ${chiefAim.what}
-By When: ${chiefAim.byWhen || "Not specified"}
-What They'll Exchange: ${chiefAim.exchange || "Not specified"}
-Their Plan: ${chiefAim.plan || "Not specified"}
+What: ${chiefAim?.what || "Not specified"}
+By When: ${chiefAim?.byWhen || "Not specified"}
+What They'll Exchange: ${chiefAim?.exchange || "Not specified"}
+Their Plan: ${chiefAim?.plan || "Not specified"}
 
 Based on WHO THEY ARE NOW (their archetype) and WHAT THEY WANT TO ACHIEVE (their Chief Aim), analyze the CHARACTER TRANSFORMATION required.
 
@@ -40,7 +49,7 @@ Return a JSON object with this exact structure:
 {
   "analysis": {
     "currentSelf": {
-      "archetype": "${archetype.name}",
+      "archetype": "${archetypeName}",
       "strengths": ["3 specific strengths that WILL help them achieve their Chief Aim"],
       "liabilities": ["3 specific traits from their archetype that WILL sabotage their goal if not addressed"],
       "blindSpots": ["2-3 things they won't see coming based on their archetype's shadow side"]
