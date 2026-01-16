@@ -18,6 +18,7 @@ import AwardsCeremony from "./pages/AwardsCeremony";
 import Settings from "./pages/Settings";
 import Actions from "./pages/Actions";
 import Character from "./pages/Character";
+import Episodes from "./pages/Episodes";
 import NotFound from "./pages/NotFound";
 import { RequireAdmin } from "./components/auth/RequireAdmin";
 
@@ -47,6 +48,7 @@ const App = () => (
           <Route path="/settings" element={<Settings />} />
           <Route path="/actions" element={<Actions />} />
           <Route path="/character" element={<Character />} />
+          <Route path="/episodes" element={<Episodes />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

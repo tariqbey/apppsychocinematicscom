@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Zap, Calendar, CheckCircle, MoreVertical, Pause, Play, X, ChevronRight } from "lucide-react";
+import { Zap, Calendar, CheckCircle, MoreVertical, Pause, Play, X, ChevronRight, Film } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import {
@@ -13,13 +13,19 @@ import { useEpisodes, Episode } from "@/hooks/useEpisodes";
 import { format } from "date-fns";
 
 interface ActiveEpisodeBannerProps {
-  episode: Episode;
+  episode?: Episode;
   onCreateMindMovie?: () => void;
+  onContinueProduction?: () => void;
 }
 
-export function ActiveEpisodeBanner({ episode, onCreateMindMovie }: ActiveEpisodeBannerProps) {
-  const { completeEpisode, pauseEpisode, abandonEpisode, getDaysRemaining, getProgress } = useEpisodes();
+export function ActiveEpisodeBanner({ episode: providedEpisode, onCreateMindMovie, onContinueProduction }: ActiveEpisodeBannerProps) {
+  const { activeEpisode, completeEpisode, pauseEpisode, abandonEpisode, getDaysRemaining, getProgress } = useEpisodes();
   const [loading, setLoading] = useState<string | null>(null);
+
+  // Use provided episode or fall back to active episode from hook
+  const episode = providedEpisode || activeEpisode;
+  
+  if (!episode) return null;
 
   const daysRemaining = getDaysRemaining(episode.deadline);
   const progress = getProgress(episode);
@@ -97,6 +103,17 @@ export function ActiveEpisodeBanner({ episode, onCreateMindMovie }: ActiveEpisod
 
         {/* Actions */}
         <div className="flex items-center gap-2 shrink-0">
+          {onContinueProduction && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="border-amber-500/30 text-amber-500 hover:bg-amber-500/10 hidden sm:flex"
+              onClick={onContinueProduction}
+            >
+              <Film className="w-4 h-4 mr-1" />
+              Continue Production
+            </Button>
+          )}
           <Button
             size="sm"
             className="bg-green-600 hover:bg-green-700 hidden sm:flex"
@@ -121,6 +138,12 @@ export function ActiveEpisodeBanner({ episode, onCreateMindMovie }: ActiveEpisod
                 <CheckCircle className="w-4 h-4 mr-2 text-green-400" />
                 Complete Episode
               </DropdownMenuItem>
+              {onContinueProduction && (
+                <DropdownMenuItem onClick={onContinueProduction} className="sm:hidden">
+                  <Film className="w-4 h-4 mr-2 text-amber-500" />
+                  Continue Production
+                </DropdownMenuItem>
+              )}
               {onCreateMindMovie && (
                 <DropdownMenuItem onClick={onCreateMindMovie}>
                   <ChevronRight className="w-4 h-4 mr-2" />
