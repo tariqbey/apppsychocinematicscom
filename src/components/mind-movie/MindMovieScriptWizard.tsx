@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { X, ChevronLeft, ChevronRight, Sparkles, Save, Clapperboard, Palette, Layout, Wand2, Music, Check, RefreshCw, Plus, User, ChevronDown, Trash2, HelpCircle, ExternalLink, Film, Zap, Loader2, CheckSquare, Square, Crown } from "lucide-react";
+import { X, ChevronLeft, ChevronRight, Sparkles, Save, Clapperboard, Palette, Layout, Wand2, Music, Check, RefreshCw, Plus, User, ChevronDown, Trash2, HelpCircle, ExternalLink, Film, Zap, Loader2, CheckSquare, Square, Crown, ClipboardList } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
@@ -25,6 +25,7 @@ import { DraggableStoryboardGrid } from "./DraggableStoryboardGrid";
 import { CreditCostEstimate } from "./CreditCostEstimate";
 import { LyricsEditor } from "./LyricsEditor";
 import { SoundtrackPlayer } from "./SoundtrackPlayer";
+import { VisionQuestionnaire, buildDescriptionFromAnswers, DEFAULT_VISION_ANSWERS, type VisionAnswers } from "./VisionQuestionnaire";
 import { useMindMovieScript, type Scene } from "@/hooks/useMindMovieScript";
 import { useMindMovieMusic, MUSIC_STYLES, type MusicStyle } from "@/hooks/useMindMovieMusic";
 import { useMediaGeneration } from "@/hooks/useMediaGeneration";
@@ -130,6 +131,7 @@ export function MindMovieScriptWizard({
   const [step, setStep] = useState(1);
   const [visualStyle, setVisualStyle] = useState("cinematic");
   const [userDescription, setUserDescription] = useState("");
+  const [visionAnswers, setVisionAnswers] = useState<VisionAnswers>(DEFAULT_VISION_ANSWERS);
   const [generatedTitle, setGeneratedTitle] = useState("");
   const [generatedScenes, setGeneratedScenes] = useState<Scene[]>([]);
   const [isAddingScenes, setIsAddingScenes] = useState(false);
@@ -255,11 +257,17 @@ export function MindMovieScriptWizard({
     if (addScenes) {
       setIsAddingScenes(true);
     }
+    
+    // Build rich description from questionnaire answers
+    const richDescription = buildDescriptionFromAnswers(visionAnswers);
+    // Combine with any additional user description
+    const fullDescription = richDescription + (userDescription ? `\n\nADDITIONAL CONTEXT: ${userDescription}` : "");
+    
     const existingScenes = addScenes ? generatedScenes : undefined;
     const result = await generateStoryboard(
       chiefAim, 
       visualStyle, 
-      userDescription, 
+      fullDescription, 
       existingScenes,
       transformationAnalysis
     );
@@ -745,30 +753,37 @@ export function MindMovieScriptWizard({
                 )}
 
                 <div>
-                  <h2 className="text-2xl font-bold mb-2">Set Your Visual Foundation</h2>
+                  <h2 className="text-2xl font-bold mb-2">Design Your Vision</h2>
                   <p className="text-muted-foreground">
-                    {transformationAnalysis?.requiredCharacter?.name 
-                      ? "We'll use your transformation analysis and Chief Aim to craft a powerful screenplay."
-                      : "We'll use your Definite Chief Aim to create a personalized storyboard."}
+                    Answer these questions to help AI create powerful, personalized scenes for your Mind Movie. 
+                    The more detail you provide, the more vivid your visualization will be.
                   </p>
                 </div>
 
-                {/* Chief Aim Reference */}
-                <Card className="bg-primary/5 border-primary/20">
-                  <CardContent className="p-4">
-                    <h3 className="font-semibold text-primary mb-2">Your Definite Chief Aim</h3>
-                    <div className="space-y-2 text-sm">
-                      <p><span className="text-muted-foreground">What:</span> {chiefAim.what || "Not set"}</p>
-                      <p><span className="text-muted-foreground">By When:</span> {chiefAim.byWhen || "Not set"}</p>
-                      <p><span className="text-muted-foreground">Exchange:</span> {chiefAim.exchange || "Not set"}</p>
-                      <p><span className="text-muted-foreground">Plan:</span> {chiefAim.plan || "Not set"}</p>
-                    </div>
-                  </CardContent>
-                </Card>
+                {/* Chief Aim Reference - Collapsible */}
+                <details className="group">
+                  <summary className="flex items-center gap-2 cursor-pointer text-sm font-medium text-primary hover:text-primary/80">
+                    <ChevronRight className="w-4 h-4 transition-transform group-open:rotate-90" />
+                    View Your Definite Chief Aim
+                  </summary>
+                  <Card className="bg-primary/5 border-primary/20 mt-2">
+                    <CardContent className="p-4">
+                      <div className="space-y-2 text-sm">
+                        <p><span className="text-muted-foreground">What:</span> {chiefAim.what || "Not set"}</p>
+                        <p><span className="text-muted-foreground">By When:</span> {chiefAim.byWhen || "Not set"}</p>
+                        <p><span className="text-muted-foreground">Exchange:</span> {chiefAim.exchange || "Not set"}</p>
+                        <p><span className="text-muted-foreground">Plan:</span> {chiefAim.plan || "Not set"}</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </details>
 
                 {/* Visual Style Selection */}
                 <div className="space-y-3">
-                  <Label className="text-base font-semibold">Choose Your Visual Style</Label>
+                  <Label className="text-base font-semibold flex items-center gap-2">
+                    <Palette className="w-4 h-4" />
+                    Choose Your Visual Style
+                  </Label>
                   <RadioGroup
                     value={visualStyle}
                     onValueChange={setVisualStyle}
@@ -798,20 +813,16 @@ export function MindMovieScriptWizard({
                   </RadioGroup>
                 </div>
 
-                {/* User Description */}
+                {/* Vision Questionnaire */}
                 <div className="space-y-3">
-                  <Label htmlFor="description" className="text-base font-semibold">
-                    Describe Your Vision
-                  </Label>
-                  <p className="text-sm text-muted-foreground">
-                    What does your success look like? Describe yourself, the setting, key moments, and how you want to feel.
-                  </p>
-                  <Textarea
-                    id="description"
-                    placeholder="Example: I see myself standing on the stage of a major conference, wearing my signature navy suit. The crowd is applauding. Behind me is a slide showing my company's logo. I feel confident, accomplished, and grateful. The lighting is warm and golden..."
-                    value={userDescription}
-                    onChange={(e) => setUserDescription(e.target.value)}
-                    className="min-h-[150px]"
+                  <div className="flex items-center gap-2 mb-4">
+                    <ClipboardList className="w-5 h-5 text-primary" />
+                    <Label className="text-base font-semibold">Define Your Vision</Label>
+                  </div>
+                  <VisionQuestionnaire
+                    answers={visionAnswers}
+                    onChange={setVisionAnswers}
+                    transformationAnalysis={transformationAnalysis}
                   />
                 </div>
               </div>
