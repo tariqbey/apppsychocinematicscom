@@ -32,7 +32,7 @@ export default function Episodes() {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
   const { profile } = useUserProfile();
-  const { episodes, activeEpisode, loading, updateEpisode } = useEpisodes();
+  const { episodes, activeEpisode, loading, updateEpisode, deleteEpisode, completeEpisode, pauseEpisode, resumeEpisode } = useEpisodes();
   
   const [showWizard, setShowWizard] = useState(false);
   const [selectedEpisode, setSelectedEpisode] = useState<Episode | null>(null);
@@ -228,17 +228,16 @@ export default function Episodes() {
                     </h2>
                     <div className="grid gap-4 md:grid-cols-2">
                       {activeEpisodes.map((episode) => (
-                        <div 
+                        <EpisodeCard 
                           key={episode.id}
-                          className="cursor-pointer transition-transform hover:scale-[1.02]"
-                          onClick={() => handleOpenProduction(episode)}
-                        >
-                          <EpisodeCard 
-                            episode={episode} 
-                            variant="full"
-                            onCreateMindMovie={() => handleCardCreateMindMovie(episode)}
-                          />
-                        </div>
+                          episode={episode} 
+                          variant="full"
+                          onCreateMindMovie={() => handleCardCreateMindMovie(episode)}
+                          onDelete={deleteEpisode}
+                          onComplete={completeEpisode}
+                          onPause={pauseEpisode}
+                          onResume={resumeEpisode}
+                        />
                       ))}
                     </div>
                   </section>
@@ -253,17 +252,16 @@ export default function Episodes() {
                     </h2>
                     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                       {completedEpisodes.map((episode) => (
-                        <div 
+                        <EpisodeCard 
                           key={episode.id}
-                          className="cursor-pointer transition-transform hover:scale-[1.02]"
-                          onClick={() => handleOpenProduction(episode)}
-                        >
-                          <EpisodeCard 
-                            episode={episode} 
-                            variant="compact"
-                            onCreateMindMovie={() => handleCardCreateMindMovie(episode)}
-                          />
-                        </div>
+                          episode={episode} 
+                          variant="compact"
+                          onCreateMindMovie={() => handleCardCreateMindMovie(episode)}
+                          onDelete={deleteEpisode}
+                          onComplete={completeEpisode}
+                          onPause={pauseEpisode}
+                          onResume={resumeEpisode}
+                        />
                       ))}
                     </div>
                   </section>
@@ -277,17 +275,16 @@ export default function Episodes() {
                     </h2>
                     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                       {otherEpisodes.map((episode) => (
-                        <div 
+                        <EpisodeCard 
                           key={episode.id}
-                          className="cursor-pointer transition-transform hover:scale-[1.02]"
-                          onClick={() => handleOpenProduction(episode)}
-                        >
-                          <EpisodeCard 
-                            episode={episode} 
-                            variant="compact"
-                            onCreateMindMovie={() => handleCardCreateMindMovie(episode)}
-                          />
-                        </div>
+                          episode={episode} 
+                          variant="compact"
+                          onCreateMindMovie={() => handleCardCreateMindMovie(episode)}
+                          onDelete={deleteEpisode}
+                          onComplete={completeEpisode}
+                          onPause={pauseEpisode}
+                          onResume={resumeEpisode}
+                        />
                       ))}
                     </div>
                   </section>

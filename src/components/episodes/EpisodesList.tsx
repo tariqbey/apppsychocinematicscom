@@ -18,7 +18,7 @@ import { supabase } from "@/integrations/supabase/client";
 type StatusFilter = "all" | "active" | "completed" | "paused" | "abandoned";
 
 export function EpisodesList() {
-  const { episodes, loading, updateEpisode } = useEpisodes();
+  const { episodes, loading, updateEpisode, deleteEpisode, completeEpisode, pauseEpisode, resumeEpisode } = useEpisodes();
   const [showWizard, setShowWizard] = useState(false);
   const [filter, setFilter] = useState<StatusFilter>("all");
   const [activeView, setActiveView] = useState<"list" | "timeline">("list");
@@ -180,44 +180,15 @@ export function EpisodesList() {
                   key={episode.id} 
                   episode={episode} 
                   onCreateMindMovie={() => handleCreateMindMovie(episode)}
+                  onDelete={deleteEpisode}
+                  onComplete={completeEpisode}
+                  onPause={pauseEpisode}
+                  onResume={resumeEpisode}
                 />
               ))}
             </div>
           )}
         </>
-      )}
-      {filteredEpisodes.length === 0 ? (
-        <div className="glass-card p-8 text-center">
-          <Zap className="w-12 h-12 text-amber-500/50 mx-auto mb-4" />
-          <h3 className="text-lg font-medium mb-2">
-            {filter === "all" ? "No Episodes Yet" : `No ${filterLabels[filter]} Episodes`}
-          </h3>
-          <p className="text-sm text-muted-foreground mb-4">
-            {filter === "all" 
-              ? "Episodes are short-term sprints that support your main Chief Aim."
-              : "Try changing the filter to see other episodes."
-            }
-          </p>
-          {filter === "all" && (
-            <Button
-              className="bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700"
-              onClick={() => setShowWizard(true)}
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Create Your First Episode
-            </Button>
-          )}
-        </div>
-      ) : (
-        <div className="grid gap-4">
-          {filteredEpisodes.map((episode) => (
-            <EpisodeCard 
-              key={episode.id} 
-              episode={episode} 
-              onCreateMindMovie={() => handleCreateMindMovie(episode)}
-            />
-          ))}
-        </div>
       )}
 
       {/* Episode Wizard Modal */}
