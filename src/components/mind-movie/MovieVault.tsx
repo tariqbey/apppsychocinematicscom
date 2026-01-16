@@ -97,68 +97,77 @@ export function MovieVault({ isOpen, onClose, onSelectMovie, onCreateNew }: Movi
 
   return (
     <div className="fixed inset-0 z-50 bg-background/95 backdrop-blur-sm flex flex-col animate-fade-in">
-      {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-border">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-gold to-amber-soft flex items-center justify-center">
-            <Clapperboard className="w-5 h-5 text-primary-foreground" />
+      {/* Header - Responsive */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 sm:p-4 border-b border-border gap-3">
+        {/* Top row: Back button, title, close */}
+        <div className="flex items-center justify-between sm:justify-start gap-3">
+          <Button variant="ghost" size="icon" onClick={onClose} className="shrink-0">
+            <X className="w-5 h-5" />
+          </Button>
+          <div className="flex items-center gap-2 min-w-0 flex-1">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-gradient-to-br from-gold to-amber-soft flex items-center justify-center shrink-0">
+              <Clapperboard className="w-4 h-4 sm:w-5 sm:h-5 text-primary-foreground" />
+            </div>
+            <div className="min-w-0">
+              <h2 className="text-lg sm:text-xl font-display tracking-wide truncate">Mind Movie Vault</h2>
+              <p className="text-xs sm:text-sm text-muted-foreground">
+                {movies.length} movie{movies.length !== 1 ? "s" : ""}
+              </p>
+            </div>
           </div>
-          <div>
-            <h2 className="text-xl font-display tracking-wide">Mind Movie Vault</h2>
-            <p className="text-sm text-muted-foreground">
-              {movies.length} movie{movies.length !== 1 ? "s" : ""} • Manage your collection
-            </p>
-          </div>
+          {/* Mobile: Create button in header row */}
+          <Button variant="gold" size="icon" onClick={onCreateNew} className="sm:hidden shrink-0">
+            <Plus className="w-5 h-5" />
+          </Button>
         </div>
 
-        <div className="flex items-center gap-4">
+        {/* Second row on mobile: Storage + Create button */}
+        <div className="flex items-center justify-between sm:justify-end gap-2 sm:gap-4">
           {/* Storage Usage Indicator */}
-          <div className="flex items-center gap-3 px-4 py-2 rounded-lg bg-muted/50 border border-border">
-            <HardDrive className="w-4 h-4 text-muted-foreground" />
-            <div className="flex flex-col gap-1">
-              <div className="flex items-center justify-between gap-4">
-                <span className="text-xs text-muted-foreground">Storage</span>
-                <span className="text-xs font-medium">
+          <div className="flex items-center gap-2 sm:gap-3 px-2 sm:px-4 py-1.5 sm:py-2 rounded-lg bg-muted/50 border border-border flex-1 sm:flex-initial">
+            <HardDrive className="w-4 h-4 text-muted-foreground shrink-0" />
+            <div className="flex flex-col gap-0.5 sm:gap-1 min-w-0">
+              <div className="flex items-center justify-between gap-2 sm:gap-4">
+                <span className="text-xs text-muted-foreground hidden sm:inline">Storage</span>
+                <span className="text-xs font-medium truncate">
                   {isLoadingUsage ? (
                     <Loader2 className="w-3 h-3 animate-spin" />
                   ) : usage ? (
                     `${formatUsage(usage.totalBytes)} / ${STORAGE_LIMIT_GB} GB`
                   ) : (
-                    "Calculating..."
+                    "..."
                   )}
                 </span>
               </div>
               <Progress 
                 value={usage?.percentUsed || 0} 
-                className="h-1.5 w-32"
+                className="h-1 sm:h-1.5 w-20 sm:w-32"
               />
             </div>
           </div>
 
-          <Button variant="gold" onClick={onCreateNew}>
+          {/* Desktop: Create button */}
+          <Button variant="gold" onClick={onCreateNew} className="hidden sm:flex">
             <Plus className="w-4 h-4 mr-2" />
             Start New Movie
-          </Button>
-          <Button variant="ghost" size="icon" onClick={onClose}>
-            <X className="w-5 h-5" />
           </Button>
         </div>
       </div>
 
-      {/* Filter Tabs */}
-      <div className="px-4 border-b border-border">
+      {/* Filter Tabs - Scrollable on mobile */}
+      <div className="px-2 sm:px-4 border-b border-border overflow-x-auto">
         <Tabs value={vaultFilter} onValueChange={(v) => setVaultFilter(v as VaultFilter)}>
-          <TabsList className="bg-transparent border-b-0">
-            <TabsTrigger value="all" className="data-[state=active]:bg-muted">
-              All Movies
+          <TabsList className="bg-transparent border-b-0 w-max min-w-full sm:w-auto">
+            <TabsTrigger value="all" className="data-[state=active]:bg-muted text-xs sm:text-sm px-2 sm:px-3">
+              All
             </TabsTrigger>
-            <TabsTrigger value="main" className="data-[state=active]:bg-muted">
-              <Film className="w-3 h-3 mr-1.5" />
-              Main Movies
+            <TabsTrigger value="main" className="data-[state=active]:bg-muted text-xs sm:text-sm px-2 sm:px-3">
+              <Film className="w-3 h-3 mr-1 sm:mr-1.5" />
+              Main
             </TabsTrigger>
-            <TabsTrigger value="episode" className="data-[state=active]:bg-muted">
-              <Zap className="w-3 h-3 mr-1.5" />
-              Episode Movies
+            <TabsTrigger value="episode" className="data-[state=active]:bg-muted text-xs sm:text-sm px-2 sm:px-3">
+              <Zap className="w-3 h-3 mr-1 sm:mr-1.5" />
+              Episode
             </TabsTrigger>
           </TabsList>
         </Tabs>
@@ -402,24 +411,12 @@ function MovieCard({
           </p>
         )}
 
-        {/* Actions */}
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" className="flex-1" onClick={onSelect}>
+        {/* Actions - Responsive grid */}
+        <div className="flex flex-wrap items-center gap-1 sm:gap-2">
+          <Button variant="outline" size="sm" className="flex-1 min-w-[80px]" onClick={onSelect}>
             <Edit3 className="w-3 h-3 mr-1" />
             Edit
           </Button>
-
-          {hasVideo && (
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8"
-              onClick={onPreview}
-              title="Preview movie"
-            >
-              <Eye className="w-4 h-4" />
-            </Button>
-          )}
 
           {!movie.is_active && hasVideo && (
             <Button
@@ -427,74 +424,89 @@ function MovieCard({
               size="sm"
               onClick={onSetActive}
               disabled={isSettingActive}
-              className="flex-1"
+              className="flex-1 min-w-[80px]"
             >
               {isSettingActive ? (
                 <Loader2 className="w-3 h-3 animate-spin" />
               ) : (
                 <>
                   <Check className="w-3 h-3 mr-1" />
-                  Set Active
+                  <span className="hidden sm:inline">Set </span>Active
                 </>
               )}
             </Button>
           )}
 
-          {hasVideo && (
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8"
-              onClick={onDownload}
-              title="Download movie"
-            >
-              <Download className="w-3 h-3" />
-            </Button>
-          )}
-
-          {hasVideo && movie.status === "complete" && (
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 text-gold hover:text-gold/80"
-              onClick={onSubmitToCommunity}
-              title="Submit to Community"
-            >
-              <Share2 className="w-3 h-3" />
-            </Button>
-          )}
-
-          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onDuplicate} title="Duplicate">
-            <Copy className="w-3 h-3" />
-          </Button>
-
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
+          {/* Icon buttons row */}
+          <div className="flex items-center gap-1 ml-auto">
+            {hasVideo && (
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                disabled={isDeleting}
+                className="h-7 w-7 sm:h-8 sm:w-8"
+                onClick={onPreview}
+                title="Preview movie"
               >
-                {isDeleting ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3 h-3" />}
+                <Eye className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Delete Mind Movie?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  This will permanently delete "{movie.title || "Untitled Movie"}" and all its
-                  scenes. This action cannot be undone.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={onDelete} className="bg-destructive hover:bg-destructive/90">
-                  Delete
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
+            )}
+
+            {hasVideo && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 sm:h-8 sm:w-8"
+                onClick={onDownload}
+                title="Download movie"
+              >
+                <Download className="w-3 h-3" />
+              </Button>
+            )}
+
+            {hasVideo && movie.status === "complete" && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 sm:h-8 sm:w-8 text-gold hover:text-gold/80"
+                onClick={onSubmitToCommunity}
+                title="Submit to Community"
+              >
+                <Share2 className="w-3 h-3" />
+              </Button>
+            )}
+
+            <Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8" onClick={onDuplicate} title="Duplicate">
+              <Copy className="w-3 h-3" />
+            </Button>
+
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7 sm:h-8 sm:w-8 text-muted-foreground hover:text-destructive"
+                  disabled={isDeleting}
+                >
+                  {isDeleting ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3 h-3" />}
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent className="max-w-[90vw] sm:max-w-lg">
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Delete Mind Movie?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This will permanently delete "{movie.title || "Untitled Movie"}" and all its
+                    scenes. This action cannot be undone.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={onDelete} className="bg-destructive hover:bg-destructive/90">
+                    Delete
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
         </div>
       </div>
     </Card>
