@@ -1683,7 +1683,7 @@ export function MindMovieScriptWizard({
                   setStep(2);
                   handleGenerateStoryboard();
                 }}
-                disabled={!userDescription.trim() || isGenerating}
+                disabled={isGenerating}
               >
                 Generate Storyboard
                 <Sparkles className="w-4 h-4 ml-2" />
