@@ -77,20 +77,29 @@ serve(async (req) => {
       userId: userId.substring(0, 8) 
     });
 
-    const isEdit = images && images.length > 0;
+    const hasReferencePhoto = images && images.length > 0;
     
     // Build the message content
     let messageContent: any[];
     
-    if (isEdit) {
-      // For image editing: include both text instruction and the image
+    if (hasReferencePhoto) {
+      // Reference photo mode: Generate a NEW scene featuring the person from the reference photo
       const imageUrl = images[0];
-      console.log("Edit mode - image URL type:", imageUrl.startsWith("data:") ? "base64" : "url");
+      console.log("Reference photo mode - image URL:", imageUrl.substring(0, 50));
+      
+      // Create a prompt that instructs the AI to generate a new scene with the person's likeness
+      let enhancedPrompt = `Generate a completely new cinematic image for the following scene. IMPORTANT: The main character in this scene must look exactly like the person in the reference photo provided - same face, same features, same identity. Create the scene described below but ensure the protagonist matches the reference person's appearance.
+
+Scene to generate: ${prompt}`;
+      
+      if (aspect_ratio) {
+        enhancedPrompt += `. Use a ${aspect_ratio} aspect ratio.`;
+      }
       
       messageContent = [
         { 
           type: "text", 
-          text: `Edit this image according to these instructions: ${prompt}. Maintain the original composition and style as much as possible while applying the requested changes.` 
+          text: enhancedPrompt
         },
         { 
           type: "image_url", 
@@ -98,7 +107,7 @@ serve(async (req) => {
         }
       ];
     } else {
-      // For image creation: just the text prompt
+      // For image creation without reference: just the text prompt
       let enhancedPrompt = prompt;
       if (aspect_ratio) {
         enhancedPrompt = `${prompt}. Use a ${aspect_ratio} aspect ratio.`;
@@ -227,7 +236,7 @@ serve(async (req) => {
           prompt,
           media_url: finalImageUrl,
           status: "completed",
-          metadata: { aspect_ratio, isEdit }
+          metadata: { aspect_ratio, hasReferencePhoto }
         });
       } catch (dbErr) {
         console.error("Failed to save to generated_media");

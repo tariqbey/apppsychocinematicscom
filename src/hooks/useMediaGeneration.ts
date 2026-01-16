@@ -115,10 +115,24 @@ export function useMediaGeneration() {
         });
       }
 
+      // Build request body - explicitly include images if provided
+      const requestBody: Record<string, any> = {
+        prompt: params.prompt,
+        aspect_ratio: params.aspect_ratio,
+        resolution: params.resolution,
+        user_id: user.id,
+      };
+      
+      // Only add images if array has items (for reference photo / edit mode)
+      if (params.images && params.images.length > 0) {
+        requestBody.images = params.images;
+        console.log("Sending image generation with reference photo:", params.images[0].substring(0, 50));
+      }
+
       const { data: invokeData, error: invokeError } = await supabase.functions.invoke(
         "lovable-generate-image",
         {
-          body: { ...params, user_id: user.id },
+          body: requestBody,
         }
       );
 
