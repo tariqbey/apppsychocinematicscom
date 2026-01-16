@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Zap, Calendar, CheckCircle, Pause, Play, Trash2, ChevronDown, ChevronUp, Film } from "lucide-react";
+import { Zap, Calendar, CheckCircle, Pause, Play, Trash2, ChevronDown, ChevronUp, Film, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { useEpisodes, Episode } from "@/hooks/useEpisodes";
@@ -10,6 +10,7 @@ interface EpisodeCardProps {
   episode: Episode;
   variant?: "compact" | "full";
   onCreateMindMovie?: (episode: Episode) => void;
+  onEditMindMovie?: (episode: Episode) => void;
   onDelete?: (episodeId: string) => Promise<boolean>;
   onComplete?: (episodeId: string) => Promise<boolean>;
   onPause?: (episodeId: string) => Promise<boolean>;
@@ -20,6 +21,7 @@ export function EpisodeCard({
   episode, 
   variant = "compact", 
   onCreateMindMovie,
+  onEditMindMovie,
   onDelete,
   onComplete,
   onPause,
@@ -215,6 +217,19 @@ export function EpisodeCard({
             >
               <Film className="w-4 h-4 mr-1" />
               Create Movie
+            </Button>
+          )}
+          
+          {/* Edit Mind Movie Button for Episodes with existing Movies */}
+          {onEditMindMovie && episode.mind_movie_script_id && episode.status !== "completed" && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="border-primary/30 text-primary hover:bg-primary/10"
+              onClick={() => onEditMindMovie(episode)}
+            >
+              <Pencil className="w-4 h-4 mr-1" />
+              Edit Movie
             </Button>
           )}
           
