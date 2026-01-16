@@ -268,6 +268,33 @@ const Index = () => {
             />
           )}
 
+          {/* Resume Production Button - When active episode has a Mind Movie in progress */}
+          {activeEpisode?.mind_movie_script_id && activeEpisode.status !== "completed" && (
+            <button
+              onClick={() => {
+                setSelectedMovieId(activeEpisode.mind_movie_script_id!);
+                setEpisodeForMovie({
+                  id: activeEpisode.id,
+                  title: activeEpisode.title,
+                  objective: activeEpisode.objective,
+                  deadline: activeEpisode.deadline,
+                  alignment_score: activeEpisode.alignment_score,
+                });
+                setShowMindMovieWizard(true);
+              }}
+              className="w-full glass-card p-4 cinematic-border animate-slide-up group hover:border-green-500/50 transition-all duration-300 text-left flex items-center gap-4"
+            >
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-green-500/20 to-emerald-600/20 flex items-center justify-center animate-pulse">
+                <Clapperboard className="w-6 h-6 text-green-500" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-medium group-hover:text-green-500 transition-colors">Resume Production</h3>
+                <p className="text-sm text-muted-foreground">Continue editing "{activeEpisode.title}" Mind Movie</p>
+              </div>
+              <span className="text-green-500 hidden sm:block">Continue →</span>
+            </button>
+          )}
+
           {/* New Episode Button (when no active episode) */}
           {!activeEpisode && !episodesLoading && chiefAimComplete && (
             <button

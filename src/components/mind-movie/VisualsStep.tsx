@@ -36,6 +36,7 @@ export function VisualsStep({
   const [isBatchGeneratingVideos, setIsBatchGeneratingVideos] = useState(false);
   const [isBatchUploading, setIsBatchUploading] = useState(false);
   const [batchProgress, setBatchProgress] = useState({ current: 0, total: 0, type: "" });
+  const [dragOverScene, setDragOverScene] = useState<number | null>(null);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const bulkFileInputRef = useRef<HTMLInputElement>(null);
@@ -132,6 +133,35 @@ export function VisualsStep({
       fileInputRef.current.value = '';
     }
   }, [pendingUploadScene, handleUploadSceneImage]);
+
+  // Drag and drop handlers for individual scene cards
+  const handleDragOver = useCallback((e: React.DragEvent, sceneOrder: number) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragOverScene(sceneOrder);
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragOverScene(null);
+  }, []);
+
+  const handleDrop = useCallback((e: React.DragEvent, sceneOrder: number) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragOverScene(null);
+    
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+      const file = files[0];
+      if (file.type.startsWith('image/')) {
+        handleUploadSceneImage(sceneOrder, file);
+      } else {
+        toast.error("Please drop an image file");
+      }
+    }
+  }, [handleUploadSceneImage]);
 
   const handleBulkUpload = useCallback(async (files: FileList) => {
     if (!user?.id) {
@@ -492,13 +522,18 @@ export function VisualsStep({
                 </Badge>
               </div>
 
-              {/* Upload / Preview Area - Clear Drop Zone */}
+              {/* Upload / Preview Area - Clear Drop Zone with Drag & Drop */}
               <div 
                 className={`aspect-video rounded-lg overflow-hidden relative border-2 border-dashed transition-all ${
-                  scene.generatedImageUrl || scene.generatedVideoUrl 
-                    ? "border-transparent" 
-                    : "border-muted-foreground/30 hover:border-primary/50 bg-muted/30"
+                  dragOverScene === scene.order 
+                    ? "border-green-500 bg-green-500/10 scale-[1.02]" 
+                    : scene.generatedImageUrl || scene.generatedVideoUrl 
+                      ? "border-transparent" 
+                      : "border-muted-foreground/30 hover:border-primary/50 bg-muted/30"
                 }`}
+                onDragOver={(e) => handleDragOver(e, scene.order)}
+                onDragLeave={handleDragLeave}
+                onDrop={(e) => handleDrop(e, scene.order)}
                 onClick={() => {
                   if (!scene.generatedImageUrl && !scene.generatedVideoUrl && !isBusy) {
                     triggerFileUpload(scene.order);
@@ -538,10 +573,14 @@ export function VisualsStep({
                     </div>
                   </div>
                 ) : (
-                  <div className="absolute inset-0 flex flex-col items-center justify-center text-muted-foreground cursor-pointer">
-                    <Upload className="w-8 h-8 mb-2 opacity-50" />
-                    <span className="text-sm font-medium">Click to upload image</span>
-                    <span className="text-xs opacity-70">or drag & drop (Free)</span>
+                  <div className={`absolute inset-0 flex flex-col items-center justify-center cursor-pointer transition-all ${
+                    dragOverScene === scene.order ? "text-green-500" : "text-muted-foreground"
+                  }`}>
+                    <Upload className={`w-8 h-8 mb-2 transition-transform ${dragOverScene === scene.order ? "scale-125" : "opacity-50"}`} />
+                    <span className="text-sm font-medium">
+                      {dragOverScene === scene.order ? "Drop to upload!" : "Click or drag image"}
+                    </span>
+                    <span className="text-xs opacity-70">Free upload</span>
                   </div>
                 )}
                 
