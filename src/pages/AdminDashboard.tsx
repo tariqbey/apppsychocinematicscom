@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Users, CreditCard, TrendingUp, DollarSign, Image, Video, Activity, Search, Shield, ArrowLeft } from "lucide-react";
 import { FeaturedContentManager } from "@/components/admin/FeaturedContentManager";
+import { RadioManager } from "@/components/admin/RadioManager";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from "recharts";
 import { format, subDays } from "date-fns";
 
@@ -379,6 +380,9 @@ const AdminDashboard = () => {
             </CardContent>
           </Card>
         </div>
+
+        {/* Internet Radio Manager */}
+        <RadioManager />
 
         {/* Featured Content Manager */}
         <FeaturedContentManager />

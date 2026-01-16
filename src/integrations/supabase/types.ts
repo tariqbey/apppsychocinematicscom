@@ -966,6 +966,155 @@ export type Database = {
         }
         Relationships: []
       }
+      radio_featured_tracks: {
+        Row: {
+          artist: string | null
+          audio_url: string
+          featured_at: string
+          featured_by: string | null
+          id: string
+          is_now_playing: boolean | null
+          track_title: string
+        }
+        Insert: {
+          artist?: string | null
+          audio_url: string
+          featured_at?: string
+          featured_by?: string | null
+          id?: string
+          is_now_playing?: boolean | null
+          track_title: string
+        }
+        Update: {
+          artist?: string | null
+          audio_url?: string
+          featured_at?: string
+          featured_by?: string | null
+          id?: string
+          is_now_playing?: boolean | null
+          track_title?: string
+        }
+        Relationships: []
+      }
+      radio_playlist_tracks: {
+        Row: {
+          artist: string | null
+          audio_url: string
+          created_at: string
+          duration_seconds: number | null
+          id: string
+          playlist_id: string
+          source_media_id: string | null
+          source_type: string | null
+          title: string
+          track_order: number | null
+        }
+        Insert: {
+          artist?: string | null
+          audio_url: string
+          created_at?: string
+          duration_seconds?: number | null
+          id?: string
+          playlist_id: string
+          source_media_id?: string | null
+          source_type?: string | null
+          title: string
+          track_order?: number | null
+        }
+        Update: {
+          artist?: string | null
+          audio_url?: string
+          created_at?: string
+          duration_seconds?: number | null
+          id?: string
+          playlist_id?: string
+          source_media_id?: string | null
+          source_type?: string | null
+          title?: string
+          track_order?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "radio_playlist_tracks_playlist_id_fkey"
+            columns: ["playlist_id"]
+            isOneToOne: false
+            referencedRelation: "radio_playlists"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      radio_playlists: {
+        Row: {
+          cover_image_url: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          is_featured: boolean | null
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          cover_image_url?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_featured?: boolean | null
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          cover_image_url?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_featured?: boolean | null
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      radio_stations: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          is_live: boolean | null
+          name: string
+          stream_url: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_live?: boolean | null
+          name: string
+          stream_url?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_live?: boolean | null
+          name?: string
+          stream_url?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       saved_insights: {
         Row: {
           content: string
