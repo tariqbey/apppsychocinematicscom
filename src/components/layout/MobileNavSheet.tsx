@@ -13,6 +13,7 @@ import {
   Film,
   Trophy,
   MessageSquare,
+  Music,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -73,6 +74,13 @@ export function MobileNavSheet({
       icon: <UserRound className="h-5 w-5" />,
       authOnly: true,
       description: "Build your identity"
+    },
+    {
+      to: "/soundtrack",
+      label: "Soundtrack",
+      icon: <Music className="h-5 w-5" />,
+      authOnly: true,
+      description: "Create music & lyrics"
     },
     {
       to: "/community",
