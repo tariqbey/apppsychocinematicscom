@@ -10,9 +10,21 @@ interface EpisodeCardProps {
   episode: Episode;
   variant?: "compact" | "full";
   onCreateMindMovie?: (episode: Episode) => void;
+  onDelete?: (episodeId: string) => Promise<boolean>;
+  onComplete?: (episodeId: string) => Promise<boolean>;
+  onPause?: (episodeId: string) => Promise<boolean>;
+  onResume?: (episodeId: string) => Promise<boolean>;
 }
 
-export function EpisodeCard({ episode, variant = "compact", onCreateMindMovie }: EpisodeCardProps) {
+export function EpisodeCard({ 
+  episode, 
+  variant = "compact", 
+  onCreateMindMovie,
+  onDelete,
+  onComplete,
+  onPause,
+  onResume 
+}: EpisodeCardProps) {
   const { completeEpisode, pauseEpisode, resumeEpisode, deleteEpisode, getDaysRemaining, getProgress } = useEpisodes();
   const [expanded, setExpanded] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -36,23 +48,41 @@ export function EpisodeCard({ episode, variant = "compact", onCreateMindMovie }:
 
   const handleComplete = async () => {
     setLoading(true);
-    await completeEpisode(episode.id);
+    if (onComplete) {
+      await onComplete(episode.id);
+    } else {
+      await completeEpisode(episode.id);
+    }
     setLoading(false);
   };
 
   const handlePauseResume = async () => {
     setLoading(true);
     if (episode.status === "paused") {
-      await resumeEpisode(episode.id);
+      if (onResume) {
+        await onResume(episode.id);
+      } else {
+        await resumeEpisode(episode.id);
+      }
     } else {
-      await pauseEpisode(episode.id);
+      if (onPause) {
+        await onPause(episode.id);
+      } else {
+        await pauseEpisode(episode.id);
+      }
     }
     setLoading(false);
   };
 
   const handleDelete = async () => {
     if (confirm("Are you sure you want to delete this episode?")) {
-      await deleteEpisode(episode.id);
+      setLoading(true);
+      if (onDelete) {
+        await onDelete(episode.id);
+      } else {
+        await deleteEpisode(episode.id);
+      }
+      setLoading(false);
     }
   };
 
