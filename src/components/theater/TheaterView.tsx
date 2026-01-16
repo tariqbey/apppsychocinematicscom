@@ -273,11 +273,17 @@ export const TheaterView = ({ onClose }: TheaterViewProps) => {
                 <video
                   ref={videoRef}
                   src={videoUrl}
-                  className="w-full h-full object-contain bg-black"
+                  className="w-full h-full object-contain bg-black landscape:object-cover"
                   playsInline
                   webkit-playsinline="true"
                   controls={false}
                   onClick={togglePlay}
+                  style={{ 
+                    maxHeight: '100%', 
+                    maxWidth: '100%',
+                    width: '100%',
+                    height: '100%'
+                  }}
                 />
 
                 {/* Video Controls Overlay - Always visible on mobile, hover on desktop */}

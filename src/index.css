@@ -255,3 +255,27 @@
   background: linear-gradient(to bottom, hsl(var(--destructive)), hsl(var(--destructive) / 0.6));
   box-shadow: 0 0 8px hsl(var(--destructive) / 0.5);
 }
+
+/* Fullscreen video landscape support */
+video:fullscreen {
+  width: 100vw !important;
+  height: 100vh !important;
+  object-fit: contain !important;
+  background: black;
+}
+
+video:-webkit-full-screen {
+  width: 100vw !important;
+  height: 100vh !important;
+  object-fit: contain !important;
+  background: black;
+}
+
+/* Mobile landscape orientation video */
+@media screen and (orientation: landscape) and (max-height: 500px) {
+  video {
+    max-height: 100vh;
+    width: auto;
+    height: 100%;
+  }
+}

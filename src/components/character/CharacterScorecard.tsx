@@ -284,7 +284,18 @@ export function CharacterScorecard({ onClose, onSubmitSuccess, inline = false }:
       <TooltipProvider>
         <div className={wrapperClass}>
           <div className={cn(cardWrapperClass, "w-full")}>
-            <div className="w-full max-w-lg mx-auto glass-card cinematic-border p-6 text-center space-y-4">
+            <div className="w-full max-w-lg mx-auto glass-card cinematic-border p-6 text-center space-y-4 relative">
+              {/* Close Button */}
+              {!inline && (
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  onClick={onClose} 
+                  className="absolute top-3 right-3 h-8 w-8"
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              )}
               <div className="w-16 h-16 rounded-full bg-green-500/20 flex items-center justify-center mx-auto">
                 <Check className="w-8 h-8 text-green-400" />
               </div>
@@ -293,6 +304,11 @@ export function CharacterScorecard({ onClose, onSubmitSuccess, inline = false }:
                 You've already tracked your character alignment for today. 
                 Come back tomorrow to continue your transformation journey.
               </p>
+              {!inline && (
+                <Button variant="cinematic" onClick={onClose} className="mt-4">
+                  Close
+                </Button>
+              )}
             </div>
           </div>
         </div>
