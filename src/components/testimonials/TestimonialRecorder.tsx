@@ -13,12 +13,16 @@ const MAX_DURATION = 30; // 30 seconds
 
 export function TestimonialRecorder({ type, onRecordingComplete, onCancel }: TestimonialRecorderProps) {
   const [isReady, setIsReady] = useState(false); // Camera/mic is active but not recording
+  const [isCountingDown, setIsCountingDown] = useState(false);
+  const [countdown, setCountdown] = useState(3);
   const [isRecording, setIsRecording] = useState(false);
   const [isPreviewing, setIsPreviewing] = useState(false);
   const [recordedBlob, setRecordedBlob] = useState<Blob | null>(null);
   const [thumbnailBlob, setThumbnailBlob] = useState<Blob | null>(null);
   const [timeElapsed, setTimeElapsed] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  
+  const countdownRef = useRef<NodeJS.Timeout | null>(null);
   
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -39,6 +43,10 @@ export function TestimonialRecorder({ type, onRecordingComplete, onCancel }: Tes
     if (timerRef.current) {
       clearInterval(timerRef.current);
       timerRef.current = null;
+    }
+    if (countdownRef.current) {
+      clearInterval(countdownRef.current);
+      countdownRef.current = null;
     }
   }, []);
 
@@ -98,8 +106,29 @@ export function TestimonialRecorder({ type, onRecordingComplete, onCancel }: Tes
     }
   };
 
+  // Start countdown then recording
+  const initiateRecording = () => {
+    setIsCountingDown(true);
+    setCountdown(3);
+    
+    countdownRef.current = setInterval(() => {
+      setCountdown(prev => {
+        if (prev <= 1) {
+          if (countdownRef.current) {
+            clearInterval(countdownRef.current);
+            countdownRef.current = null;
+          }
+          setIsCountingDown(false);
+          startRecordingActual();
+          return 3;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  };
+
   // Actually start recording (stream should already be active)
-  const startRecording = async () => {
+  const startRecordingActual = async () => {
     if (!streamRef.current) {
       await prepareRecording();
       return;
@@ -179,7 +208,10 @@ export function TestimonialRecorder({ type, onRecordingComplete, onCancel }: Tes
     setThumbnailBlob(null);
     setIsPreviewing(false);
     setIsReady(false);
+    setIsCountingDown(false);
+    setCountdown(3);
     setTimeElapsed(0);
+    clearTimer();
     stopStream();
     if (videoPreviewRef.current) {
       videoPreviewRef.current.src = "";
@@ -219,10 +251,15 @@ export function TestimonialRecorder({ type, onRecordingComplete, onCancel }: Tes
             muted
             playsInline
           />
-          {!isReady && !isRecording && (
+          {!isReady && !isRecording && !isCountingDown && (
             <div className="absolute inset-0 flex items-center justify-center flex-col gap-2">
               <Video className="h-16 w-16 text-muted-foreground/50" />
               <span className="text-sm text-muted-foreground">Camera preview will appear here</span>
+            </div>
+          )}
+          {isCountingDown && (
+            <div className="absolute inset-0 flex items-center justify-center bg-black/40">
+              <span className="text-8xl font-bold text-white animate-pulse">{countdown}</span>
             </div>
           )}
           {isRecording && (
@@ -235,12 +272,22 @@ export function TestimonialRecorder({ type, onRecordingComplete, onCancel }: Tes
       )}
 
       {/* Audio - Ready state indicator */}
-      {type === "audio" && isReady && !isRecording && !isPreviewing && (
+      {type === "audio" && isReady && !isRecording && !isPreviewing && !isCountingDown && (
         <div className="flex items-center justify-center p-8 bg-muted rounded-lg">
           <div className="flex items-center gap-3 flex-col">
             <Mic className="h-12 w-12 text-primary" />
             <span className="text-lg font-medium">Microphone ready</span>
             <span className="text-sm text-muted-foreground">Click "Start Recording" when ready</span>
+          </div>
+        </div>
+      )}
+
+      {/* Audio - Countdown */}
+      {type === "audio" && isCountingDown && (
+        <div className="flex items-center justify-center p-8 bg-muted rounded-lg">
+          <div className="flex items-center gap-3 flex-col">
+            <span className="text-6xl font-bold text-primary animate-pulse">{countdown}</span>
+            <span className="text-lg font-medium">Get ready...</span>
           </div>
         </div>
       )}
@@ -306,9 +353,9 @@ export function TestimonialRecorder({ type, onRecordingComplete, onCancel }: Tes
         )}
 
         {/* Ready state - camera/mic active, can start recording */}
-        {isReady && !isRecording && !isPreviewing && (
+        {isReady && !isRecording && !isPreviewing && !isCountingDown && (
           <>
-            <Button onClick={startRecording} variant="gold" className="gap-2">
+            <Button onClick={initiateRecording} variant="gold" className="gap-2">
               {type === "video" ? <Video className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
               Start Recording
             </Button>
@@ -316,6 +363,13 @@ export function TestimonialRecorder({ type, onRecordingComplete, onCancel }: Tes
               Cancel
             </Button>
           </>
+        )}
+
+        {/* Countdown state */}
+        {isCountingDown && (
+          <Button onClick={resetRecording} variant="outline">
+            Cancel
+          </Button>
         )}
 
         {/* Recording state */}
