@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { VoiceInput } from "@/components/ui/VoiceInput";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { Key, Loader2, CheckCircle, Shield } from "lucide-react";
@@ -87,7 +87,7 @@ export const AccessCodeRedemption = () => {
       </CardHeader>
       <CardContent>
         <div className="flex gap-3">
-          <Input
+          <VoiceInput
             type="text"
             placeholder="Enter access code..."
             value={code}

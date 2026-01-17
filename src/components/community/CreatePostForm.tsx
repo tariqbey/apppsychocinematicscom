@@ -1,7 +1,7 @@
 import { useState, useRef } from "react";
 import { Lightbulb, Trophy, Sparkles, HelpCircle, Send, Loader2, Image, Video, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
+import { VoiceTextarea } from "@/components/ui/VoiceTextarea";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -121,7 +121,7 @@ export function CreatePostForm({ onSubmit }: CreatePostFormProps) {
         <h3 className="font-display text-lg">Share with the Community</h3>
       </div>
 
-      <Textarea
+      <VoiceTextarea
         placeholder="What's on your mind, Director? Share your insights, wins, or questions..."
         value={content}
         onChange={(e) => setContent(e.target.value)}
