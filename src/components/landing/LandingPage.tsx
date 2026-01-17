@@ -572,13 +572,13 @@ export const LandingPage = ({ onLogin }: LandingPageProps) => {
               Invest in Your <span className="text-gold-gradient">Transformation</span>
             </h2>
             <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-              Join the directors who are rewriting their stories. Start with a risk-free 3-day trial.
+              Choose your path: DIY with our powerful tools, or let us create your complete Mind Movie for you.
             </p>
           </div>
           
-          <div className="max-w-lg mx-auto">
-            {/* Main Plan */}
-            <div className="glass-card p-8 cinematic-border border-gold/50 relative overflow-hidden">
+          <div className="grid lg:grid-cols-2 gap-8 max-w-5xl mx-auto">
+            {/* DIY Plan */}
+            <div className="glass-card p-8 cinematic-border border-border/50 relative overflow-hidden">
               {/* Trial Badge */}
               <div className="absolute top-4 right-4">
                 <div className="px-3 py-1 rounded-full bg-gold text-black text-sm font-bold flex items-center gap-1">
@@ -588,8 +588,8 @@ export const LandingPage = ({ onLogin }: LandingPageProps) => {
               </div>
               
               <div className="mb-6">
-                <h3 className="text-2xl font-display mb-2">Director's OS Complete</h3>
-                <p className="text-muted-foreground">Full access to the transformation suite</p>
+                <h3 className="text-2xl font-display mb-2">Director's OS</h3>
+                <p className="text-muted-foreground">Build your own Mind Movie with AI tools</p>
               </div>
               
               <div className="mb-8">
@@ -618,6 +618,84 @@ export const LandingPage = ({ onLogin }: LandingPageProps) => {
               
               <p className="text-xs text-muted-foreground text-center mt-4">
                 No credit card required for trial. Cancel anytime.
+              </p>
+            </div>
+
+            {/* Done For You Plan */}
+            <div className="glass-card p-8 cinematic-border border-gold/50 relative overflow-hidden">
+              {/* Premium Badge */}
+              <div className="absolute top-4 right-4">
+                <div className="px-3 py-1 rounded-full bg-gradient-to-r from-gold to-amber-soft text-black text-sm font-bold flex items-center gap-1">
+                  <Sparkles className="w-4 h-4" />
+                  Done For You
+                </div>
+              </div>
+              
+              <div className="mb-6">
+                <h3 className="text-2xl font-display mb-2">Complete Mind Movie Package</h3>
+                <p className="text-muted-foreground">We create your entire Mind Movie for you</p>
+              </div>
+              
+              <div className="mb-8">
+                <div className="flex items-baseline gap-2">
+                  <span className="text-sm text-muted-foreground line-through mr-1">$997</span>
+                  <span className="text-5xl font-display text-gold">$497</span>
+                </div>
+                <p className="text-sm text-muted-foreground mt-1">One-time + 1 month free software</p>
+              </div>
+              
+              <ul className="space-y-3 mb-8">
+                <li className="flex items-center gap-3">
+                  <div className="w-5 h-5 rounded-full bg-gold/20 flex items-center justify-center flex-shrink-0">
+                    <Check className="w-3 h-3 text-gold" />
+                  </div>
+                  <span className="text-sm">3-Minute Professional Mind Movie</span>
+                </li>
+                <li className="flex items-center gap-3">
+                  <div className="w-5 h-5 rounded-full bg-gold/20 flex items-center justify-center flex-shrink-0">
+                    <Check className="w-3 h-3 text-gold" />
+                  </div>
+                  <span className="text-sm">Custom AI-Generated Soundtrack</span>
+                </li>
+                <li className="flex items-center gap-3">
+                  <div className="w-5 h-5 rounded-full bg-gold/20 flex items-center justify-center flex-shrink-0">
+                    <Check className="w-3 h-3 text-gold" />
+                  </div>
+                  <span className="text-sm">Definite Chief Aim Coaching Session</span>
+                </li>
+                <li className="flex items-center gap-3">
+                  <div className="w-5 h-5 rounded-full bg-gold/20 flex items-center justify-center flex-shrink-0">
+                    <Check className="w-3 h-3 text-gold" />
+                  </div>
+                  <span className="text-sm">Professional Script Writing</span>
+                </li>
+                <li className="flex items-center gap-3">
+                  <div className="w-5 h-5 rounded-full bg-gold/20 flex items-center justify-center flex-shrink-0">
+                    <Check className="w-3 h-3 text-gold" />
+                  </div>
+                  <span className="text-sm">12+ AI-Generated Scenes (with YOUR face)</span>
+                </li>
+                <li className="flex items-center gap-3">
+                  <div className="w-5 h-5 rounded-full bg-gold/20 flex items-center justify-center flex-shrink-0">
+                    <Check className="w-3 h-3 text-gold" />
+                  </div>
+                  <span className="text-sm">1 Month Free Director's OS Access ($29 value)</span>
+                </li>
+                <li className="flex items-center gap-3">
+                  <div className="w-5 h-5 rounded-full bg-gold/20 flex items-center justify-center flex-shrink-0">
+                    <Check className="w-3 h-3 text-gold" />
+                  </div>
+                  <span className="text-sm">Unlimited Revisions Until Perfect</span>
+                </li>
+              </ul>
+              
+              <Button variant="gold" size="lg" className="w-full text-lg" onClick={() => navigate("/done-for-you")}>
+                <Sparkles className="w-5 h-5 mr-2" />
+                Get Your Mind Movie Created
+              </Button>
+              
+              <p className="text-xs text-muted-foreground text-center mt-4">
+                Delivered in 7-10 days. 30-day money-back guarantee.
               </p>
             </div>
           </div>
