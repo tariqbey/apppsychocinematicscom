@@ -62,16 +62,17 @@ export function CharacterTransformationCoach({
     plan: string | null;
   } | null>(null);
 
-  // Fetch archetype, scores, and chief aim from database if not provided
+  // Always fetch saved transformation analysis and chief aim from database
+  // Only skip archetype/scores fetch if props are provided
   useEffect(() => {
-    const fetchArchetypeData = async () => {
-      if (!user || archetypeProp) {
+    const fetchData = async () => {
+      if (!user) {
         setLoadingData(false);
         return;
       }
 
       try {
-        // Fetch character profile data
+        // Always fetch character profile to get saved transformation_analysis
         const { data: profileData } = await supabase
           .from("character_profiles")
           .select("archetype, archetype_score, transformation_analysis")
@@ -81,11 +82,15 @@ export function CharacterTransformationCoach({
           .single();
 
         if (profileData) {
-          const foundArchetype = ARCHETYPES.find(a => a.id === profileData.archetype);
-          if (foundArchetype) {
-            setArchetype(foundArchetype);
-            setScores(profileData.archetype_score as Record<string, number> || {});
+          // Only set archetype/scores from DB if not provided as props
+          if (!archetypeProp) {
+            const foundArchetype = ARCHETYPES.find(a => a.id === profileData.archetype);
+            if (foundArchetype) {
+              setArchetype(foundArchetype);
+              setScores(profileData.archetype_score as Record<string, number> || {});
+            }
           }
+          // Always load saved transformation analysis if it exists
           if (profileData.transformation_analysis) {
             setAnalysis(profileData.transformation_analysis as unknown as TransformationAnalysis);
           }
@@ -107,13 +112,13 @@ export function CharacterTransformationCoach({
           });
         }
       } catch (error) {
-        console.error("Error fetching archetype data:", error);
+        console.error("Error fetching data:", error);
       } finally {
         setLoadingData(false);
       }
     };
 
-    fetchArchetypeData();
+    fetchData();
   }, [user, archetypeProp]);
 
   const generateTransformationPlan = async () => {
