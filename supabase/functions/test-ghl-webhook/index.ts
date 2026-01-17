@@ -29,6 +29,7 @@ serve(async (req) => {
       last_name: lastName,
       phone: phone || "",
       email: email || "test@example.com",
+      tags: ["Director App"],
       product: "Done For You Mind Movie Package",
       amount: 497,
       currency: "USD",
