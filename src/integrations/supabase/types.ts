@@ -132,6 +132,8 @@ export type Database = {
           light_shadow_state: string | null
           survey_responses: Json
           transformation_analysis: Json | null
+          transformation_chief_aim_snapshot: Json | null
+          transformation_cycle_number: number | null
           updated_at: string
           user_id: string
         }
@@ -143,6 +145,8 @@ export type Database = {
           light_shadow_state?: string | null
           survey_responses?: Json
           transformation_analysis?: Json | null
+          transformation_chief_aim_snapshot?: Json | null
+          transformation_cycle_number?: number | null
           updated_at?: string
           user_id: string
         }
@@ -154,6 +158,8 @@ export type Database = {
           light_shadow_state?: string | null
           survey_responses?: Json
           transformation_analysis?: Json | null
+          transformation_chief_aim_snapshot?: Json | null
+          transformation_cycle_number?: number | null
           updated_at?: string
           user_id?: string
         }
