@@ -30,42 +30,42 @@ const onboardingSteps: OnboardingStep[] = [
     icon: <Sparkles className="w-12 h-12" />,
     title: "Welcome, Director!",
     description: "You're about to embark on a transformational journey. Psycho-Cinematics™ treats your life as a movie where YOU are both the Director and the star.",
-    tip: "This quick tour will show you the 5 key steps to get started."
+    tip: "Everything starts with ONE thing: Your Definite Chief Aim. Let's get you set up."
   },
   {
     id: "chief-aim",
     icon: <Target className="w-12 h-12" />,
-    title: "Step 1: Define Your Chief Aim",
-    description: "Your Definite Chief Aim is the foundation of everything. It's a crystal-clear statement of what you want, when you'll achieve it, what you'll give in exchange, and your plan.",
-    tip: "Click the Chief Aim card on your dashboard to launch the AI-guided wizard."
-  },
-  {
-    id: "edit-bay",
-    icon: <Palette className="w-12 h-12" />,
-    title: "Step 2: Visualize in the Edit Bay",
-    description: "Use AI to generate powerful images and videos of your future self. Upload a reference photo to see yourself living your goals.",
-    tip: "Start with images, then animate your best ones into videos."
+    title: "⭐ First: Your Definite Chief Aim",
+    description: "This is THE FOUNDATION of everything. Your Definite Chief Aim is a crystal-clear statement of what you want, when you'll achieve it, what you'll give in exchange, and your plan. Nothing else works without this.",
+    tip: "Click the gold 'Start Here: Definite Chief Aim' card on your dashboard. The AI will guide you through Napoleon Hill's proven 4-phase framework."
   },
   {
     id: "mind-movie",
     icon: <Film className="w-12 h-12" />,
-    title: "Step 3: Create Your Mind Movie",
-    description: "Build a personalized visualization video with AI-generated scenes and a custom soundtrack. Watch it daily to reprogram your subconscious.",
-    tip: "Aim for a 90-day viewing streak for maximum transformation."
+    title: "Step 2: Create Your Mind Movie",
+    description: "Once your Chief Aim is set, bring it to life with AI-generated scenes and a custom soundtrack. Your Mind Movie is the visual representation of your goals that you'll watch daily.",
+    tip: "The Mind Movie Wizard uses your Chief Aim to auto-generate scenes featuring YOU."
+  },
+  {
+    id: "edit-bay",
+    icon: <Palette className="w-12 h-12" />,
+    title: "Step 3: The AI Studio",
+    description: "Generate powerful images and videos of your future self using AI. Upload a reference photo to see yourself living your goals in photorealistic detail.",
+    tip: "Use reference photos to make your Mind Movie personal and emotionally powerful."
   },
   {
     id: "soundtrack",
     icon: <Music className="w-12 h-12" />,
-    title: "Step 4: Generate Soundtracks & Listen",
-    description: "Create AI-powered custom soundtracks for your Mind Movie with 50+ genres. Tune into Director Radio for curated motivation music.",
-    tip: "Submit your best tracks to be featured on Director Radio!"
+    title: "Step 4: Your Soundtrack",
+    description: "Create AI-powered custom soundtracks for your Mind Movie with 50+ genres. The music carries your Chief Aim's message deep into your subconscious.",
+    tip: "Your Chief Aim can become song lyrics that play in your Mind Movie!"
   },
   {
     id: "daily-ritual",
     icon: <Calendar className="w-12 h-12" />,
     title: "Step 5: Daily Rituals",
-    description: "Each morning, read your Chief Aim, watch your Mind Movie, and set your Three Things. Each evening, complete your Director Scorecard.",
-    tip: "Consistency is the key. Small daily actions compound into massive change."
+    description: "Each morning, read your Chief Aim, watch your Mind Movie, and set your Three Things. Each evening, complete your Director Scorecard. Consistency compounds.",
+    tip: "A 90-day viewing streak creates permanent neural pathways for your new identity."
   }
 ];
 

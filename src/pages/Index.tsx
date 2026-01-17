@@ -257,6 +257,50 @@ const Index = () => {
           {/* Production Status */}
           <ProductionStatus currentAct={currentAct} dayNumber={dayNumber} />
 
+          {/* Definite Chief Aim Creator Card - THE FOUNDATION - Must be done first */}
+          <button
+            onClick={() => setShowChiefAimWizard(true)}
+            className={`w-full glass-card p-6 cinematic-border animate-slide-up group transition-all duration-300 text-left ${
+              chiefAimComplete 
+                ? "hover:border-emerald-500/50" 
+                : "border-gold/50 hover:border-gold ring-2 ring-gold/20"
+            }`}
+          >
+            <div className="flex items-center gap-4">
+              <div className={`w-14 h-14 rounded-xl flex items-center justify-center transition-all duration-300 ${
+                chiefAimComplete 
+                  ? "bg-gradient-to-br from-emerald-500/20 to-green-600/20 group-hover:from-emerald-500/30 group-hover:to-green-600/30" 
+                  : "bg-gradient-to-br from-gold/30 to-amber-500/30 animate-pulse"
+              }`}>
+                <FileText className={`w-7 h-7 ${chiefAimComplete ? "text-emerald-400" : "text-gold"}`} />
+              </div>
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-1">
+                  <h3 className={`text-xl font-display tracking-wide transition-colors ${
+                    chiefAimComplete ? "group-hover:text-emerald-400" : "text-gold group-hover:text-gold"
+                  }`}>
+                    {chiefAimComplete ? "Definite Chief Aim" : "⭐ Start Here: Definite Chief Aim"}
+                  </h3>
+                  <Sparkles className={`w-4 h-4 ${chiefAimComplete ? "text-emerald-400/60" : "text-gold/60"}`} />
+                  <InfoTooltip content="Your Definite Chief Aim is THE FOUNDATION of everything. It's a crystal-clear statement of your burning desire, deadline, exchange, and plan. This becomes the script for your entire transformation journey." />
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  {chiefAimComplete 
+                    ? "Your transformation script is set • Click to refine or update" 
+                    : "The foundation of your transformation • AI-guided script writing"}
+                </p>
+              </div>
+              <div className={`hidden sm:flex items-center gap-2 text-sm transition-colors ${
+                chiefAimComplete 
+                  ? "text-muted-foreground group-hover:text-emerald-400" 
+                  : "text-gold group-hover:text-gold font-semibold"
+              }`}>
+                <span>{chiefAimComplete ? "Edit Script" : "Create Now"}</span>
+                <span className="text-lg">→</span>
+              </div>
+            </div>
+          </button>
+
           {/* Streak Banner */}
           <StreakBanner streak={streak} bestStreak={bestStreak} />
 
@@ -480,32 +524,6 @@ const Index = () => {
               </div>
               <div className="hidden sm:flex items-center gap-2 text-sm text-muted-foreground group-hover:text-pink-400 transition-colors">
                 <span>Create Music</span>
-                <span className="text-lg">→</span>
-              </div>
-            </div>
-          </button>
-
-          {/* Definite Chief Aim Creator Card */}
-          <button
-            onClick={() => setShowChiefAimWizard(true)}
-            className="w-full glass-card p-6 cinematic-border animate-slide-up group hover:border-emerald-500/50 transition-all duration-300 text-left"
-          >
-            <div className="flex items-center gap-4">
-              <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-emerald-500/20 to-green-600/20 flex items-center justify-center group-hover:from-emerald-500/30 group-hover:to-green-600/30 transition-all duration-300">
-                <FileText className="w-7 h-7 text-emerald-400" />
-              </div>
-              <div className="flex-1">
-                <div className="flex items-center gap-2 mb-1">
-                  <h3 className="text-xl font-display tracking-wide group-hover:text-emerald-400 transition-colors">Definite Chief Aim Creator</h3>
-                  <Sparkles className="w-4 h-4 text-emerald-400/60" />
-                  <InfoTooltip content="Craft your Definite Chief Aim with AI guidance. Define your burning desire, deadline, what you'll give in exchange, and your action plan. This becomes the script for your transformation." />
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  AI-guided script writing • The Dream, Deadline, Exchange & Plan
-                </p>
-              </div>
-              <div className="hidden sm:flex items-center gap-2 text-sm text-muted-foreground group-hover:text-emerald-400 transition-colors">
-                <span>{chiefAimComplete ? "Edit Script" : "Create Script"}</span>
                 <span className="text-lg">→</span>
               </div>
             </div>
