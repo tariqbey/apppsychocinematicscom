@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, Target, Sparkles, AlertTriangle, ArrowRight, Crown, Swords, Shield, X, Film, Clapperboard, Download, Check } from "lucide-react";
+import { Loader2, Target, Sparkles, AlertTriangle, ArrowRight, Crown, Swords, Shield, X, Film, Clapperboard, Download, Check, RefreshCw, Calendar } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Archetype, ARCHETYPES } from "./archetypes";
@@ -51,6 +51,7 @@ export function CharacterTransformationCoach({
   const navigate = useNavigate();
   const { user } = useAuth();
   const [analysis, setAnalysis] = useState<TransformationAnalysis | null>(null);
+  const [analysisDate, setAnalysisDate] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [loadingData, setLoadingData] = useState(!archetypeProp);
   const [archetype, setArchetype] = useState<Archetype | null>(archetypeProp || null);
@@ -72,10 +73,10 @@ export function CharacterTransformationCoach({
       }
 
       try {
-        // Always fetch character profile to get saved transformation_analysis
+        // Always fetch character profile to get saved transformation_analysis and updated_at
         const { data: profileData } = await supabase
           .from("character_profiles")
-          .select("archetype, archetype_score, transformation_analysis")
+          .select("archetype, archetype_score, transformation_analysis, updated_at")
           .eq("user_id", user.id)
           .order("created_at", { ascending: false })
           .limit(1)
@@ -93,6 +94,7 @@ export function CharacterTransformationCoach({
           // Always load saved transformation analysis if it exists
           if (profileData.transformation_analysis) {
             setAnalysis(profileData.transformation_analysis as unknown as TransformationAnalysis);
+            setAnalysisDate(profileData.updated_at);
           }
         }
 
@@ -173,6 +175,7 @@ export function CharacterTransformationCoach({
       if (error) throw error;
       
       setAnalysis(data.analysis);
+      setAnalysisDate(new Date().toISOString());
       
       // Save the transformation analysis to character_profiles for Director AI access
       await supabase
@@ -473,6 +476,38 @@ export function CharacterTransformationCoach({
 
             {analysis && (
               <>
+                {/* Analysis Date & Regenerate Button */}
+                <div className="flex items-center justify-between flex-wrap gap-3 p-3 rounded-lg bg-muted/30 border border-border">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Calendar className="h-4 w-4" />
+                    <span>
+                      Analysis generated: {analysisDate 
+                        ? new Date(analysisDate).toLocaleDateString('en-US', { 
+                            month: 'short', 
+                            day: 'numeric', 
+                            year: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          }) 
+                        : 'Unknown'}
+                    </span>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={generateTransformationPlan}
+                    disabled={isLoading}
+                    className="gap-2"
+                  >
+                    {isLoading ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <RefreshCw className="h-4 w-4" />
+                    )}
+                    Regenerate Analysis
+                  </Button>
+                </div>
+
                 {/* The Script Header */}
                 <Card className="glass-card border-gold/50 overflow-hidden">
                   <div className="absolute inset-0 bg-gradient-to-br from-red-500/5 via-transparent to-orange-500/5" />
