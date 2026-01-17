@@ -12,15 +12,26 @@ import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
-const packageIncludes = [
-  { icon: Target, title: "Definite Chief Aim Coaching", description: "Personal guidance to craft your perfect vision statement" },
+const dfyExclusives = [
+  { icon: Target, title: "Definite Chief Aim Coaching", description: "Personal 1-on-1 guidance to craft your perfect vision statement" },
   { icon: FileText, title: "Professional Script Writing", description: "Expert-crafted affirmation script tailored to your goals" },
   { icon: Image, title: "AI-Generated Visuals", description: "12+ stunning scenes featuring you as the star" },
   { icon: Video, title: "3-Minute Mind Movie", description: "Fully edited, cinematic visualization video" },
   { icon: Music, title: "Custom Soundtrack", description: "Original AI-generated music matched to your vision" },
   { icon: Users, title: "Cameo Integration", description: "Your reference photos seamlessly integrated" },
-  { icon: Gift, title: "1 Month Free Software", description: "Full Director's OS access ($29 value)" },
-  { icon: Headphones, title: "Priority Support", description: "Dedicated support throughout your transformation" },
+  { icon: Headphones, title: "Priority Support", description: "Dedicated support throughout your creation" },
+];
+
+const softwareFeatures = [
+  { title: "Director AI Voice Coach", description: "24/7 AI coaching for identity transformation" },
+  { title: "Daily Scorecard & Tracking", description: "Track your transformation with detailed analytics" },
+  { title: "Director's Journal", description: "AI-analyzed journaling with mood trends" },
+  { title: "Three Things Task System", description: "Daily priority management with streak tracking" },
+  { title: "Character Builder", description: "Discover your archetype and transformation path" },
+  { title: "Episodes System", description: "Short-term sprints for focused goals" },
+  { title: "Media Studio", description: "Create additional images and videos anytime" },
+  { title: "Director Radio", description: "Motivational playlists and podcasts" },
+  { title: "Community Access", description: "Connect with other Directors on their journey" },
 ];
 
 const processSteps = [
@@ -125,17 +136,41 @@ const DoneForYou = () => {
         <div className="grid lg:grid-cols-2 gap-12 items-start">
           {/* Left Column - What's Included */}
           <div className="space-y-8">
+            {/* DFY Exclusives */}
             <div>
-              <h2 className="text-2xl font-bold mb-6">Everything Included</h2>
+              <h2 className="text-2xl font-bold mb-2">Done For You Package</h2>
+              <p className="text-muted-foreground mb-6">We create everything for you—just watch and transform</p>
               <div className="grid gap-4">
-                {packageIncludes.map((item, i) => (
-                  <div key={i} className="flex items-start gap-4 p-4 rounded-lg bg-card border">
+                {dfyExclusives.map((item, i) => (
+                  <div key={i} className="flex items-start gap-4 p-4 rounded-lg bg-primary/5 border border-primary/20">
                     <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
                       <item.icon className="h-5 w-5 text-primary" />
                     </div>
                     <div>
                       <h3 className="font-semibold">{item.title}</h3>
                       <p className="text-sm text-muted-foreground">{item.description}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Software Features */}
+            <div>
+              <div className="flex items-center gap-3 mb-2">
+                <h2 className="text-2xl font-bold">Plus Full Software Access</h2>
+                <span className="px-2 py-1 text-xs font-semibold bg-green-500/10 text-green-500 rounded-full">
+                  1 Month FREE
+                </span>
+              </div>
+              <p className="text-muted-foreground mb-6">Everything in the $29/month Director's OS plan included</p>
+              <div className="grid gap-3">
+                {softwareFeatures.map((item, i) => (
+                  <div key={i} className="flex items-start gap-3 p-3 rounded-lg bg-card border">
+                    <Check className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <h3 className="font-medium text-sm">{item.title}</h3>
+                      <p className="text-xs text-muted-foreground">{item.description}</p>
                     </div>
                   </div>
                 ))}
