@@ -11,19 +11,51 @@ interface TestimonialRecorderProps {
 
 const MAX_DURATION = 30; // 30 seconds
 
+// Get supported video mime type
+const getSupportedMimeType = (isVideo: boolean): string => {
+  if (isVideo) {
+    // Try different codecs in order of preference
+    const videoTypes = [
+      'video/mp4',
+      'video/webm;codecs=h264',
+      'video/webm;codecs=vp9,opus',
+      'video/webm;codecs=vp8,opus',
+      'video/webm'
+    ];
+    for (const type of videoTypes) {
+      if (MediaRecorder.isTypeSupported(type)) {
+        return type;
+      }
+    }
+    return 'video/webm';
+  } else {
+    const audioTypes = [
+      'audio/webm;codecs=opus',
+      'audio/webm',
+      'audio/mp4'
+    ];
+    for (const type of audioTypes) {
+      if (MediaRecorder.isTypeSupported(type)) {
+        return type;
+      }
+    }
+    return 'audio/webm';
+  }
+};
+
 export function TestimonialRecorder({ type, onRecordingComplete, onCancel }: TestimonialRecorderProps) {
-  const [isReady, setIsReady] = useState(false); // Camera/mic is active but not recording
+  const [isReady, setIsReady] = useState(false);
   const [isCountingDown, setIsCountingDown] = useState(false);
   const [countdown, setCountdown] = useState(3);
   const [isRecording, setIsRecording] = useState(false);
   const [isPreviewing, setIsPreviewing] = useState(false);
   const [recordedBlob, setRecordedBlob] = useState<Blob | null>(null);
   const [thumbnailBlob, setThumbnailBlob] = useState<Blob | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [timeElapsed, setTimeElapsed] = useState(0);
   const [error, setError] = useState<string | null>(null);
   
   const countdownRef = useRef<NodeJS.Timeout | null>(null);
-  
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const chunksRef = useRef<Blob[]>([]);
@@ -50,12 +82,23 @@ export function TestimonialRecorder({ type, onRecordingComplete, onCancel }: Tes
     }
   }, []);
 
+  // Clean up object URLs to prevent memory leaks
+  const cleanupPreviewUrl = useCallback(() => {
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl);
+      setPreviewUrl(null);
+    }
+  }, [previewUrl]);
+
   useEffect(() => {
     return () => {
       stopStream();
       clearTimer();
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+      }
     };
-  }, [stopStream, clearTimer]);
+  }, [stopStream, clearTimer, previewUrl]);
 
   const generateThumbnail = useCallback(() => {
     if (type !== "video" || !videoPreviewRef.current || !canvasRef.current) return null;
@@ -75,7 +118,6 @@ export function TestimonialRecorder({ type, onRecordingComplete, onCancel }: Tes
     return null;
   }, [type]);
 
-  // Prepare: activate camera/mic but don't start recording yet
   const prepareRecording = async () => {
     setError(null);
     
@@ -83,20 +125,29 @@ export function TestimonialRecorder({ type, onRecordingComplete, onCancel }: Tes
       const constraints = type === "video" 
         ? { 
             video: { 
-              width: { ideal: 720 },
-              height: { ideal: 1280 },
+              width: { ideal: 720, max: 1280 },
+              height: { ideal: 1280, max: 1920 },
+              frameRate: { ideal: 30, max: 30 },
               facingMode: "user"
             },
-            audio: true 
+            audio: {
+              echoCancellation: true,
+              noiseSuppression: true
+            }
           }
-        : { audio: true };
+        : { 
+            audio: {
+              echoCancellation: true,
+              noiseSuppression: true
+            }
+          };
       
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
       streamRef.current = stream;
       
       if (type === "video" && liveVideoRef.current) {
         liveVideoRef.current.srcObject = stream;
-        liveVideoRef.current.play();
+        await liveVideoRef.current.play();
       }
       
       setIsReady(true);
@@ -106,7 +157,6 @@ export function TestimonialRecorder({ type, onRecordingComplete, onCancel }: Tes
     }
   };
 
-  // Start countdown then recording
   const initiateRecording = () => {
     setIsCountingDown(true);
     setCountdown(3);
@@ -127,7 +177,6 @@ export function TestimonialRecorder({ type, onRecordingComplete, onCancel }: Tes
     }, 1000);
   };
 
-  // Actually start recording (stream should already be active)
   const startRecordingActual = async () => {
     if (!streamRef.current) {
       await prepareRecording();
@@ -136,46 +185,79 @@ export function TestimonialRecorder({ type, onRecordingComplete, onCancel }: Tes
     
     setError(null);
     chunksRef.current = [];
+    cleanupPreviewUrl();
     
     try {
-      const mimeType = type === "video" 
-        ? "video/webm;codecs=vp8,opus"
-        : "audio/webm;codecs=opus";
+      const mimeType = getSupportedMimeType(type === "video");
+      console.log("Using mime type:", mimeType);
       
-      const mediaRecorder = new MediaRecorder(streamRef.current, {
+      const options: MediaRecorderOptions = {
         mimeType,
-        videoBitsPerSecond: type === "video" ? 500000 : undefined,
-        audioBitsPerSecond: 64000
-      });
+      };
       
+      // Higher bitrate for smoother video
+      if (type === "video") {
+        options.videoBitsPerSecond = 2500000; // 2.5 Mbps for smoother video
+        options.audioBitsPerSecond = 128000;  // 128 kbps audio
+      } else {
+        options.audioBitsPerSecond = 128000;
+      }
+      
+      const mediaRecorder = new MediaRecorder(streamRef.current, options);
       mediaRecorderRef.current = mediaRecorder;
       
       mediaRecorder.ondataavailable = (event) => {
-        if (event.data.size > 0) {
+        if (event.data && event.data.size > 0) {
           chunksRef.current.push(event.data);
         }
       };
       
       mediaRecorder.onstop = async () => {
-        const blob = new Blob(chunksRef.current, { 
-          type: type === "video" ? "video/webm" : "audio/webm" 
-        });
+        // Create blob from all chunks
+        const blobType = type === "video" ? "video/webm" : "audio/webm";
+        const blob = new Blob(chunksRef.current, { type: blobType });
+        
+        console.log("Recording complete, blob size:", blob.size, "bytes");
+        
         setRecordedBlob(blob);
         setIsPreviewing(true);
         stopStream();
         setIsReady(false);
         
-        // Generate thumbnail for video after setting preview
+        // Create object URL for preview
+        const url = URL.createObjectURL(blob);
+        setPreviewUrl(url);
+        
+        // Set video source and generate thumbnail
         if (type === "video" && videoPreviewRef.current) {
-          videoPreviewRef.current.src = URL.createObjectURL(blob);
-          videoPreviewRef.current.onloadeddata = async () => {
+          videoPreviewRef.current.src = url;
+          videoPreviewRef.current.load();
+          
+          videoPreviewRef.current.onloadedmetadata = () => {
+            console.log("Video duration:", videoPreviewRef.current?.duration);
+          };
+          
+          videoPreviewRef.current.oncanplay = async () => {
+            // Seek to start and generate thumbnail
+            if (videoPreviewRef.current) {
+              videoPreviewRef.current.currentTime = 0.1;
+            }
+          };
+          
+          videoPreviewRef.current.onseeked = async () => {
             const thumb = await generateThumbnail();
             if (thumb) setThumbnailBlob(thumb);
           };
         }
       };
       
-      mediaRecorder.start(1000);
+      mediaRecorder.onerror = (event) => {
+        console.error("MediaRecorder error:", event);
+        setError("Recording error occurred. Please try again.");
+      };
+      
+      // Start recording - collect data more frequently for smoother results
+      mediaRecorder.start(100); // Collect data every 100ms
       setIsRecording(true);
       setTimeElapsed(0);
       
@@ -204,6 +286,7 @@ export function TestimonialRecorder({ type, onRecordingComplete, onCancel }: Tes
   };
 
   const resetRecording = () => {
+    cleanupPreviewUrl();
     setRecordedBlob(null);
     setThumbnailBlob(null);
     setIsPreviewing(false);
@@ -215,6 +298,7 @@ export function TestimonialRecorder({ type, onRecordingComplete, onCancel }: Tes
     stopStream();
     if (videoPreviewRef.current) {
       videoPreviewRef.current.src = "";
+      videoPreviewRef.current.load();
     }
   };
 
@@ -250,6 +334,7 @@ export function TestimonialRecorder({ type, onRecordingComplete, onCancel }: Tes
             className="w-full h-full object-cover"
             muted
             playsInline
+            autoPlay
           />
           {!isReady && !isRecording && !isCountingDown && (
             <div className="absolute inset-0 flex items-center justify-center flex-col gap-2">
@@ -303,7 +388,7 @@ export function TestimonialRecorder({ type, onRecordingComplete, onCancel }: Tes
       )}
 
       {/* Preview */}
-      {isPreviewing && recordedBlob && (
+      {isPreviewing && recordedBlob && previewUrl && (
         <div className="space-y-3">
           {type === "video" ? (
             <div className="aspect-[9/16] max-h-[400px] bg-muted rounded-lg overflow-hidden">
@@ -312,14 +397,16 @@ export function TestimonialRecorder({ type, onRecordingComplete, onCancel }: Tes
                 className="w-full h-full object-cover"
                 controls
                 playsInline
+                preload="auto"
               />
             </div>
           ) : (
             <div className="p-4 bg-muted rounded-lg">
               <audio
-                src={URL.createObjectURL(recordedBlob)}
+                src={previewUrl}
                 controls
                 className="w-full"
+                preload="auto"
               />
             </div>
           )}
@@ -340,7 +427,7 @@ export function TestimonialRecorder({ type, onRecordingComplete, onCancel }: Tes
       {/* Controls */}
       <div className="flex gap-3 justify-center flex-wrap">
         {/* Initial state - not ready yet */}
-        {!isReady && !isRecording && !isPreviewing && (
+        {!isReady && !isRecording && !isPreviewing && !isCountingDown && (
           <>
             <Button onClick={prepareRecording} variant="outline" className="gap-2">
               {type === "video" ? <Camera className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
