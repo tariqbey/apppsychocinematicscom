@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { VoiceInput } from "@/components/ui/VoiceInput";
+import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { 
   Target, Plus, Loader2, Sparkles, ChevronLeft, ChevronRight,
@@ -679,7 +679,7 @@ export function ThreeThings({ showAnalyticsDefault = false }: ThreeThingsProps) 
       {/* Add Task Input */}
       {tasks.length < 3 && (
         <div className="flex gap-2">
-          <VoiceInput
+          <Input
             placeholder="Add a priority task..."
             value={newTaskText}
             onChange={(e) => setNewTaskText(e.target.value)}
