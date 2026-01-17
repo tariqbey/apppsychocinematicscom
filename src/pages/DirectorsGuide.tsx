@@ -76,6 +76,49 @@ interface TutorialSection {
 
 const tutorialSections: TutorialSection[] = [
   {
+    id: "chief-aim",
+    icon: <Target className="w-6 h-6" />,
+    title: "⭐ Start Here: Definite Chief Aim",
+    description: "THE FOUNDATION — Everything else depends on this",
+    steps: [
+      {
+        title: "Why This Comes First",
+        content: "Your Definite Chief Aim is the ROOT of your entire transformation. It's not just a goal — it's a crystal-clear statement of your burning desire, when you'll achieve it, what you'll sacrifice, and your immediate plan. Nothing else works without this foundation in place."
+      },
+      {
+        title: "Launch the AI Wizard",
+        content: "On your dashboard, click the gold 'Start Here: Definite Chief Aim' card. The AI-guided wizard walks you through Napoleon Hill's proven 4-phase framework with personalized coaching."
+      },
+      {
+        title: "Phase 1: The Dream (What)",
+        content: "Define your burning desire in vivid, specific terms. Not a vague wish, but a clear picture of your Final Scene. Help yourself see it, feel it, taste it."
+      },
+      {
+        title: "Phase 2: The Deadline (By When)",
+        content: "Set a specific date that creates urgency. Ambitious yet believable. This is when your Final Scene plays out in reality."
+      },
+      {
+        title: "Phase 3: The Exchange (What I Give)",
+        content: "Nothing comes free. Define the habits, time, comfort, and sacrifices you'll commit. This is the price of your transformation."
+      },
+      {
+        title: "Phase 4: The Plan (How)",
+        content: "Outline your immediate next actions. Not the whole journey, but the first steps that begin your transformation TODAY."
+      },
+      {
+        title: "Review Daily",
+        content: "Your Chief Aim appears on your dashboard. Read it aloud every morning and evening as part of your ritual. This statement becomes the lyrics of your Mind Movie."
+      }
+    ],
+    tips: [
+      "Be specific about what you want — vague goals produce vague results",
+      "Set a deadline that stretches you but feels achievable",
+      "Your exchange should reflect real sacrifice and commitment",
+      "This becomes the foundation for your Mind Movie's lyrics and scenes",
+      "Without a clear Chief Aim, all other tools are just entertainment"
+    ]
+  },
+  {
     id: "getting-started",
     icon: <Play className="w-6 h-6" />,
     title: "Getting Started",
@@ -86,12 +129,12 @@ const tutorialSections: TutorialSection[] = [
         content: "Sign up with your email or Google account. You'll receive a 3-day free trial with 250 credits to explore all features."
       },
       {
-        title: "Set Up Your Profile",
-        content: "Go to Settings and customize your profile. Add your avatar, bio, and set your Director character name - this is who you're becoming."
+        title: "Complete Your Chief Aim FIRST",
+        content: "Before anything else, click the gold 'Start Here: Definite Chief Aim' card on your dashboard. This is THE foundation that everything else builds upon."
       },
       {
         title: "Explore the Dashboard",
-        content: "Your dashboard is mission control. Here you'll see your Chief Aim, daily tasks, streak progress, and quick access to all studio tools."
+        content: "Your dashboard is mission control. Once your Chief Aim is set, you'll see it displayed prominently along with daily tasks, streak progress, and access to all studio tools."
       },
       {
         title: "Connect Integrations",
@@ -99,7 +142,7 @@ const tutorialSections: TutorialSection[] = [
       }
     ],
     tips: [
-      "Complete your profile to unlock the full experience",
+      "Your Chief Aim must be defined before you can create effective Mind Movies",
       "Enable notifications to stay on track with your daily rituals",
       "Connect Notion to automatically sync your journal and scorecards"
     ]
@@ -187,32 +230,41 @@ const tutorialSections: TutorialSection[] = [
     ]
   },
   {
-    id: "chief-aim",
-    icon: <Target className="w-6 h-6" />,
-    title: "Definite Chief Aim",
-    description: "The foundation of your transformation journey",
+    id: "mind-movie",
+    icon: <Film className="w-6 h-6" />,
+    title: "Mind Movie Studio",
+    description: "Create and watch your personal visualization movie",
     steps: [
       {
-        title: "Understand the Concept",
-        content: "Your Definite Chief Aim is based on Napoleon Hill's principle - a crystal-clear statement of your ultimate goal, including what you want, when you'll achieve it, what you'll give in exchange, and your plan."
+        title: "Ensure Chief Aim is Complete",
+        content: "Before creating your Mind Movie, your Definite Chief Aim must be defined. The wizard uses your Chief Aim to generate scenes, lyrics, and visuals automatically."
       },
       {
-        title: "Launch the Wizard",
-        content: "Click 'Create Your Chief Aim' on the dashboard. The AI-guided wizard will walk you through four phases: The Dream, The Deadline, The Exchange, and The Plan."
+        title: "Use the Script Wizard",
+        content: "Launch the Mind Movie Script Wizard to create an AI-generated storyboard based on your Chief Aim. It generates scenes, visuals, and even a custom soundtrack."
       },
       {
-        title: "Refine with AI Assistance",
-        content: "The AI coach helps you articulate each component with clarity and power. Don't rush - this statement will guide your entire journey."
+        title: "Generate & Download Assets",
+        content: "Use 'Auto-Generate All' to create images and videos for each scene. Download all assets from the Media Library."
       },
       {
-        title: "Review Daily",
-        content: "Your Chief Aim appears on your dashboard. Read it aloud every morning and evening as part of your ritual."
+        title: "Use Timeline Editor or External Software",
+        content: "Use the built-in Timeline Editor to stitch your assets together, or export to Final Cut Pro, CapCut, or DaVinci Resolve for advanced editing."
+      },
+      {
+        title: "Upload Your Final Mind Movie",
+        content: "Once edited, upload your completed Mind Movie to The Theater via the Movie Vault. Watch it daily for maximum impact."
+      },
+      {
+        title: "Daily Viewing Ritual",
+        content: "Watch your Mind Movie every morning. The Theater tracks your viewing streak - consistency is key to reprogramming your subconscious."
       }
     ],
     tips: [
-      "Be specific about what you want - vague goals produce vague results",
-      "Set a deadline that stretches you but feels achievable",
-      "Your exchange should reflect real sacrifice and commitment"
+      "Your Chief Aim becomes the foundation of your Mind Movie's scenes and lyrics",
+      "Keep your Mind Movie under 5 minutes for maximum impact",
+      "Use the Timeline Editor for quick edits without leaving the platform",
+      "Your viewing streak appears on the dashboard - aim for 90+ days"
     ]
   },
   {

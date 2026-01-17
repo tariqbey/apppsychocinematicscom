@@ -58,6 +58,11 @@ export const LandingPage = ({ onLogin }: LandingPageProps) => {
 
   const features = [
     {
+      icon: Target,
+      title: "Definite Chief Aim Creator",
+      description: "The foundation of everything. AI guides you through Napoleon Hill's proven 4-phase framework: The Dream, The Deadline, The Exchange, The Plan. Crystal-clear vision that drives your entire transformation."
+    },
+    {
       icon: Video,
       title: "Hollywood-Grade AI Studio",
       description: "Generate stunning videos with Google Veo 3, create AI images with your face using reference photos, transform your voice with 10+ options, and produce custom soundtracks in 50+ genres."
@@ -70,7 +75,7 @@ export const LandingPage = ({ onLogin }: LandingPageProps) => {
     {
       icon: Mic,
       title: "Director AI Voice Coach",
-      description: "24/7 voice-enabled AI coaching with personality presets from 'Swag Coach' to 'Zen Guide'. Get challenged, inspired, and held accountable by an AI that knows your goals."
+      description: "24/7 voice-enabled AI coaching with personality presets from 'Swag Coach' to 'Zen Guide'. Get challenged, inspired, and held accountable by an AI that knows your Chief Aim."
     },
     {
       icon: Wand2,
@@ -88,11 +93,6 @@ export const LandingPage = ({ onLogin }: LandingPageProps) => {
       description: "Discover your archetype with our 28-question survey. Get AI-powered transformation analysis revealing your strengths, required traits, and a personalized roadmap."
     },
     {
-      icon: Target,
-      title: "Chief Aim Wizard",
-      description: "Define your Definite Chief Aim with Napoleon Hill's proven 4-phase framework: The Dream, The Deadline, The Exchange, The Plan. Crystal clear vision, powered by AI."
-    },
-    {
       icon: Calendar,
       title: "21-Day Transformation Cycles",
       description: "Track your evolution through 10 cycles across 3 Acts. Daily scorecards, character trait tracking, and AI progress reports measure your identity shift."
@@ -105,7 +105,7 @@ export const LandingPage = ({ onLogin }: LandingPageProps) => {
     {
       icon: Music,
       title: "Soundtrack Studio & Director Radio",
-      description: "Generate custom soundtracks in 50+ genres with AI lyrics. Stream motivational playlists on Director Radio or submit your own tracks for community airplay."
+      description: "Generate custom soundtracks in 50+ genres with AI lyrics based on your Chief Aim. Stream motivational playlists on Director Radio."
     },
     {
       icon: Users,
@@ -120,8 +120,8 @@ export const LandingPage = ({ onLogin }: LandingPageProps) => {
   ];
 
   const phases = [
-    { phase: 1, title: "The Director Emerges", description: "Define your Definite Chief Aim. Decide who you're becoming and commit it to writing with AI guidance." },
-    { phase: 2, title: "The Script", description: "Create your Mind Movie storyboard with AI-generated scenes, visuals, and a custom soundtrack that embodies your vision." },
+    { phase: 1, title: "The Director Emerges", description: "Define your Definite Chief Aim — the foundation of everything. Decide who you're becoming and commit it to writing with AI guidance." },
+    { phase: 2, title: "The Script", description: "Create your Mind Movie storyboard with AI-generated scenes, visuals, and a custom soundtrack that embodies your Chief Aim." },
     { phase: 3, title: "Pre-Production", description: "Build your daily ritual system. Set up morning visualizations, evening reviews, and the Three Things that move you forward." },
     { phase: 4, title: "Principal Photography", description: "Daily visualization in the Theater + consistent action. Watch your movie, execute your plan, log your progress." },
     { phase: 5, title: "Post-Production", description: "Refine with AI analysis. Journal insights, scorecard reviews, and Director AI coaching optimize your approach." },
@@ -130,19 +130,19 @@ export const LandingPage = ({ onLogin }: LandingPageProps) => {
   ];
 
   const createPillar = [
+    { icon: Target, title: "Chief Aim Creator", description: "AI-guided 4-phase framework" },
     { icon: Video, title: "AI Video Generation", description: "Veo 3, Wan 2.1, Kling models" },
     { icon: Palette, title: "Reference Photo AI", description: "Generate images with YOUR face" },
     { icon: Music, title: "Soundtrack Studio", description: "50+ genres, Director Radio" },
-    { icon: Mic, title: "Voice Transformation", description: "10+ premium voice options" },
     { icon: Scissors, title: "Timeline Editor", description: "Multi-track NLE, 4K export" }
   ];
 
   const transformPillar = [
     { icon: Bot, title: "Director AI Coach", description: "Voice-first, 6 personalities" },
     { icon: Brain, title: "Character Builder", description: "28-question archetype survey" },
-    { icon: Target, title: "Chief Aim Wizard", description: "4-phase goal definition" },
     { icon: Zap, title: "Episode Sprints", description: "1-4 week focused production" },
-    { icon: Calendar, title: "21-Day Cycles", description: "10 cycles across 3 Acts" }
+    { icon: Calendar, title: "21-Day Cycles", description: "10 cycles across 3 Acts" },
+    { icon: Mic, title: "Voice Transformation", description: "10+ premium voice options" }
   ];
 
   const connectPillar = [
