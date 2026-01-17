@@ -13,7 +13,7 @@ const logStep = (step: string, details?: any) => {
 };
 
 // Go High Level Webhook URL
-const GHL_WEBHOOK_URL = "https://services.leadconnectorhq.com/hooks/f3lkMOjhelReglpXlnVa/webhook-trigger/c640f54b-49e1-44ec-a0c3-1d86a53c4ca6";
+const GHL_WEBHOOK_URL = "https://services.leadconnectorhq.com/hooks/f3lkMOjhelReglpXlnVa/webhook-trigger/49984473-d11e-4cac-9996-c248784e2b4c";
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
