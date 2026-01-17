@@ -60,7 +60,7 @@ export const LandingPage = ({ onLogin }: LandingPageProps) => {
     {
       icon: Video,
       title: "Hollywood-Grade AI Studio",
-      description: "Generate stunning videos with Google Veo 3, create AI images, transform your voice with 10+ options, and produce custom soundtracks in 50+ genres. All without leaving the platform."
+      description: "Generate stunning videos with Google Veo 3, create AI images with your face using reference photos, transform your voice with 10+ options, and produce custom soundtracks in 50+ genres."
     },
     {
       icon: Scissors,
@@ -75,7 +75,17 @@ export const LandingPage = ({ onLogin }: LandingPageProps) => {
     {
       icon: Wand2,
       title: "One-Click Mind Movie Creation",
-      description: "Go from Chief Aim to finished movie with a single click. AI generates your scenes, images, videos, and soundtrack automatically. Magic, simplified."
+      description: "Go from Chief Aim to finished movie with our 5-step wizard. AI generates scenes, images featuring YOU, videos, and soundtrack automatically. Magic, simplified."
+    },
+    {
+      icon: Zap,
+      title: "Episode Sprints",
+      description: "Break your transformation into 1, 2, or 4-week episodes. Each sprint gets its own Mind Movie, AI character analysis, and production dashboard for focused execution."
+    },
+    {
+      icon: Brain,
+      title: "Character Builder",
+      description: "Discover your archetype with our 28-question survey. Get AI-powered transformation analysis revealing your strengths, required traits, and a personalized roadmap."
     },
     {
       icon: Target,
@@ -84,23 +94,28 @@ export const LandingPage = ({ onLogin }: LandingPageProps) => {
     },
     {
       icon: Calendar,
-      title: "Daily Director Scorecard",
-      description: "Rate yourself daily across Identity, Behavior, Emotion, and Progress with our 0-3 rubric system. Brutally honest self-assessment that drives real change."
+      title: "21-Day Transformation Cycles",
+      description: "Track your evolution through 10 cycles across 3 Acts. Daily scorecards, character trait tracking, and AI progress reports measure your identity shift."
     },
     {
       icon: Film,
-      title: "Theater Viewing Experience",
-      description: "Watch your Mind Movie in a distraction-free theater. Track your viewing streak and build the visualization habit that rewires your identity."
+      title: "Theater & Daily Ritual",
+      description: "Watch your Mind Movie in a distraction-free theater. Track viewing streaks with our 4-step daily ritual: Morning Screening, Script Review, Action, Evening Review."
+    },
+    {
+      icon: Music,
+      title: "Soundtrack Studio & Director Radio",
+      description: "Generate custom soundtracks in 50+ genres with AI lyrics. Stream motivational playlists on Director Radio or submit your own tracks for community airplay."
     },
     {
       icon: Users,
       title: "Director's Corner Community",
-      description: "Share your movies, vote for others, compete for Movie of the Week, and celebrate at the Annual Awards Ceremony. Transform together."
+      description: "Share your movies, vote for Movie of the Week, compete for Director of the Month, and celebrate at the Annual Awards Ceremony. Transform together."
     },
     {
       icon: Share2,
       title: "Ecosystem Integrations",
-      description: "Connect Slack, Telegram, and Notion for automated reminders. Auto-sync your journal and scorecards. Get accountability where you already work."
+      description: "Connect Slack, Telegram, and Notion for automated reminders. Auto-sync journal and scorecards. Share to Facebook, X, Instagram, and TikTok with built-in branding."
     }
   ];
 
@@ -116,44 +131,45 @@ export const LandingPage = ({ onLogin }: LandingPageProps) => {
 
   const createPillar = [
     { icon: Video, title: "AI Video Generation", description: "Veo 3, Wan 2.1, Kling models" },
-    { icon: Palette, title: "AI Image Generation", description: "Stunning visuals from text" },
-    { icon: Music, title: "AI Soundtrack Studio", description: "50+ genres, custom lyrics" },
+    { icon: Palette, title: "Reference Photo AI", description: "Generate images with YOUR face" },
+    { icon: Music, title: "Soundtrack Studio", description: "50+ genres, Director Radio" },
     { icon: Mic, title: "Voice Transformation", description: "10+ premium voice options" },
-    { icon: Scissors, title: "Timeline Editor", description: "Pro editing, 4K export" }
+    { icon: Scissors, title: "Timeline Editor", description: "Multi-track NLE, 4K export" }
   ];
 
   const transformPillar = [
-    { icon: Bot, title: "Director AI Coach", description: "Voice-first, personality presets" },
+    { icon: Bot, title: "Director AI Coach", description: "Voice-first, 6 personalities" },
+    { icon: Brain, title: "Character Builder", description: "28-question archetype survey" },
     { icon: Target, title: "Chief Aim Wizard", description: "4-phase goal definition" },
-    { icon: Calendar, title: "Daily Scorecard", description: "0-3 rubric accountability" },
-    { icon: Brain, title: "Director's Journal", description: "AI-analyzed reflections" },
-    { icon: Clock, title: "Three Things System", description: "Daily priority tasks" }
+    { icon: Zap, title: "Episode Sprints", description: "1-4 week focused production" },
+    { icon: Calendar, title: "21-Day Cycles", description: "10 cycles across 3 Acts" }
   ];
 
   const connectPillar = [
     { icon: Users, title: "Director's Corner", description: "Share, vote, celebrate" },
     { icon: Trophy, title: "Movie of the Week", description: "Community voting" },
-    { icon: Award, title: "Annual Awards", description: "Yearly celebration" },
+    { icon: Award, title: "Annual Awards", description: "Yearly ceremony" },
     { icon: MessageSquare, title: "Slack & Telegram", description: "Automated reminders" },
-    { icon: Layers, title: "Notion Sync", description: "Auto-export data" }
+    { icon: Share2, title: "Social Sharing", description: "FB, X, Instagram, TikTok" }
   ];
 
   const pricingFeatures = [
     "Unlimited Director AI Voice Conversations",
     "$10 Monthly Production Credits",
     "Full AI Media Studio (Video, Image, Voice, Music)",
+    "Reference Photo Generation (AI images with YOUR face)",
     "Professional Timeline Editor with 4K Export",
-    "Mind Movie Script & Storyboard Wizard",
-    "One-Click Auto-Generate Pipeline",
-    "Daily Scorecard & Streak Tracking",
+    "5-Step Mind Movie Wizard with Scene Control",
+    "Episode Sprints (1, 2, or 4-week focused productions)",
+    "Character Builder & 28-Question Archetype Survey",
+    "21-Day Transformation Cycles (10 cycles, 3 Acts)",
+    "Daily Scorecard, Character Scorecard & Streak Tracking",
     "Director's Journal with AI Analysis",
-    "Three Things AI Task Suggestions",
+    "Soundtrack Studio & Director Radio",
     "Movie Vault (Multiple Projects)",
-    "5GB Mind Movie Uploads",
-    "20GB Total Storage",
-    "Director's Corner Community Access",
-    "Slack, Telegram, Notion Integrations",
-    "Annual Awards Ceremony Eligibility"
+    "5GB Mind Movie Uploads, 20GB Total Storage",
+    "Director's Corner Community & Annual Awards",
+    "Slack, Telegram, Notion & Social Media Integrations"
   ];
 
   const testimonials = [
@@ -186,27 +202,31 @@ export const LandingPage = ({ onLogin }: LandingPageProps) => {
   const faqs = [
     {
       question: "What exactly is a Mind Movie?",
-      answer: "A Mind Movie is a personalized video that visualizes your goals, dreams, and the identity you're stepping into. Using our AI tools, you create cinematic scenes with images, video, music, and even your own voiceover that represent your ideal life. Watching it daily rewires your subconscious mind for success—based on proven visualization techniques from Maxwell Maltz and Napoleon Hill."
+      answer: "A Mind Movie is a personalized video that visualizes your goals, dreams, and the identity you're stepping into. Using our AI tools, you create cinematic scenes with images featuring YOUR face, video, music, and even your own voiceover that represent your ideal life. Watching it daily rewires your subconscious mind for success—based on proven visualization techniques from Maxwell Maltz and Napoleon Hill."
     },
     {
       question: "Do I need any video editing experience?",
-      answer: "Absolutely not. Our One-Click Auto-Generate feature can create your entire Mind Movie from scratch—scenes, images, videos, and soundtrack—all based on your Chief Aim. For those who want more control, our Timeline Editor is intuitive with drag-and-drop simplicity. We've designed it so anyone can produce Hollywood-quality content."
+      answer: "Absolutely not. Our 5-Step Mind Movie Wizard guides you from foundation to finished film. Upload a reference photo and AI generates scenes featuring YOU. For advanced control, our Timeline Editor offers multi-track editing, razor cuts, and 4K export. We've designed it so anyone can produce Hollywood-quality content."
+    },
+    {
+      question: "What are Episodes and 21-Day Cycles?",
+      answer: "Episodes are focused 1-4 week sprints with their own Mind Movie and production dashboard. The 21-Day Cycle system organizes your transformation into 10 cycles across 3 Acts (210 days total). Each cycle builds on the last, with AI progress reports tracking your identity shift over time."
     },
     {
       question: "How is this different from other visualization apps?",
-      answer: "Most visualization apps give you static vision boards or generic guided meditations. Psycho-Cinematics gives you a complete production studio with AI video generation, voice coaching, and daily accountability tracking. It's the difference between looking at a photo and starring in your own movie. Plus, our Director AI actually knows your goals and coaches you in real-time."
+      answer: "Most visualization apps give you static vision boards or generic guided meditations. Psycho-Cinematics gives you a complete production studio with AI video generation, reference photo personalization, voice coaching, and a full character transformation system. It's the difference between looking at a photo and starring in your own movie."
     },
     {
       question: "What's included in the $10 monthly production credits?",
-      answer: "Your credits fuel AI generations: videos, images, voice transformations, and soundtrack creation. $10 is enough to create multiple complete Mind Movies each month. Heavy users can purchase additional credit packs. We believe in transparent pricing—you always see the cost before generating anything."
+      answer: "Your credits fuel AI generations: videos, images (including reference photo generations featuring you), voice transformations, and soundtrack creation. $10 is enough to create multiple complete Mind Movies each month. Heavy users can purchase additional credit packs with up to 17% bonus credits."
     },
     {
-      question: "Can I use my own videos and images?",
-      answer: "Yes! You can upload your own media (up to 5GB per file, 20GB total storage) and mix it with AI-generated content. Many directors combine personal footage with AI-enhanced scenes for a truly personalized experience."
+      question: "How does the Character Builder work?",
+      answer: "Our 28-question archetype survey reveals your dominant character type, shadow tendencies, and transformation opportunities. The AI generates a personalized Transformation Analysis with your strengths, required traits, and a roadmap. Track daily alignment with the Character Scorecard."
     },
     {
       question: "How does the Director AI Voice Coach work?",
-      answer: "The Director AI is your 24/7 voice-enabled accountability partner. It knows your Chief Aim, tracks your viewing streak and daily tasks, and coaches you based on your progress. Choose from 6 personality styles—from the challenging 'Swag Coach' to the calming 'Zen Guide'—and 10 different voices. It's like having a personal transformation coach in your pocket."
+      answer: "The Director AI is your 24/7 voice-enabled accountability partner. It knows your Chief Aim, active Episode, character archetype, and daily progress. Choose from 6 personality styles—from the challenging 'Swag Coach' to the calming 'Zen Guide'—and 10 different voices. It references your transformation analysis to provide identity-shifting guidance."
     },
     {
       question: "What if I want to cancel?",
@@ -214,7 +234,7 @@ export const LandingPage = ({ onLogin }: LandingPageProps) => {
     },
     {
       question: "Is my content private?",
-      answer: "Completely. Your Mind Movies, journal entries, and scorecards are private by default. You choose what to share with the community. We take privacy seriously—your transformation journey is yours alone unless you decide to inspire others."
+      answer: "Completely. Your Mind Movies, journal entries, character profiles, and scorecards are private by default. You choose what to share with the Director's Corner community. We take privacy seriously—your transformation journey is yours alone unless you decide to inspire others."
     }
   ];
 
