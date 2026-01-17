@@ -1,7 +1,9 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Mic, Video, Square, Play, RotateCcw, Camera } from "lucide-react";
+import { Mic, Video, Square, Play, RotateCcw, Camera, Loader2 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
+import { FFmpeg } from "@ffmpeg/ffmpeg";
+import { fetchFile, toBlobURL } from "@ffmpeg/util";
 
 interface TestimonialRecorderProps {
   type: "audio" | "video";
@@ -49,11 +51,16 @@ export function TestimonialRecorder({ type, onRecordingComplete, onCancel }: Tes
   const [countdown, setCountdown] = useState(3);
   const [isRecording, setIsRecording] = useState(false);
   const [isPreviewing, setIsPreviewing] = useState(false);
+  const [isCompressing, setIsCompressing] = useState(false);
+  const [compressionProgress, setCompressionProgress] = useState(0);
   const [recordedBlob, setRecordedBlob] = useState<Blob | null>(null);
+  const [compressedBlob, setCompressedBlob] = useState<Blob | null>(null);
   const [thumbnailBlob, setThumbnailBlob] = useState<Blob | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [timeElapsed, setTimeElapsed] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [originalSize, setOriginalSize] = useState<number>(0);
+  const [compressedSize, setCompressedSize] = useState<number>(0);
   
   const countdownRef = useRef<NodeJS.Timeout | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -63,6 +70,7 @@ export function TestimonialRecorder({ type, onRecordingComplete, onCancel }: Tes
   const videoPreviewRef = useRef<HTMLVideoElement>(null);
   const liveVideoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const ffmpegRef = useRef<FFmpeg | null>(null);
 
   const stopStream = useCallback(() => {
     if (streamRef.current) {
@@ -117,6 +125,72 @@ export function TestimonialRecorder({ type, onRecordingComplete, onCancel }: Tes
     }
     return null;
   }, [type]);
+
+  const compressVideo = useCallback(async (inputBlob: Blob): Promise<Blob> => {
+    try {
+      setIsCompressing(true);
+      setCompressionProgress(0);
+      setOriginalSize(inputBlob.size);
+
+      // Initialize FFmpeg if not already done
+      if (!ffmpegRef.current) {
+        const ffmpeg = new FFmpeg();
+        ffmpeg.on("progress", ({ progress }) => {
+          setCompressionProgress(Math.round(progress * 100));
+        });
+
+        const baseURL = "https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd";
+        await ffmpeg.load({
+          coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, "text/javascript"),
+          wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, "application/wasm"),
+        });
+        ffmpegRef.current = ffmpeg;
+      }
+
+      const ffmpeg = ffmpegRef.current;
+      const inputFileName = "input.webm";
+      const outputFileName = "output.mp4";
+
+      // Write input file
+      await ffmpeg.writeFile(inputFileName, await fetchFile(inputBlob));
+
+      // Compress video with good quality/size balance
+      // -crf 28: Good quality with smaller file size (range 0-51, lower = better quality)
+      // -preset fast: Faster encoding
+      // -vf scale=-2:720: Scale to 720p height while maintaining aspect ratio
+      // -b:a 64k: Compress audio to 64kbps
+      await ffmpeg.exec([
+        "-i", inputFileName,
+        "-c:v", "libx264",
+        "-crf", "28",
+        "-preset", "fast",
+        "-vf", "scale=-2:720",
+        "-c:a", "aac",
+        "-b:a", "64k",
+        "-movflags", "+faststart",
+        outputFileName
+      ]);
+
+      // Read the output file
+      const data = await ffmpeg.readFile(outputFileName);
+      const compressedVideoBlob = new Blob([new Uint8Array(data as unknown as ArrayBuffer).buffer], { type: "video/mp4" });
+      
+      setCompressedSize(compressedVideoBlob.size);
+      console.log(`Compressed video from ${(inputBlob.size / 1024 / 1024).toFixed(2)}MB to ${(compressedVideoBlob.size / 1024 / 1024).toFixed(2)}MB`);
+
+      // Clean up
+      await ffmpeg.deleteFile(inputFileName);
+      await ffmpeg.deleteFile(outputFileName);
+
+      return compressedVideoBlob;
+    } catch (err) {
+      console.error("Video compression failed:", err);
+      // Return original blob if compression fails
+      return inputBlob;
+    } finally {
+      setIsCompressing(false);
+    }
+  }, []);
 
   const prepareRecording = async () => {
     setError(null);
@@ -220,12 +294,20 @@ export function TestimonialRecorder({ type, onRecordingComplete, onCancel }: Tes
         console.log("Recording complete, blob size:", blob.size, "bytes");
         
         setRecordedBlob(blob);
-        setIsPreviewing(true);
         stopStream();
         setIsReady(false);
         
+        // Compress video before preview
+        let finalBlob = blob;
+        if (type === "video") {
+          finalBlob = await compressVideo(blob);
+          setCompressedBlob(finalBlob);
+        }
+        
+        setIsPreviewing(true);
+        
         // Create object URL for preview
-        const url = URL.createObjectURL(blob);
+        const url = URL.createObjectURL(finalBlob);
         setPreviewUrl(url);
         
         // Set video source and generate thumbnail
@@ -288,8 +370,13 @@ export function TestimonialRecorder({ type, onRecordingComplete, onCancel }: Tes
   const resetRecording = () => {
     cleanupPreviewUrl();
     setRecordedBlob(null);
+    setCompressedBlob(null);
     setThumbnailBlob(null);
     setIsPreviewing(false);
+    setIsCompressing(false);
+    setCompressionProgress(0);
+    setOriginalSize(0);
+    setCompressedSize(0);
     setIsReady(false);
     setIsCountingDown(false);
     setCountdown(3);
@@ -303,9 +390,17 @@ export function TestimonialRecorder({ type, onRecordingComplete, onCancel }: Tes
   };
 
   const handleSubmit = () => {
-    if (recordedBlob) {
-      onRecordingComplete(recordedBlob, thumbnailBlob || undefined);
+    // Use compressed blob for video, original for audio
+    const blobToSubmit = type === "video" && compressedBlob ? compressedBlob : recordedBlob;
+    if (blobToSubmit) {
+      onRecordingComplete(blobToSubmit, thumbnailBlob || undefined);
     }
+  };
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes === 0) return "0 B";
+    const mb = bytes / 1024 / 1024;
+    return mb >= 1 ? `${mb.toFixed(2)} MB` : `${(bytes / 1024).toFixed(1)} KB`;
   };
 
   const formatTime = (seconds: number) => {
@@ -387,19 +482,43 @@ export function TestimonialRecorder({ type, onRecordingComplete, onCancel }: Tes
         </div>
       )}
 
+      {/* Compression Progress */}
+      {isCompressing && (
+        <div className="space-y-3 p-4 bg-muted rounded-lg">
+          <div className="flex items-center gap-3 justify-center">
+            <Loader2 className="h-5 w-5 animate-spin text-primary" />
+            <span className="text-lg font-medium">Compressing video...</span>
+          </div>
+          <Progress value={compressionProgress} className="h-2" />
+          <p className="text-sm text-muted-foreground text-center">
+            {compressionProgress}% complete
+          </p>
+        </div>
+      )}
+
       {/* Preview */}
-      {isPreviewing && recordedBlob && previewUrl && (
+      {isPreviewing && recordedBlob && previewUrl && !isCompressing && (
         <div className="space-y-3">
           {type === "video" ? (
-            <div className="aspect-[9/16] max-h-[400px] bg-muted rounded-lg overflow-hidden">
-              <video
-                ref={videoPreviewRef}
-                className="w-full h-full object-cover"
-                controls
-                playsInline
-                preload="auto"
-              />
-            </div>
+            <>
+              <div className="aspect-[9/16] max-h-[400px] bg-muted rounded-lg overflow-hidden">
+                <video
+                  ref={videoPreviewRef}
+                  className="w-full h-full object-cover"
+                  controls
+                  playsInline
+                  preload="auto"
+                />
+              </div>
+              {originalSize > 0 && compressedSize > 0 && (
+                <div className="text-xs text-muted-foreground text-center space-y-1">
+                  <p>Original: {formatFileSize(originalSize)} → Compressed: {formatFileSize(compressedSize)}</p>
+                  <p className="text-green-500">
+                    Saved {Math.round((1 - compressedSize / originalSize) * 100)}% file size
+                  </p>
+                </div>
+              )}
+            </>
           ) : (
             <div className="p-4 bg-muted rounded-lg">
               <audio
@@ -468,7 +587,7 @@ export function TestimonialRecorder({ type, onRecordingComplete, onCancel }: Tes
         )}
 
         {/* Preview state */}
-        {isPreviewing && (
+        {isPreviewing && !isCompressing && (
           <>
             <Button onClick={resetRecording} variant="outline" className="gap-2">
               <RotateCcw className="h-4 w-4" />
