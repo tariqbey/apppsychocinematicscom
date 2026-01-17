@@ -1,9 +1,8 @@
 import { useState, useRef, useEffect } from "react";
-import { X, Sparkles, Target, Calendar, ArrowRightLeft, Map, Send, Loader2, Check, Mic, MicOff } from "lucide-react";
+import { X, Sparkles, Target, Calendar, ArrowRightLeft, Map, Send, Loader2, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
+import { VoiceTextarea } from "@/components/ui/VoiceTextarea";
 import { cn } from "@/lib/utils";
-import { useVoiceInput } from "@/hooks/useVoiceInput";
 import { toast } from "sonner";
 
 interface ChiefAimData {
@@ -49,16 +48,7 @@ export const ChiefAimWizard = ({ isOpen, onClose, initialAim, onSave }: ChiefAim
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  const { isListening, isSupported, toggleListening } = useVoiceInput({
-    onTranscript: (transcript) => {
-      setInput((prev) => prev + transcript);
-    },
-    onError: (error) => {
-      toast.error(error);
-    },
-  });
 
   // Initialize with first prompt when opening
   useEffect(() => {
@@ -301,30 +291,14 @@ export const ChiefAimWizard = ({ isOpen, onClose, initialAim, onSave }: ChiefAim
             {/* Input */}
             <div className="p-4 border-t border-border/30">
               <div className="flex gap-2">
-                <div className="flex-1 relative">
-                  <Textarea
-                    ref={textareaRef}
-                    value={input}
-                    onChange={(e) => setInput(e.target.value)}
-                    onKeyDown={handleKeyDown}
-                    placeholder="Share your thoughts..."
-                    className="min-h-[60px] max-h-[150px] resize-none pr-12"
-                    disabled={isLoading}
-                  />
-                  {isSupported && (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className={cn(
-                        "absolute right-2 top-2",
-                        isListening && "text-red-500"
-                      )}
-                      onClick={toggleListening}
-                    >
-                      {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
-                    </Button>
-                  )}
-                </div>
+                <VoiceTextarea
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  placeholder="Share your thoughts..."
+                  className="min-h-[60px] max-h-[150px] resize-none"
+                  disabled={isLoading}
+                />
                 <Button onClick={sendMessage} disabled={!input.trim() || isLoading} className="self-end">
                   <Send className="w-4 h-4" />
                 </Button>
@@ -341,7 +315,7 @@ export const ChiefAimWizard = ({ isOpen, onClose, initialAim, onSave }: ChiefAim
             <p className="text-sm text-muted-foreground mb-4">{STEPS[currentStepIndex].description}</p>
 
             {/* Current field input */}
-            <Textarea
+            <VoiceTextarea
               value={aim[currentStep]}
               onChange={(e) => setAim((prev) => ({ ...prev, [currentStep]: e.target.value }))}
               placeholder={`Enter your ${STEPS[currentStepIndex].label.toLowerCase()}...`}

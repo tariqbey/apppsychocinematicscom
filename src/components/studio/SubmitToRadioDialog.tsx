@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Radio, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { VoiceInput } from "@/components/ui/VoiceInput";
 import { Label } from "@/components/ui/label";
 import {
   Dialog,
@@ -87,7 +87,7 @@ export function SubmitToRadioDialog({
         <div className="space-y-4 py-4">
           <div className="space-y-2">
             <Label htmlFor="track-title">Track Title *</Label>
-            <Input
+            <VoiceInput
               id="track-title"
               value={trackTitle}
               onChange={(e) => setTrackTitle(e.target.value)}
@@ -98,7 +98,7 @@ export function SubmitToRadioDialog({
 
           <div className="space-y-2">
             <Label htmlFor="artist-name">Artist Name (optional)</Label>
-            <Input
+            <VoiceInput
               id="artist-name"
               value={artistName}
               onChange={(e) => setArtistName(e.target.value)}

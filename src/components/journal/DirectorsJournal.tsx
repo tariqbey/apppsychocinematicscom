@@ -2,8 +2,8 @@ import { useState, useEffect } from "react";
 import { X, Plus, BookOpen, Sparkles, TrendingUp, Target, Loader2, ChevronDown, ChevronUp, Trash2, Bell, Save, BookMarked, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Textarea } from "@/components/ui/textarea";
-import { Input } from "@/components/ui/input";
+import { VoiceTextarea } from "@/components/ui/VoiceTextarea";
+import { VoiceInput } from "@/components/ui/VoiceInput";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -172,14 +172,14 @@ export function DirectorsJournal({ isOpen, onClose }: DirectorsJournalProps) {
           <TabsContent value="write" className="flex-1 p-4 overflow-auto">
             <div className="max-w-2xl mx-auto space-y-6">
               <Card className="p-6 space-y-4">
-                <Input
+                <VoiceInput
                   placeholder="Entry title (optional)"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   className="text-lg font-medium"
                 />
 
-                <Textarea
+                <VoiceTextarea
                   placeholder="What's on your mind, Director? Record your experiences, breakthroughs, challenges, and insights..."
                   value={content}
                   onChange={(e) => setContent(e.target.value)}

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Textarea } from '@/components/ui/textarea';
+import { VoiceTextarea } from '@/components/ui/VoiceTextarea';
 import { Button } from '@/components/ui/button';
 import { RefreshCw, Save, FileText } from 'lucide-react';
 
@@ -57,7 +57,7 @@ export const LyricsEditor: React.FC<LyricsEditorProps> = ({
       </div>
 
       <div className="relative">
-        <Textarea
+        <VoiceTextarea
           value={lyrics}
           onChange={(e) => onChange(e.target.value)}
           placeholder="Your lyrics will appear here..."
