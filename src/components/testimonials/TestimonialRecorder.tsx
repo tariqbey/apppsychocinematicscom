@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Mic, Video, Square, Play, RotateCcw } from "lucide-react";
+import { Mic, Video, Square, Play, RotateCcw, Camera } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 
 interface TestimonialRecorderProps {
@@ -12,6 +12,7 @@ interface TestimonialRecorderProps {
 const MAX_DURATION = 30; // 30 seconds
 
 export function TestimonialRecorder({ type, onRecordingComplete, onCancel }: TestimonialRecorderProps) {
+  const [isReady, setIsReady] = useState(false); // Camera/mic is active but not recording
   const [isRecording, setIsRecording] = useState(false);
   const [isPreviewing, setIsPreviewing] = useState(false);
   const [recordedBlob, setRecordedBlob] = useState<Blob | null>(null);
@@ -66,9 +67,9 @@ export function TestimonialRecorder({ type, onRecordingComplete, onCancel }: Tes
     return null;
   }, [type]);
 
-  const startRecording = async () => {
+  // Prepare: activate camera/mic but don't start recording yet
+  const prepareRecording = async () => {
     setError(null);
-    chunksRef.current = [];
     
     try {
       const constraints = type === "video" 
@@ -90,11 +91,29 @@ export function TestimonialRecorder({ type, onRecordingComplete, onCancel }: Tes
         liveVideoRef.current.play();
       }
       
+      setIsReady(true);
+    } catch (err) {
+      console.error("Error accessing media devices:", err);
+      setError(`Unable to access ${type === "video" ? "camera" : "microphone"}. Please check permissions.`);
+    }
+  };
+
+  // Actually start recording (stream should already be active)
+  const startRecording = async () => {
+    if (!streamRef.current) {
+      await prepareRecording();
+      return;
+    }
+    
+    setError(null);
+    chunksRef.current = [];
+    
+    try {
       const mimeType = type === "video" 
         ? "video/webm;codecs=vp8,opus"
         : "audio/webm;codecs=opus";
       
-      const mediaRecorder = new MediaRecorder(stream, {
+      const mediaRecorder = new MediaRecorder(streamRef.current, {
         mimeType,
         videoBitsPerSecond: type === "video" ? 500000 : undefined,
         audioBitsPerSecond: 64000
@@ -115,6 +134,7 @@ export function TestimonialRecorder({ type, onRecordingComplete, onCancel }: Tes
         setRecordedBlob(blob);
         setIsPreviewing(true);
         stopStream();
+        setIsReady(false);
         
         // Generate thumbnail for video after setting preview
         if (type === "video" && videoPreviewRef.current) {
@@ -141,8 +161,8 @@ export function TestimonialRecorder({ type, onRecordingComplete, onCancel }: Tes
       }, 1000);
       
     } catch (err) {
-      console.error("Error accessing media devices:", err);
-      setError(`Unable to access ${type === "video" ? "camera" : "microphone"}. Please check permissions.`);
+      console.error("Error starting recording:", err);
+      setError(`Unable to start recording. Please try again.`);
     }
   };
 
@@ -158,7 +178,9 @@ export function TestimonialRecorder({ type, onRecordingComplete, onCancel }: Tes
     setRecordedBlob(null);
     setThumbnailBlob(null);
     setIsPreviewing(false);
+    setIsReady(false);
     setTimeElapsed(0);
+    stopStream();
     if (videoPreviewRef.current) {
       videoPreviewRef.current.src = "";
     }
@@ -188,7 +210,7 @@ export function TestimonialRecorder({ type, onRecordingComplete, onCancel }: Tes
         </div>
       )}
 
-      {/* Live Preview (while recording video) */}
+      {/* Live Preview (video - shown when ready or recording) */}
       {type === "video" && !isPreviewing && (
         <div className="relative aspect-[9/16] max-h-[400px] bg-muted rounded-lg overflow-hidden">
           <video
@@ -197,11 +219,29 @@ export function TestimonialRecorder({ type, onRecordingComplete, onCancel }: Tes
             muted
             playsInline
           />
-          {!isRecording && !streamRef.current && (
-            <div className="absolute inset-0 flex items-center justify-center">
+          {!isReady && !isRecording && (
+            <div className="absolute inset-0 flex items-center justify-center flex-col gap-2">
               <Video className="h-16 w-16 text-muted-foreground/50" />
+              <span className="text-sm text-muted-foreground">Camera preview will appear here</span>
             </div>
           )}
+          {isRecording && (
+            <div className="absolute top-3 left-3 flex items-center gap-2 bg-black/60 px-3 py-1.5 rounded-full">
+              <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse" />
+              <span className="text-white text-sm font-medium">REC</span>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Audio - Ready state indicator */}
+      {type === "audio" && isReady && !isRecording && !isPreviewing && (
+        <div className="flex items-center justify-center p-8 bg-muted rounded-lg">
+          <div className="flex items-center gap-3 flex-col">
+            <Mic className="h-12 w-12 text-primary" />
+            <span className="text-lg font-medium">Microphone ready</span>
+            <span className="text-sm text-muted-foreground">Click "Start Recording" when ready</span>
+          </div>
         </div>
       )}
 
@@ -240,7 +280,7 @@ export function TestimonialRecorder({ type, onRecordingComplete, onCancel }: Tes
       )}
 
       {/* Timer and Progress */}
-      {(isRecording || isPreviewing) && (
+      {isRecording && (
         <div className="space-y-2">
           <div className="flex justify-between text-sm text-muted-foreground">
             <span>{formatTime(timeElapsed)}</span>
@@ -251,19 +291,34 @@ export function TestimonialRecorder({ type, onRecordingComplete, onCancel }: Tes
       )}
 
       {/* Controls */}
-      <div className="flex gap-3 justify-center">
-        {!isRecording && !isPreviewing && (
+      <div className="flex gap-3 justify-center flex-wrap">
+        {/* Initial state - not ready yet */}
+        {!isReady && !isRecording && !isPreviewing && (
           <>
-            <Button onClick={startRecording} variant="gold" className="gap-2">
-              {type === "video" ? <Video className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
-              Start Recording
+            <Button onClick={prepareRecording} variant="outline" className="gap-2">
+              {type === "video" ? <Camera className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+              {type === "video" ? "Activate Camera" : "Activate Microphone"}
             </Button>
-            <Button onClick={onCancel} variant="outline">
+            <Button onClick={onCancel} variant="ghost">
               Cancel
             </Button>
           </>
         )}
 
+        {/* Ready state - camera/mic active, can start recording */}
+        {isReady && !isRecording && !isPreviewing && (
+          <>
+            <Button onClick={startRecording} variant="gold" className="gap-2">
+              {type === "video" ? <Video className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+              Start Recording
+            </Button>
+            <Button onClick={resetRecording} variant="outline">
+              Cancel
+            </Button>
+          </>
+        )}
+
+        {/* Recording state */}
         {isRecording && (
           <Button onClick={stopRecording} variant="destructive" className="gap-2">
             <Square className="h-4 w-4" />
@@ -271,6 +326,7 @@ export function TestimonialRecorder({ type, onRecordingComplete, onCancel }: Tes
           </Button>
         )}
 
+        {/* Preview state */}
         {isPreviewing && (
           <>
             <Button onClick={resetRecording} variant="outline" className="gap-2">
