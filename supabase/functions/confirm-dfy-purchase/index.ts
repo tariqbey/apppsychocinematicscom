@@ -119,10 +119,16 @@ serve(async (req) => {
     // Send webhook to Go High Level
     let ghlWebhookSent = false;
     try {
+      // Split name into first and last name
+      const nameParts = customerName.trim().split(/\s+/);
+      const firstName = nameParts[0] || "";
+      const lastName = nameParts.slice(1).join(" ") || "";
+
       const ghlPayload = {
-        name: customerName,
-        email: customerEmail,
+        first_name: firstName,
+        last_name: lastName,
         phone: customerPhone,
+        email: customerEmail,
         product: "Done For You Mind Movie Package",
         amount: 497,
         currency: "USD",
