@@ -18,10 +18,17 @@ serve(async (req) => {
     const subscriptionStartsAt = new Date();
     subscriptionStartsAt.setMonth(subscriptionStartsAt.getMonth() + 1);
 
+    // Split name into first and last name
+    const fullName = name || "Test User";
+    const nameParts = fullName.trim().split(/\s+/);
+    const firstName = nameParts[0] || "";
+    const lastName = nameParts.slice(1).join(" ") || "";
+
     const ghlPayload = {
-      name: name || "Test User",
-      email: email || "test@example.com",
+      first_name: firstName,
+      last_name: lastName,
       phone: phone || "",
+      email: email || "test@example.com",
       product: "Done For You Mind Movie Package",
       amount: 497,
       currency: "USD",
