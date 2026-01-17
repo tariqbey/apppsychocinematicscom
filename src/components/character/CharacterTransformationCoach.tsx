@@ -1,13 +1,15 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, Target, Sparkles, AlertTriangle, ArrowRight, Crown, Swords, Shield, X, Film, Clapperboard, Download, Check, RefreshCw, Calendar } from "lucide-react";
+import { Loader2, Target, Sparkles, AlertTriangle, ArrowRight, Crown, Swords, Shield, X, Film, Clapperboard, Download, Check, RefreshCw, Calendar, Bell, RotateCcw } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Archetype, ARCHETYPES } from "./archetypes";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
+import { useCycleTracking } from "@/hooks/useCycleTracking";
+import { Badge } from "@/components/ui/badge";
 interface TransformationAnalysis {
   currentSelf: {
     archetype: string;
@@ -50,8 +52,16 @@ export function CharacterTransformationCoach({
 }: CharacterTransformationCoachProps) {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { cycleInfo } = useCycleTracking();
   const [analysis, setAnalysis] = useState<TransformationAnalysis | null>(null);
   const [analysisDate, setAnalysisDate] = useState<string | null>(null);
+  const [savedChiefAimSnapshot, setSavedChiefAimSnapshot] = useState<{
+    what: string | null;
+    byWhen: string | null;
+    exchange: string | null;
+    plan: string | null;
+  } | null>(null);
+  const [savedCycleNumber, setSavedCycleNumber] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [loadingData, setLoadingData] = useState(!archetypeProp);
   const [archetype, setArchetype] = useState<Archetype | null>(archetypeProp || null);
@@ -63,6 +73,25 @@ export function CharacterTransformationCoach({
     plan: string | null;
   } | null>(null);
 
+  // Calculate what has changed since last analysis
+  const changes = useMemo(() => {
+    if (!chiefAim || !savedChiefAimSnapshot || !analysis) return null;
+    
+    const changedFields: string[] = [];
+    if (chiefAim.what !== savedChiefAimSnapshot.what) changedFields.push('The Dream');
+    if (chiefAim.byWhen !== savedChiefAimSnapshot.byWhen) changedFields.push('The Deadline');
+    if (chiefAim.exchange !== savedChiefAimSnapshot.exchange) changedFields.push('The Exchange');
+    if (chiefAim.plan !== savedChiefAimSnapshot.plan) changedFields.push('The Plan');
+    
+    return changedFields.length > 0 ? changedFields : null;
+  }, [chiefAim, savedChiefAimSnapshot, analysis]);
+
+  // Check if a new cycle analysis is needed (every 21 days)
+  const needsCycleAnalysis = useMemo(() => {
+    if (!cycleInfo || !savedCycleNumber || !analysis) return false;
+    return cycleInfo.currentCycle > savedCycleNumber;
+  }, [cycleInfo, savedCycleNumber, analysis]);
+
   // Always fetch saved transformation analysis and chief aim from database
   // Only skip archetype/scores fetch if props are provided
   useEffect(() => {
@@ -73,10 +102,10 @@ export function CharacterTransformationCoach({
       }
 
       try {
-        // Always fetch character profile to get saved transformation_analysis and updated_at
+        // Always fetch character profile to get saved transformation_analysis and snapshots
         const { data: profileData } = await supabase
           .from("character_profiles")
-          .select("archetype, archetype_score, transformation_analysis, updated_at")
+          .select("archetype, archetype_score, transformation_analysis, updated_at, transformation_chief_aim_snapshot, transformation_cycle_number")
           .eq("user_id", user.id)
           .order("created_at", { ascending: false })
           .limit(1)
@@ -95,6 +124,18 @@ export function CharacterTransformationCoach({
           if (profileData.transformation_analysis) {
             setAnalysis(profileData.transformation_analysis as unknown as TransformationAnalysis);
             setAnalysisDate(profileData.updated_at);
+          }
+          // Load the saved Chief Aim snapshot and cycle number
+          if (profileData.transformation_chief_aim_snapshot) {
+            setSavedChiefAimSnapshot(profileData.transformation_chief_aim_snapshot as {
+              what: string | null;
+              byWhen: string | null;
+              exchange: string | null;
+              plan: string | null;
+            });
+          }
+          if (profileData.transformation_cycle_number) {
+            setSavedCycleNumber(profileData.transformation_cycle_number);
           }
         }
 
@@ -174,13 +215,26 @@ export function CharacterTransformationCoach({
 
       if (error) throw error;
       
+      const newChiefAimSnapshot = {
+        what: profileData.chief_aim_what,
+        byWhen: profileData.chief_aim_by_when,
+        exchange: profileData.chief_aim_exchange,
+        plan: profileData.chief_aim_plan
+      };
+      
       setAnalysis(data.analysis);
       setAnalysisDate(new Date().toISOString());
+      setSavedChiefAimSnapshot(newChiefAimSnapshot);
+      setSavedCycleNumber(cycleInfo?.currentCycle || 1);
       
-      // Save the transformation analysis to character_profiles for Director AI access
+      // Save the transformation analysis along with Chief Aim snapshot and cycle number
       await supabase
         .from("character_profiles")
-        .update({ transformation_analysis: data.analysis })
+        .update({ 
+          transformation_analysis: data.analysis,
+          transformation_chief_aim_snapshot: newChiefAimSnapshot,
+          transformation_cycle_number: cycleInfo?.currentCycle || 1
+        })
         .eq("user_id", user.id);
         
       toast.success("Transformation analysis saved!");
@@ -476,21 +530,81 @@ export function CharacterTransformationCoach({
 
             {analysis && (
               <>
+                {/* Cycle-Based Update Prompt */}
+                {needsCycleAnalysis && (
+                  <Card className="glass-card border-amber-500/50 bg-amber-500/5">
+                    <CardContent className="flex items-center gap-4 py-4">
+                      <div className="w-12 h-12 rounded-full bg-amber-500/20 flex items-center justify-center shrink-0">
+                        <Bell className="h-6 w-6 text-amber-400" />
+                      </div>
+                      <div className="flex-1">
+                        <h4 className="font-semibold text-amber-300">New Cycle Check-In</h4>
+                        <p className="text-sm text-muted-foreground">
+                          You've entered Cycle {cycleInfo?.currentCycle}! Your last analysis was from Cycle {savedCycleNumber}. 
+                          Regenerate to track your character evolution.
+                        </p>
+                      </div>
+                      <Button
+                        onClick={generateTransformationPlan}
+                        disabled={isLoading}
+                        className="gap-2 bg-amber-600 hover:bg-amber-700"
+                      >
+                        {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCcw className="h-4 w-4" />}
+                        Update Analysis
+                      </Button>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Chief Aim Changes Alert */}
+                {changes && changes.length > 0 && (
+                  <Card className="glass-card border-blue-500/50 bg-blue-500/5">
+                    <CardContent className="py-4">
+                      <div className="flex items-start gap-4">
+                        <div className="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center shrink-0">
+                          <AlertTriangle className="h-5 w-5 text-blue-400" />
+                        </div>
+                        <div className="flex-1">
+                          <h4 className="font-semibold text-blue-300 mb-2">Your Definite Chief Aim Has Changed</h4>
+                          <p className="text-sm text-muted-foreground mb-3">
+                            The following parts were updated since your last analysis:
+                          </p>
+                          <div className="flex flex-wrap gap-2 mb-3">
+                            {changes.map((field) => (
+                              <Badge key={field} variant="outline" className="border-blue-500/50 text-blue-300">
+                                {field}
+                              </Badge>
+                            ))}
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            Consider regenerating your analysis to align with your updated vision.
+                          </p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
                 {/* Analysis Date & Regenerate Button */}
                 <div className="flex items-center justify-between flex-wrap gap-3 p-3 rounded-lg bg-muted/30 border border-border">
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Calendar className="h-4 w-4" />
-                    <span>
-                      Analysis generated: {analysisDate 
-                        ? new Date(analysisDate).toLocaleDateString('en-US', { 
-                            month: 'short', 
-                            day: 'numeric', 
-                            year: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit'
-                          }) 
-                        : 'Unknown'}
-                    </span>
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 text-sm text-muted-foreground">
+                    <div className="flex items-center gap-2">
+                      <Calendar className="h-4 w-4" />
+                      <span>
+                        Generated: {analysisDate 
+                          ? new Date(analysisDate).toLocaleDateString('en-US', { 
+                              month: 'short', 
+                              day: 'numeric', 
+                              year: 'numeric'
+                            }) 
+                          : 'Unknown'}
+                      </span>
+                    </div>
+                    {savedCycleNumber && (
+                      <span className="text-xs">
+                        • Cycle {savedCycleNumber}
+                      </span>
+                    )}
                   </div>
                   <Button
                     variant="outline"
