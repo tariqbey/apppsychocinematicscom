@@ -20,6 +20,8 @@ import Actions from "./pages/Actions";
 import Character from "./pages/Character";
 import Episodes from "./pages/Episodes";
 import Soundtrack from "./pages/Soundtrack";
+import DoneForYou from "./pages/DoneForYou";
+import DFYSuccess from "./pages/DFYSuccess";
 import NotFound from "./pages/NotFound";
 import { RequireAdmin } from "./components/auth/RequireAdmin";
 
@@ -51,6 +53,8 @@ const App = () => (
           <Route path="/character" element={<Character />} />
           <Route path="/episodes" element={<Episodes />} />
           <Route path="/soundtrack" element={<Soundtrack />} />
+          <Route path="/done-for-you" element={<DoneForYou />} />
+          <Route path="/dfy-success" element={<DFYSuccess />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

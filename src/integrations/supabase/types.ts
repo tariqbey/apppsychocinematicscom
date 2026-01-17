@@ -539,6 +539,54 @@ export type Database = {
         }
         Relationships: []
       }
+      dfy_orders: {
+        Row: {
+          amount_paid: number
+          created_at: string
+          customer_email: string
+          customer_name: string
+          customer_phone: string | null
+          ghl_webhook_sent: boolean | null
+          id: string
+          notes: string | null
+          status: string
+          stripe_session_id: string | null
+          subscription_starts_at: string | null
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          amount_paid?: number
+          created_at?: string
+          customer_email: string
+          customer_name: string
+          customer_phone?: string | null
+          ghl_webhook_sent?: boolean | null
+          id?: string
+          notes?: string | null
+          status?: string
+          stripe_session_id?: string | null
+          subscription_starts_at?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          amount_paid?: number
+          created_at?: string
+          customer_email?: string
+          customer_name?: string
+          customer_phone?: string | null
+          ghl_webhook_sent?: boolean | null
+          id?: string
+          notes?: string | null
+          status?: string
+          stripe_session_id?: string | null
+          subscription_starts_at?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       director_posts: {
         Row: {
           comments_count: number
