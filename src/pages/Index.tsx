@@ -24,11 +24,12 @@ import { useGamification } from "@/hooks/useGamification";
 import { useMindMovies, MindMovie } from "@/hooks/useMindMovies";
 import { useEpisodes } from "@/hooks/useEpisodes";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Wand2, Sparkles, Bot, Clapperboard, FolderOpen, BookOpen, Target, User2, Zap, Music, Radio, FileText } from "lucide-react";
+import { Loader2, Wand2, Sparkles, Bot, Clapperboard, FolderOpen, BookOpen, Target, User2, Zap, Music, Radio, FileText, MessageSquareHeart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { InfoTooltip } from "@/components/ui/info-tooltip";
 import { toast } from "sonner";
 import { DirectorRadioCard } from "@/components/radio/DirectorRadioCard";
+import { TestimonialSubmissionDialog } from "@/components/testimonials/TestimonialSubmissionDialog";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -61,6 +62,7 @@ const Index = () => {
   const { createNewMovie } = useMindMovies();
   const { activeEpisode, loading: episodesLoading, updateEpisode } = useEpisodes();
   const [showEpisodeWizard, setShowEpisodeWizard] = useState(false);
+  const [showTestimonialDialog, setShowTestimonialDialog] = useState(false);
   const [episodeForMovie, setEpisodeForMovie] = useState<{
     id: string;
     title: string;
@@ -532,6 +534,31 @@ const Index = () => {
           {/* Director Radio Card */}
           <DirectorRadioCard />
 
+          {/* Share Your Story Card */}
+          <button
+            onClick={() => setShowTestimonialDialog(true)}
+            className="w-full glass-card p-6 cinematic-border animate-slide-up group hover:border-emerald-500/50 transition-all duration-300 text-left"
+          >
+            <div className="flex items-center gap-4">
+              <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-emerald-500/20 to-green-500/20 flex items-center justify-center group-hover:from-emerald-500/30 group-hover:to-green-500/30 transition-all duration-300">
+                <MessageSquareHeart className="w-7 h-7 text-emerald-400" />
+              </div>
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-1">
+                  <h3 className="text-xl font-display tracking-wide group-hover:text-emerald-400 transition-colors">Share Your Story</h3>
+                  <Sparkles className="w-4 h-4 text-emerald-400/60" />
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Record a testimonial • Inspire other directors • Get featured on the landing page
+                </p>
+              </div>
+              <div className="hidden sm:flex items-center gap-2 text-sm text-muted-foreground group-hover:text-emerald-400 transition-colors">
+                <span>Share</span>
+                <span className="text-lg">→</span>
+              </div>
+            </div>
+          </button>
+
           {/* Two Column Layout */}
           <div className="grid md:grid-cols-2 gap-6">
             {/* Daily Ritual */}
@@ -731,6 +758,12 @@ const Index = () => {
       {showEpisodeWizard && (
         <EpisodeWizard onClose={() => setShowEpisodeWizard(false)} />
       )}
+
+      {/* Testimonial Submission Dialog */}
+      <TestimonialSubmissionDialog
+        open={showTestimonialDialog}
+        onOpenChange={setShowTestimonialDialog}
+      />
     </div>
   );
 };
