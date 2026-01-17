@@ -1247,6 +1247,66 @@ export type Database = {
         }
         Relationships: []
       }
+      testimonials: {
+        Row: {
+          admin_notes: string | null
+          avatar_url: string | null
+          created_at: string
+          display_name: string
+          id: string
+          media_url: string | null
+          result_highlight: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          submitted_at: string
+          testimonial_type: string
+          text_content: string | null
+          thumbnail_url: string | null
+          updated_at: string
+          user_id: string
+          user_title: string | null
+        }
+        Insert: {
+          admin_notes?: string | null
+          avatar_url?: string | null
+          created_at?: string
+          display_name: string
+          id?: string
+          media_url?: string | null
+          result_highlight?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          submitted_at?: string
+          testimonial_type: string
+          text_content?: string | null
+          thumbnail_url?: string | null
+          updated_at?: string
+          user_id: string
+          user_title?: string | null
+        }
+        Update: {
+          admin_notes?: string | null
+          avatar_url?: string | null
+          created_at?: string
+          display_name?: string
+          id?: string
+          media_url?: string | null
+          result_highlight?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          submitted_at?: string
+          testimonial_type?: string
+          text_content?: string | null
+          thumbnail_url?: string | null
+          updated_at?: string
+          user_id?: string
+          user_title?: string | null
+        }
+        Relationships: []
+      }
       timeline_projects: {
         Row: {
           created_at: string

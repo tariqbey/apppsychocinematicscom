@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { 
   Film, 
@@ -27,7 +27,8 @@ import {
   Wand2,
   Quote,
   HelpCircle,
-  ChevronDown
+  ChevronDown,
+  Volume2
 } from "lucide-react";
 import {
   Accordion,
@@ -37,6 +38,8 @@ import {
 } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
 import { AuthModal } from "@/components/auth/AuthModal";
+import { TestimonialCard } from "@/components/testimonials/TestimonialCard";
+import { supabase } from "@/integrations/supabase/client";
 import psychoCinematicsLogo from "@/assets/psycho-cinematics-logo.png";
 import heroImage from "@/assets/hero-image.png";
 
@@ -44,9 +47,44 @@ interface LandingPageProps {
   onLogin: () => void;
 }
 
+interface ApprovedTestimonial {
+  id: string;
+  testimonial_type: "text" | "audio" | "video";
+  text_content: string | null;
+  media_url: string | null;
+  thumbnail_url: string | null;
+  display_name: string;
+  avatar_url: string | null;
+  user_title: string | null;
+  result_highlight: string | null;
+}
+
 export const LandingPage = ({ onLogin }: LandingPageProps) => {
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [approvedTestimonials, setApprovedTestimonials] = useState<ApprovedTestimonial[]>([]);
   const navigate = useNavigate();
+
+  // Fetch approved testimonials from database
+  useEffect(() => {
+    const fetchApprovedTestimonials = async () => {
+      const { data, error } = await supabase
+        .from("testimonials")
+        .select("id, testimonial_type, text_content, media_url, thumbnail_url, display_name, avatar_url, user_title, result_highlight")
+        .eq("status", "approved")
+        .order("submitted_at", { ascending: false })
+        .limit(8);
+
+      if (!error && data) {
+        // Sort by type priority: video > audio > text
+        const sorted = [...data].sort((a, b) => {
+          const priority = { video: 0, audio: 1, text: 2 };
+          return priority[a.testimonial_type as keyof typeof priority] - priority[b.testimonial_type as keyof typeof priority];
+        });
+        setApprovedTestimonials(sorted as ApprovedTestimonial[]);
+      }
+    };
+    fetchApprovedTestimonials();
+  }, []);
 
   const handleGetStarted = () => {
     navigate("/signup");
@@ -541,6 +579,26 @@ export const LandingPage = ({ onLogin }: LandingPageProps) => {
             </p>
           </div>
           
+          {/* Dynamic Testimonials from Database */}
+          {approvedTestimonials.length > 0 && (
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto mb-12">
+              {approvedTestimonials.slice(0, 6).map((testimonial) => (
+                <TestimonialCard
+                  key={testimonial.id}
+                  testimonialType={testimonial.testimonial_type}
+                  textContent={testimonial.text_content}
+                  mediaUrl={testimonial.media_url}
+                  thumbnailUrl={testimonial.thumbnail_url}
+                  displayName={testimonial.display_name}
+                  avatarUrl={testimonial.avatar_url}
+                  userTitle={testimonial.user_title}
+                  resultHighlight={testimonial.result_highlight}
+                />
+              ))}
+            </div>
+          )}
+
+          {/* Static Testimonials as Fallback/Supplement */}
           <div className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto">
             {testimonials.map((testimonial, index) => (
               <div 
