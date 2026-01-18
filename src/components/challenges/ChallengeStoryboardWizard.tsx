@@ -119,6 +119,64 @@ export function ChallengeStoryboardWizard({
     return [];
   }, [visualizationScript]);
 
+  // Convert image to JPEG using canvas (handles HEIC and other unsupported formats)
+  const convertToJpeg = async (file: File): Promise<{ blob: Blob; ext: string }> => {
+    const originalType = file.type.toLowerCase();
+    const originalName = file.name.toLowerCase();
+    
+    // Check if format is already supported
+    const supportedFormats = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp', 'image/gif'];
+    const unsupportedExtensions = ['heic', 'heif', 'avif', 'bmp', 'tiff', 'tif'];
+    
+    const ext = originalName.split('.').pop() || '';
+    const needsConversion = unsupportedExtensions.includes(ext) || !supportedFormats.includes(originalType);
+    
+    if (!needsConversion) {
+      return { blob: file, ext: ext === 'jpg' ? 'jpeg' : ext };
+    }
+    
+    // Convert to JPEG using canvas
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      const url = URL.createObjectURL(file);
+      
+      img.onload = () => {
+        URL.revokeObjectURL(url);
+        
+        const canvas = document.createElement('canvas');
+        canvas.width = img.naturalWidth;
+        canvas.height = img.naturalHeight;
+        
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          reject(new Error('Failed to get canvas context'));
+          return;
+        }
+        
+        ctx.drawImage(img, 0, 0);
+        
+        canvas.toBlob(
+          (blob) => {
+            if (blob) {
+              resolve({ blob, ext: 'jpeg' });
+            } else {
+              reject(new Error('Failed to convert image'));
+            }
+          },
+          'image/jpeg',
+          0.92
+        );
+      };
+      
+      img.onerror = () => {
+        URL.revokeObjectURL(url);
+        reject(new Error('Failed to load image for conversion. HEIC format may not be supported in this browser.'));
+      };
+      
+      img.src = url;
+    });
+  };
+
   // Handle reference photo upload
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -126,12 +184,16 @@ export function ChallengeStoryboardWizard({
 
     setUploadingPhoto(true);
     try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${user.id}/storyboard-reference-${Date.now()}.${fileExt}`;
+      // Convert to supported format if needed (handles HEIC, etc.)
+      const { blob, ext } = await convertToJpeg(file);
+      const fileName = `${user.id}/storyboard-reference-${Date.now()}.${ext}`;
       
       const { error: uploadError } = await supabase.storage
         .from('generated-media')
-        .upload(fileName, file, { upsert: true });
+        .upload(fileName, blob, { 
+          upsert: true,
+          contentType: `image/${ext}`
+        });
 
       if (uploadError) throw uploadError;
 
@@ -143,7 +205,8 @@ export function ChallengeStoryboardWizard({
       toast.success("Reference photo uploaded!");
     } catch (error) {
       console.error("Error uploading photo:", error);
-      toast.error("Failed to upload photo");
+      const errorMessage = error instanceof Error ? error.message : "Failed to upload photo";
+      toast.error(errorMessage);
     } finally {
       setUploadingPhoto(false);
     }
