@@ -87,13 +87,32 @@ serve(async (req) => {
       const imageUrl = images[0];
       console.log("Reference photo mode - image URL:", imageUrl.substring(0, 50));
       
-      // Create a prompt that instructs the AI to generate a new scene with the person's likeness
-      let enhancedPrompt = `Generate a completely new cinematic image for the following scene. IMPORTANT: The main character in this scene must look exactly like the person in the reference photo provided - same face, same features, same identity. Create the scene described below but ensure the protagonist matches the reference person's appearance.
+      // Create a comprehensive cinematic prompt with detailed camera specifications
+      let enhancedPrompt = `Generate a completely new CINEMATIC IMAGE for the following scene. 
 
-Scene to generate: ${prompt}`;
+CRITICAL REQUIREMENTS:
+1. The main character MUST look exactly like the person in the reference photo - same face, same features, same identity
+2. Use PROFESSIONAL CINEMATOGRAPHY techniques throughout
+
+TECHNICAL CAMERA SPECIFICATIONS:
+- Camera: ARRI Alexa 65 or RED V-Raptor 8K with large format sensor
+- Lens: Zeiss Master Prime T1.3 or Cooke Anamorphic for wide shots
+- Color Science: ARRI/RED cinematic color grading with natural skin tones
+- Dynamic Range: 14+ stops for rich shadow and highlight detail
+
+SCENE TO GENERATE:
+${prompt}
+
+MANDATORY PRODUCTION QUALITY:
+- Ultra high resolution 8K quality
+- Volumetric lighting with atmospheric depth
+- Shallow depth of field with creamy bokeh separation
+- Natural film grain texture
+- Professional color grading
+- Cinematic 16:9 aspect ratio composition`;
       
       if (aspect_ratio) {
-        enhancedPrompt += `. Use a ${aspect_ratio} aspect ratio.`;
+        enhancedPrompt += `\n- Use a ${aspect_ratio} aspect ratio.`;
       }
       
       messageContent = [
@@ -107,10 +126,29 @@ Scene to generate: ${prompt}`;
         }
       ];
     } else {
-      // For image creation without reference: just the text prompt
-      let enhancedPrompt = prompt;
+      // For image creation without reference: comprehensive cinematic prompt
+      let enhancedPrompt = `Generate a CINEMATIC IMAGE with the following specifications:
+
+TECHNICAL CAMERA SETUP:
+- Camera: ARRI Alexa 65, large format cinematic sensor, ARRI color science
+- Lens: Zeiss Master Prime T1.3 or Cooke Anamorphic for epic wide shots  
+- Settings: Shallow depth of field, 180° shutter angle, optimal ISO for scene
+- Dynamic Range: 14+ stops, rich shadows and highlights
+
+SCENE DESCRIPTION:
+${prompt}
+
+MANDATORY PRODUCTION QUALITY:
+- Ultra high resolution 8K quality photorealistic image
+- Volumetric lighting with atmospheric depth and god rays where appropriate
+- Creamy bokeh separation on subject from background
+- Natural film grain texture for organic feel
+- Professional Hollywood-grade color grading
+- Cinematic 16:9 aspect ratio composition
+- Award-winning photography aesthetic`;
+
       if (aspect_ratio) {
-        enhancedPrompt = `${prompt}. Use a ${aspect_ratio} aspect ratio.`;
+        enhancedPrompt += `\n- Use a ${aspect_ratio} aspect ratio.`;
       }
       messageContent = [{ type: "text", text: enhancedPrompt }];
     }
