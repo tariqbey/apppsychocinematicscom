@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -46,6 +47,7 @@ type ResponseStep = "feeling" | "cut" | "clarity" | "action" | "complete";
 
 export function ChallengeCard({ challenge, onComplete }: ChallengeCardProps) {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [showResponse, setShowResponse] = useState(false);
   const [showVisualization, setShowVisualization] = useState(false);
   const [step, setStep] = useState<ResponseStep>("feeling");
@@ -106,14 +108,15 @@ export function ChallengeCard({ challenge, onComplete }: ChallengeCardProps) {
   };
 
   const handleJournalReflection = () => {
-    // Store context for journal
+    // Store context for journal and navigate to dashboard with journal open
     sessionStorage.setItem("adversityChallengeForJournal", JSON.stringify({
       id: challenge.id,
       trait: challenge.target_trait,
       situation: challenge.situation_description,
       trigger: challenge.emotional_trigger
     }));
-    toast.info("Opening journal with challenge context...");
+    // Navigate to home page with query param to open journal
+    navigate("/?openJournal=true");
   };
 
   const renderStep = () => {

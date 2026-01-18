@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { SUCCESS_PRINCIPLES_KB, generateVisualizationPrompt } from "../_shared/success-principles-kb.ts";
+import { CINEMATOGRAPHY_TECHNIQUES, NLP_AFFIRMATION_PATTERNS, getCinematographyForScene } from "../_shared/cinematography-nlp-kb.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -12,7 +13,7 @@ serve(async (req) => {
   }
 
   try {
-    const { scenarioType, targetTrait, episodeContext, generateVisualization = false } = await req.json();
+    const { scenarioType, targetTrait, episodeContext, generateVisualization = false, referencePhotoUrl } = await req.json();
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
@@ -21,6 +22,10 @@ serve(async (req) => {
 
     // Get ideal response patterns from knowledge base
     const { response: idealResponse, affirmation } = SUCCESS_PRINCIPLES_KB.getIdealResponse(scenarioType, targetTrait);
+
+    // Get cinematography guidance for adversity scenes
+    const adversityCinematography = getCinematographyForScene("challenge", "intense", 2);
+    const victoryCinematography = getCinematographyForScene("achievement", "triumphant", 3);
 
     const systemPrompt = `You are an Adversity Challenge Generator for the Psycho-Cinematics™ system.
 
@@ -33,10 +38,18 @@ These challenges should:
 4. Be challenging but not traumatic
 5. Allow the user to practice the "CUT!" technique (consciously pausing before reacting)
 
-IMPORTANT: You have access to Napoleon Hill's 17 Laws of Success principles. Use these to inform the challenge design:
+IMPORTANT: You have access to Napoleon Hill's 17 Laws of Success principles and professional cinematography techniques. Use these to inform the challenge design:
 - The challenge should test one of Hill's principles
 - The ideal response should embody that principle
 - The situation should create a clear "choice point" between old reactive patterns and transformed behavior
+
+CINEMATOGRAPHY TECHNIQUES FOR VISUALIZATION:
+${JSON.stringify(adversityCinematography, null, 2)}
+
+NLP PATTERNS TO USE:
+- Presupposition: "${NLP_AFFIRMATION_PATTERNS.patterns.presupposition.examples[0]}"
+- Embedded Command: "${NLP_AFFIRMATION_PATTERNS.patterns.embeddedCommand.examples[0]}"
+- Identity Statement: "${NLP_AFFIRMATION_PATTERNS.patterns.identityStatements.examples[0]}"
 
 The goal is CHARACTER DEVELOPMENT through navigating emotional adversity with clarity and maturity.`;
 
@@ -44,6 +57,7 @@ The goal is CHARACTER DEVELOPMENT through navigating emotional adversity with cl
 
 SCENARIO TYPE: ${scenarioType}
 TARGET TRAIT: ${targetTrait}
+${referencePhotoUrl ? `REFERENCE PHOTO: User has uploaded a reference photo for personalized visualizations` : ''}
 ${episodeContext ? `
 EPISODE CONTEXT:
 - Title: ${episodeContext.title}
@@ -64,7 +78,36 @@ Return JSON with these fields:
   "trigger": "The specific emotional trigger that would cause reactive behavior (1 sentence)",
   "idealResponse": "How the Director Character should handle this situation (2-3 sentences based on Napoleon Hill's principles)",
   "affirmation": "A powerful first-person affirmation for this specific challenge",
-  "visualizationScript": "A brief 4-scene visualization script: 1) The challenge appears, 2) The CUT! moment, 3) The transformed response, 4) The victory"
+  "visualizationScript": [
+    {
+      "scene": 1,
+      "title": "The Challenge Appears",
+      "description": "Opening scene showing the adversity - use HIGH ANGLE shot to show initial vulnerability, then LOW ANGLE as character recognizes the test",
+      "cameraWork": "High angle transitioning to eye level, dramatic lighting",
+      "nlpOverlay": "As you notice this challenge arising..."
+    },
+    {
+      "scene": 2,
+      "title": "The CUT! Moment",
+      "description": "The protagonist pauses, takes a breath. EXTREME CLOSE-UP on eyes showing clarity emerging. DUTCH ANGLE to signify pattern break.",
+      "cameraWork": "Extreme close-up, dutch angle, rim lighting from behind",
+      "nlpOverlay": "You naturally pause, accessing your higher self..."
+    },
+    {
+      "scene": 3,
+      "title": "The Transformed Response",
+      "description": "POV shot showing how they see the situation differently. LOW ANGLE shot of protagonist responding with ${targetTrait}.",
+      "cameraWork": "POV shot, then low angle power shot, golden hour lighting",
+      "nlpOverlay": "I AM embodying ${targetTrait} completely..."
+    },
+    {
+      "scene": 4,
+      "title": "Victory",
+      "description": "Pull-back wide shot showing protagonist walking forward with purpose. CRANE shot rising above, showing mastery.",
+      "cameraWork": "Wide shot, crane rising, rim lighting creating halo effect",
+      "nlpOverlay": "This is who I am becoming. Each challenge strengthens this pattern."
+    }
+  ]
 }`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -95,6 +138,11 @@ Return JSON with these fields:
       challenge = JSON.parse(content);
     } catch {
       throw new Error("Failed to parse AI response");
+    }
+
+    // Add reference photo URL if provided
+    if (referencePhotoUrl) {
+      challenge.referencePhotoUrl = referencePhotoUrl;
     }
 
     // Add visualization prompt if requested

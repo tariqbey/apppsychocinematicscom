@@ -235,6 +235,28 @@ const Index = () => {
     openWizardFromCharacter();
   }, [searchParams, user, authLoading, setSearchParams, createNewMovie]);
 
+  // Check for openJournal URL parameter (from Challenges page)
+  useEffect(() => {
+    if (searchParams.get("openJournal") !== "true") return;
+    if (authLoading) return;
+    if (!user) return;
+
+    // Clear the URL param and open journal
+    setSearchParams({});
+    setShowJournal(true);
+
+    // Check for challenge context in sessionStorage
+    const challengeContext = sessionStorage.getItem("adversityChallengeForJournal");
+    if (challengeContext) {
+      try {
+        const context = JSON.parse(challengeContext);
+        toast.info(`Reflecting on: ${context.trait} challenge`);
+      } catch {
+        // Ignore parsing errors
+      }
+    }
+  }, [searchParams, user, authLoading, setSearchParams]);
+
   if (authLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
