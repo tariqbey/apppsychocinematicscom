@@ -6,7 +6,6 @@ import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Progress } from "@/components/ui/progress";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -22,17 +21,15 @@ import {
   Scissors,
   Flame,
   CheckCircle2,
-  Image as ImageIcon,
   Video,
   Upload,
   X,
   Play,
-  ArrowRight,
   Camera,
   RefreshCw,
   Download,
-  Eye,
-  UserCircle
+  UserCircle,
+  Save
 } from "lucide-react";
 
 interface ChallengeScene {
@@ -56,6 +53,11 @@ interface ChallengeStoryboardWizardProps {
     scenario_type: string;
   };
   visualizationScript?: string | object;
+  savedStoryboard?: {
+    scenes: ChallengeScene[];
+    referencePhoto: string | null;
+  } | null;
+  onStoryboardSaved?: () => void;
 }
 
 const SCENE_ICONS = [Target, Scissors, Flame, CheckCircle2];
@@ -65,7 +67,9 @@ export function ChallengeStoryboardWizard({
   open,
   onOpenChange,
   challenge,
-  visualizationScript
+  visualizationScript,
+  savedStoryboard,
+  onStoryboardSaved
 }: ChallengeStoryboardWizardProps) {
   const { user } = useAuth();
   const [step, setStep] = useState<"setup" | "generate" | "preview">("setup");
@@ -77,6 +81,8 @@ export function ChallengeStoryboardWizard({
   const [selectedScene, setSelectedScene] = useState<number | null>(null);
   const [animationPrompt, setAnimationPrompt] = useState("");
   const [animationModel, setAnimationModel] = useState<VideoModel>("kling-ai/v1.0/image-to-video");
+  const [savingStoryboard, setSavingStoryboard] = useState(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   // Global reference photo hook
   const { 
@@ -90,19 +96,28 @@ export function ChallengeStoryboardWizard({
     isGeneratingVideo,
     generateImage,
     generateVideo,
-    estimateCreditCost
   } = useMediaGeneration();
 
-  // Auto-load global reference photo when dialog opens
+  // Load saved storyboard or initialize from global reference photo
   useEffect(() => {
-    if (open && !referencePhoto) {
-      fetchReferencePhoto().then((url) => {
-        if (url) {
-          setReferencePhoto(url);
-        }
-      });
+    if (open) {
+      if (savedStoryboard?.scenes && savedStoryboard.scenes.length > 0) {
+        // Load saved storyboard
+        setScenes(savedStoryboard.scenes);
+        setReferencePhoto(savedStoryboard.referencePhoto);
+        setStep("preview");
+        setHasUnsavedChanges(false);
+        toast.success("Loaded saved storyboard");
+      } else if (!referencePhoto) {
+        // No saved storyboard, load global reference photo
+        fetchReferencePhoto().then((url) => {
+          if (url) {
+            setReferencePhoto(url);
+          }
+        });
+      }
     }
-  }, [open, fetchReferencePhoto, referencePhoto]);
+  }, [open, savedStoryboard, fetchReferencePhoto, referencePhoto]);
 
   // Parse visualization script into scenes
   const parseVisualizationScript = useCallback(() => {
@@ -243,34 +258,49 @@ export function ChallengeStoryboardWizard({
     setStep("generate");
   };
 
-  // Generate image for a single scene
+  // Generate image for a single scene using Nano Banana Pro for higher quality
   const generateSceneImage = async (sceneIndex: number) => {
     const scene = scenes[sceneIndex];
     if (!scene) return;
 
-    // Build cinematic prompt
-    let prompt = `Cinematic scene: ${scene.description}`;
+    // Build comprehensive cinematic prompt with detailed camera specs
+    let prompt = `CINEMATIC SCENE: ${scene.description}
+
+CAMERA SETUP:
+- Camera: ARRI Alexa 65 with large format sensor
+- Lens: Zeiss Master Prime T1.3 or Cooke Anamorphic
+- Lighting: Professional 3-point lighting with volumetric atmosphere
+`;
     if (scene.cameraWork) {
-      prompt += ` Camera: ${scene.cameraWork}.`;
+      prompt += `- Movement: ${scene.cameraWork}\n`;
     }
-    prompt += ` Style: dramatic lighting, film grain, high contrast. Character trait: ${challenge.target_trait}.`;
+    prompt += `
+PRODUCTION QUALITY:
+- Ultra high resolution 8K photorealistic
+- Shallow depth of field with creamy bokeh
+- Natural film grain texture
+- Dramatic contrast and color grading
+- Character embodies: ${challenge.target_trait}`;
 
     const imagesToUse = referencePhoto ? [referencePhoto] : [];
     const enhancedPrompt = referencePhoto 
       ? `Generate a cinematic image featuring the person from the reference photo as the main character. ${prompt}`
       : prompt;
 
+    // Use Nano Banana Pro for higher quality images
     const imageUrl = await generateImage({
       prompt: enhancedPrompt,
       aspect_ratio: "16:9",
       resolution: "2k",
-      images: imagesToUse.length > 0 ? imagesToUse : undefined
+      images: imagesToUse.length > 0 ? imagesToUse : undefined,
+      model: "nano-banana-pro"
     });
 
     if (imageUrl) {
       setScenes(prev => prev.map((s, i) => 
         i === sceneIndex ? { ...s, generatedImageUrl: imageUrl } : s
       ));
+      setHasUnsavedChanges(true);
       return imageUrl;
     }
     return null;
@@ -288,7 +318,37 @@ export function ChallengeStoryboardWizard({
     setGeneratingScenes(false);
     setCurrentGeneratingScene(0);
     setStep("preview");
+    setHasUnsavedChanges(true);
     toast.success("All storyboard images generated!");
+  };
+
+  // Save storyboard to database
+  const handleSaveStoryboard = async () => {
+    if (!user || scenes.length === 0) return;
+
+    setSavingStoryboard(true);
+    try {
+      const { error } = await supabase
+        .from("adversity_challenges")
+        .update({
+          storyboard_scenes: scenes as any,
+          storyboard_reference_photo: referencePhoto,
+          storyboard_created_at: new Date().toISOString()
+        })
+        .eq("id", challenge.id)
+        .eq("user_id", user.id);
+
+      if (error) throw error;
+
+      setHasUnsavedChanges(false);
+      toast.success("Storyboard saved!");
+      onStoryboardSaved?.();
+    } catch (error) {
+      console.error("Error saving storyboard:", error);
+      toast.error("Failed to save storyboard");
+    } finally {
+      setSavingStoryboard(false);
+    }
   };
 
   // Generate video from image
@@ -312,6 +372,7 @@ export function ChallengeStoryboardWizard({
       setScenes(prev => prev.map((s, i) => 
         i === sceneIndex ? { ...s, generatedVideoUrl: videoUrl } : s
       ));
+      setHasUnsavedChanges(true);
       toast.success("Animation created!");
       setAnimationPrompt("");
       setSelectedScene(null);
@@ -321,6 +382,7 @@ export function ChallengeStoryboardWizard({
   // Regenerate single scene
   const handleRegenerateScene = async (sceneIndex: number) => {
     await generateSceneImage(sceneIndex);
+    setHasUnsavedChanges(true);
     toast.success("Scene regenerated!");
   };
 
@@ -681,14 +743,38 @@ export function ChallengeStoryboardWizard({
                 })}
               </div>
 
-              <Button
-                variant="gold"
-                className="w-full"
-                onClick={() => onOpenChange(false)}
-              >
-                <CheckCircle2 className="w-4 h-4 mr-2" />
-                Complete Storyboard
-              </Button>
+              {/* Action Buttons */}
+              <div className="flex gap-3">
+                {hasUnsavedChanges && (
+                  <Button
+                    variant="outline"
+                    className="flex-1"
+                    onClick={handleSaveStoryboard}
+                    disabled={savingStoryboard}
+                  >
+                    {savingStoryboard ? (
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    ) : (
+                      <Save className="w-4 h-4 mr-2" />
+                    )}
+                    Save Storyboard
+                  </Button>
+                )}
+                <Button
+                  variant="gold"
+                  className={hasUnsavedChanges ? "flex-1" : "w-full"}
+                  onClick={async () => {
+                    if (hasUnsavedChanges) {
+                      await handleSaveStoryboard();
+                    }
+                    onOpenChange(false);
+                  }}
+                  disabled={savingStoryboard}
+                >
+                  <CheckCircle2 className="w-4 h-4 mr-2" />
+                  {hasUnsavedChanges ? "Save & Close" : "Close"}
+                </Button>
+              </div>
             </div>
           )}
         </div>

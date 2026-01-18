@@ -44,6 +44,11 @@ interface ChallengeVisualizationProps {
   affirmation?: string;
   visualizationScript?: string;
   onJournalEntry?: (notes: string) => void;
+  savedStoryboard?: {
+    scenes: any[];
+    referencePhoto: string | null;
+  } | null;
+  onStoryboardSaved?: () => void;
 }
 
 export function ChallengeVisualization({
@@ -53,7 +58,9 @@ export function ChallengeVisualization({
   idealResponse,
   affirmation,
   visualizationScript,
-  onJournalEntry
+  onJournalEntry,
+  savedStoryboard,
+  onStoryboardSaved
 }: ChallengeVisualizationProps) {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState("script");
@@ -492,6 +499,8 @@ ${generatedContent.affirmation || "Not yet generated"}`,
         onOpenChange={setShowStoryboardWizard}
         challenge={challenge}
         visualizationScript={generatedContent.visualizationScript}
+        savedStoryboard={savedStoryboard}
+        onStoryboardSaved={onStoryboardSaved}
       />
 
       {/* Soundtrack Generator */}

@@ -36,6 +36,9 @@ interface AdversityChallenge {
   challenge_date: string;
   completed: boolean;
   episode_id?: string | null;
+  storyboard_scenes?: any[] | null;
+  storyboard_reference_photo?: string | null;
+  storyboard_created_at?: string | null;
 }
 
 interface ChallengeCardProps {
@@ -384,6 +387,11 @@ export function ChallengeCard({ challenge, onComplete }: ChallengeCardProps) {
         open={showVisualization}
         onOpenChange={setShowVisualization}
         challenge={challenge}
+        savedStoryboard={challenge.storyboard_scenes ? {
+          scenes: challenge.storyboard_scenes,
+          referencePhoto: challenge.storyboard_reference_photo || null
+        } : null}
+        onStoryboardSaved={onComplete}
       />
 
       {/* Response Dialog */}

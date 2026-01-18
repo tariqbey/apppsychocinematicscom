@@ -95,6 +95,9 @@ export type Database = {
           response_type: string | null
           scenario_type: string
           situation_description: string
+          storyboard_created_at: string | null
+          storyboard_reference_photo: string | null
+          storyboard_scenes: Json | null
           target_trait: string
           trait_xp_earned: number | null
           updated_at: string
@@ -118,6 +121,9 @@ export type Database = {
           response_type?: string | null
           scenario_type: string
           situation_description: string
+          storyboard_created_at?: string | null
+          storyboard_reference_photo?: string | null
+          storyboard_scenes?: Json | null
           target_trait: string
           trait_xp_earned?: number | null
           updated_at?: string
@@ -141,6 +147,9 @@ export type Database = {
           response_type?: string | null
           scenario_type?: string
           situation_description?: string
+          storyboard_created_at?: string | null
+          storyboard_reference_photo?: string | null
+          storyboard_scenes?: Json | null
           target_trait?: string
           trait_xp_earned?: number | null
           updated_at?: string
