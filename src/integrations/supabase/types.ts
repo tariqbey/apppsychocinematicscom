@@ -636,6 +636,7 @@ export type Database = {
         Row: {
           alignment_reasoning: string | null
           alignment_score: number | null
+          character_transformation: Json | null
           completed_at: string | null
           created_at: string
           deadline: string
@@ -652,6 +653,7 @@ export type Database = {
         Insert: {
           alignment_reasoning?: string | null
           alignment_score?: number | null
+          character_transformation?: Json | null
           completed_at?: string | null
           created_at?: string
           deadline: string
@@ -668,6 +670,7 @@ export type Database = {
         Update: {
           alignment_reasoning?: string | null
           alignment_score?: number | null
+          character_transformation?: Json | null
           completed_at?: string | null
           created_at?: string
           deadline?: string

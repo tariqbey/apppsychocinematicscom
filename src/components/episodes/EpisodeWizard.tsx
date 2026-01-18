@@ -12,6 +12,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { format, addDays, addWeeks } from "date-fns";
 import { toast } from "sonner";
+import { EpisodeTransformationCard, EpisodeCharacterTransformation } from "./EpisodeTransformationCard";
 
 interface EpisodeWizardProps {
   onClose: () => void;
@@ -22,21 +23,7 @@ interface EpisodeWizardProps {
     objective: string;
     deadline: string;
     alignment_score: number | null;
-  }, characterAnalysis: EpisodeCharacterAnalysis) => void;
-}
-
-interface EpisodeCharacterAnalysis {
-  requiredCharacter: {
-    name: string;
-    traits: string[];
-    behaviors: string[];
-    mindset: string;
-  };
-  gap: {
-    whatMustDie: string[];
-    whatMustEmerge: string[];
-  };
-  dailyFocus: string;
+  }, characterAnalysis: EpisodeCharacterTransformation) => void;
 }
 
 type Step = "define" | "validate" | "character" | "complete";
@@ -59,7 +46,7 @@ export function EpisodeWizard({ onClose, onSuccess, onCreateMindMovie }: Episode
     objective: string;
     deadline: string;
   } | null>(null);
-  const [characterAnalysis, setCharacterAnalysis] = useState<EpisodeCharacterAnalysis | null>(null);
+  const [characterAnalysis, setCharacterAnalysis] = useState<EpisodeCharacterTransformation | null>(null);
   const [analyzingCharacter, setAnalyzingCharacter] = useState(false);
 
   const chiefAim = {
@@ -97,7 +84,7 @@ export function EpisodeWizard({ onClose, onSuccess, onCreateMindMovie }: Episode
     }
   };
 
-  const analyzeEpisodeCharacter = async (episodeObjective: string): Promise<EpisodeCharacterAnalysis | null> => {
+  const analyzeEpisodeCharacter = async (episodeObjective: string): Promise<EpisodeCharacterTransformation | null> => {
     try {
       // Fetch user's archetype for context
       const { data: characterProfile } = await supabase
@@ -108,67 +95,17 @@ export function EpisodeWizard({ onClose, onSuccess, onCreateMindMovie }: Episode
         .limit(1)
         .single();
 
-      const response = await fetch("https://api.openai.com/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${import.meta.env.VITE_OPENAI_API_KEY || ""}`,
-        },
-        body: JSON.stringify({
-          model: "gpt-4o-mini",
-          messages: [
-            {
-              role: "system",
-              content: `You are a character transformation coach for the Psycho-Cinematics™ methodology. For this SPECIFIC EPISODE/SPRINT, determine what character the user must embody to succeed. Be specific and action-oriented.`
-            },
-            {
-              role: "user",
-              content: `EPISODE OBJECTIVE: ${episodeObjective}
-
-CHIEF AIM: ${chiefAim.what}
-CURRENT ARCHETYPE: ${characterProfile?.archetype || "Not determined"}
-
-For THIS SPECIFIC EPISODE, determine:
-1. What character must they become to achieve this episode objective?
-2. What specific traits and behaviors must they exhibit?
-3. What must they let go of to succeed in this sprint?
-
-Return JSON:
-{
-  "requiredCharacter": {
-    "name": "A specific character name for this episode (e.g., 'The Focused Executor', 'The Bold Networker')",
-    "traits": ["3-4 specific traits needed for THIS episode"],
-    "behaviors": ["3-4 specific daily behaviors for THIS episode"],
-    "mindset": "One sentence on how they must think during this sprint"
-  },
-  "gap": {
-    "whatMustDie": ["2-3 behaviors/patterns to eliminate for this sprint"],
-    "whatMustEmerge": ["2-3 new patterns to adopt for this sprint"]
-  },
-  "dailyFocus": "One sentence daily mantra for this episode"
-}`
-            }
-          ],
-          response_format: { type: "json_object" },
-          temperature: 0.7
-        })
+      // Use the new edge function for deep character transformation analysis
+      const { data, error } = await supabase.functions.invoke("analyze-episode-character", {
+        body: {
+          episodeObjective,
+          chiefAim,
+          archetype: characterProfile?.archetype || "Unknown"
+        }
       });
 
-      if (!response.ok) {
-        // Fall back to edge function
-        const { data, error } = await supabase.functions.invoke("analyze-character-transformation", {
-          body: {
-            archetype: { name: characterProfile?.archetype || "Unknown" },
-            chiefAim,
-            episodeObjective
-          }
-        });
-        if (error) throw error;
-        return data?.analysis as EpisodeCharacterAnalysis;
-      }
-
-      const data = await response.json();
-      return JSON.parse(data.choices[0].message.content);
+      if (error) throw error;
+      return data as EpisodeCharacterTransformation;
     } catch (error) {
       console.error("Error analyzing episode character:", error);
       // Return a default analysis if AI fails
@@ -179,11 +116,16 @@ Return JSON:
           behaviors: ["Start each day with the #1 priority", "Block distractions ruthlessly", "Review progress nightly"],
           mindset: "I am the person who gets this done, no matter what."
         },
-        gap: {
+        transformationGap: {
           whatMustDie: ["Procrastination", "Overthinking", "Distraction"],
           whatMustEmerge: ["Immediate action", "Single-task focus", "Daily accountability"]
         },
-        dailyFocus: "Execute today. Tomorrow doesn't exist."
+        dailyPractice: {
+          morningActivation: "Ask: Who must I become today?",
+          midDayReset: "Am I acting as my required character?",
+          eveningReflection: "Did I show up as the person I committed to be?",
+          mantra: "Execute today. Tomorrow doesn't exist."
+        }
       };
     }
   };
@@ -224,6 +166,14 @@ Return JSON:
       
       const analysis = await analyzeEpisodeCharacter(episode.objective);
       setCharacterAnalysis(analysis);
+      
+      // Store the transformation analysis in the database
+      if (analysis) {
+        await updateEpisode(episode.id, {
+          character_transformation: JSON.parse(JSON.stringify(analysis))
+        });
+      }
+      
       setAnalyzingCharacter(false);
     }
   };
@@ -546,39 +496,28 @@ Return JSON:
                     </p>
                   </div>
 
-                  {/* Character Card */}
-                  <div className="p-4 rounded-lg bg-gradient-to-br from-amber-500/10 to-orange-600/10 border border-amber-500/30">
-                    <div className="flex items-center gap-3 mb-3">
-                      <div className="w-10 h-10 rounded-full bg-amber-500/20 flex items-center justify-center">
-                        <User className="w-5 h-5 text-amber-500" />
-                      </div>
-                      <div>
-                        <p className="text-xs text-amber-500 uppercase tracking-wide">Your Episode Character</p>
-                        <p className="font-display text-lg">{characterAnalysis.requiredCharacter.name}</p>
-                      </div>
-                    </div>
-                    
-                    <p className="text-sm text-muted-foreground mb-3 italic">
-                      "{characterAnalysis.requiredCharacter.mindset}"
-                    </p>
+                  {/* Enhanced Transformation Card */}
+                  <EpisodeTransformationCard 
+                    transformation={characterAnalysis} 
+                    variant="compact" 
+                  />
 
-                    <div className="space-y-2">
-                      <p className="text-xs font-medium text-amber-500">Key Traits:</p>
-                      <div className="flex flex-wrap gap-1.5">
-                        {characterAnalysis.requiredCharacter.traits.map((trait, i) => (
-                          <span key={i} className="px-2 py-0.5 text-xs rounded-full bg-amber-500/20 text-amber-400">
-                            {trait}
-                          </span>
-                        ))}
-                      </div>
+                  {/* Narrative Arc Preview */}
+                  {characterAnalysis.narrativeArc && (
+                    <div className="p-4 rounded-lg bg-muted/30 border border-border space-y-2">
+                      <p className="text-xs font-medium text-amber-500 uppercase tracking-wide">Your Story Arc</p>
+                      <p className="text-sm"><strong>Midpoint:</strong> {characterAnalysis.narrativeArc.midpointConflict}</p>
+                      <p className="text-sm"><strong>Climax:</strong> {characterAnalysis.narrativeArc.climacticShift}</p>
                     </div>
-                  </div>
+                  )}
 
-                  {/* Daily Focus */}
-                  <div className="p-3 rounded-lg bg-primary/10 border border-primary/30 text-center">
-                    <p className="text-xs text-primary uppercase tracking-wide mb-1">Daily Mantra</p>
-                    <p className="font-medium">{characterAnalysis.dailyFocus}</p>
-                  </div>
+                  {/* Chief Aim Connection */}
+                  {characterAnalysis.chiefAimConnection && (
+                    <div className="p-3 rounded-lg bg-gold/5 border border-gold/20">
+                      <p className="text-xs text-gold mb-1">Connection to Your Chief Aim</p>
+                      <p className="text-sm">{characterAnalysis.chiefAimConnection}</p>
+                    </div>
+                  )}
 
                   {/* Actions */}
                   <div className="space-y-3">
