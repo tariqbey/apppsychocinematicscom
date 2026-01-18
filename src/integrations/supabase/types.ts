@@ -203,6 +203,65 @@ export type Database = {
           },
         ]
       }
+      challenge_soundtracks: {
+        Row: {
+          archetype_id: string | null
+          audio_url: string | null
+          challenge_id: string
+          character_traits: Json | null
+          created_at: string
+          id: string
+          lyrics: string | null
+          metadata: Json | null
+          music_style: string | null
+          status: string | null
+          suno_task_id: string | null
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          archetype_id?: string | null
+          audio_url?: string | null
+          challenge_id: string
+          character_traits?: Json | null
+          created_at?: string
+          id?: string
+          lyrics?: string | null
+          metadata?: Json | null
+          music_style?: string | null
+          status?: string | null
+          suno_task_id?: string | null
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          archetype_id?: string | null
+          audio_url?: string | null
+          challenge_id?: string
+          character_traits?: Json | null
+          created_at?: string
+          id?: string
+          lyrics?: string | null
+          metadata?: Json | null
+          music_style?: string | null
+          status?: string | null
+          suno_task_id?: string | null
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "challenge_soundtracks_challenge_id_fkey"
+            columns: ["challenge_id"]
+            isOneToOne: false
+            referencedRelation: "adversity_challenges"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       character_profiles: {
         Row: {
           archetype: string
@@ -779,6 +838,62 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      episode_soundtracks: {
+        Row: {
+          audio_url: string | null
+          character_traits: Json | null
+          created_at: string
+          episode_id: string
+          id: string
+          lyrics: string | null
+          metadata: Json | null
+          music_style: string | null
+          status: string | null
+          suno_task_id: string | null
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          audio_url?: string | null
+          character_traits?: Json | null
+          created_at?: string
+          episode_id: string
+          id?: string
+          lyrics?: string | null
+          metadata?: Json | null
+          music_style?: string | null
+          status?: string | null
+          suno_task_id?: string | null
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          audio_url?: string | null
+          character_traits?: Json | null
+          created_at?: string
+          episode_id?: string
+          id?: string
+          lyrics?: string | null
+          metadata?: Json | null
+          music_style?: string | null
+          status?: string | null
+          suno_task_id?: string | null
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "episode_soundtracks_episode_id_fkey"
+            columns: ["episode_id"]
+            isOneToOne: false
+            referencedRelation: "episodes"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       episodes: {
         Row: {
@@ -1655,6 +1770,98 @@ export type Database = {
         }
         Relationships: []
       }
+      user_playlist_tracks: {
+        Row: {
+          artist: string | null
+          audio_url: string
+          created_at: string
+          duration_seconds: number | null
+          id: string
+          metadata: Json | null
+          playlist_id: string
+          source_id: string | null
+          source_type: string | null
+          title: string
+          track_order: number | null
+          user_id: string
+        }
+        Insert: {
+          artist?: string | null
+          audio_url: string
+          created_at?: string
+          duration_seconds?: number | null
+          id?: string
+          metadata?: Json | null
+          playlist_id: string
+          source_id?: string | null
+          source_type?: string | null
+          title: string
+          track_order?: number | null
+          user_id: string
+        }
+        Update: {
+          artist?: string | null
+          audio_url?: string
+          created_at?: string
+          duration_seconds?: number | null
+          id?: string
+          metadata?: Json | null
+          playlist_id?: string
+          source_id?: string | null
+          source_type?: string | null
+          title?: string
+          track_order?: number | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_playlist_tracks_playlist_id_fkey"
+            columns: ["playlist_id"]
+            isOneToOne: false
+            referencedRelation: "user_playlists"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_playlists: {
+        Row: {
+          cover_image_url: string | null
+          created_at: string
+          description: string | null
+          id: string
+          is_default: boolean | null
+          name: string
+          total_duration_seconds: number | null
+          track_count: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          cover_image_url?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_default?: boolean | null
+          name: string
+          total_duration_seconds?: number | null
+          track_count?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          cover_image_url?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_default?: boolean | null
+          name?: string
+          total_duration_seconds?: number | null
+          track_count?: number | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_profiles: {
         Row: {
           avatar_url: string | null
@@ -1686,6 +1893,7 @@ export type Database = {
           morning_ritual_reminder_time: string | null
           phone_number: string | null
           push_notifications_enabled: boolean | null
+          reference_photo_url: string | null
           show_on_leaderboard: boolean
           transformation_start_date: string | null
           updated_at: string
@@ -1721,6 +1929,7 @@ export type Database = {
           morning_ritual_reminder_time?: string | null
           phone_number?: string | null
           push_notifications_enabled?: boolean | null
+          reference_photo_url?: string | null
           show_on_leaderboard?: boolean
           transformation_start_date?: string | null
           updated_at?: string
@@ -1756,6 +1965,7 @@ export type Database = {
           morning_ritual_reminder_time?: string | null
           phone_number?: string | null
           push_notifications_enabled?: boolean | null
+          reference_photo_url?: string | null
           show_on_leaderboard?: boolean
           transformation_start_date?: string | null
           updated_at?: string
