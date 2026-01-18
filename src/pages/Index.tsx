@@ -495,6 +495,32 @@ const Index = () => {
             </div>
           </button>
 
+          {/* ========== CHALLENGES & ADVERSITY ========== */}
+          <button
+            onClick={() => navigate("/challenges")}
+            className="w-full glass-card p-6 cinematic-border animate-slide-up group hover:border-red-500/50 transition-all duration-300 text-left"
+          >
+            <div className="flex items-center gap-4">
+              <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-red-500/20 to-orange-500/20 flex items-center justify-center group-hover:from-red-500/30 group-hover:to-orange-500/30 transition-all duration-300">
+                <Target className="w-7 h-7 text-red-500" />
+              </div>
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-1">
+                  <h3 className="text-xl font-display tracking-wide group-hover:text-red-400 transition-colors">Challenges & Adversity</h3>
+                  <Sparkles className="w-4 h-4 text-red-400/60" />
+                  <InfoTooltip content="Train your character through scenario-based emotional adversity. Earn XP by responding transformatively to challenges." />
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Character training • XP rewards • Transformation tracking
+                </p>
+              </div>
+              <div className="hidden sm:flex items-center gap-2 text-sm text-muted-foreground group-hover:text-red-400 transition-colors">
+                <span>Train Now</span>
+                <span className="text-lg">→</span>
+              </div>
+            </div>
+          </button>
+
           {/* ========== STEP 5: ACTION EXECUTION ========== */}
           <button
             onClick={() => navigate("/actions")}
