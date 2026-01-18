@@ -63,9 +63,19 @@ serve(async (req) => {
       emailMap[u.id] = u.email || "No email";
     }
 
-    return new Response(JSON.stringify({ emails: emailMap, count: users.length }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    // Also return a list so admin UI can show accounts even if profile RLS is restrictive
+    const usersList = users.map((u) => ({
+      id: u.id,
+      email: u.email || null,
+      created_at: (u as any).created_at || null,
+    }));
+
+    return new Response(
+      JSON.stringify({ emails: emailMap, count: users.length, users: usersList }),
+      {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      }
+    );
   } catch (error: unknown) {
     console.error("Error:", error);
     const message = error instanceof Error ? error.message : "Unknown error";
