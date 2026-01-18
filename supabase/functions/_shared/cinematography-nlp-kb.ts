@@ -1,6 +1,160 @@
 // Professional Cinematography Techniques & NLP Knowledge Base
 // For AI-assisted Mind Movie storyboard generation
 
+// Cinema-grade camera and lens specifications for ultra-detailed prompts
+export const CAMERA_SPECIFICATIONS = {
+  cameras: {
+    arri: {
+      name: "ARRI Alexa 65",
+      sensor: "65mm large format sensor",
+      colorScience: "ARRI color science with natural skin tones",
+      dynamicRange: "14+ stops dynamic range",
+      prompt: "shot on ARRI Alexa 65, large format cinematic sensor, ARRI color science"
+    },
+    red: {
+      name: "RED V-Raptor 8K",
+      sensor: "VistaVision sensor",
+      colorScience: "RED color science, filmic look",
+      dynamicRange: "17 stops dynamic range",
+      prompt: "shot on RED V-Raptor 8K, VistaVision sensor, cinematic color grading"
+    },
+    sony: {
+      name: "Sony Venice 2",
+      sensor: "Full-frame 8.6K sensor",
+      colorScience: "Venetian color science, organic skin tones",
+      dynamicRange: "16 stops dynamic range",
+      prompt: "shot on Sony Venice 2, full-frame cinematic sensor, dual base ISO"
+    },
+    blackmagic: {
+      name: "Blackmagic URSA Mini Pro 12K",
+      sensor: "Super 35 12K sensor",
+      colorScience: "Blackmagic film color science",
+      dynamicRange: "14 stops dynamic range",
+      prompt: "shot on Blackmagic URSA 12K, super 35 sensor, natural film grain"
+    }
+  },
+  lenses: {
+    anamorphic: {
+      name: "Cooke Anamorphic/i 2x",
+      characteristics: "Oval bokeh, horizontal lens flares, cinematic breathing",
+      focalRange: "25mm - 135mm",
+      aperture: "T2.3",
+      prompt: "Cooke anamorphic lens, 2x squeeze, oval bokeh, characteristic blue lens flares"
+    },
+    masterPrime: {
+      name: "Zeiss Master Prime",
+      characteristics: "Ultra sharp, minimal distortion, clinical precision",
+      focalRange: "14mm - 150mm",
+      aperture: "T1.3",
+      prompt: "Zeiss Master Prime lens T1.3, ultra sharp optics, smooth bokeh transition"
+    },
+    summilux: {
+      name: "Leica Summilux-C",
+      characteristics: "Creamy bokeh, warm color rendition, organic feel",
+      focalRange: "18mm - 100mm",
+      aperture: "T1.4",
+      prompt: "Leica Summilux-C T1.4, creamy cinematic bokeh, warm organic color"
+    },
+    signature: {
+      name: "ARRI Signature Prime",
+      characteristics: "Large format coverage, beautiful flares, gentle fall-off",
+      focalRange: "12mm - 280mm",
+      aperture: "T1.8",
+      prompt: "ARRI Signature Prime T1.8, large format coverage, elegant optical character"
+    },
+    vintage: {
+      name: "Panavision C-Series Anamorphic",
+      characteristics: "Vintage character, distinct flares, nostalgic feel",
+      focalRange: "35mm - 100mm",
+      aperture: "T2.8",
+      prompt: "vintage Panavision C-Series anamorphic, classic Hollywood character, nostalgic flares"
+    }
+  },
+  technicalSettings: {
+    portrait: {
+      focalLength: "85mm",
+      aperture: "f/1.4",
+      iso: "800",
+      shutterAngle: "180°",
+      prompt: "85mm lens f/1.4, shallow depth of field, creamy bokeh separation"
+    },
+    closeUp: {
+      focalLength: "100mm macro",
+      aperture: "f/2.0",
+      iso: "640",
+      shutterAngle: "180°",
+      prompt: "100mm macro lens f/2.0, intimate close-up, extreme detail"
+    },
+    wideEstablishing: {
+      focalLength: "24mm",
+      aperture: "f/5.6",
+      iso: "400",
+      shutterAngle: "180°",
+      prompt: "24mm wide angle lens f/5.6, deep focus, environmental storytelling"
+    },
+    epicWide: {
+      focalLength: "14mm",
+      aperture: "f/8",
+      iso: "200",
+      shutterAngle: "180°",
+      prompt: "14mm ultra-wide lens f/8, epic scale, dramatic perspective"
+    },
+    mediumDramatic: {
+      focalLength: "50mm",
+      aperture: "f/1.8",
+      iso: "800",
+      shutterAngle: "180°",
+      prompt: "50mm lens f/1.8, natural perspective, subject isolation"
+    },
+    telephoto: {
+      focalLength: "200mm",
+      aperture: "f/2.8",
+      iso: "1000",
+      shutterAngle: "180°",
+      prompt: "200mm telephoto f/2.8, compressed perspective, powerful isolation"
+    }
+  }
+};
+
+// Get camera setup for specific scene type
+export const getCameraSetupForScene = (shotSize: string, sceneType: string, actNumber: number): string => {
+  const cameras = CAMERA_SPECIFICATIONS.cameras;
+  const lenses = CAMERA_SPECIFICATIONS.lenses;
+  const settings = CAMERA_SPECIFICATIONS.technicalSettings;
+  
+  // Select camera based on scene type
+  let camera = cameras.arri; // Default to ARRI
+  if (sceneType === 'challenge' || sceneType === 'transformation') {
+    camera = cameras.red;
+  } else if (sceneType === 'reflection' || sceneType === 'celebration') {
+    camera = cameras.sony;
+  }
+  
+  // Select lens based on shot size
+  let lens = lenses.masterPrime;
+  if (shotSize.includes('Wide') || shotSize.includes('EWS')) {
+    lens = actNumber >= 3 ? lenses.anamorphic : lenses.signature;
+  } else if (shotSize.includes('Close')) {
+    lens = lenses.summilux;
+  } else if (sceneType === 'triumph' || sceneType === 'achievement') {
+    lens = lenses.anamorphic;
+  }
+  
+  // Select technical settings
+  let techSettings = settings.mediumDramatic;
+  if (shotSize.includes('Extreme Close') || shotSize.includes('ECU')) {
+    techSettings = settings.closeUp;
+  } else if (shotSize.includes('Close') || shotSize.includes('CU')) {
+    techSettings = settings.portrait;
+  } else if (shotSize.includes('Wide') && !shotSize.includes('Extreme')) {
+    techSettings = settings.wideEstablishing;
+  } else if (shotSize.includes('Extreme Wide') || shotSize.includes('EWS')) {
+    techSettings = settings.epicWide;
+  }
+  
+  return `${camera.prompt}, ${lens.prompt}, ${techSettings.prompt}`;
+};
+
 export const CINEMATOGRAPHY_TECHNIQUES = {
   // Camera Angles and their psychological effects
   cameraAngles: {
@@ -351,6 +505,7 @@ export const getCinematographyForScene = (sceneType: string, emotionalTone: stri
   composition: string;
   movement: string;
   nlpPattern: string;
+  cameraSetup: string;
   fullPromptAddition: string;
 } => {
   const techniques = CINEMATOGRAPHY_TECHNIQUES;
@@ -444,8 +599,11 @@ export const getCinematographyForScene = (sceneType: string, emotionalTone: stri
   // Default to action if scene type not found
   const config = cinematographyMap[sceneType.toLowerCase()] || cinematographyMap.action;
   
-  // Build the full prompt addition
-  const fullPromptAddition = `${config.shotSize.prompt}, ${config.cameraAngle.prompt}, ${config.lighting.prompt}, ${config.composition.prompt || ''}, cinematic 16:9 aspect ratio, photorealistic, volumetric lighting, shallow depth of field, professional cinematography`;
+  // Get detailed camera specifications
+  const cameraSetup = getCameraSetupForScene(config.shotSize.name, sceneType, actNumber);
+  
+  // Build comprehensive cinematography prompt with camera details
+  const fullPromptAddition = `${cameraSetup}, ${config.shotSize.prompt}, ${config.cameraAngle.prompt}, ${config.lighting.prompt}, ${config.composition.prompt || ''}, cinematic 16:9 aspect ratio, photorealistic, volumetric lighting, film grain, professional color grading, 4K resolution`;
 
   return {
     cameraAngle: config.cameraAngle.name,
@@ -454,6 +612,7 @@ export const getCinematographyForScene = (sceneType: string, emotionalTone: stri
     composition: config.composition.description,
     movement: config.movement.name,
     nlpPattern: config.nlpPattern.name,
+    cameraSetup, // Add camera details for transparency
     fullPromptAddition
   };
 };
@@ -535,7 +694,7 @@ export const generateNLPAffirmation = (
   };
 };
 
-// Export the complete cinematography prompt builder
+// Export the complete cinematography prompt builder with full camera specs
 export const buildCinematicPrompt = (
   sceneDescription: string,
   sceneType: string,
@@ -545,5 +704,11 @@ export const buildCinematicPrompt = (
 ): string => {
   const cinematography = getCinematographyForScene(sceneType, emotionalTone, actNumber);
   
-  return `${sceneDescription}. ${cinematography.fullPromptAddition}. Style: ${visualStyle || 'cinematic and inspiring'}. Emotional tone: ${emotionalTone}.`;
+  // Add additional production quality keywords for best results
+  const productionQuality = "ultra high resolution, 8K quality, professional cinematography, award-winning photography, hyper-detailed, masterful composition";
+  
+  return `${sceneDescription}. ${cinematography.fullPromptAddition}. ${productionQuality}. Style: ${visualStyle || 'cinematic and inspiring'}. Emotional tone: ${emotionalTone}.`;
 };
+
+// Export camera specs for use in image generation
+

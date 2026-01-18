@@ -1,14 +1,56 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.89.0";
-import { CINEMATOGRAPHY_TECHNIQUES, NLP_AFFIRMATION_PATTERNS, COMPOSITION_TECHNIQUES } from "../_shared/cinematography-nlp-kb.ts";
+import { CINEMATOGRAPHY_TECHNIQUES, NLP_AFFIRMATION_PATTERNS, COMPOSITION_TECHNIQUES, CAMERA_SPECIFICATIONS } from "../_shared/cinematography-nlp-kb.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// Build comprehensive camera specifications knowledge
+const buildCameraSpecifications = () => {
+  const cameras = Object.entries(CAMERA_SPECIFICATIONS.cameras)
+    .map(([key, val]) => `**${val.name}**: ${val.sensor}, ${val.dynamicRange}. Prompt: "${val.prompt}"`)
+    .join("\n");
+    
+  const lenses = Object.entries(CAMERA_SPECIFICATIONS.lenses)
+    .map(([key, val]) => `**${val.name}**: ${val.characteristics}, ${val.focalRange}, ${val.aperture}. Prompt: "${val.prompt}"`)
+    .join("\n");
+    
+  const settings = Object.entries(CAMERA_SPECIFICATIONS.technicalSettings)
+    .map(([key, val]) => `**${key}**: ${val.focalLength} at ${val.aperture}, ISO ${val.iso}. Prompt: "${val.prompt}"`)
+    .join("\n");
+
+  return `
+═══════════════════════════════════════════════
+CINEMA-GRADE CAMERA SPECIFICATIONS
+═══════════════════════════════════════════════
+
+You MUST include specific camera and lens details in EVERY scene prompt. This ensures maximum cinematic quality.
+
+🎥 CINEMA CAMERAS (Choose based on scene mood):
+${cameras}
+
+📷 PROFESSIONAL LENSES (Choose based on shot type):
+${lenses}
+
+⚙️ TECHNICAL SETTINGS BY SHOT TYPE:
+${settings}
+
+CRITICAL: Every image prompt MUST include:
+1. Camera model (e.g., "shot on ARRI Alexa 65")
+2. Lens type with aperture (e.g., "Zeiss Master Prime 85mm T1.3")
+3. Focal length appropriate for shot size
+4. Aperture for desired depth of field
+5. Lighting setup and color temperature
+6. Film grain and color grading notes
+`;
+};
+
 // Build comprehensive cinematography knowledge for AI
 const buildCinematographyKnowledge = () => {
+  const cameraSpecs = buildCameraSpecifications();
+  
   const cameraAngles = Object.entries(CINEMATOGRAPHY_TECHNIQUES.cameraAngles)
     .map(([key, val]) => `**${val.name}**: ${val.psychologicalEffect}. Use for: ${val.useFor.join(", ")}. Prompt: "${val.prompt}"`)
     .join("\n");
@@ -30,6 +72,8 @@ const buildCinematographyKnowledge = () => {
     .join("\n");
 
   return `
+${cameraSpecs}
+
 ═══════════════════════════════════════════════
 PROFESSIONAL CINEMATOGRAPHY TECHNIQUES
 ═══════════════════════════════════════════════
