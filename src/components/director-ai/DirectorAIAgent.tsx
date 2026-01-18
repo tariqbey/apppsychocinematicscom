@@ -189,9 +189,17 @@ export function DirectorAIAgent({ isOpen, onClose, chiefAim }: DirectorAIAgentPr
   useEffect(() => {
     if (voiceEnabled && !isListening && orbState !== "speaking" && orbState !== "processing" && !isLoading) {
       console.log("[DirectorAI] Voice enabled but not listening, starting...");
+      // On mobile, show a helpful message if voice isn't working
+      if (!isSupported) {
+        toast.info("Voice input isn't supported on this device. Use the text input below.", {
+          duration: 5000,
+        });
+        setVoiceEnabled(false);
+        return;
+      }
       startListening();
     }
-  }, [voiceEnabled, isListening, orbState, isLoading, startListening]);
+  }, [voiceEnabled, isListening, orbState, isLoading, startListening, isSupported]);
 
   // Update orb state based on listening
   useEffect(() => {

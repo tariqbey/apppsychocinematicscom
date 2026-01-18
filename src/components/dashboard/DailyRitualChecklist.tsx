@@ -20,9 +20,10 @@ interface RitualItem {
 interface DailyRitualChecklistProps {
   onTheaterClick: () => void;
   onScorecardClick: () => void;
+  onEveningMindMovieClick?: () => void;
 }
 
-export const DailyRitualChecklist = ({ onTheaterClick, onScorecardClick }: DailyRitualChecklistProps) => {
+export const DailyRitualChecklist = ({ onTheaterClick, onScorecardClick, onEveningMindMovieClick }: DailyRitualChecklistProps) => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [rituals, setRituals] = useState<RitualItem[]>([
@@ -53,13 +54,14 @@ export const DailyRitualChecklist = ({ onTheaterClick, onScorecardClick }: Daily
     {
       id: "evening",
       dbField: "evening_review",
-      title: "Evening Review",
-      subtitle: "Complete your Scorecard",
+      title: "Evening Session",
+      subtitle: "Watch Mind Movie + Complete Scorecard",
       icon: <ClipboardCheck className="w-5 h-5" />,
       completed: false,
     },
   ]);
   const [isLoading, setIsLoading] = useState(true);
+  const [showEveningFlow, setShowEveningFlow] = useState(false);
 
   // Load today's ritual state from database
   useEffect(() => {
@@ -157,7 +159,12 @@ export const DailyRitualChecklist = ({ onTheaterClick, onScorecardClick }: Daily
     if (id === "morning") {
       onTheaterClick();
     } else if (id === "evening") {
-      onScorecardClick();
+      // Evening session: First watch Mind Movie, then scorecard
+      if (onEveningMindMovieClick) {
+        onEveningMindMovieClick();
+      } else {
+        onScorecardClick();
+      }
     } else if (id === "actions") {
       navigate("/actions");
     }
@@ -186,7 +193,7 @@ export const DailyRitualChecklist = ({ onTheaterClick, onScorecardClick }: Daily
         tips={[
           "Morning: Watch your Mind Movie first thing to prime your subconscious",
           "Midday: Execute your 3 key tasks that move you toward your Chief Aim",
-          "Evening: Complete your scorecard honestly - accountability drives transformation",
+          "Evening: Watch your Mind Movie AGAIN before bed, then complete your scorecard",
         ]}
       />
 

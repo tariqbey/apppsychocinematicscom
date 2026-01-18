@@ -6,6 +6,7 @@ import { ProductionStatus } from "@/components/dashboard/ProductionStatus";
 import { DailyRitualChecklist } from "@/components/dashboard/DailyRitualChecklist";
 import { DefiniteChiefAimCard } from "@/components/dashboard/DefiniteChiefAimCard";
 import { StreakBanner } from "@/components/dashboard/StreakBanner";
+import { CutResetModal } from "@/components/dashboard/CutResetModal";
 import { TheaterView } from "@/components/theater/TheaterView";
 import { EditBay } from "@/components/studio/EditBay";
 import { DirectorAIAgent } from "@/components/director-ai/DirectorAIAgent";
@@ -24,7 +25,7 @@ import { useGamification } from "@/hooks/useGamification";
 import { useMindMovies, MindMovie } from "@/hooks/useMindMovies";
 import { useEpisodes } from "@/hooks/useEpisodes";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Sparkles, Bot, Clapperboard, Zap, MessageSquareHeart, FileText, Wand2, FolderOpen, BookOpen, Target, User2, Music } from "lucide-react";
+import { Loader2, Sparkles, Bot, Clapperboard, Zap, MessageSquareHeart, FileText, Wand2, FolderOpen, BookOpen, Target, User2, Music, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { InfoTooltip } from "@/components/ui/info-tooltip";
 import { toast } from "sonner";
@@ -60,6 +61,7 @@ const Index = () => {
   } | undefined>();
   const [timelineExportData, setTimelineExportData] = useState<TimelineExportData | undefined>();
   const [showJournal, setShowJournal] = useState(false);
+  const [showCutReset, setShowCutReset] = useState(false);
   const [transformationDataForWizard, setTransformationDataForWizard] = useState<{
     analysis: unknown;
     chiefAim: { what: string | null; byWhen: string | null; exchange: string | null; plan: string | null };
@@ -314,6 +316,30 @@ const Index = () => {
 
           {/* Streak Banner */}
           <StreakBanner streak={streak} bestStreak={bestStreak} />
+
+          {/* CUT! Button - Big red reset button */}
+          <button
+            onClick={() => setShowCutReset(true)}
+            className="w-full glass-card p-5 animate-slide-up group transition-all duration-300 text-left border-2 border-red-500/50 hover:border-red-500 hover:bg-red-500/10"
+          >
+            <div className="flex items-center gap-4">
+              <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-red-600 to-red-700 flex items-center justify-center shadow-lg shadow-red-500/30 group-hover:shadow-red-500/50 transition-all duration-300">
+                <XCircle className="w-8 h-8 text-white" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-2xl font-display tracking-wider text-red-500 group-hover:text-red-400 transition-colors font-bold">
+                  CUT!
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  Reset your mindset • Watch your Mind Movie • Get back in character
+                </p>
+              </div>
+              <div className="hidden sm:flex items-center gap-2 text-red-500 group-hover:text-red-400 transition-colors font-semibold">
+                <span>Reset Now</span>
+                <span className="text-lg">→</span>
+              </div>
+            </div>
+          </button>
 
           {/* Active Episode Banner - Clickable to navigate to Episodes page */}
           {activeEpisode && (
@@ -574,6 +600,10 @@ const Index = () => {
             <DailyRitualChecklist
               onTheaterClick={() => setShowTheater(true)}
               onScorecardClick={() => setShowScorecard(true)}
+              onEveningMindMovieClick={() => {
+                // Evening flow: Show theater first, scorecard will be shown after
+                setShowTheater(true);
+              }}
             />
 
             {/* Chief Aim */}
@@ -581,6 +611,17 @@ const Index = () => {
           </div>
         </div>
       </main>
+
+      {/* CUT Reset Modal */}
+      <CutResetModal
+        isOpen={showCutReset}
+        onClose={() => setShowCutReset(false)}
+        onWatchMindMovie={() => {
+          setShowCutReset(false);
+          setShowTheater(true);
+        }}
+        chiefAim={chiefAim}
+      />
 
       {/* Theater View */}
       {showTheater && (

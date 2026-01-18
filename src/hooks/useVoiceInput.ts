@@ -21,6 +21,16 @@ interface SpeechRecognitionErrorEvent {
   message?: string;
 }
 
+// Detect mobile/iOS for special handling
+const isMobile = () => {
+  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+};
+
+const isIOS = () => {
+  return /iPad|iPhone|iPod/.test(navigator.userAgent) || 
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+};
+
 export const useVoiceInput = (options: UseVoiceInputOptions = {}) => {
   const { 
     continuous = false, 
@@ -33,6 +43,7 @@ export const useVoiceInput = (options: UseVoiceInputOptions = {}) => {
   const [transcript, setTranscript] = useState("");
   const [isSupported, setIsSupported] = useState(true);
   const [audioLevel, setAudioLevel] = useState(0);
+  const [permissionGranted, setPermissionGranted] = useState(false);
   
   const recognitionRef = useRef<any>(null);
   const silenceTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -270,9 +281,10 @@ export const useVoiceInput = (options: UseVoiceInputOptions = {}) => {
     };
   }, [continuous, language, autoStart, clearSilenceTimer, startSilenceTimer, stopAudioAnalysis]);
 
-  const startListening = useCallback(() => {
+  const startListening = useCallback(async () => {
     if (!recognitionRef.current || !isSupported) {
       console.log("[VoiceInput] Cannot start - not supported");
+      onErrorRef.current?.("Voice input is not supported on this device");
       return;
     }
     
@@ -287,16 +299,46 @@ export const useVoiceInput = (options: UseVoiceInputOptions = {}) => {
       return;
     }
 
-    console.log("[VoiceInput] Starting listening...");
+    console.log("[VoiceInput] Starting listening...", { isMobile: isMobile(), isIOS: isIOS() });
     isStartingRef.current = true;
     accumulatedTranscriptRef.current = "";
     setTranscript("");
     
+    // On mobile, we MUST request microphone permission explicitly before starting speech recognition
+    // This is especially important on iOS where the permission prompt may not show otherwise
+    if (isMobile() && !permissionGranted) {
+      console.log("[VoiceInput] Mobile detected - requesting explicit microphone permission");
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        // Keep the stream alive briefly to ensure permission sticks
+        stream.getTracks().forEach(track => {
+          setTimeout(() => track.stop(), 500);
+        });
+        setPermissionGranted(true);
+        console.log("[VoiceInput] Microphone permission granted on mobile");
+      } catch (error: any) {
+        console.error("[VoiceInput] Microphone permission denied:", error);
+        isStartingRef.current = false;
+        if (error.name === "NotAllowedError" || error.name === "PermissionDeniedError") {
+          onErrorRef.current?.("Microphone access denied. Please enable it in your browser settings and try again.");
+        } else {
+          onErrorRef.current?.("Could not access microphone. Please check your device settings.");
+        }
+        return;
+      }
+    }
+    
     startAudioAnalysis();
+    
+    // Small delay on iOS to ensure audio context is ready
+    if (isIOS()) {
+      await new Promise(resolve => setTimeout(resolve, 200));
+    }
     
     try {
       recognitionRef.current.start();
       hasStartedRef.current = true;
+      console.log("[VoiceInput] Speech recognition started successfully");
     } catch (error: any) {
       console.warn("[VoiceInput] Start error:", error);
       isStartingRef.current = false;
@@ -306,7 +348,7 @@ export const useVoiceInput = (options: UseVoiceInputOptions = {}) => {
         hasStartedRef.current = true;
       } else {
         hasStartedRef.current = false;
-        onErrorRef.current?.("Failed to start voice input");
+        onErrorRef.current?.("Failed to start voice input. Please try again.");
       }
     }
     
@@ -314,7 +356,7 @@ export const useVoiceInput = (options: UseVoiceInputOptions = {}) => {
     setTimeout(() => {
       isStartingRef.current = false;
     }, 300);
-  }, [isSupported, startAudioAnalysis]);
+  }, [isSupported, startAudioAnalysis, permissionGranted]);
 
   const stopListening = useCallback(() => {
     if (!recognitionRef.current) return;
