@@ -531,15 +531,15 @@ export function MediaLibrary({ filter = "all", onSelect, onAddToTimeline, onAddM
         </div>
       ) : (
         <ScrollArea className="h-[350px]">
-          <div className="grid grid-cols-2 gap-3 pr-4">
+          <div className="grid grid-cols-2 gap-2 sm:gap-3 pr-2 sm:pr-4">
             {sortedHistory.map((item) => (
               <div
                 key={item.id}
                 className="group relative rounded-lg border border-border/50 overflow-hidden hover:border-primary/50 transition-colors cursor-pointer"
                 onClick={() => item.status === "completed" && item.media_url && setLightboxMedia(item)}
               >
-                {/* Thumbnail */}
-                <div className="relative aspect-video bg-muted">
+                {/* Thumbnail - Use square aspect ratio for consistent grid */}
+                <div className="relative aspect-square bg-muted">
                   {item.status === "completed" && item.media_url ? (
                     item.media_type === "image" ? (
                       <img src={item.media_url} alt="" className="w-full h-full object-cover" />
