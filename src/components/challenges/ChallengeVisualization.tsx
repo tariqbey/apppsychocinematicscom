@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
@@ -160,10 +159,39 @@ ${generatedContent.affirmation || "Not yet generated"}`,
   
   const scriptSteps = parseVisualizationScript();
 
+  // Style mapping for dynamic Tailwind classes (avoids purge issues)
+  const STEP_STYLES = {
+    red: {
+      card: "border-red-500/30 bg-red-500/5",
+      iconBg: "bg-red-500/20",
+      icon: "text-red-500"
+    },
+    amber: {
+      card: "border-amber-500/30 bg-amber-500/5",
+      iconBg: "bg-amber-500/20",
+      icon: "text-amber-500"
+    },
+    purple: {
+      card: "border-purple-500/30 bg-purple-500/5",
+      iconBg: "bg-purple-500/20",
+      icon: "text-purple-500"
+    },
+    green: {
+      card: "border-green-500/30 bg-green-500/5",
+      iconBg: "bg-green-500/20",
+      icon: "text-green-500"
+    },
+    gold: {
+      card: "border-gold/30 bg-gold/5",
+      iconBg: "bg-gold/20",
+      icon: "text-gold"
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
-        <DialogHeader>
+      <DialogContent className="sm:max-w-2xl max-h-[90dvh] overflow-hidden flex flex-col">
+        <DialogHeader className="flex-shrink-0">
           <DialogTitle className="flex items-center gap-2 font-display text-xl">
             <Film className="w-5 h-5 text-gold" />
             Challenge Visualization
@@ -174,7 +202,7 @@ ${generatedContent.affirmation || "Not yet generated"}`,
         </DialogHeader>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-4 flex-shrink-0">
             <TabsTrigger value="script" className="text-xs sm:text-sm">
               <Film className="w-4 h-4 mr-1 hidden sm:block" />
               Script
@@ -193,8 +221,9 @@ ${generatedContent.affirmation || "Not yet generated"}`,
             </TabsTrigger>
           </TabsList>
 
-          <ScrollArea className="flex-1 mt-4">
-            <TabsContent value="script" className="mt-0 space-y-4 pr-4">
+          {/* Native scroll container - more reliable on mobile */}
+          <div className="flex-1 min-h-0 overflow-y-auto mt-4 pr-2 pb-6 overscroll-contain">
+            <TabsContent value="script" className="mt-0 space-y-4">
               <Card className="p-4 bg-muted/50">
                 <div className="flex items-start gap-3 mb-4">
                   <div className="w-10 h-10 rounded-lg bg-red-500/20 flex items-center justify-center flex-shrink-0">
@@ -239,20 +268,21 @@ ${generatedContent.affirmation || "Not yet generated"}`,
                   <div className="space-y-3">
                     {scriptSteps.map((step, index) => {
                       const icons = [Target, Scissors, Flame, CheckCircle2];
-                      const colors = ["red", "amber", "purple", "green"];
+                      const colorKeys: Array<keyof typeof STEP_STYLES> = ["red", "amber", "purple", "green"];
                       const labels = ["The Challenge", "The CUT! Moment", "Transformed Response", "Victory"];
                       const Icon = icons[index] || Target;
-                      const color = colors[index] || "gold";
+                      const colorKey = colorKeys[index] || "gold";
                       const label = labels[index] || "Scene";
+                      const styles = STEP_STYLES[colorKey];
 
                       return (
                         <Card 
                           key={index} 
-                          className={`p-3 border-${color}-500/30 bg-${color}-500/5`}
+                          className={`p-3 ${styles.card}`}
                         >
                           <div className="flex items-start gap-3">
-                            <div className={`w-8 h-8 rounded-lg bg-${color}-500/20 flex items-center justify-center flex-shrink-0`}>
-                              <Icon className={`w-4 h-4 text-${color}-500`} />
+                            <div className={`w-8 h-8 rounded-lg ${styles.iconBg} flex items-center justify-center flex-shrink-0`}>
+                              <Icon className={`w-4 h-4 ${styles.icon}`} />
                             </div>
                             <div>
                               <p className="text-xs font-medium text-muted-foreground uppercase">{label}</p>
@@ -267,7 +297,7 @@ ${generatedContent.affirmation || "Not yet generated"}`,
               )}
             </TabsContent>
 
-            <TabsContent value="response" className="mt-0 space-y-4 pr-4">
+            <TabsContent value="response" className="mt-0 space-y-4">
               {generatedContent.idealResponse ? (
                 <Card className="p-4 border-green-500/30 bg-green-500/5">
                   <div className="flex items-start gap-3">
@@ -303,7 +333,7 @@ ${generatedContent.affirmation || "Not yet generated"}`,
               </Card>
             </TabsContent>
 
-            <TabsContent value="affirmation" className="mt-0 space-y-4 pr-4">
+            <TabsContent value="affirmation" className="mt-0 space-y-4">
               {generatedContent.affirmation ? (
                 <Card className="p-6 border-gold/30 bg-gradient-to-br from-gold/10 to-amber-500/5">
                   <Quote className="w-8 h-8 text-gold/50 mb-4" />
@@ -337,7 +367,7 @@ ${generatedContent.affirmation || "Not yet generated"}`,
               </Card>
             </TabsContent>
 
-            <TabsContent value="journal" className="mt-0 space-y-4 pr-4">
+            <TabsContent value="journal" className="mt-0 space-y-4">
               <Card className="p-4 bg-muted/50">
                 <h4 className="font-medium mb-2">Reflection Prompts</h4>
                 <ul className="text-sm text-muted-foreground space-y-1">
@@ -374,7 +404,7 @@ ${generatedContent.affirmation || "Not yet generated"}`,
                 )}
               </Button>
             </TabsContent>
-          </ScrollArea>
+          </div>
         </Tabs>
       </DialogContent>
     </Dialog>
