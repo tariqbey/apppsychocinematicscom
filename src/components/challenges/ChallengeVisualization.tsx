@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -39,6 +39,9 @@ interface ChallengeVisualizationProps {
     emotional_trigger: string;
     target_trait: string;
     scenario_type: string;
+    visualization_script?: string | null;
+    ideal_response?: string | null;
+    affirmation?: string | null;
   };
   idealResponse?: string;
   affirmation?: string;
@@ -49,6 +52,7 @@ interface ChallengeVisualizationProps {
     referencePhoto: string | null;
   } | null;
   onStoryboardSaved?: () => void;
+  onScriptSaved?: () => void;
 }
 
 export function ChallengeVisualization({
@@ -60,24 +64,39 @@ export function ChallengeVisualization({
   visualizationScript,
   onJournalEntry,
   savedStoryboard,
-  onStoryboardSaved
+  onStoryboardSaved,
+  onScriptSaved
 }: ChallengeVisualizationProps) {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState("script");
   const [generating, setGenerating] = useState(false);
+  const [savingScript, setSavingScript] = useState(false);
+  
+  // Initialize from saved challenge data or props
   const [generatedContent, setGeneratedContent] = useState<{
     idealResponse?: string;
     affirmation?: string;
     visualizationScript?: string;
   }>({
-    idealResponse,
-    affirmation,
-    visualizationScript
+    idealResponse: challenge.ideal_response || idealResponse,
+    affirmation: challenge.affirmation || affirmation,
+    visualizationScript: challenge.visualization_script || visualizationScript
   });
   const [journalNotes, setJournalNotes] = useState("");
   const [savingJournal, setSavingJournal] = useState(false);
   const [showStoryboardWizard, setShowStoryboardWizard] = useState(false);
   const [showSoundtrackGenerator, setShowSoundtrackGenerator] = useState(false);
+  
+  // Load saved scripts when challenge changes
+  useEffect(() => {
+    if (challenge.visualization_script || challenge.ideal_response || challenge.affirmation) {
+      setGeneratedContent({
+        idealResponse: challenge.ideal_response || idealResponse,
+        affirmation: challenge.affirmation || affirmation,
+        visualizationScript: challenge.visualization_script || visualizationScript
+      });
+    }
+  }, [challenge.id, challenge.visualization_script, challenge.ideal_response, challenge.affirmation]);
 
   const handleGenerateVisualization = async () => {
     setGenerating(true);
@@ -92,18 +111,55 @@ export function ChallengeVisualization({
 
       if (error) throw error;
 
-      setGeneratedContent({
+      const newContent = {
         idealResponse: data.idealResponse,
         affirmation: data.affirmation,
         visualizationScript: data.visualizationScript
-      });
+      };
       
-      toast.success("Visualization generated!");
+      setGeneratedContent(newContent);
+      
+      // Auto-save to database
+      await saveVisualizationScript(newContent);
+      
+      toast.success("Visualization generated and saved!");
     } catch (error) {
       console.error("Error generating visualization:", error);
       toast.error("Failed to generate visualization");
     } finally {
       setGenerating(false);
+    }
+  };
+
+  const saveVisualizationScript = async (content: {
+    idealResponse?: string;
+    affirmation?: string;
+    visualizationScript?: string;
+  }) => {
+    if (!user) return;
+    
+    setSavingScript(true);
+    try {
+      const scriptToSave = typeof content.visualizationScript === 'string'
+        ? content.visualizationScript
+        : JSON.stringify(content.visualizationScript);
+
+      const { error } = await supabase
+        .from("adversity_challenges")
+        .update({
+          visualization_script: scriptToSave,
+          ideal_response: content.idealResponse,
+          affirmation: content.affirmation,
+        })
+        .eq("id", challenge.id);
+
+      if (error) throw error;
+      onScriptSaved?.();
+    } catch (error) {
+      console.error("Error saving script:", error);
+      toast.error("Failed to save script");
+    } finally {
+      setSavingScript(false);
     }
   };
 
@@ -503,11 +559,12 @@ ${generatedContent.affirmation || "Not yet generated"}`,
         onStoryboardSaved={onStoryboardSaved}
       />
 
-      {/* Soundtrack Generator */}
+      {/* Soundtrack Generator - pass the visualization script */}
       <ChallengeSoundtrackGenerator
         open={showSoundtrackGenerator}
         onOpenChange={setShowSoundtrackGenerator}
         challenge={challenge}
+        visualizationScript={generatedContent.visualizationScript}
       />
     </Dialog>
   );

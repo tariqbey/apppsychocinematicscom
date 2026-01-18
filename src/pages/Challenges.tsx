@@ -56,6 +56,14 @@ interface AdversityChallenge {
   at_peace: boolean | null;
   trait_xp_earned: number | null;
   created_at: string;
+  // Storyboard persistence
+  storyboard_scenes?: unknown;
+  storyboard_reference_photo?: string | null;
+  storyboard_created_at?: string | null;
+  // Script persistence
+  visualization_script?: string | null;
+  ideal_response?: string | null;
+  affirmation?: string | null;
 }
 
 export default function Challenges() {
