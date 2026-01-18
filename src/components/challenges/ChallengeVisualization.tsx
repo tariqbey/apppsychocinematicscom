@@ -24,9 +24,11 @@ import {
   Quote,
   Save,
   Camera,
-  ImageIcon
+  ImageIcon,
+  Music
 } from "lucide-react";
 import { ChallengeStoryboardWizard } from "./ChallengeStoryboardWizard";
+import { ChallengeSoundtrackGenerator } from "./ChallengeSoundtrackGenerator";
 
 interface ChallengeVisualizationProps {
   open: boolean;
@@ -68,6 +70,7 @@ export function ChallengeVisualization({
   const [journalNotes, setJournalNotes] = useState("");
   const [savingJournal, setSavingJournal] = useState(false);
   const [showStoryboardWizard, setShowStoryboardWizard] = useState(false);
+  const [showSoundtrackGenerator, setShowSoundtrackGenerator] = useState(false);
 
   const handleGenerateVisualization = async () => {
     setGenerating(true);
@@ -206,7 +209,7 @@ ${generatedContent.affirmation || "Not yet generated"}`,
         </DialogHeader>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
-          <TabsList className="grid w-full grid-cols-4 flex-shrink-0">
+          <TabsList className="grid w-full grid-cols-5 flex-shrink-0">
             <TabsTrigger value="script" className="text-xs sm:text-sm">
               <Film className="w-4 h-4 mr-1 hidden sm:block" />
               Script
@@ -218,6 +221,10 @@ ${generatedContent.affirmation || "Not yet generated"}`,
             <TabsTrigger value="affirmation" className="text-xs sm:text-sm">
               <Sparkles className="w-4 h-4 mr-1 hidden sm:block" />
               Affirm
+            </TabsTrigger>
+            <TabsTrigger value="soundtrack" className="text-xs sm:text-sm">
+              <Music className="w-4 h-4 mr-1 hidden sm:block" />
+              Music
             </TabsTrigger>
             <TabsTrigger value="journal" className="text-xs sm:text-sm">
               <BookOpen className="w-4 h-4 mr-1 hidden sm:block" />
@@ -404,6 +411,40 @@ ${generatedContent.affirmation || "Not yet generated"}`,
               </Card>
             </TabsContent>
 
+            <TabsContent value="soundtrack" className="mt-0 space-y-4">
+              <Card className="p-4 bg-gradient-to-br from-gold/10 to-purple-500/5 border-gold/30">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 rounded-lg bg-gold/20 flex items-center justify-center flex-shrink-0">
+                    <Music className="w-5 h-5 text-gold" />
+                  </div>
+                  <div>
+                    <h4 className="font-medium">Challenge Anthem</h4>
+                    <p className="text-xs text-muted-foreground">
+                      Generate an NLP-infused song that anchors your transformed response
+                    </p>
+                  </div>
+                </div>
+                <Button
+                  variant="gold"
+                  className="w-full"
+                  onClick={() => setShowSoundtrackGenerator(true)}
+                >
+                  <Music className="w-4 h-4 mr-2" />
+                  Create Your Challenge Soundtrack
+                </Button>
+              </Card>
+
+              <Card className="p-4 bg-muted/50">
+                <h4 className="font-medium mb-2">How Music Anchors Change</h4>
+                <ul className="text-sm text-muted-foreground space-y-2">
+                  <li>• 🎵 <strong>Emotional Imprinting:</strong> Music activates deep neural pathways</li>
+                  <li>• 🧠 <strong>NLP Integration:</strong> Lyrics embed new behavioral patterns</li>
+                  <li>• 🎯 <strong>Trigger Replacement:</strong> Replace anxiety with your anthem</li>
+                  <li>• ⚡ <strong>Instant State Change:</strong> Recall your power in moments</li>
+                </ul>
+              </Card>
+            </TabsContent>
+
             <TabsContent value="journal" className="mt-0 space-y-4">
               <Card className="p-4 bg-muted/50">
                 <h4 className="font-medium mb-2">Reflection Prompts</h4>
@@ -451,6 +492,13 @@ ${generatedContent.affirmation || "Not yet generated"}`,
         onOpenChange={setShowStoryboardWizard}
         challenge={challenge}
         visualizationScript={generatedContent.visualizationScript}
+      />
+
+      {/* Soundtrack Generator */}
+      <ChallengeSoundtrackGenerator
+        open={showSoundtrackGenerator}
+        onOpenChange={setShowSoundtrackGenerator}
+        challenge={challenge}
       />
     </Dialog>
   );
