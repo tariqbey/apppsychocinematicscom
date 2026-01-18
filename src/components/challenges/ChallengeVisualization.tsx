@@ -135,7 +135,30 @@ ${generatedContent.affirmation || "Not yet generated"}`,
     }
   };
 
-  const scriptSteps = generatedContent.visualizationScript?.split(/\d\)/).filter(Boolean) || [];
+  // Handle visualizationScript as either string or array
+  const parseVisualizationScript = () => {
+    const script = generatedContent.visualizationScript;
+    if (!script) return [];
+    
+    // If it's already an array, return it
+    if (Array.isArray(script)) {
+      return script.map(item => typeof item === 'string' ? item : item.description || item.scene || JSON.stringify(item));
+    }
+    
+    // If it's a string, split by numbered list pattern
+    if (typeof script === 'string') {
+      return script.split(/\d\)/).filter(Boolean);
+    }
+    
+    // If it's an object, try to extract values
+    if (typeof script === 'object') {
+      return Object.values(script).map(v => typeof v === 'string' ? v : JSON.stringify(v));
+    }
+    
+    return [];
+  };
+  
+  const scriptSteps = parseVisualizationScript();
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
