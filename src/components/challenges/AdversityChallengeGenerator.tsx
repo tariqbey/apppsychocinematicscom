@@ -149,15 +149,23 @@ export function AdversityChallengeGenerator({
           <div className="space-y-2">
             <Label>Scenario Type</Label>
             <Select value={scenarioType} onValueChange={setScenarioType}>
-              <SelectTrigger>
+              <SelectTrigger className="w-full">
                 <SelectValue placeholder="Select a scenario type..." />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent 
+                className="max-h-[280px] bg-popover border shadow-lg"
+                position="popper"
+                sideOffset={4}
+              >
                 {SCENARIO_TYPES.map((type) => (
-                  <SelectItem key={type.value} value={type.value}>
-                    <div>
-                      <p className="font-medium">{type.label}</p>
-                      <p className="text-xs text-muted-foreground">{type.desc}</p>
+                  <SelectItem 
+                    key={type.value} 
+                    value={type.value}
+                    className="cursor-pointer py-2"
+                  >
+                    <div className="flex flex-col">
+                      <span className="font-medium">{type.label}</span>
+                      <span className="text-xs text-muted-foreground">{type.desc}</span>
                     </div>
                   </SelectItem>
                 ))}
@@ -169,12 +177,20 @@ export function AdversityChallengeGenerator({
           <div className="space-y-2">
             <Label>Target Trait to Develop</Label>
             <Select value={targetTrait} onValueChange={setTargetTrait}>
-              <SelectTrigger>
+              <SelectTrigger className="w-full">
                 <SelectValue placeholder="Select a trait to train..." />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent 
+                className="max-h-[280px] bg-popover border shadow-lg"
+                position="popper"
+                sideOffset={4}
+              >
                 {TARGET_TRAITS.map((trait) => (
-                  <SelectItem key={trait} value={trait}>
+                  <SelectItem 
+                    key={trait} 
+                    value={trait}
+                    className="cursor-pointer"
+                  >
                     {trait}
                   </SelectItem>
                 ))}
