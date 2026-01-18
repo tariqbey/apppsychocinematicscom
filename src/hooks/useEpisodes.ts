@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
 import { toast } from "sonner";
+import type { Json } from "@/integrations/supabase/types";
 
 export interface Episode {
   id: string;
@@ -15,6 +16,7 @@ export interface Episode {
   alignment_reasoning: string | null;
   vision_answers: Record<string, string> | null;
   mind_movie_script_id: string | null;
+  character_transformation: Json | null;
   created_at: string;
   updated_at: string;
   completed_at: string | null;
@@ -126,7 +128,7 @@ export function useEpisodes() {
 
   const updateEpisode = useCallback(async (
     episodeId: string,
-    updates: Partial<Pick<Episode, "title" | "objective" | "deadline" | "status" | "alignment_score" | "alignment_reasoning" | "vision_answers" | "mind_movie_script_id" | "completed_at">>
+    updates: Partial<Pick<Episode, "title" | "objective" | "deadline" | "status" | "alignment_score" | "alignment_reasoning" | "vision_answers" | "mind_movie_script_id" | "character_transformation" | "completed_at">>
   ): Promise<boolean> => {
     if (!user) return false;
 

@@ -13,20 +13,7 @@ import { EpisodeTimeline } from "@/components/episodes/EpisodeTimeline";
 import { ActiveEpisodeBanner } from "@/components/episodes/ActiveEpisodeBanner";
 import { MindMovieScriptWizard } from "@/components/mind-movie/MindMovieScriptWizard";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-
-interface EpisodeCharacterAnalysis {
-  requiredCharacter: {
-    name: string;
-    traits: string[];
-    behaviors: string[];
-    mindset: string;
-  };
-  gap: {
-    whatMustDie: string[];
-    whatMustEmerge: string[];
-  };
-  dailyFocus: string;
-}
+import { EpisodeCharacterTransformation } from "@/components/episodes/EpisodeTransformationCard";
 
 export default function Episodes() {
   const navigate = useNavigate();
@@ -40,7 +27,7 @@ export default function Episodes() {
   
   // Mind Movie Wizard state
   const [movieWizardEpisode, setMovieWizardEpisode] = useState<Episode | null>(null);
-  const [characterAnalysis, setCharacterAnalysis] = useState<EpisodeCharacterAnalysis | null>(null);
+  const [characterAnalysis, setCharacterAnalysis] = useState<EpisodeCharacterTransformation | null>(null);
   
   const chiefAim = {
     what: profile?.chief_aim_what || "",
@@ -66,7 +53,7 @@ export default function Episodes() {
   const handleCreateMindMovie = (
     episodeId: string, 
     episode: { id: string; title: string; objective: string; deadline: string; alignment_score: number | null },
-    analysis: EpisodeCharacterAnalysis
+    analysis: EpisodeCharacterTransformation
   ) => {
     const fullEpisode = episodes.find(e => e.id === episodeId);
     if (fullEpisode) {
@@ -353,7 +340,7 @@ export default function Episodes() {
           }}
           transformationAnalysis={characterAnalysis ? {
             requiredCharacter: characterAnalysis.requiredCharacter,
-            gap: characterAnalysis.gap,
+            gap: characterAnalysis.transformationGap,
           } : undefined}
           onEpisodeMovieCreated={handleEpisodeMovieCreated}
         />
