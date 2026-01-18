@@ -142,24 +142,66 @@ export const useRadio = () => {
   };
 
   const playTrack = useCallback((track: RadioTrack | FeaturedTrack) => {
-    if (audioRef.current) {
-      audioRef.current.src = track.audio_url;
+    // Ensure audio element exists
+    if (!audioRef.current) {
+      audioRef.current = new Audio();
       audioRef.current.volume = volume;
-      audioRef.current.play();
-      setIsPlaying(true);
+      
+      // Add event listeners
+      audioRef.current.addEventListener("timeupdate", () => {
+        setCurrentTime(audioRef.current?.currentTime || 0);
+      });
+      audioRef.current.addEventListener("durationchange", () => {
+        setDuration(audioRef.current?.duration || 0);
+      });
+      audioRef.current.addEventListener("ended", () => {
+        setIsPlaying(false);
+      });
+      audioRef.current.addEventListener("play", () => {
+        setIsPlaying(true);
+      });
+      audioRef.current.addEventListener("pause", () => {
+        setIsPlaying(false);
+      });
     }
+    
+    // Set the track as now playing so it shows in the player
+    const featuredTrack: FeaturedTrack = {
+      id: 'id' in track && typeof track.id === 'string' ? track.id : '',
+      track_title: 'title' in track ? (track as RadioTrack).title : (track as FeaturedTrack).track_title,
+      artist: track.artist || null,
+      audio_url: track.audio_url,
+      is_now_playing: true,
+      featured_at: new Date().toISOString(),
+      featured_by: null,
+    };
+    setNowPlaying(featuredTrack);
+    
+    audioRef.current.src = track.audio_url;
+    audioRef.current.volume = volume;
+    audioRef.current.play().catch(err => {
+      console.error("Playback failed:", err);
+    });
+    setIsPlaying(true);
   }, [volume]);
 
   const togglePlay = useCallback(() => {
-    if (!audioRef.current) return;
+    if (!audioRef.current) {
+      // If no audio and we have a now playing track, initialize it
+      if (nowPlaying) {
+        playTrack(nowPlaying);
+      }
+      return;
+    }
     
     if (isPlaying) {
       audioRef.current.pause();
     } else {
-      audioRef.current.play();
+      audioRef.current.play().catch(err => {
+        console.error("Playback failed:", err);
+      });
     }
-    setIsPlaying(!isPlaying);
-  }, [isPlaying]);
+  }, [isPlaying, nowPlaying, playTrack]);
 
   const handleVolumeChange = useCallback((newVolume: number) => {
     setVolume(newVolume);

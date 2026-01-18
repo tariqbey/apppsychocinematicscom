@@ -1,5 +1,5 @@
-import { useEffect, useRef } from "react";
-import { Play, Pause, Volume2, VolumeX, Radio, Music } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Play, Pause, Volume2, VolumeX, Radio, SkipForward, SkipBack } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Card, CardContent } from "@/components/ui/card";
@@ -17,23 +17,96 @@ export const RadioPlayer = () => {
     handleVolumeChange,
     handleSeek,
     playTrack,
+    tracks,
     loading,
   } = useRadio();
 
-  // Create audio element
-  useEffect(() => {
-    if (!audioRef.current) {
-      audioRef.current = new Audio();
-    }
-  }, [audioRef]);
+  const [localCurrentTime, setLocalCurrentTime] = useState(0);
+  const [localDuration, setLocalDuration] = useState(0);
+  const localAudioRef = useRef<HTMLAudioElement | null>(null);
 
-  // Auto-play now playing track
+  // Initialize local audio element if hook doesn't provide one
   useEffect(() => {
-    if (nowPlaying && audioRef.current) {
-      audioRef.current.src = nowPlaying.audio_url;
-      audioRef.current.volume = volume;
+    if (!localAudioRef.current) {
+      localAudioRef.current = new Audio();
+      localAudioRef.current.volume = volume;
     }
-  }, [nowPlaying, volume, audioRef]);
+
+    const audio = localAudioRef.current;
+    
+    const handleTimeUpdate = () => setLocalCurrentTime(audio.currentTime);
+    const handleDurationChange = () => setLocalDuration(audio.duration);
+    const handleEnded = () => {
+      // Try to play next track if available
+      if (tracks.length > 0 && nowPlaying) {
+        const currentIndex = tracks.findIndex(t => t.audio_url === nowPlaying.audio_url);
+        if (currentIndex >= 0 && currentIndex < tracks.length - 1) {
+          playTrack(tracks[currentIndex + 1]);
+        }
+      }
+    };
+
+    audio.addEventListener("timeupdate", handleTimeUpdate);
+    audio.addEventListener("durationchange", handleDurationChange);
+    audio.addEventListener("ended", handleEnded);
+
+    return () => {
+      audio.removeEventListener("timeupdate", handleTimeUpdate);
+      audio.removeEventListener("durationchange", handleDurationChange);
+      audio.removeEventListener("ended", handleEnded);
+    };
+  }, [tracks, nowPlaying, playTrack, volume]);
+
+  // Sync now playing with local audio
+  useEffect(() => {
+    if (nowPlaying && localAudioRef.current) {
+      if (localAudioRef.current.src !== nowPlaying.audio_url) {
+        localAudioRef.current.src = nowPlaying.audio_url;
+        localAudioRef.current.volume = volume;
+      }
+    }
+  }, [nowPlaying, volume]);
+
+  // Sync playing state
+  useEffect(() => {
+    if (!localAudioRef.current) return;
+    
+    if (isPlaying) {
+      localAudioRef.current.play().catch(err => {
+        console.error("Playback error:", err);
+      });
+    } else {
+      localAudioRef.current.pause();
+    }
+  }, [isPlaying]);
+
+  // Sync volume
+  useEffect(() => {
+    if (localAudioRef.current) {
+      localAudioRef.current.volume = volume;
+    }
+  }, [volume]);
+
+  const handleLocalTogglePlay = () => {
+    if (!nowPlaying) return;
+    
+    if (localAudioRef.current) {
+      if (localAudioRef.current.paused) {
+        localAudioRef.current.play().catch(console.error);
+      } else {
+        localAudioRef.current.pause();
+      }
+    }
+    togglePlay();
+  };
+
+  const handleLocalSeek = (time: number) => {
+    if (localAudioRef.current) {
+      localAudioRef.current.currentTime = time;
+      setLocalCurrentTime(time);
+    }
+    handleSeek(time);
+  };
 
   const formatTime = (seconds: number) => {
     if (!isFinite(seconds) || isNaN(seconds)) return "0:00";
@@ -41,6 +114,9 @@ export const RadioPlayer = () => {
     const secs = Math.floor(seconds % 60);
     return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
+
+  const displayCurrentTime = localCurrentTime || currentTime;
+  const displayDuration = localDuration || duration;
 
   if (loading) {
     return (
@@ -71,7 +147,7 @@ export const RadioPlayer = () => {
                   )}
                 </>
               ) : (
-                <p className="text-sm text-muted-foreground">No track playing</p>
+                <p className="text-sm text-muted-foreground">Select a track to play</p>
               )}
             </div>
           </div>
@@ -83,15 +159,15 @@ export const RadioPlayer = () => {
           {nowPlaying && (
             <div className="space-y-1">
               <Slider
-                value={[currentTime]}
-                max={duration || 100}
+                value={[displayCurrentTime]}
+                max={displayDuration || 100}
                 step={1}
-                onValueChange={([value]) => handleSeek(value)}
+                onValueChange={([value]) => handleLocalSeek(value)}
                 className="cursor-pointer"
               />
               <div className="flex justify-between text-xs text-muted-foreground">
-                <span>{formatTime(currentTime)}</span>
-                <span>{formatTime(duration)}</span>
+                <span>{formatTime(displayCurrentTime)}</span>
+                <span>{formatTime(displayDuration)}</span>
               </div>
             </div>
           )}
@@ -102,7 +178,7 @@ export const RadioPlayer = () => {
               variant="outline"
               size="icon"
               className="h-12 w-12 rounded-full border-gold/30 hover:border-gold hover:bg-gold/10"
-              onClick={togglePlay}
+              onClick={handleLocalTogglePlay}
               disabled={!nowPlaying}
             >
               {isPlaying ? (
@@ -136,9 +212,6 @@ export const RadioPlayer = () => {
             </div>
           </div>
         </div>
-
-        {/* Hidden Audio Element */}
-        <audio ref={audioRef as React.RefObject<HTMLAudioElement>} preload="auto" />
       </CardContent>
     </Card>
   );
