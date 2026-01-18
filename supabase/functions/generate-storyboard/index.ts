@@ -37,7 +37,11 @@ serve(async (req) => {
       );
     }
 
-    const { chiefAim, visualStyle, userDescription, existingScenes, addMoreScenes, transformationAnalysis, episodeMode, episodeData } = await req.json();
+    const { chiefAim, visualStyle, userDescription, existingScenes, addMoreScenes, transformationAnalysis, episodeMode, episodeData, targetDuration = 120 } = await req.json();
+    
+    // Calculate scene count based on target duration (default 2 minutes = 120 seconds)
+    // Each scene is 10 seconds
+    const sceneCount = Math.max(6, Math.min(18, Math.ceil(targetDuration / 10)));
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     
     if (!LOVABLE_API_KEY) {
@@ -47,6 +51,12 @@ serve(async (req) => {
     // Build a rich, cinematic system prompt based on mode and available data
     const hasTransformation = transformationAnalysis?.requiredCharacter?.name;
     const isEpisodeMode = episodeMode && episodeData;
+    
+    // Extract character transformation data for embedding traits in storyboard
+    const characterTraits = transformationAnalysis?.requiredCharacter?.traits || [];
+    const characterBehaviors = transformationAnalysis?.requiredCharacter?.behaviors || [];
+    const characterMindset = transformationAnalysis?.requiredCharacter?.mindset || '';
+    const requiredCharacterName = transformationAnalysis?.requiredCharacter?.name || 'Your Best Self';
     
     // Episode-focused system prompt for mini mind movies
     const episodeSystemPrompt = `You are a Psycho-Cinematics™ Episode Director. Your specialty: creating SHORT, FOCUSED visualization sequences for specific sprints and objectives.
@@ -66,7 +76,7 @@ EPISODE MOVIE RULES:
 1. EXACTLY 3-5 SCENES - This is a sprint visualization, not an epic
 2. FOCUS ON THE OBJECTIVE - Every scene must relate to the episode objective
 3. SHOW THE ACHIEVEMENT - The final scene shows the episode objective COMPLETED
-4. FAST PACING - 5-second scenes, high energy, immediate impact
+4. FAST PACING - 10-second scenes, high energy, immediate impact
 5. CONNECT TO CHIEF AIM - Subtly show how this episode advances the larger goal
 
 SCENE STRUCTURE:
@@ -82,61 +92,105 @@ FOR AI IMAGE GENERATION:
 - Close-ups on determination and triumph
 - Include the protagonist demonstrating success`;
     
-    const systemPrompt = isEpisodeMode 
-      ? episodeSystemPrompt
-      : hasTransformation 
+    // Full Mind Movie system prompt with 3-Act structure
+    const fullMindMoviePrompt = hasTransformation 
       ? `You are an Oscar-winning screenwriter and Mind Movie director. You don't just create scenes—you craft TRANSFORMATION STORIES that burn into the subconscious.
 
-Your mission: Turn the user's character transformation journey into a VISCERAL, CINEMATIC experience. This isn't a slideshow. This is the movie of their life they'll watch every morning until their neural pathways rewire.
+Your mission: Create a ${sceneCount}-scene Mind Movie (approximately ${targetDuration} seconds total, each scene 10 seconds) that tells a complete 3-ACT TRANSFORMATION STORY.
 
-THE CHARACTER ARC:
-The user must transform from "${transformationAnalysis.currentSelf?.archetype || 'their current self'}" into "${transformationAnalysis.requiredCharacter.name}".
+═══════════════════════════════════════════════
+3-ACT STRUCTURE FOR MIND MOVIES
+═══════════════════════════════════════════════
 
-REQUIRED TRAITS TO EMBED IN EVERY SCENE:
-${transformationAnalysis.requiredCharacter.traits?.map((t: string) => `• ${t}`).join('\n') || 'Not specified'}
+**ACT ONE: THE AWAKENING (Scenes 1-${Math.floor(sceneCount * 0.25)})**
+- Open with a powerful moment of DECISION
+- Show the character recognizing the need for transformation
+- Establish the gap between current reality and the dream
+- First affirmations should be about COMMITMENT and IDENTITY SHIFT
+
+**ACT TWO: THE TRANSFORMATION (Scenes ${Math.floor(sceneCount * 0.25) + 1}-${Math.floor(sceneCount * 0.75)})**
+- Show the character EMBODYING each required trait in specific situations
+- Include a MIDPOINT MOMENT where old patterns try to resurface—and are overcome
+- Demonstrate the behaviors and mindset in action
+- Affirmations shift from commitment to BEING—"I AM" statements
+- Show progressive wins, challenges overcome, skills demonstrated
+
+**ACT THREE: THE MANIFESTATION (Scenes ${Math.floor(sceneCount * 0.75) + 1}-${sceneCount})**
+- Build to the CLIMACTIC ACHIEVEMENT
+- Show the complete vision realized
+- The Chief Aim manifested in vivid detail
+- Emotional crescendo—joy, triumph, gratitude
+- Final scene: The Oscar-winning moment of complete transformation
+
+═══════════════════════════════════════════════
+THE CHARACTER TRANSFORMATION
+═══════════════════════════════════════════════
+
+The user must transform from "${transformationAnalysis.currentSelf?.archetype || 'their current self'}" into "${requiredCharacterName}".
+
+REQUIRED TRAITS TO EMBED IN SCENES:
+${characterTraits.map((t: string) => `• ${t}`).join('\n') || 'Not specified'}
 
 BEHAVIORS THE CHARACTER MUST DEMONSTRATE:
-${transformationAnalysis.requiredCharacter.behaviors?.map((b: string) => `• ${b}`).join('\n') || 'Not specified'}
+${characterBehaviors.map((b: string) => `• ${b}`).join('\n') || 'Not specified'}
 
 THE MINDSET SHIFT:
-${transformationAnalysis.requiredCharacter.mindset || 'Not specified'}
+${characterMindset || 'Not specified'}
 
-WHAT MUST DIE (Show the old self being left behind):
+WHAT MUST DIE (Show being left behind in Act 1-2):
 ${transformationAnalysis.gap?.whatMustDie?.map((d: string) => `💀 ${d}`).join('\n') || 'Not specified'}
 
-WHAT MUST EMERGE (Show these qualities rising):
+WHAT MUST EMERGE (Show rising in Act 2-3):
 ${transformationAnalysis.gap?.whatMustEmerge?.map((e: string) => `🌱 ${e}`).join('\n') || 'Not specified'}
 
-SCREENWRITING RULES:
-1. SHOW, DON'T TELL. No generic "person achieving goals" scenes. Be SPECIFIC. Be VIVID.
-2. Each scene must demonstrate a REQUIRED TRAIT in action—not abstractly, but through a concrete moment
-3. Include AFFIRMATION TEXT that will appear on screen—write it like dialogue, not a fortune cookie
-4. The affirmations must feel like the character's internal voice—confident, specific, first-person
-5. Build emotional momentum—start with determination, move through challenge, crescendo into triumph
-6. The FINAL SCENE must show the complete manifestation—the Oscar-winning moment
+═══════════════════════════════════════════════
+AFFIRMATION RULES
+═══════════════════════════════════════════════
 
-FOR AI IMAGE GENERATION:
+Each scene MUST include an affirmation that:
+1. Reinforces the required character trait for that scene
+2. Sounds like confident INTERNAL DIALOGUE, not a fortune cookie
+3. Uses first-person, present tense: "I am...", "I choose...", "I create..."
+4. Feels natural to the scene—like what the character would be thinking
+5. Builds emotional intensity as the movie progresses
+
+Examples of GOOD affirmations that reinforce traits:
+- (For decisiveness) "I make powerful decisions instantly and follow through completely."
+- (For resilience) "Every challenge I face makes me stronger. I rise every time."
+- (For confidence) "I walk into every room knowing my value. My presence is powerful."
+
+═══════════════════════════════════════════════
+VISUAL GENERATION REQUIREMENTS
+═══════════════════════════════════════════════
+
+FOR AI IMAGE GENERATION, EVERY PROMPT MUST INCLUDE:
 - Cinematic 16:9 aspect ratio
-- Specify lighting (golden hour, dramatic shadows, studio lighting)
-- Camera angles (low angle for power, close-up for emotion, wide for establishing)
-- Include the protagonist in most scenes—describe their posture, expression, energy
-- Use terms: photorealistic, cinematic, shallow depth of field, volumetric lighting`
-      : `You are a Mind Movie Storyboard Director, an expert in visual storytelling and the Psycho-Cinematics methodology. Your role is to help users create powerful visual storyboards for their Mind Movies - short visualization videos that program the subconscious mind for success.
+- Specific lighting (golden hour, dramatic shadows, studio lighting, etc.)
+- Camera angle (low angle for power, close-up for emotion, wide for establishing)
+- The protagonist's posture, expression, and energy
+- Style terms: photorealistic, cinematic, shallow depth of field, volumetric lighting
+- Emotional atmosphere matching the scene's place in the arc`
+      : `You are a Mind Movie Storyboard Director, an expert in visual storytelling and the Psycho-Cinematics methodology.
 
-A Mind Movie should:
-1. Start with the user's current state or the beginning of their journey
-2. Progress through key milestones and transformations
-3. End with the FINAL SCENE - the complete manifestation of their Definite Chief Aim
-4. Use vivid, emotionally evocative imagery
-5. Include personal details that make it feel real and achievable
+Create a ${sceneCount}-scene Mind Movie (approximately ${targetDuration} seconds total) following a 3-ACT STRUCTURE:
 
-Generate prompts that are optimized for AI image generation:
-- Include specific visual details (lighting, camera angle, composition)
-- Describe the scene cinematically
-- Include the person's appearance if described
-- Use terms like "cinematic", "photorealistic", "golden hour", "shallow depth of field"
-- Specify aspect ratio as 16:9 for video frames
-- Include emotional tone and atmosphere`;
+**ACT ONE (Opening ${Math.floor(sceneCount * 0.25)} scenes):** The Decision & Starting Point
+**ACT TWO (Middle ${Math.floor(sceneCount * 0.5)} scenes):** The Journey & Transformation
+**ACT THREE (Final ${Math.floor(sceneCount * 0.25)} scenes):** The Achievement & Celebration
+
+Each scene should:
+1. Build emotional momentum from determination to triumph
+2. Include vivid, cinematic visuals optimized for AI image generation
+3. Feature affirmations that feel like confident internal dialogue
+4. Progress logically toward the final manifestation
+
+For AI image generation, include:
+- Cinematic 16:9 aspect ratio
+- Specific lighting, camera angles, and composition
+- Photorealistic, cinematic style with volumetric lighting
+- The protagonist's expressions and body language`;
+    
+    const systemPrompt = isEpisodeMode ? episodeSystemPrompt : fullMindMoviePrompt;
 
     // Build the user prompt with transformation context if available
     let userPrompt: string;
@@ -171,53 +225,76 @@ Visual Style: ${visualStyle || "Cinematic"}
 
 Create 3 NEW scenes that continue the story toward the triumphant finale. Number them starting from 1.`;
     } else if (hasTransformation) {
-      userPrompt = `WRITE THE SCREENPLAY for this transformation journey:
+      userPrompt = `CREATE A ${sceneCount}-SCENE MIND MOVIE (${Math.floor(targetDuration / 60)} minute${targetDuration >= 120 ? 's' : ''}) for this transformation:
 
 ═══════════════════════════════════════════════
-THE FINAL SCENE (Where we're headed):
-${chiefAim?.what || "Not specified"}
-Deadline: ${chiefAim?.byWhen || "Not specified"}
+THE DEFINITE CHIEF AIM (The Final Scene)
 ═══════════════════════════════════════════════
-
-THE CHARACTER TRANSFORMATION:
-From: ${transformationAnalysis.currentSelf?.archetype || 'Current self'}
-To: ${transformationAnalysis.requiredCharacter.name}
-
-THE ROLE THEY'RE PLAYING:
-"${transformationAnalysis.script?.role || 'Not specified'}"
-
-THE ARC:
-${transformationAnalysis.script?.arc || 'Not specified'}
-
-VISUAL STYLE: ${visualStyle || "Cinematic and inspiring"}
-ADDITIONAL DIRECTION: ${userDescription || "None provided"}
+WHAT: ${chiefAim?.what || "Not specified"}
+BY WHEN: ${chiefAim?.byWhen || "Not specified"}
+EXCHANGE: ${chiefAim?.exchange || "Not specified"}
+PLAN: ${chiefAim?.plan || "Not specified"}
 
 ═══════════════════════════════════════════════
-CREATE 6-8 SCENES that:
-1. Open with a powerful moment showing the character CHOOSING to transform
-2. Show them PRACTICING the required traits in specific situations
-3. Include a moment of CHALLENGE where old patterns try to return—and they overcome
-4. Build to the TRIUMPHANT FINALE showing complete manifestation
+THE CHARACTER TRANSFORMATION
+═══════════════════════════════════════════════
+FROM: ${transformationAnalysis.currentSelf?.archetype || 'Current self'}
+TO: ${transformationAnalysis.requiredCharacter.name}
 
-Each scene needs:
-- A vivid visual that demonstrates a required character trait
-- An affirmation that sounds like the character's confident internal voice
-- Emotional escalation toward the climax
+REQUIRED TRAITS:
+${characterTraits.map((t: string) => `• ${t}`).join('\n') || 'Not specified'}
 
-Make it so good they'll want to watch it every single day.`;
+REQUIRED BEHAVIORS:
+${characterBehaviors.map((b: string) => `• ${b}`).join('\n') || 'Not specified'}
+
+MINDSET:
+${characterMindset || 'Not specified'}
+
+═══════════════════════════════════════════════
+VISUAL DIRECTION
+═══════════════════════════════════════════════
+STYLE: ${visualStyle || "Cinematic and inspiring"}
+ADDITIONAL NOTES: ${userDescription || "None provided"}
+
+═══════════════════════════════════════════════
+CREATE EXACTLY ${sceneCount} SCENES following the 3-Act structure:
+
+ACT ONE (Scenes 1-${Math.floor(sceneCount * 0.25)}): THE AWAKENING
+- The decision to transform
+- Leaving the old identity behind
+
+ACT TWO (Scenes ${Math.floor(sceneCount * 0.25) + 1}-${Math.floor(sceneCount * 0.75)}): THE JOURNEY
+- Embodying each required trait
+- Overcoming challenges with new behaviors
+- The midpoint test of the old pattern
+
+ACT THREE (Scenes ${Math.floor(sceneCount * 0.75) + 1}-${sceneCount}): THE MANIFESTATION
+- Progressive wins building to climax
+- The Chief Aim fully realized
+- The triumphant finale
+
+REMEMBER:
+- Each scene = 10 seconds of video
+- Every affirmation must reinforce a required character trait
+- Show the character BEING the person who achieves the goal
+- Make it visceral, specific, and emotionally powerful`;
     } else {
-      userPrompt = `Create a storyboard for a Mind Movie based on this Definite Chief Aim:
+      userPrompt = `CREATE A ${sceneCount}-SCENE MIND MOVIE (${Math.floor(targetDuration / 60)} minute${targetDuration >= 120 ? 's' : ''}) for this Definite Chief Aim:
 
 WHAT I WANT: ${chiefAim?.what || "Not specified"}
 BY WHEN: ${chiefAim?.byWhen || "Not specified"}
 WHAT I WILL GIVE: ${chiefAim?.exchange || "Not specified"}
 MY PLAN: ${chiefAim?.plan || "Not specified"}
 
-VISUAL STYLE PREFERENCE: ${visualStyle || "Cinematic and inspiring"}
+VISUAL STYLE: ${visualStyle || "Cinematic and inspiring"}
+ADDITIONAL NOTES: ${userDescription || "Not provided"}
 
-USER'S DESCRIPTION OF THEIR VISION: ${userDescription || "Not provided"}
+Create exactly ${sceneCount} scenes following a 3-Act structure:
+- ACT ONE: The decision and starting point
+- ACT TWO: The journey, challenges, and transformation
+- ACT THREE: The achievement and celebration
 
-Generate 5-8 scenes that tell the story of achieving this goal. Each scene should build toward the final triumphant visualization.`;
+Each scene should be 10 seconds, building emotional momentum toward the triumphant finale.`;
     }
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
