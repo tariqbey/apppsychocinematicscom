@@ -79,6 +79,7 @@ export type Database = {
       adversity_challenges: {
         Row: {
           action_taken: string | null
+          affirmation: string | null
           at_peace: boolean | null
           challenge_date: string
           completed: boolean | null
@@ -90,6 +91,7 @@ export type Database = {
           episode_id: string | null
           feeling: string | null
           id: string
+          ideal_response: string | null
           insight_gained: string | null
           part_challenged: string | null
           response_type: string | null
@@ -102,9 +104,11 @@ export type Database = {
           trait_xp_earned: number | null
           updated_at: string
           user_id: string
+          visualization_script: string | null
         }
         Insert: {
           action_taken?: string | null
+          affirmation?: string | null
           at_peace?: boolean | null
           challenge_date?: string
           completed?: boolean | null
@@ -116,6 +120,7 @@ export type Database = {
           episode_id?: string | null
           feeling?: string | null
           id?: string
+          ideal_response?: string | null
           insight_gained?: string | null
           part_challenged?: string | null
           response_type?: string | null
@@ -128,9 +133,11 @@ export type Database = {
           trait_xp_earned?: number | null
           updated_at?: string
           user_id: string
+          visualization_script?: string | null
         }
         Update: {
           action_taken?: string | null
+          affirmation?: string | null
           at_peace?: boolean | null
           challenge_date?: string
           completed?: boolean | null
@@ -142,6 +149,7 @@ export type Database = {
           episode_id?: string | null
           feeling?: string | null
           id?: string
+          ideal_response?: string | null
           insight_gained?: string | null
           part_challenged?: string | null
           response_type?: string | null
@@ -154,6 +162,7 @@ export type Database = {
           trait_xp_earned?: number | null
           updated_at?: string
           user_id?: string
+          visualization_script?: string | null
         }
         Relationships: [
           {
