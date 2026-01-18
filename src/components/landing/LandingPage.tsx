@@ -108,12 +108,12 @@ export const LandingPage = ({ onLogin }: LandingPageProps) => {
     {
       icon: Scissors,
       title: "Professional Timeline Editor",
-      description: "Edit like a pro with multi-track video and audio, razor cuts, audio fades, VU meters, and export up to 4K. Your Mind Movie deserves cinematic quality."
+      description: "Edit like a pro with multi-track video and audio, razor cuts, audio fades, and VU meters. Your Mind Movie deserves cinematic quality."
     },
     {
       icon: Mic,
       title: "Director AI Voice Coach",
-      description: "24/7 voice-enabled AI coaching with personality presets from 'Swag Coach' to 'Zen Guide'. Get challenged, inspired, and held accountable by an AI that knows your Chief Aim."
+      description: "Voice-enabled AI coaching with personality presets from 'Swag Coach' to 'Zen Guide'. Get challenged, inspired, and held accountable by an AI that knows your Chief Aim."
     },
     {
       icon: Wand2,
@@ -172,7 +172,7 @@ export const LandingPage = ({ onLogin }: LandingPageProps) => {
     { icon: Video, title: "AI Video Generation", description: "Veo 3, Wan 2.1, Kling models" },
     { icon: Palette, title: "Reference Photo AI", description: "Generate images with YOUR face" },
     { icon: Music, title: "Soundtrack Studio", description: "50+ genres, Director Radio" },
-    { icon: Scissors, title: "Timeline Editor", description: "Multi-track NLE, 4K export" }
+    { icon: Scissors, title: "Timeline Editor", description: "Multi-track NLE, HD export" }
   ];
 
   const transformPillar = [
@@ -192,11 +192,11 @@ export const LandingPage = ({ onLogin }: LandingPageProps) => {
   ];
 
   const pricingFeatures = [
-    "Unlimited Director AI Voice Conversations",
+    "Director AI Voice Coaching",
     "$10 Monthly Production Credits",
     "Full AI Media Studio (Video, Image, Voice, Music)",
     "Reference Photo Generation (AI images with YOUR face)",
-    "Professional Timeline Editor with 4K Export",
+    "Professional Timeline Editor with HD Export",
     "5-Step Mind Movie Wizard with Scene Control",
     "Episode Sprints (1, 2, or 4-week focused productions)",
     "Character Builder & 28-Question Archetype Survey",
@@ -244,7 +244,7 @@ export const LandingPage = ({ onLogin }: LandingPageProps) => {
     },
     {
       question: "Do I need any video editing experience?",
-      answer: "Absolutely not. Our 5-Step Mind Movie Wizard guides you from foundation to finished film. Upload a reference photo and AI generates scenes featuring YOU. For advanced control, our Timeline Editor offers multi-track editing, razor cuts, and 4K export. We've designed it so anyone can produce Hollywood-quality content."
+      answer: "Absolutely not. Our 5-Step Mind Movie Wizard guides you from foundation to finished film. Upload a reference photo and AI generates scenes featuring YOU. For advanced control, our Timeline Editor offers multi-track editing and razor cuts. We've designed it so anyone can produce Hollywood-quality content."
     },
     {
       question: "What are Episodes and 21-Day Cycles?",
@@ -264,11 +264,11 @@ export const LandingPage = ({ onLogin }: LandingPageProps) => {
     },
     {
       question: "How does the Director AI Voice Coach work?",
-      answer: "The Director AI is your 24/7 voice-enabled accountability partner. It knows your Chief Aim, active Episode, character archetype, and daily progress. Choose from 6 personality styles—from the challenging 'Swag Coach' to the calming 'Zen Guide'—and 10 different voices. It references your transformation analysis to provide identity-shifting guidance."
+      answer: "The Director AI is your voice-enabled accountability partner. It knows your Chief Aim, active Episode, character archetype, and daily progress. Choose from 6 personality styles—from the challenging 'Swag Coach' to the calming 'Zen Guide'—and 10 different voices. It references your transformation analysis to provide identity-shifting guidance."
     },
     {
       question: "What if I want to cancel?",
-      answer: "Cancel anytime with one click—no questions asked. Your 3-day trial is completely free with no credit card required. We're confident you'll see the value, but there's zero risk to try it."
+      answer: "Cancel anytime with one click—no questions asked. We're confident you'll see the value, and there's no long-term commitment required."
     },
     {
       question: "Is my content private?",
@@ -293,7 +293,7 @@ export const LandingPage = ({ onLogin }: LandingPageProps) => {
               Login
             </Button>
             <Button variant="gold" onClick={handleGetStarted}>
-              Start Free Trial
+              Get Started
             </Button>
           </div>
         </div>
@@ -311,7 +311,7 @@ export const LandingPage = ({ onLogin }: LandingPageProps) => {
             <div className="space-y-8 animate-fade-in">
               <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gold/10 border border-gold/20">
                 <Sparkles className="w-4 h-4 text-gold" />
-                <span className="text-sm text-gold font-semibold">3-Day Free Trial • No Card Required</span>
+                <span className="text-sm text-gold font-semibold">Start Your Transformation Today</span>
               </div>
               
               <h1 className="text-5xl md:text-6xl lg:text-7xl font-display tracking-wide leading-tight">
@@ -345,7 +345,7 @@ export const LandingPage = ({ onLogin }: LandingPageProps) => {
               <div className="flex flex-col sm:flex-row gap-4">
                 <Button variant="gold" size="lg" onClick={handleGetStarted} className="text-lg px-8">
                   <Play className="w-5 h-5 mr-2" />
-                  Start Your 3-Day Free Trial
+                  Start Your Transformation
                 </Button>
                 <Button variant="outline" size="lg" onClick={handleLogin} className="text-lg px-8">
                   Already a Director? Login
@@ -637,11 +637,11 @@ export const LandingPage = ({ onLogin }: LandingPageProps) => {
           <div className="grid lg:grid-cols-2 gap-8 max-w-5xl mx-auto">
             {/* DIY Plan */}
             <div className="glass-card p-8 cinematic-border border-border/50 relative overflow-hidden">
-              {/* Trial Badge */}
+              {/* Popular Badge */}
               <div className="absolute top-4 right-4">
                 <div className="px-3 py-1 rounded-full bg-gold text-black text-sm font-bold flex items-center gap-1">
                   <Zap className="w-4 h-4" />
-                  3-Day Free Trial
+                  Most Popular
                 </div>
               </div>
               
@@ -655,7 +655,7 @@ export const LandingPage = ({ onLogin }: LandingPageProps) => {
                   <span className="text-5xl font-display text-gold">$29</span>
                   <span className="text-muted-foreground">/month</span>
                 </div>
-                <p className="text-sm text-muted-foreground mt-1">After your 3-day free trial</p>
+                <p className="text-sm text-muted-foreground mt-1">Cancel anytime</p>
               </div>
               
               <ul className="space-y-3 mb-8">
@@ -671,11 +671,11 @@ export const LandingPage = ({ onLogin }: LandingPageProps) => {
               
               <Button variant="gold" size="lg" className="w-full text-lg" onClick={handleGetStarted}>
                 <Play className="w-5 h-5 mr-2" />
-                Start Your Free Trial
+                Get Started Now
               </Button>
               
               <p className="text-xs text-muted-foreground text-center mt-4">
-                No credit card required for trial. Cancel anytime.
+                Secure checkout. Cancel anytime.
               </p>
             </div>
 

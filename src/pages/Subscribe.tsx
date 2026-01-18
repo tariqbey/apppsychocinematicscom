@@ -8,7 +8,7 @@ import { useSubscription } from "@/hooks/useSubscription";
 import { AuthModal } from "@/components/auth/AuthModal";
 
 const features = [
-  { icon: Brain, text: "Director AI - Unlimited conversations" },
+  { icon: Brain, text: "Director AI Voice Coaching" },
   { icon: Film, text: "Mind Movie Studio - Full access" },
   { icon: Zap, text: "1000 Monthly Production Credits ($10 value)" },
   { icon: BarChart3, text: "Daily Scorecard & Progress Tracking" },
@@ -19,8 +19,8 @@ const features = [
 const creditInfo = [
   { type: "5-second video", cost: "60 credits" },
   { type: "10-second video", cost: "110 credits" },
-  { type: "2K image", cost: "15 credits" },
-  { type: "4K image", cost: "18 credits" },
+  { type: "HD image", cost: "15 credits" },
+  { type: "2K image", cost: "18 credits" },
   { type: "Music generation", cost: "25 credits" },
 ];
 
@@ -98,7 +98,7 @@ const Subscribe = () => {
               $29<span className="text-lg font-normal text-muted-foreground">/month</span>
             </CardTitle>
             <CardDescription className="text-base">
-              3-day free trial with 250 credits • Cancel anytime
+              Cancel anytime • Secure checkout
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -129,8 +129,7 @@ const Subscribe = () => {
                 ))}
               </div>
               <p className="text-xs text-muted-foreground mt-3">
-                <strong>Trial:</strong> 250 credits = 5 images + 2 videos + 2 songs<br/>
-                <strong>Paid:</strong> 1000 credits/month = ~16 videos OR ~66 images (or mix & match!)
+                1000 credits/month = ~16 videos OR ~66 images (or mix & match!)
               </p>
             </div>
 
@@ -154,7 +153,7 @@ const Subscribe = () => {
               ) : (
                 <>
                   <Zap className="h-5 w-5" />
-                  Start 3-Day Free Trial
+                  Get Started Now
                 </>
               )}
             </Button>

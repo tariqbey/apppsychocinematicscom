@@ -479,22 +479,30 @@ export const RadioManager = () => {
                                   </p>
                                 )}
                               </div>
-                              <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <div className="flex items-center gap-1">
                                 <Button
-                                  variant="ghost"
+                                  variant="outline"
                                   size="icon"
-                                  className="h-7 w-7"
-                                  onClick={() => handleSetNowPlaying(track.title, track.audio_url, track.artist || undefined)}
+                                  className="h-8 w-8 border-gold/30 hover:bg-gold/20"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleSetNowPlaying(track.title, track.audio_url, track.artist || undefined);
+                                  }}
+                                  title="Set as Now Playing"
                                 >
-                                  <Play className="w-3 h-3" />
+                                  <Play className="w-4 h-4 text-gold" />
                                 </Button>
                                 <Button
                                   variant="ghost"
                                   size="icon"
-                                  className="h-7 w-7 text-destructive"
-                                  onClick={() => handleDeleteTrack(track.id)}
+                                  className="h-8 w-8 text-destructive hover:bg-destructive/20"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDeleteTrack(track.id);
+                                  }}
+                                  title="Delete Track"
                                 >
-                                  <Trash2 className="w-3 h-3" />
+                                  <Trash2 className="w-4 h-4" />
                                 </Button>
                               </div>
                             </div>
