@@ -19,9 +19,12 @@ import { Target,
   ArrowRight,
   Flame,
   BookOpen,
-  Loader2
+  Loader2,
+  Film,
+  Eye
 } from "lucide-react";
 import { format } from "date-fns";
+import { ChallengeVisualization } from "./ChallengeVisualization";
 
 interface AdversityChallenge {
   id: string;
@@ -44,6 +47,7 @@ type ResponseStep = "feeling" | "cut" | "clarity" | "action" | "complete";
 export function ChallengeCard({ challenge, onComplete }: ChallengeCardProps) {
   const { user } = useAuth();
   const [showResponse, setShowResponse] = useState(false);
+  const [showVisualization, setShowVisualization] = useState(false);
   const [step, setStep] = useState<ResponseStep>("feeling");
   const [saving, setSaving] = useState(false);
   
@@ -110,7 +114,6 @@ export function ChallengeCard({ challenge, onComplete }: ChallengeCardProps) {
       trigger: challenge.emotional_trigger
     }));
     toast.info("Opening journal with challenge context...");
-    // Navigate or open journal modal
   };
 
   const renderStep = () => {
@@ -355,20 +358,32 @@ export function ChallengeCard({ challenge, onComplete }: ChallengeCardProps) {
               <p className="text-sm italic text-amber-400">"{challenge.emotional_trigger}"</p>
             </div>
             
-            <div className="flex items-center gap-3 flex-wrap">
-              <Button size="sm" variant="gold" onClick={() => setShowResponse(true)}>
+            <div className="flex items-center gap-2 flex-wrap">
+              <Button size="sm" variant="gold" onClick={() => setShowVisualization(true)}>
+                <Film className="w-4 h-4 mr-1" />
+                See Ideal Response
+              </Button>
+              <Button size="sm" variant="default" onClick={() => setShowResponse(true)}>
                 <Scissors className="w-4 h-4 mr-1" />
-                Respond to Challenge
+                Respond
               </Button>
               <Button size="sm" variant="outline" onClick={handleJournalReflection}>
                 <BookOpen className="w-4 h-4 mr-1" />
-                Journal Reflection
+                Journal
               </Button>
             </div>
           </div>
         </div>
       </Card>
 
+      {/* Visualization Modal */}
+      <ChallengeVisualization
+        open={showVisualization}
+        onOpenChange={setShowVisualization}
+        challenge={challenge}
+      />
+
+      {/* Response Dialog */}
       <Dialog open={showResponse} onOpenChange={setShowResponse}>
         <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>

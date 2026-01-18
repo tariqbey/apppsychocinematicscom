@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { SUCCESS_PRINCIPLES_KB, generateVisualizationPrompt } from "../_shared/success-principles-kb.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -11,12 +12,15 @@ serve(async (req) => {
   }
 
   try {
-    const { scenarioType, targetTrait, episodeContext } = await req.json();
+    const { scenarioType, targetTrait, episodeContext, generateVisualization = false } = await req.json();
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
       throw new Error("LOVABLE_API_KEY not configured");
     }
+
+    // Get ideal response patterns from knowledge base
+    const { response: idealResponse, affirmation } = SUCCESS_PRINCIPLES_KB.getIdealResponse(scenarioType, targetTrait);
 
     const systemPrompt = `You are an Adversity Challenge Generator for the Psycho-Cinematics™ system.
 
@@ -28,6 +32,11 @@ These challenges should:
 3. Create an emotional trigger that would normally cause reactive behavior
 4. Be challenging but not traumatic
 5. Allow the user to practice the "CUT!" technique (consciously pausing before reacting)
+
+IMPORTANT: You have access to Napoleon Hill's 17 Laws of Success principles. Use these to inform the challenge design:
+- The challenge should test one of Hill's principles
+- The ideal response should embody that principle
+- The situation should create a clear "choice point" between old reactive patterns and transformed behavior
 
 The goal is CHARACTER DEVELOPMENT through navigating emotional adversity with clarity and maturity.`;
 
@@ -43,10 +52,19 @@ EPISODE CONTEXT:
 
 Create a realistic situation that would trigger emotional reactivity and test the target trait.
 
-Return JSON with exactly these fields:
+IDEAL RESPONSE PATTERN (from Napoleon Hill's Laws of Success):
+${idealResponse}
+
+AFFIRMATION:
+${affirmation}
+
+Return JSON with these fields:
 {
   "situation": "A detailed 2-3 sentence description of the adversity scenario",
-  "trigger": "The specific emotional trigger that would cause reactive behavior (1 sentence)"
+  "trigger": "The specific emotional trigger that would cause reactive behavior (1 sentence)",
+  "idealResponse": "How the Director Character should handle this situation (2-3 sentences based on Napoleon Hill's principles)",
+  "affirmation": "A powerful first-person affirmation for this specific challenge",
+  "visualizationScript": "A brief 4-scene visualization script: 1) The challenge appears, 2) The CUT! moment, 3) The transformed response, 4) The victory"
 }`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -77,6 +95,17 @@ Return JSON with exactly these fields:
       challenge = JSON.parse(content);
     } catch {
       throw new Error("Failed to parse AI response");
+    }
+
+    // Add visualization prompt if requested
+    if (generateVisualization) {
+      const characterName = episodeContext?.characterTransformation?.requiredCharacter || "The Director Character";
+      challenge.fullVisualizationPrompt = generateVisualizationPrompt(
+        challenge.situation,
+        targetTrait,
+        scenarioType,
+        characterName
+      );
     }
 
     return new Response(JSON.stringify(challenge), {
