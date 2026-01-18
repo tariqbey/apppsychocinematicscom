@@ -1885,6 +1885,10 @@ export type Database = {
           avatar_url: string | null
           best_streak: number | null
           bio: string | null
+          character_build: string | null
+          character_features: string | null
+          character_height: string | null
+          character_weight: string | null
           chat_summary: string | null
           chat_summary_updated_at: string | null
           chief_aim_by_when: string | null
@@ -1904,6 +1908,9 @@ export type Database = {
           director_character_name: string | null
           display_name: string | null
           evening_scorecard_reminder_time: string | null
+          hero_image_back_url: string | null
+          hero_image_side_url: string | null
+          hero_image_url: string | null
           id: string
           journal_reminder_time: string | null
           last_viewing_date: string | null
@@ -1921,6 +1928,10 @@ export type Database = {
           avatar_url?: string | null
           best_streak?: number | null
           bio?: string | null
+          character_build?: string | null
+          character_features?: string | null
+          character_height?: string | null
+          character_weight?: string | null
           chat_summary?: string | null
           chat_summary_updated_at?: string | null
           chief_aim_by_when?: string | null
@@ -1940,6 +1951,9 @@ export type Database = {
           director_character_name?: string | null
           display_name?: string | null
           evening_scorecard_reminder_time?: string | null
+          hero_image_back_url?: string | null
+          hero_image_side_url?: string | null
+          hero_image_url?: string | null
           id?: string
           journal_reminder_time?: string | null
           last_viewing_date?: string | null
@@ -1957,6 +1971,10 @@ export type Database = {
           avatar_url?: string | null
           best_streak?: number | null
           bio?: string | null
+          character_build?: string | null
+          character_features?: string | null
+          character_height?: string | null
+          character_weight?: string | null
           chat_summary?: string | null
           chat_summary_updated_at?: string | null
           chief_aim_by_when?: string | null
@@ -1976,6 +1994,9 @@ export type Database = {
           director_character_name?: string | null
           display_name?: string | null
           evening_scorecard_reminder_time?: string | null
+          hero_image_back_url?: string | null
+          hero_image_side_url?: string | null
+          hero_image_url?: string | null
           id?: string
           journal_reminder_time?: string | null
           last_viewing_date?: string | null

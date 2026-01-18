@@ -29,6 +29,7 @@ interface PlatformStats {
 interface UserData {
   user_id: string;
   display_name: string | null;
+  email: string | null;
   created_at: string;
   monthly_credits: number;
   purchased_credits: number;
@@ -107,6 +108,22 @@ const AdminDashboard = () => {
   };
 
   const fetchUserData = async () => {
+    // Fetch emails from edge function
+    let emailMap: Record<string, string> = {};
+    try {
+      const { data: session } = await supabase.auth.getSession();
+      if (session?.session?.access_token) {
+        const { data: emailData } = await supabase.functions.invoke("get-user-emails", {
+          headers: { Authorization: `Bearer ${session.session.access_token}` }
+        });
+        if (emailData?.emails) {
+          emailMap = emailData.emails;
+        }
+      }
+    } catch (err) {
+      console.error("Error fetching emails:", err);
+    }
+
     const { data: profiles } = await supabase
       .from("user_profiles")
       .select("user_id, display_name, created_at")
@@ -125,6 +142,7 @@ const AdminDashboard = () => {
         return {
           user_id: profile.user_id,
           display_name: profile.display_name,
+          email: emailMap[profile.user_id] || null,
           created_at: profile.created_at,
           monthly_credits: credits?.monthly_credits || 0,
           purchased_credits: credits?.purchased_credits || 0,
@@ -179,7 +197,8 @@ const AdminDashboard = () => {
 
   const filteredUsers = users.filter(u => 
     u.display_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    u.user_id.toLowerCase().includes(searchTerm.toLowerCase())
+    u.user_id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    u.email?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   if (authLoading || adminLoading) {
@@ -446,7 +465,12 @@ const AdminDashboard = () => {
                           <TableCell>
                             <div>
                               <div className="font-medium">{user.display_name || "Unnamed"}</div>
-                              <div className="text-xs text-muted-foreground font-mono">
+                              {user.email && (
+                                <div className="text-xs text-muted-foreground">
+                                  {user.email}
+                                </div>
+                              )}
+                              <div className="text-xs text-muted-foreground/60 font-mono">
                                 {user.user_id.slice(0, 8)}...
                               </div>
                             </div>
