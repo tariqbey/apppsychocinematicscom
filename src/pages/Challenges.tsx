@@ -27,7 +27,8 @@ import {
   ArrowRight,
   TrendingUp,
   Calendar,
-  Loader2
+  Loader2,
+  ChevronLeft
 } from "lucide-react";
 import { format } from "date-fns";
 import { AdversityChallengeGenerator } from "@/components/challenges/AdversityChallengeGenerator";
@@ -119,6 +120,15 @@ export default function Challenges() {
           {/* Header */}
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => navigate("/")}
+                className="mb-2 -ml-2 text-muted-foreground hover:text-foreground"
+              >
+                <ChevronLeft className="w-4 h-4 mr-1" />
+                Back to Dashboard
+              </Button>
               <div className="flex items-center gap-3 mb-2">
                 <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-red-500/20 to-orange-600/20 flex items-center justify-center">
                   <Swords className="w-6 h-6 text-red-500" />

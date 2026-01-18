@@ -40,6 +40,7 @@ interface ChallengeScene {
   nlpOverlay?: string;
   generatedImageUrl?: string;
   generatedVideoUrl?: string;
+  videoPrompt?: string; // Auto-generated video prompt
 }
 
 interface ChallengeStoryboardWizardProps {
@@ -83,6 +84,7 @@ export function ChallengeStoryboardWizard({
   const [animationModel, setAnimationModel] = useState<VideoModel>("kling-ai/v1.0/image-to-video");
   const [savingStoryboard, setSavingStoryboard] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [lastGeneratedSceneIndex, setLastGeneratedSceneIndex] = useState<number | null>(null);
 
   // Global reference photo hook
   const { 
@@ -297,13 +299,36 @@ PRODUCTION QUALITY:
     });
 
     if (imageUrl) {
+      // Generate auto-fill video prompt based on scene description
+      const videoPrompt = generateVideoPromptForScene(scene);
+      
       setScenes(prev => prev.map((s, i) => 
-        i === sceneIndex ? { ...s, generatedImageUrl: imageUrl } : s
+        i === sceneIndex ? { ...s, generatedImageUrl: imageUrl, videoPrompt } : s
       ));
       setHasUnsavedChanges(true);
+      setLastGeneratedSceneIndex(sceneIndex);
       return imageUrl;
     }
     return null;
+  };
+
+  // Generate a video prompt based on scene content
+  const generateVideoPromptForScene = (scene: ChallengeScene): string => {
+    const label = scene.label.toLowerCase();
+    const trait = challenge.target_trait;
+    
+    if (label.includes("challenge")) {
+      return `Slow push in on the character's face as tension builds. Their expression shifts from uncertainty to determination. Subtle camera movement creates dramatic atmosphere. Character breathes deeply, preparing to embody ${trait}.`;
+    } else if (label.includes("cut")) {
+      return `Quick dolly out creating visual separation. Character pauses, takes a conscious breath. Lighting shifts subtly as they mentally detach from reactive patterns. Hand gesture or body language shows conscious choice to "CUT!" the old script.`;
+    } else if (label.includes("transformed") || label.includes("response")) {
+      return `Smooth tracking shot following character's confident movement. Body language transforms to embody ${trait}. Camera circles subtly, capturing the moment of authentic response. Expression shows calm strength and clarity.`;
+    } else if (label.includes("victory")) {
+      return `Slow motion crane shot pulling back to reveal character in their power. Golden hour lighting. Character's posture radiates ${trait}. Triumphant but grounded energy. Subtle smile of self-mastery.`;
+    }
+    
+    // Default dynamic prompt
+    return `Camera slowly pushes in. Character demonstrates ${trait} through body language and expression. ${scene.cameraWork || 'Cinematic movement with dramatic lighting shifts'}. Professional film production quality.`;
   };
 
   // Generate all scene images
@@ -319,6 +344,18 @@ PRODUCTION QUALITY:
     setCurrentGeneratingScene(0);
     setStep("preview");
     setHasUnsavedChanges(true);
+    
+    // Auto-select the first scene and scroll into view
+    setSelectedScene(0);
+    if (scenes[0]?.videoPrompt) {
+      setAnimationPrompt(scenes[0].videoPrompt);
+    }
+    
+    // Scroll to first scene after a short delay
+    setTimeout(() => {
+      document.getElementById('scene-card-0')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 300);
+    
     toast.success("All storyboard images generated!");
   };
 
@@ -381,8 +418,21 @@ PRODUCTION QUALITY:
 
   // Regenerate single scene
   const handleRegenerateScene = async (sceneIndex: number) => {
+    setCurrentGeneratingScene(sceneIndex);
     await generateSceneImage(sceneIndex);
     setHasUnsavedChanges(true);
+    
+    // Auto-scroll to the regenerated scene and select it
+    setTimeout(() => {
+      document.getElementById(`scene-card-${sceneIndex}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      setSelectedScene(sceneIndex);
+      // Auto-fill the animation prompt from the updated scene
+      const updatedScene = scenes[sceneIndex];
+      if (updatedScene?.videoPrompt) {
+        setAnimationPrompt(updatedScene.videoPrompt);
+      }
+    }, 300);
+    
     toast.success("Scene regenerated!");
   };
 
@@ -606,7 +656,8 @@ PRODUCTION QUALITY:
                   
                   return (
                     <Card 
-                      key={index} 
+                      key={index}
+                      id={`scene-card-${index}`}
                       className={`p-4 transition-all ${isSelected ? 'ring-2 ring-gold' : ''}`}
                     >
                       <div className="flex items-center gap-2 mb-3">
@@ -670,7 +721,14 @@ PRODUCTION QUALITY:
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => setSelectedScene(isSelected ? null : index)}
+                            onClick={() => {
+                              const newSelected = isSelected ? null : index;
+                              setSelectedScene(newSelected);
+                              // Auto-fill animation prompt with scene's video prompt
+                              if (newSelected !== null && scene.videoPrompt) {
+                                setAnimationPrompt(scene.videoPrompt);
+                              }
+                            }}
                             className="border-primary/50"
                           >
                             <Video className="w-3 h-3 mr-1" />
@@ -693,12 +751,17 @@ PRODUCTION QUALITY:
                       {/* Animation Panel */}
                       {isSelected && scene.generatedImageUrl && !scene.generatedVideoUrl && (
                         <div className="mt-4 p-3 rounded-lg border border-primary/30 bg-primary/5 space-y-3">
-                          <Label>Describe the motion</Label>
+                          <div className="flex items-center justify-between">
+                            <Label>Video Action & Dialogue</Label>
+                            <Badge variant="outline" className="text-xs bg-gold/10 text-gold">
+                              Auto-filled
+                            </Badge>
+                          </div>
                           <Textarea
                             value={animationPrompt}
                             onChange={(e) => setAnimationPrompt(e.target.value)}
                             placeholder="Camera slowly pushes in, character takes a deep breath..."
-                            rows={2}
+                            rows={3}
                           />
                           
                           <div className="flex gap-3 items-end">
