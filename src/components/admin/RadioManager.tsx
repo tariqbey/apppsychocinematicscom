@@ -607,10 +607,27 @@ export const RadioManager = () => {
                     </div>
 
                     <div className="flex gap-2 flex-wrap">
-                      {/* Play All button */}
+                      {/* Stream Playlist - broadcasts first track to all users */}
                       {selectedPlaylist.tracks.length > 0 && (
                         <Button
                           variant="gold"
+                          size="sm"
+                          onClick={async () => {
+                            const first = selectedPlaylist.tracks[0];
+                            // Start local preview AND broadcast to all users
+                            handleLocalPlay(first.title, first.audio_url, first.artist || undefined, 0);
+                            await handleSetNowPlaying(first.title, first.audio_url, first.artist || undefined);
+                            toast.success(`Now streaming "${first.title}" to all users!`);
+                          }}
+                        >
+                          <Radio className="w-4 h-4 mr-1" />
+                          Stream Playlist
+                        </Button>
+                      )}
+                      {/* Preview All - plays locally without broadcasting */}
+                      {selectedPlaylist.tracks.length > 0 && (
+                        <Button
+                          variant="outline"
                           size="sm"
                           onClick={() => {
                             const first = selectedPlaylist.tracks[0];
@@ -618,7 +635,7 @@ export const RadioManager = () => {
                           }}
                         >
                           <Play className="w-4 h-4 mr-1" />
-                          Play All
+                          Preview All
                         </Button>
                       )}
                       <Dialog open={showAddTrackDialog} onOpenChange={setShowAddTrackDialog}>
@@ -702,11 +719,11 @@ export const RadioManager = () => {
                                   )}
                                 </div>
                                 <div className="flex items-center gap-1">
-                                  {/* Local Play */}
+                                  {/* Preview (Local Play) */}
                                   <Button
-                                    variant={isCurrentTrack && localPlaying ? "default" : "outline"}
+                                    variant={isCurrentTrack && localPlaying ? "default" : "ghost"}
                                     size="icon"
-                                    className="h-8 w-8 border-gold/30 hover:bg-gold/20"
+                                    className="h-8 w-8"
                                     onClick={(e) => {
                                       e.stopPropagation();
                                       if (isCurrentTrack && localPlaying) {
@@ -715,26 +732,27 @@ export const RadioManager = () => {
                                         handleLocalPlay(track.title, track.audio_url, track.artist || undefined, index);
                                       }
                                     }}
-                                    title={isCurrentTrack && localPlaying ? "Pause" : "Play"}
+                                    title={isCurrentTrack && localPlaying ? "Pause Preview" : "Preview Track"}
                                   >
                                     {isCurrentTrack && localPlaying ? (
                                       <Pause className="w-4 h-4 text-gold" />
                                     ) : (
-                                      <Play className="w-4 h-4 text-gold" />
+                                      <Play className="w-4 h-4" />
                                     )}
                                   </Button>
-                                  {/* Broadcast (Set Now Playing) */}
+                                  {/* Stream to All Users (Set Now Playing) */}
                                   <Button
-                                    variant="ghost"
+                                    variant="outline"
                                     size="icon"
-                                    className="h-8 w-8"
-                                    onClick={(e) => {
+                                    className="h-8 w-8 border-gold/30 hover:bg-gold/20"
+                                    onClick={async (e) => {
                                       e.stopPropagation();
-                                      handleSetNowPlaying(track.title, track.audio_url, track.artist || undefined);
+                                      await handleSetNowPlaying(track.title, track.audio_url, track.artist || undefined);
+                                      toast.success(`Now streaming "${track.title}" to all users!`);
                                     }}
-                                    title="Broadcast to All Users"
+                                    title="Stream to All Users"
                                   >
-                                    <Radio className="w-4 h-4 text-muted-foreground" />
+                                    <Radio className="w-4 h-4 text-gold" />
                                   </Button>
                                   {/* Delete */}
                                   <Button
@@ -799,9 +817,14 @@ export const RadioManager = () => {
               </CardContent>
             </Card>
 
-            <div className="text-sm text-muted-foreground">
-              <p>Set a track as "Now Playing" by clicking the play button next to any track in a playlist or stream.</p>
-              <p>All users will see and hear this track in their Radio Player.</p>
+            <div className="text-sm text-muted-foreground space-y-2 p-4 bg-muted/10 rounded-lg">
+              <p><strong>How to stream:</strong></p>
+              <ul className="list-disc list-inside space-y-1">
+                <li><strong>Stream Playlist</strong> - Click to start streaming the first track to all users</li>
+                <li><strong>Preview</strong> (play icon) - Listen to a track locally without broadcasting</li>
+                <li><strong>Stream</strong> (radio icon) - Click next to any track to broadcast it to all users</li>
+              </ul>
+              <p className="text-gold">All users will see "Now Streaming" and hear this track in their Radio Player.</p>
             </div>
           </TabsContent>
 
