@@ -17,11 +17,14 @@ export type VideoModel =
   | "google/veo3-fast"
   | "google/veo3-fast/image-to-video";
 
+export type ImageModel = "gemini" | "nano-banana-pro";
+
 export interface ImageGenerationParams {
   prompt: string;
   aspect_ratio?: "1:1" | "16:9" | "9:16" | "4:3";
   resolution?: "1k" | "2k" | "4k";
   images?: string[];
+  model?: ImageModel;
 }
 
 export interface VideoGenerationParams {
@@ -88,6 +91,10 @@ export function useMediaGeneration() {
       return null;
     }
 
+    // Determine which model/function to use
+    const useNanoBanana = params.model === "nano-banana-pro";
+    const functionName = useNanoBanana ? "atlas-generate-image" : "lovable-generate-image";
+
     // Check balance first (in credits)
     const creditCost = estimateCreditCost("image", undefined, params.resolution);
     if (credits && !credits.isAdmin && credits.totalRemaining < creditCost) {
@@ -126,11 +133,13 @@ export function useMediaGeneration() {
       // Only add images if array has items (for reference photo / edit mode)
       if (params.images && params.images.length > 0) {
         requestBody.images = params.images;
-        console.log("Sending image generation with reference photo:", params.images[0].substring(0, 50));
+        console.log(`Sending image generation (${functionName}) with reference photo:`, params.images[0].substring(0, 50));
       }
 
+      console.log(`Using ${functionName} for image generation, model: ${params.model || 'gemini'}`);
+
       const { data: invokeData, error: invokeError } = await supabase.functions.invoke(
-        "lovable-generate-image",
+        functionName,
         {
           body: requestBody,
         }
