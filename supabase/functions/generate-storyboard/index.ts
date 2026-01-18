@@ -1,9 +1,93 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.89.0";
+import { CINEMATOGRAPHY_TECHNIQUES, NLP_AFFIRMATION_PATTERNS, COMPOSITION_TECHNIQUES } from "../_shared/cinematography-nlp-kb.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
+
+// Build comprehensive cinematography knowledge for AI
+const buildCinematographyKnowledge = () => {
+  const cameraAngles = Object.entries(CINEMATOGRAPHY_TECHNIQUES.cameraAngles)
+    .map(([key, val]) => `**${val.name}**: ${val.psychologicalEffect}. Use for: ${val.useFor.join(", ")}. Prompt: "${val.prompt}"`)
+    .join("\n");
+    
+  const shotSizes = Object.entries(CINEMATOGRAPHY_TECHNIQUES.shotSizes)
+    .map(([key, val]) => `**${val.name}**: ${val.psychologicalEffect}. Use for: ${val.useFor.join(", ")}. Prompt: "${val.prompt}"`)
+    .join("\n");
+    
+  const lighting = Object.entries(CINEMATOGRAPHY_TECHNIQUES.lighting)
+    .map(([key, val]) => `**${val.name}**: ${val.psychologicalEffect}. Use for: ${val.useFor.join(", ")}. Prompt: "${val.prompt}"`)
+    .join("\n");
+    
+  const movements = Object.entries(CINEMATOGRAPHY_TECHNIQUES.cameraMovement)
+    .map(([key, val]) => `**${val.name}**: ${val.psychologicalEffect}. Use for: ${val.useFor.join(", ")}. Prompt: "${val.prompt}"`)
+    .join("\n");
+    
+  const compositions = Object.entries(COMPOSITION_TECHNIQUES)
+    .map(([key, val]) => `**${key}**: ${val.description}. Use for: ${val.useFor.join(", ")}. Prompt: "${val.prompt}"`)
+    .join("\n");
+
+  return `
+═══════════════════════════════════════════════
+PROFESSIONAL CINEMATOGRAPHY TECHNIQUES
+═══════════════════════════════════════════════
+
+You MUST incorporate these specific cinematography techniques into every scene prompt to create psychologically impactful visuals:
+
+📹 CAMERA ANGLES (Choose based on emotional intent):
+${cameraAngles}
+
+📐 SHOT SIZES (Match to scene's emotional need):
+${shotSizes}
+
+💡 LIGHTING TECHNIQUES (Set the emotional atmosphere):
+${lighting}
+
+🎬 CAMERA MOVEMENT (Implied through composition):
+${movements}
+
+🖼️ COMPOSITION TECHNIQUES:
+${compositions}
+`;
+};
+
+// Build NLP knowledge for affirmation creation
+const buildNLPKnowledge = () => {
+  const patterns = Object.entries(NLP_AFFIRMATION_PATTERNS.patterns)
+    .map(([key, val]) => `**${val.name}**: ${val.description}\nExamples: ${val.examples.slice(0, 2).join(" | ")}\nUse for: ${val.useFor.join(", ")}`)
+    .join("\n\n");
+
+  return `
+═══════════════════════════════════════════════
+NEURO-LINGUISTIC PROGRAMMING (NLP) FOR AFFIRMATIONS
+═══════════════════════════════════════════════
+
+Every affirmation MUST use these NLP patterns to bypass conscious resistance and program the subconscious:
+
+${patterns}
+
+🔥 POWER WORDS TO INCLUDE:
+Action Words: ${NLP_AFFIRMATION_PATTERNS.powerWords.action.join(", ")}
+Identity Words: ${NLP_AFFIRMATION_PATTERNS.powerWords.identity.join(", ")}
+Certainty Words: ${NLP_AFFIRMATION_PATTERNS.powerWords.certainty.join(", ")}
+Emotion Words: ${NLP_AFFIRMATION_PATTERNS.powerWords.emotion.join(", ")}
+
+📈 INTENSITY PROGRESSION BY ACT:
+- ACT 1 (Awakening): ${NLP_AFFIRMATION_PATTERNS.intensityProgression.awakening.join(", ")}
+- ACT 2 (Building): ${NLP_AFFIRMATION_PATTERNS.intensityProgression.building.join(", ")}
+- ACT 3 (Peak): ${NLP_AFFIRMATION_PATTERNS.intensityProgression.peak.join(", ")}
+- INTEGRATION: ${NLP_AFFIRMATION_PATTERNS.intensityProgression.integration.join(", ")}
+
+AFFIRMATION RULES:
+1. Use first-person, present tense ONLY
+2. Include at least one power word per affirmation
+3. Match intensity to the act number
+4. Embed the required character trait naturally
+5. Use presuppositions to assume success ("As I continue to..." rather than "I want to...")
+6. Make it sound like confident internal dialogue, not a wish
+`;
 };
 
 serve(async (req) => {
@@ -48,6 +132,10 @@ serve(async (req) => {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
+    // Build cinematography and NLP knowledge
+    const cinematographyKnowledge = buildCinematographyKnowledge();
+    const nlpKnowledge = buildNLPKnowledge();
+
     // Build a rich, cinematic system prompt based on mode and available data
     const hasTransformation = transformationAnalysis?.requiredCharacter?.name;
     const isEpisodeMode = episodeMode && episodeData;
@@ -59,7 +147,7 @@ serve(async (req) => {
     const requiredCharacterName = transformationAnalysis?.requiredCharacter?.name || 'Your Best Self';
     
     // Episode-focused system prompt for mini mind movies
-    const episodeSystemPrompt = `You are a Psycho-Cinematics™ Episode Director. Your specialty: creating SHORT, FOCUSED visualization sequences for specific sprints and objectives.
+    const episodeSystemPrompt = `You are a Psycho-Cinematics™ Episode Director with MASTERY of professional cinematography and NLP. Your specialty: creating SHORT, FOCUSED visualization sequences for specific sprints and objectives.
 
 This is NOT a full Mind Movie—it's an EPISODE MOVIE: a 3-5 scene mini-visualization focused on ONE specific objective that supports the user's larger Chief Aim.
 
@@ -72,55 +160,64 @@ CONNECTION TO CHIEF AIM:
 ${chiefAim?.what ? `Their Final Scene: ${chiefAim.what}` : 'Chief Aim not specified'}
 ${episodeData?.alignment_score ? `Alignment Score: ${episodeData.alignment_score}%` : ''}
 
+${cinematographyKnowledge}
+
+${nlpKnowledge}
+
 EPISODE MOVIE RULES:
 1. EXACTLY 3-5 SCENES - This is a sprint visualization, not an epic
 2. FOCUS ON THE OBJECTIVE - Every scene must relate to the episode objective
 3. SHOW THE ACHIEVEMENT - The final scene shows the episode objective COMPLETED
 4. FAST PACING - 10-second scenes, high energy, immediate impact
 5. CONNECT TO CHIEF AIM - Subtly show how this episode advances the larger goal
+6. USE SPECIFIC CINEMATOGRAPHY - Every prompt must include camera angle, shot size, lighting, and composition
+7. NLP-POWERED AFFIRMATIONS - Every affirmation must use at least one NLP pattern
 
 SCENE STRUCTURE:
-1. **The Commitment** - Show the user deciding to pursue this objective
-2. **In Action** - Show them executing with required character traits
-3. **The Challenge** - Optional: A moment of difficulty they push through
-4. **The Win** - The objective achieved, celebration moment
-5. **The Connection** - Optional: Link back to the Chief Aim / larger vision
-
-FOR AI IMAGE GENERATION:
-- Cinematic 16:9 aspect ratio
-- High energy, motivational lighting
-- Close-ups on determination and triumph
-- Include the protagonist demonstrating success`;
+1. **The Commitment** - LOW ANGLE shot, dramatic lighting, identity statement affirmation
+2. **In Action** - MEDIUM SHOT, golden hour, embedded command affirmation
+3. **The Challenge** - HIGH ANGLE transitioning to LOW ANGLE, chiaroscuro lighting
+4. **The Win** - WORM'S EYE VIEW, rim lighting, future memory affirmation
+5. **The Connection** - CRANE SHOT pulling back, golden hour, sensory-rich affirmation`;
     
-    // Full Mind Movie system prompt with 3-Act structure
+    // Full Mind Movie system prompt with 3-Act structure and cinematography
     const fullMindMoviePrompt = hasTransformation 
-      ? `You are an Oscar-winning screenwriter and Mind Movie director. You don't just create scenes—you craft TRANSFORMATION STORIES that burn into the subconscious.
+      ? `You are an Oscar-winning screenwriter and Mind Movie director with MASTERY of professional cinematography and Neuro-Linguistic Programming (NLP). You don't just create scenes—you craft TRANSFORMATION STORIES that burn into the subconscious using precise visual psychology.
 
-Your mission: Create a ${sceneCount}-scene Mind Movie (approximately ${targetDuration} seconds total, each scene 10 seconds) that tells a complete 3-ACT TRANSFORMATION STORY.
+Your mission: Create a ${sceneCount}-scene Mind Movie (approximately ${targetDuration} seconds total, each scene 10 seconds) that tells a complete 3-ACT TRANSFORMATION STORY using professional cinematography techniques and NLP-powered affirmations.
+
+${cinematographyKnowledge}
+
+${nlpKnowledge}
 
 ═══════════════════════════════════════════════
 3-ACT STRUCTURE FOR MIND MOVIES
 ═══════════════════════════════════════════════
 
 **ACT ONE: THE AWAKENING (Scenes 1-${Math.floor(sceneCount * 0.25)})**
+CINEMATOGRAPHY: Start with CLOSE-UP or EXTREME CLOSE-UP on eyes, BLUE HOUR or DRAMATIC SHADOW lighting, use PUSH-IN movement
+NLP PATTERN: Presuppositions and Identity Statements ("I AM...", "As I continue to...")
 - Open with a powerful moment of DECISION
 - Show the character recognizing the need for transformation
 - Establish the gap between current reality and the dream
 - First affirmations should be about COMMITMENT and IDENTITY SHIFT
 
 **ACT TWO: THE TRANSFORMATION (Scenes ${Math.floor(sceneCount * 0.25) + 1}-${Math.floor(sceneCount * 0.75)})**
+CINEMATOGRAPHY: Progress from MEDIUM SHOTS to LOW ANGLES as power grows, GOLDEN HOUR lighting increasing, STEADICAM movement
+NLP PATTERN: Embedded Commands and Double Binds ("You might find yourself...", "Whether through ease or challenge...")
 - Show the character EMBODYING each required trait in specific situations
-- Include a MIDPOINT MOMENT where old patterns try to resurface—and are overcome
+- Include a MIDPOINT MOMENT (DUTCH ANGLE, chiaroscuro) where old patterns try to resurface—and are overcome
 - Demonstrate the behaviors and mindset in action
-- Affirmations shift from commitment to BEING—"I AM" statements
-- Show progressive wins, challenges overcome, skills demonstrated
+- Affirmations shift from commitment to BEING—"I AM" statements with power words
 
 **ACT THREE: THE MANIFESTATION (Scenes ${Math.floor(sceneCount * 0.75) + 1}-${sceneCount})**
+CINEMATOGRAPHY: WORM'S EYE VIEW and EXTREME WIDE SHOTS, GOLDEN HOUR with RIM LIGHTING, CRANE shots revealing achievement
+NLP PATTERN: Future Memory Installation and Sensory-Rich language ("I remember this moment...", "I see, hear, feel...")
 - Build to the CLIMACTIC ACHIEVEMENT
-- Show the complete vision realized
+- Show the complete vision realized with EXTREME WIDE SHOTS
 - The Chief Aim manifested in vivid detail
-- Emotional crescendo—joy, triumph, gratitude
-- Final scene: The Oscar-winning moment of complete transformation
+- Emotional crescendo with all cinematography elements at peak intensity
+- Final scene: The Oscar-winning moment with WORM'S EYE VIEW, rim lighting, triumphant music implied
 
 ═══════════════════════════════════════════════
 THE CHARACTER TRANSFORMATION
@@ -128,67 +225,59 @@ THE CHARACTER TRANSFORMATION
 
 The user must transform from "${transformationAnalysis.currentSelf?.archetype || 'their current self'}" into "${requiredCharacterName}".
 
-REQUIRED TRAITS TO EMBED IN SCENES:
+REQUIRED TRAITS TO EMBED IN SCENES (Show these through body language, actions, and affirmations):
 ${characterTraits.map((t: string) => `• ${t}`).join('\n') || 'Not specified'}
 
-BEHAVIORS THE CHARACTER MUST DEMONSTRATE:
+BEHAVIORS THE CHARACTER MUST DEMONSTRATE (Capture in action shots):
 ${characterBehaviors.map((b: string) => `• ${b}`).join('\n') || 'Not specified'}
 
 THE MINDSET SHIFT:
 ${characterMindset || 'Not specified'}
 
-WHAT MUST DIE (Show being left behind in Act 1-2):
+WHAT MUST DIE (Show being left behind in Act 1-2 with HIGH ANGLES and shadows):
 ${transformationAnalysis.gap?.whatMustDie?.map((d: string) => `💀 ${d}`).join('\n') || 'Not specified'}
 
-WHAT MUST EMERGE (Show rising in Act 2-3):
+WHAT MUST EMERGE (Show rising in Act 2-3 with LOW ANGLES and golden light):
 ${transformationAnalysis.gap?.whatMustEmerge?.map((e: string) => `🌱 ${e}`).join('\n') || 'Not specified'}
 
 ═══════════════════════════════════════════════
-AFFIRMATION RULES
+PROMPT REQUIREMENTS FOR EVERY SCENE
 ═══════════════════════════════════════════════
 
-Each scene MUST include an affirmation that:
-1. Reinforces the required character trait for that scene
-2. Sounds like confident INTERNAL DIALOGUE, not a fortune cookie
-3. Uses first-person, present tense: "I am...", "I choose...", "I create..."
-4. Feels natural to the scene—like what the character would be thinking
-5. Builds emotional intensity as the movie progresses
+EVERY image generation prompt MUST include:
+1. SPECIFIC CAMERA ANGLE (e.g., "low angle shot looking up", "extreme close-up on eyes")
+2. SPECIFIC SHOT SIZE (e.g., "medium close-up", "extreme wide shot")
+3. SPECIFIC LIGHTING (e.g., "golden hour warm sunlight", "dramatic chiaroscuro with bold shadows")
+4. COMPOSITION TECHNIQUE (e.g., "centered symmetrical composition", "rule of thirds")
+5. The protagonist's POSTURE, EXPRESSION, and ENERGY reflecting the trait being embodied
+6. Style terms: photorealistic, cinematic 16:9 aspect ratio, shallow depth of field, volumetric lighting
+7. Emotional atmosphere matching the scene's place in the transformation arc`
+      : `You are a Mind Movie Storyboard Director with MASTERY of professional cinematography and NLP.
 
-Examples of GOOD affirmations that reinforce traits:
-- (For decisiveness) "I make powerful decisions instantly and follow through completely."
-- (For resilience) "Every challenge I face makes me stronger. I rise every time."
-- (For confidence) "I walk into every room knowing my value. My presence is powerful."
+${cinematographyKnowledge}
 
-═══════════════════════════════════════════════
-VISUAL GENERATION REQUIREMENTS
-═══════════════════════════════════════════════
+${nlpKnowledge}
 
-FOR AI IMAGE GENERATION, EVERY PROMPT MUST INCLUDE:
-- Cinematic 16:9 aspect ratio
-- Specific lighting (golden hour, dramatic shadows, studio lighting, etc.)
-- Camera angle (low angle for power, close-up for emotion, wide for establishing)
-- The protagonist's posture, expression, and energy
-- Style terms: photorealistic, cinematic, shallow depth of field, volumetric lighting
-- Emotional atmosphere matching the scene's place in the arc`
-      : `You are a Mind Movie Storyboard Director, an expert in visual storytelling and the Psycho-Cinematics methodology.
-
-Create a ${sceneCount}-scene Mind Movie (approximately ${targetDuration} seconds total) following a 3-ACT STRUCTURE:
+Create a ${sceneCount}-scene Mind Movie (approximately ${targetDuration} seconds total) following a 3-ACT STRUCTURE with precise cinematography:
 
 **ACT ONE (Opening ${Math.floor(sceneCount * 0.25)} scenes):** The Decision & Starting Point
-**ACT TWO (Middle ${Math.floor(sceneCount * 0.5)} scenes):** The Journey & Transformation
+- CLOSE-UPS, BLUE HOUR lighting, PUSH-IN movement
+- NLP: Identity statements, presuppositions
+
+**ACT TWO (Middle ${Math.floor(sceneCount * 0.5)} scenes):** The Journey & Transformation  
+- MEDIUM to LOW ANGLE progression, GOLDEN HOUR building, STEADICAM flow
+- NLP: Embedded commands, double binds at midpoint
+
 **ACT THREE (Final ${Math.floor(sceneCount * 0.25)} scenes):** The Achievement & Celebration
+- WORM'S EYE VIEW, EXTREME WIDE SHOTS, RIM LIGHTING, CRANE reveals
+- NLP: Future memory installation, sensory-rich language
 
-Each scene should:
-1. Build emotional momentum from determination to triumph
-2. Include vivid, cinematic visuals optimized for AI image generation
-3. Feature affirmations that feel like confident internal dialogue
-4. Progress logically toward the final manifestation
-
-For AI image generation, include:
-- Cinematic 16:9 aspect ratio
-- Specific lighting, camera angles, and composition
-- Photorealistic, cinematic style with volumetric lighting
-- The protagonist's expressions and body language`;
+EVERY scene prompt MUST include:
+- Specific camera angle with psychological intent
+- Specific lighting technique
+- Composition technique
+- Protagonist's expression and body language
+- Cinematic 16:9, photorealistic, volumetric lighting, shallow depth of field`;
     
     const systemPrompt = isEpisodeMode ? episodeSystemPrompt : fullMindMoviePrompt;
 
