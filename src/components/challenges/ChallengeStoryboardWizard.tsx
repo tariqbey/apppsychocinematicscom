@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useMediaGeneration, VideoModel } from "@/hooks/useMediaGeneration";
+import { useGlobalReferencePhoto } from "@/hooks/useGlobalReferencePhoto";
 import { toast } from "sonner";
 import { 
   Film, 
@@ -30,7 +31,8 @@ import {
   Camera,
   RefreshCw,
   Download,
-  Eye
+  Eye,
+  UserCircle
 } from "lucide-react";
 
 interface ChallengeScene {
@@ -76,6 +78,13 @@ export function ChallengeStoryboardWizard({
   const [animationPrompt, setAnimationPrompt] = useState("");
   const [animationModel, setAnimationModel] = useState<VideoModel>("kling-ai/v1.0/image-to-video");
 
+  // Global reference photo hook
+  const { 
+    referencePhotoUrl: globalReferencePhoto, 
+    fetchReferencePhoto,
+    isLoading: loadingGlobalPhoto 
+  } = useGlobalReferencePhoto();
+
   const {
     isGeneratingImage,
     isGeneratingVideo,
@@ -83,6 +92,17 @@ export function ChallengeStoryboardWizard({
     generateVideo,
     estimateCreditCost
   } = useMediaGeneration();
+
+  // Auto-load global reference photo when dialog opens
+  useEffect(() => {
+    if (open && !referencePhoto) {
+      fetchReferencePhoto().then((url) => {
+        if (url) {
+          setReferencePhoto(url);
+        }
+      });
+    }
+  }, [open, fetchReferencePhoto, referencePhoto]);
 
   // Parse visualization script into scenes
   const parseVisualizationScript = useCallback(() => {
@@ -356,24 +376,38 @@ export function ChallengeStoryboardWizard({
                   Your Best Self Reference Photo
                 </Label>
                 <p className="text-xs text-muted-foreground">
-                  Upload a photo of yourself to appear in all generated scenes
+                  {globalReferencePhoto && !referencePhoto 
+                    ? "Your saved reference photo will be loaded automatically"
+                    : "Upload a photo of yourself to appear in all generated scenes"}
                 </p>
                 
-                {referencePhoto ? (
-                  <div className="relative w-32 h-32 rounded-lg overflow-hidden border-2 border-gold/50">
-                    <img 
-                      src={referencePhoto} 
-                      alt="Reference" 
-                      className="w-full h-full object-cover"
-                    />
-                    <Button
-                      variant="destructive"
-                      size="icon"
-                      className="absolute top-1 right-1 h-6 w-6"
-                      onClick={() => setReferencePhoto(null)}
-                    >
-                      <X className="w-3 h-3" />
-                    </Button>
+                {loadingGlobalPhoto ? (
+                  <div className="flex items-center justify-center w-full h-32 border-2 border-dashed rounded-lg">
+                    <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+                  </div>
+                ) : referencePhoto ? (
+                  <div className="space-y-2">
+                    <div className="relative w-32 h-32 rounded-lg overflow-hidden border-2 border-gold/50">
+                      <img 
+                        src={referencePhoto} 
+                        alt="Reference" 
+                        className="w-full h-full object-cover"
+                      />
+                      <Button
+                        variant="destructive"
+                        size="icon"
+                        className="absolute top-1 right-1 h-6 w-6"
+                        onClick={() => setReferencePhoto(null)}
+                      >
+                        <X className="w-3 h-3" />
+                      </Button>
+                    </div>
+                    {globalReferencePhoto === referencePhoto && (
+                      <Badge variant="outline" className="text-xs gap-1">
+                        <UserCircle className="w-3 h-3" />
+                        Using saved reference
+                      </Badge>
+                    )}
                   </div>
                 ) : (
                   <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer hover:border-gold/50 transition-colors">
