@@ -14,6 +14,12 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 
+// Score illustrations
+import score0Image from "@/assets/icons/score-0-off-script.png";
+import score1Image from "@/assets/icons/score-1-rehearsing.png";
+import score2Image from "@/assets/icons/score-2-in-character.png";
+import score3Image from "@/assets/icons/score-3-oscar-worthy.png";
+
 interface TransformationAnalysis {
   currentSelf: {
     archetype: string;
@@ -46,10 +52,38 @@ interface CharacterScorecardProps {
 }
 
 const SCORE_RUBRIC = [
-  { score: 0, label: "Off-Script", description: "Did not embody this trait today" },
-  { score: 1, label: "Rehearsing", description: "Attempted but struggled to maintain" },
-  { score: 2, label: "In Character", description: "Mostly embodied this trait" },
-  { score: 3, label: "Oscar-Worthy", description: "Fully lived this trait - performance was on point" },
+  { 
+    score: 0, 
+    label: "Off-Script", 
+    description: "Did not embody this trait today",
+    explanation: "You completely forgot your role. The old character took over and ran the show.",
+    image: score0Image,
+    color: "red"
+  },
+  { 
+    score: 1, 
+    label: "Rehearsing", 
+    description: "Attempted but struggled to maintain",
+    explanation: "You tried to stay in character but kept breaking. Still practicing the lines.",
+    image: score1Image,
+    color: "amber"
+  },
+  { 
+    score: 2, 
+    label: "In Character", 
+    description: "Mostly embodied this trait",
+    explanation: "You stayed in role most of the day. A few slips, but the performance was solid.",
+    image: score2Image,
+    color: "cyan"
+  },
+  { 
+    score: 3, 
+    label: "Oscar-Worthy", 
+    description: "Fully lived this trait - performance was on point",
+    explanation: "Standing ovation! You fully became the character your Chief Aim demands.",
+    image: score3Image,
+    color: "gold"
+  },
 ];
 
 export function CharacterScorecard({ onClose, onSubmitSuccess, inline = false }: CharacterScorecardProps) {
@@ -405,13 +439,30 @@ export function CharacterScorecard({ onClose, onSubmitSuccess, inline = false }:
                               <Info className="w-3 h-3 sm:w-4 sm:h-4 text-muted-foreground" />
                             </Button>
                           </TooltipTrigger>
-                          <TooltipContent side="left" className="max-w-xs">
-                            <div className="space-y-2 text-xs">
+                          <TooltipContent side="left" className="max-w-sm p-0 overflow-hidden">
+                            <div className="space-y-0">
                               {SCORE_RUBRIC.map((r) => (
-                                <div key={r.score}>
-                                  <span className="font-semibold text-gold">{r.score}</span>
-                                  <span className="text-foreground"> — {r.label}:</span>
-                                  <span className="text-muted-foreground"> {r.description}</span>
+                                <div key={r.score} className={cn(
+                                  "flex items-center gap-3 p-3 border-b border-border last:border-0",
+                                  r.color === "red" && "bg-red-500/10",
+                                  r.color === "amber" && "bg-amber-500/10",
+                                  r.color === "cyan" && "bg-cyan-500/10",
+                                  r.color === "gold" && "bg-gold/10"
+                                )}>
+                                  <img src={r.image} alt={r.label} className="w-12 h-12 rounded-lg object-cover shrink-0" />
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2">
+                                      <span className={cn(
+                                        "font-display text-lg",
+                                        r.color === "red" && "text-red-400",
+                                        r.color === "amber" && "text-amber-400",
+                                        r.color === "cyan" && "text-cyan-400",
+                                        r.color === "gold" && "text-gold"
+                                      )}>{r.score}</span>
+                                      <span className="font-semibold text-foreground text-sm">{r.label}</span>
+                                    </div>
+                                    <p className="text-xs text-muted-foreground leading-tight">{r.explanation}</p>
+                                  </div>
                                 </div>
                               ))}
                             </div>

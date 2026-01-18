@@ -24,12 +24,21 @@ import { useGamification } from "@/hooks/useGamification";
 import { useMindMovies, MindMovie } from "@/hooks/useMindMovies";
 import { useEpisodes } from "@/hooks/useEpisodes";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Wand2, Sparkles, Bot, Clapperboard, FolderOpen, BookOpen, Target, User2, Zap, Music, Radio, FileText, MessageSquareHeart } from "lucide-react";
+import { Loader2, Sparkles, Bot, Clapperboard, Zap, MessageSquareHeart, FileText, Wand2, FolderOpen, BookOpen, Target, User2, Music } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { InfoTooltip } from "@/components/ui/info-tooltip";
 import { toast } from "sonner";
 import { DirectorRadioCard } from "@/components/radio/DirectorRadioCard";
 import { TestimonialSubmissionDialog } from "@/components/testimonials/TestimonialSubmissionDialog";
+
+// Custom module icons
+import iconChiefAim from "@/assets/icons/icon-chief-aim.png";
+import iconCharacter from "@/assets/icons/icon-character.png";
+import iconMindMovie from "@/assets/icons/icon-mind-movie.png";
+import iconEditBay from "@/assets/icons/icon-edit-bay.png";
+import iconJournal from "@/assets/icons/icon-journal.png";
+import iconActions from "@/assets/icons/icon-actions.png";
+import iconSoundtrack from "@/assets/icons/icon-soundtrack.png";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -269,12 +278,12 @@ const Index = () => {
             }`}
           >
             <div className="flex items-center gap-4">
-              <div className={`w-14 h-14 rounded-xl flex items-center justify-center transition-all duration-300 ${
+              <div className={`w-14 h-14 rounded-xl flex items-center justify-center transition-all duration-300 overflow-hidden ${
                 chiefAimComplete 
                   ? "bg-gradient-to-br from-emerald-500/20 to-green-600/20 group-hover:from-emerald-500/30 group-hover:to-green-600/30" 
                   : "bg-gradient-to-br from-gold/30 to-amber-500/30 animate-pulse"
               }`}>
-                <FileText className={`w-7 h-7 ${chiefAimComplete ? "text-emerald-400" : "text-gold"}`} />
+                <img src={iconChiefAim} alt="" className="w-10 h-10 object-contain" />
               </div>
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-1">
@@ -358,45 +367,41 @@ const Index = () => {
             </button>
           )}
 
-          {/* Edit Bay Card */}
+          {/* ========== STEP 2: CHARACTER BUILDER ========== */}
           <button
-            onClick={() => {
-              setEditBayInitialPrompt(undefined);
-              setEditBaySceneContext(undefined);
-              setShowEditBay(true);
-            }}
-            className="w-full glass-card p-6 cinematic-border animate-slide-up group hover:border-gold/50 transition-all duration-300 text-left"
+            onClick={() => navigate("/character")}
+            className="w-full glass-card p-6 cinematic-border animate-slide-up group hover:border-cyan-500/50 transition-all duration-300 text-left"
           >
             <div className="flex items-center gap-4">
-              <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-gold/20 to-amber-soft/20 flex items-center justify-center group-hover:from-gold/30 group-hover:to-amber-soft/30 transition-all duration-300">
-                <Wand2 className="w-7 h-7 text-gold" />
+              <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-cyan-500/20 to-teal-500/20 flex items-center justify-center group-hover:from-cyan-500/30 group-hover:to-teal-500/30 transition-all duration-300 overflow-hidden">
+                <img src={iconCharacter} alt="" className="w-10 h-10 object-contain" />
               </div>
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-1">
-                  <h3 className="text-xl font-display tracking-wide group-hover:text-gold transition-colors">The Edit Bay</h3>
-                  <Sparkles className="w-4 h-4 text-gold/60" />
-                  <InfoTooltip content="Generate AI images of your future self and goals, then animate them into videos. Use reference photos of yourself to see YOU living your Chief Aim. Great for creating Mind Movie visuals." />
+                  <h3 className="text-xl font-display tracking-wide group-hover:text-cyan-400 transition-colors">Character Builder</h3>
+                  <Sparkles className="w-4 h-4 text-cyan-400/60" />
+                  <InfoTooltip content="Discover your Director archetype, define required character traits, and track daily alignment. Build the identity needed to achieve your Chief Aim." />
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  AI Media Generation Studio — Create images, animate them into videos, and build your Mind Movie.
+                  Discover your archetype • Daily trait scorecard • Transformation tracking
                 </p>
               </div>
-              <div className="hidden sm:flex items-center gap-2 text-sm text-muted-foreground group-hover:text-gold transition-colors">
-                <span>Enter Studio</span>
+              <div className="hidden sm:flex items-center gap-2 text-sm text-muted-foreground group-hover:text-cyan-400 transition-colors">
+                <span>Build Character</span>
                 <span className="text-lg">→</span>
               </div>
             </div>
           </button>
 
-          {/* Mind Movie Vault Card */}
+          {/* ========== STEP 3: MIND MOVIE VAULT ========== */}
           <div className="flex flex-col sm:flex-row gap-4">
             <button
               onClick={() => setShowMovieVault(true)}
               className="flex-1 glass-card p-6 cinematic-border animate-slide-up group hover:border-amber-500/50 transition-all duration-300 text-left"
             >
               <div className="flex items-center gap-4">
-                <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-amber-500/20 to-orange-600/20 flex items-center justify-center group-hover:from-amber-500/30 group-hover:to-orange-600/30 transition-all duration-300">
-                  <FolderOpen className="w-7 h-7 text-amber-500" />
+                <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-amber-500/20 to-orange-600/20 flex items-center justify-center group-hover:from-amber-500/30 group-hover:to-orange-600/30 transition-all duration-300 overflow-hidden">
+                  <img src={iconMindMovie} alt="" className="w-10 h-10 object-contain" />
                 </div>
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-1">
@@ -428,40 +433,69 @@ const Index = () => {
             )}
           </div>
 
-          {/* Character Builder Card */}
+          {/* ========== STEP 4: EDIT BAY (AI STUDIO) ========== */}
           <button
-            onClick={() => navigate("/character")}
-            className="w-full glass-card p-6 cinematic-border animate-slide-up group hover:border-cyan-500/50 transition-all duration-300 text-left"
+            onClick={() => {
+              setEditBayInitialPrompt(undefined);
+              setEditBaySceneContext(undefined);
+              setShowEditBay(true);
+            }}
+            className="w-full glass-card p-6 cinematic-border animate-slide-up group hover:border-gold/50 transition-all duration-300 text-left"
           >
             <div className="flex items-center gap-4">
-              <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-cyan-500/20 to-teal-500/20 flex items-center justify-center group-hover:from-cyan-500/30 group-hover:to-teal-500/30 transition-all duration-300">
-                <User2 className="w-7 h-7 text-cyan-400" />
+              <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-gold/20 to-amber-soft/20 flex items-center justify-center group-hover:from-gold/30 group-hover:to-amber-soft/30 transition-all duration-300 overflow-hidden">
+                <img src={iconEditBay} alt="" className="w-10 h-10 object-contain" />
               </div>
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-1">
-                  <h3 className="text-xl font-display tracking-wide group-hover:text-cyan-400 transition-colors">Character Builder</h3>
-                  <Sparkles className="w-4 h-4 text-cyan-400/60" />
-                  <InfoTooltip content="Discover your Director archetype, define required character traits, and track daily alignment. Build the identity needed to achieve your Chief Aim." />
+                  <h3 className="text-xl font-display tracking-wide group-hover:text-gold transition-colors">The Edit Bay</h3>
+                  <Sparkles className="w-4 h-4 text-gold/60" />
+                  <InfoTooltip content="Generate AI images of your future self and goals, then animate them into videos. Use reference photos of yourself to see YOU living your Chief Aim. Great for creating Mind Movie visuals." />
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  Discover your archetype • Daily trait scorecard • Transformation tracking
+                  AI Media Generation Studio — Create images, animate them into videos, and build your Mind Movie.
                 </p>
               </div>
-              <div className="hidden sm:flex items-center gap-2 text-sm text-muted-foreground group-hover:text-cyan-400 transition-colors">
-                <span>Build Character</span>
+              <div className="hidden sm:flex items-center gap-2 text-sm text-muted-foreground group-hover:text-gold transition-colors">
+                <span>Enter Studio</span>
                 <span className="text-lg">→</span>
               </div>
             </div>
           </button>
 
-          {/* Director's Journal Card */}
+          {/* ========== STEP 5: ACTION EXECUTION ========== */}
+          <button
+            onClick={() => navigate("/actions")}
+            className="w-full glass-card p-6 cinematic-border animate-slide-up group hover:border-primary/50 transition-all duration-300 text-left"
+          >
+            <div className="flex items-center gap-4">
+              <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-primary/20 to-primary/40 flex items-center justify-center group-hover:from-primary/30 group-hover:to-primary/50 transition-all duration-300 overflow-hidden">
+                <img src={iconActions} alt="" className="w-10 h-10 object-contain" />
+              </div>
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-1">
+                  <h3 className="text-xl font-display tracking-wide group-hover:text-primary transition-colors">Action Execution</h3>
+                  <InfoTooltip content="Focus on just 3 priority tasks per day that move you toward your Chief Aim. Track your excuse patterns and build accountability." />
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Your 3 daily priorities • Excuse tracking • Accountability analytics
+                </p>
+              </div>
+              <div className="hidden sm:flex items-center gap-2 text-sm text-muted-foreground group-hover:text-primary transition-colors">
+                <span>Open Actions</span>
+                <span className="text-lg">→</span>
+              </div>
+            </div>
+          </button>
+
+          {/* ========== STEP 6: DIRECTOR'S JOURNAL ========== */}
           <button
             onClick={() => setShowJournal(true)}
             className="w-full glass-card p-6 cinematic-border animate-slide-up group hover:border-purple-500/50 transition-all duration-300 text-left"
           >
             <div className="flex items-center gap-4">
-              <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-purple-500/20 to-pink-500/20 flex items-center justify-center group-hover:from-purple-500/30 group-hover:to-pink-500/30 transition-all duration-300">
-                <BookOpen className="w-7 h-7 text-purple-400" />
+              <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-purple-500/20 to-pink-500/20 flex items-center justify-center group-hover:from-purple-500/30 group-hover:to-pink-500/30 transition-all duration-300 overflow-hidden">
+                <img src={iconJournal} alt="" className="w-10 h-10 object-contain" />
               </div>
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-1">
@@ -480,39 +514,14 @@ const Index = () => {
             </div>
           </button>
 
-          {/* Action Execution Card - Links to dedicated page */}
-          <button
-            onClick={() => navigate("/actions")}
-            className="w-full glass-card p-6 cinematic-border animate-slide-up group hover:border-primary/50 transition-all duration-300 text-left"
-          >
-            <div className="flex items-center gap-4">
-              <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-primary/20 to-primary/40 flex items-center justify-center group-hover:from-primary/30 group-hover:to-primary/50 transition-all duration-300">
-                <Target className="w-7 h-7 text-primary" />
-              </div>
-              <div className="flex-1">
-                <div className="flex items-center gap-2 mb-1">
-                  <h3 className="text-xl font-display tracking-wide group-hover:text-primary transition-colors">Action Execution</h3>
-                  <InfoTooltip content="Focus on just 3 priority tasks per day that move you toward your Chief Aim. Track your excuse patterns and build accountability." />
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  Your 3 daily priorities • Excuse tracking • Accountability analytics
-                </p>
-              </div>
-              <div className="hidden sm:flex items-center gap-2 text-sm text-muted-foreground group-hover:text-primary transition-colors">
-                <span>Open Actions</span>
-                <span className="text-lg">→</span>
-              </div>
-            </div>
-          </button>
-
-          {/* Soundtrack Studio Card */}
+          {/* ========== STEP 7: SOUNDTRACK STUDIO ========== */}
           <button
             onClick={() => navigate("/soundtrack")}
             className="w-full glass-card p-6 cinematic-border animate-slide-up group hover:border-pink-500/50 transition-all duration-300 text-left"
           >
             <div className="flex items-center gap-4">
-              <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-pink-500/20 to-rose-500/20 flex items-center justify-center group-hover:from-pink-500/30 group-hover:to-rose-500/30 transition-all duration-300">
-                <Music className="w-7 h-7 text-pink-400" />
+              <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-pink-500/20 to-rose-500/20 flex items-center justify-center group-hover:from-pink-500/30 group-hover:to-rose-500/30 transition-all duration-300 overflow-hidden">
+                <img src={iconSoundtrack} alt="" className="w-10 h-10 object-contain" />
               </div>
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-1">
@@ -531,10 +540,10 @@ const Index = () => {
             </div>
           </button>
 
-          {/* Director Radio Card */}
+          {/* ========== BONUS: DIRECTOR RADIO ========== */}
           <DirectorRadioCard />
 
-          {/* Share Your Story Card */}
+          {/* ========== BONUS: SHARE YOUR STORY ========== */}
           <button
             onClick={() => setShowTestimonialDialog(true)}
             className="w-full glass-card p-6 cinematic-border animate-slide-up group hover:border-emerald-500/50 transition-all duration-300 text-left"
