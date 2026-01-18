@@ -22,8 +22,11 @@ import {
   CheckCircle2,
   BookOpen,
   Quote,
-  Save
+  Save,
+  Camera,
+  ImageIcon
 } from "lucide-react";
+import { ChallengeStoryboardWizard } from "./ChallengeStoryboardWizard";
 
 interface ChallengeVisualizationProps {
   open: boolean;
@@ -64,6 +67,7 @@ export function ChallengeVisualization({
   });
   const [journalNotes, setJournalNotes] = useState("");
   const [savingJournal, setSavingJournal] = useState(false);
+  const [showStoryboardWizard, setShowStoryboardWizard] = useState(false);
 
   const handleGenerateVisualization = async () => {
     setGenerating(true);
@@ -260,10 +264,20 @@ ${generatedContent.affirmation || "Not yet generated"}`,
 
               {generatedContent.visualizationScript && (
                 <div className="space-y-3">
-                  <h4 className="font-display text-lg flex items-center gap-2">
-                    <Play className="w-4 h-4 text-gold" />
-                    Your Mind Movie Scene
-                  </h4>
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-display text-lg flex items-center gap-2">
+                      <Play className="w-4 h-4 text-gold" />
+                      Your Mind Movie Scene
+                    </h4>
+                    <Button
+                      variant="gold"
+                      size="sm"
+                      onClick={() => setShowStoryboardWizard(true)}
+                    >
+                      <Camera className="w-4 h-4 mr-1" />
+                      Create Images
+                    </Button>
+                  </div>
                   
                   <div className="space-y-3">
                     {scriptSteps.map((step, index) => {
@@ -293,6 +307,29 @@ ${generatedContent.affirmation || "Not yet generated"}`,
                       );
                     })}
                   </div>
+
+                  {/* Quick action to generate storyboard */}
+                  <Card className="p-4 bg-gradient-to-br from-gold/10 to-amber-500/5 border-gold/30">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-lg bg-gold/20 flex items-center justify-center flex-shrink-0">
+                        <ImageIcon className="w-5 h-5 text-gold" />
+                      </div>
+                      <div className="flex-1">
+                        <h5 className="font-medium text-sm">Ready to visualize?</h5>
+                        <p className="text-xs text-muted-foreground">
+                          Generate cinematic images of each scene with you as the star
+                        </p>
+                      </div>
+                      <Button
+                        variant="gold"
+                        size="sm"
+                        onClick={() => setShowStoryboardWizard(true)}
+                      >
+                        <Wand2 className="w-4 h-4 mr-1" />
+                        Create
+                      </Button>
+                    </div>
+                  </Card>
                 </div>
               )}
             </TabsContent>
@@ -407,6 +444,14 @@ ${generatedContent.affirmation || "Not yet generated"}`,
           </div>
         </Tabs>
       </DialogContent>
+
+      {/* Storyboard Wizard */}
+      <ChallengeStoryboardWizard
+        open={showStoryboardWizard}
+        onOpenChange={setShowStoryboardWizard}
+        challenge={challenge}
+        visualizationScript={generatedContent.visualizationScript}
+      />
     </Dialog>
   );
 }
