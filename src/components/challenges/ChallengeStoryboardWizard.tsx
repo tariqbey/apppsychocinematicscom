@@ -4,9 +4,11 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useMediaGeneration, VideoModel } from "@/hooks/useMediaGeneration";
@@ -29,7 +31,13 @@ import {
   RefreshCw,
   Download,
   UserCircle,
-  Save
+  Save,
+  ChevronDown,
+  ChevronUp,
+  Ruler,
+  Scale,
+  Dumbbell,
+  Check
 } from "lucide-react";
 
 interface ChallengeScene {
@@ -86,6 +94,23 @@ export function ChallengeStoryboardWizard({
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [lastGeneratedSceneIndex, setLastGeneratedSceneIndex] = useState<number | null>(null);
 
+  // Character description state
+  const [characterDescOpen, setCharacterDescOpen] = useState(false);
+  const [characterDesc, setCharacterDesc] = useState({
+    height: "",
+    weight: "",
+    build: "",
+    features: "",
+  });
+  const [heroImages, setHeroImages] = useState<{
+    front: string | null;
+    side: string | null;
+    back: string | null;
+  }>({ front: null, side: null, back: null });
+  const [savingCharacterDesc, setSavingCharacterDesc] = useState(false);
+  const [generatingHeroImages, setGeneratingHeroImages] = useState(false);
+  const [loadingCharacterDesc, setLoadingCharacterDesc] = useState(false);
+
   // Global reference photo hook
   const { 
     referencePhotoUrl: globalReferencePhoto, 
@@ -99,6 +124,163 @@ export function ChallengeStoryboardWizard({
     generateImage,
     generateVideo,
   } = useMediaGeneration();
+
+  // Load character description and hero images
+  useEffect(() => {
+    if (user && open) {
+      fetchCharacterDescription();
+    }
+  }, [user, open]);
+
+  const fetchCharacterDescription = async () => {
+    if (!user) return;
+    
+    setLoadingCharacterDesc(true);
+    try {
+      const { data, error } = await supabase
+        .from("user_profiles")
+        .select("character_height, character_weight, character_build, character_features, hero_image_url, hero_image_side_url, hero_image_back_url")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (error) throw error;
+
+      if (data) {
+        setCharacterDesc({
+          height: data.character_height || "",
+          weight: data.character_weight || "",
+          build: data.character_build || "",
+          features: data.character_features || "",
+        });
+        setHeroImages({
+          front: data.hero_image_url || null,
+          side: data.hero_image_side_url || null,
+          back: data.hero_image_back_url || null,
+        });
+      }
+    } catch (error) {
+      console.error("Error fetching character description:", error);
+    } finally {
+      setLoadingCharacterDesc(false);
+    }
+  };
+
+  const handleSaveCharacterDesc = async () => {
+    if (!user) return;
+
+    setSavingCharacterDesc(true);
+    try {
+      const { error } = await supabase
+        .from("user_profiles")
+        .update({
+          character_height: characterDesc.height || null,
+          character_weight: characterDesc.weight || null,
+          character_build: characterDesc.build || null,
+          character_features: characterDesc.features || null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("user_id", user.id);
+
+      if (error) throw error;
+
+      toast.success("Character description saved");
+    } catch (error) {
+      console.error("Error saving character description:", error);
+      toast.error("Failed to save character description");
+    } finally {
+      setSavingCharacterDesc(false);
+    }
+  };
+
+  const buildCharacterPrompt = () => {
+    const parts: string[] = [];
+    
+    if (characterDesc.height) {
+      parts.push(`${characterDesc.height} tall`);
+    }
+    if (characterDesc.build) {
+      parts.push(`${characterDesc.build} build`);
+    }
+    if (characterDesc.weight) {
+      parts.push(`${characterDesc.weight}`);
+    }
+    if (characterDesc.features) {
+      parts.push(characterDesc.features);
+    }
+
+    return parts.length > 0 ? parts.join(", ") : "confident powerful person";
+  };
+
+  const handleGenerateHeroImages = async () => {
+    if (!user || !referencePhoto) {
+      toast.error("Please upload a reference photo first");
+      return;
+    }
+
+    setGeneratingHeroImages(true);
+    try {
+      const charPrompt = buildCharacterPrompt();
+      
+      // Generate front, side, and back views
+      const views = [
+        { view: "front", pose: "heroic front-facing pose, arms crossed confidently, looking directly at camera" },
+        { view: "side", pose: "profile view from the side, standing tall with confident posture" },
+        { view: "back", pose: "back view showing full body from behind, confident stance" },
+      ];
+
+      const generatedUrls: { front: string; side: string; back: string } = {
+        front: "",
+        side: "",
+        back: "",
+      };
+
+      for (const { view, pose } of views) {
+        toast.info(`Generating ${view} view...`);
+        
+        const prompt = `Full body character reference sheet, ${charPrompt}, ${pose}, plain neutral gray background, professional studio lighting, ultra high resolution, clean character turnaround sheet style, no props or distractions`;
+
+        const { data, error } = await supabase.functions.invoke("lovable-generate-image", {
+          body: {
+            prompt,
+            images: [referencePhoto],
+            aspect_ratio: "3:4",
+          },
+        });
+
+        if (error) throw error;
+
+        if (data?.imageUrl) {
+          generatedUrls[view as keyof typeof generatedUrls] = data.imageUrl;
+        }
+      }
+
+      // Save hero images to profile
+      const { error: updateError } = await supabase
+        .from("user_profiles")
+        .update({
+          hero_image_url: generatedUrls.front || null,
+          hero_image_side_url: generatedUrls.side || null,
+          hero_image_back_url: generatedUrls.back || null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("user_id", user.id);
+
+      if (updateError) throw updateError;
+
+      setHeroImages({
+        front: generatedUrls.front || null,
+        side: generatedUrls.side || null,
+        back: generatedUrls.back || null,
+      });
+
+      toast.success("Hero images generated and saved!");
+    } catch (error) {
+      console.error("Error generating hero images:", error);
+      toast.error("Failed to generate hero images");
+    } finally {
+      setGeneratingHeroImages(false);
+    }
+  };
 
   // Load saved storyboard or initialize from global reference photo
   useEffect(() => {
@@ -265,6 +447,16 @@ export function ChallengeStoryboardWizard({
     const scene = scenes[sceneIndex];
     if (!scene) return;
 
+    // Build character description for the prompt
+    const charDescParts: string[] = [];
+    if (characterDesc.height) charDescParts.push(`${characterDesc.height} tall`);
+    if (characterDesc.build) charDescParts.push(`${characterDesc.build} build`);
+    if (characterDesc.weight) charDescParts.push(characterDesc.weight);
+    if (characterDesc.features) charDescParts.push(characterDesc.features);
+    const charDescription = charDescParts.length > 0 
+      ? charDescParts.join(", ") 
+      : "";
+
     // Build comprehensive cinematic prompt with detailed camera specs
     let prompt = `CINEMATIC SCENE: ${scene.description}
 
@@ -284,9 +476,18 @@ PRODUCTION QUALITY:
 - Dramatic contrast and color grading
 - Character embodies: ${challenge.target_trait}`;
 
-    const imagesToUse = referencePhoto ? [referencePhoto] : [];
+    // Add character description if available
+    if (charDescription) {
+      prompt += `\n\nCHARACTER DETAILS:\n${charDescription}`;
+    }
+
+    // Use hero images as additional reference if available
+    const imagesToUse: string[] = [];
+    if (referencePhoto) imagesToUse.push(referencePhoto);
+    if (heroImages.front) imagesToUse.push(heroImages.front);
+
     const enhancedPrompt = referencePhoto 
-      ? `Generate a cinematic image featuring the person from the reference photo as the main character. ${prompt}`
+      ? `Generate a cinematic image featuring the person from the reference photo as the main character. ${charDescription ? `The character is ${charDescription}. ` : ''}${prompt}`
       : prompt;
 
     // Use Nano Banana Pro for higher quality images
@@ -543,6 +744,196 @@ PRODUCTION QUALITY:
                   </label>
                 )}
               </div>
+
+              {/* Character Description Section */}
+              <Collapsible open={characterDescOpen} onOpenChange={setCharacterDescOpen}>
+                <CollapsibleTrigger asChild>
+                  <Card className="p-4 cursor-pointer hover:border-gold/50 transition-colors">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <UserCircle className="w-5 h-5 text-gold" />
+                        <div>
+                          <h4 className="font-medium text-sm">Character Description</h4>
+                          <p className="text-xs text-muted-foreground">
+                            {characterDesc.height || characterDesc.build 
+                              ? `${characterDesc.height} • ${characterDesc.build} build`
+                              : "Add physical details for accurate AI generation"}
+                          </p>
+                        </div>
+                      </div>
+                      {characterDescOpen ? (
+                        <ChevronUp className="w-4 h-4 text-muted-foreground" />
+                      ) : (
+                        <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                      )}
+                    </div>
+                  </Card>
+                </CollapsibleTrigger>
+                
+                <CollapsibleContent className="pt-3 space-y-4">
+                  {loadingCharacterDesc ? (
+                    <div className="flex justify-center py-6">
+                      <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                    </div>
+                  ) : (
+                    <>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1.5">
+                          <Label className="text-xs flex items-center gap-1.5">
+                            <Ruler className="w-3 h-3" />
+                            Height
+                          </Label>
+                          <Input
+                            value={characterDesc.height}
+                            onChange={(e) => setCharacterDesc({ ...characterDesc, height: e.target.value })}
+                            placeholder="e.g., 6'2, 7 feet tall"
+                            className="h-9"
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label className="text-xs flex items-center gap-1.5">
+                            <Scale className="w-3 h-3" />
+                            Weight/Size
+                          </Label>
+                          <Input
+                            value={characterDesc.weight}
+                            onChange={(e) => setCharacterDesc({ ...characterDesc, weight: e.target.value })}
+                            placeholder="e.g., 200 lbs, athletic"
+                            className="h-9"
+                          />
+                        </div>
+                        <div className="space-y-1.5 col-span-2">
+                          <Label className="text-xs flex items-center gap-1.5">
+                            <Dumbbell className="w-3 h-3" />
+                            Physical Build
+                          </Label>
+                          <Input
+                            value={characterDesc.build}
+                            onChange={(e) => setCharacterDesc({ ...characterDesc, build: e.target.value })}
+                            placeholder="e.g., muscular, lean, athletic, great physical shape"
+                            className="h-9"
+                          />
+                        </div>
+                        <div className="space-y-1.5 col-span-2">
+                          <Label className="text-xs flex items-center gap-1.5">
+                            <Sparkles className="w-3 h-3" />
+                            Additional Features
+                          </Label>
+                          <Textarea
+                            value={characterDesc.features}
+                            onChange={(e) => setCharacterDesc({ ...characterDesc, features: e.target.value })}
+                            placeholder="Hair style, clothing preferences, distinguishing features..."
+                            rows={2}
+                            className="text-sm"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={handleSaveCharacterDesc}
+                          disabled={savingCharacterDesc}
+                        >
+                          {savingCharacterDesc ? (
+                            <Loader2 className="w-3 h-3 mr-1.5 animate-spin" />
+                          ) : (
+                            <Check className="w-3 h-3 mr-1.5" />
+                          )}
+                          Save Description
+                        </Button>
+                        <Button
+                          variant="gold"
+                          size="sm"
+                          onClick={handleGenerateHeroImages}
+                          disabled={generatingHeroImages || !referencePhoto}
+                        >
+                          {generatingHeroImages ? (
+                            <Loader2 className="w-3 h-3 mr-1.5 animate-spin" />
+                          ) : (
+                            <Sparkles className="w-3 h-3 mr-1.5" />
+                          )}
+                          Generate Hero Images
+                        </Button>
+                      </div>
+
+                      {!referencePhoto && (
+                        <p className="text-xs text-muted-foreground">
+                          Upload a reference photo above to generate hero images
+                        </p>
+                      )}
+
+                      {/* Hero Images Preview */}
+                      {(heroImages.front || heroImages.side || heroImages.back) && (
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between">
+                            <h4 className="text-sm font-medium flex items-center gap-2">
+                              <Sparkles className="w-3 h-3 text-gold" />
+                              Your Hero Character Sheet
+                            </h4>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={handleGenerateHeroImages}
+                              disabled={generatingHeroImages || !referencePhoto}
+                              className="h-7 text-xs"
+                            >
+                              <RefreshCw className={`w-3 h-3 mr-1 ${generatingHeroImages ? 'animate-spin' : ''}`} />
+                              Regenerate
+                            </Button>
+                          </div>
+                          
+                          <div className="grid grid-cols-3 gap-2">
+                            {heroImages.front && (
+                              <div className="space-y-1">
+                                <div className="aspect-[3/4] rounded-lg overflow-hidden border border-gold/30">
+                                  <img
+                                    src={heroImages.front}
+                                    alt="Front view"
+                                    className="w-full h-full object-cover"
+                                  />
+                                </div>
+                                <Badge variant="outline" className="w-full justify-center text-xs">Front</Badge>
+                              </div>
+                            )}
+                            {heroImages.side && (
+                              <div className="space-y-1">
+                                <div className="aspect-[3/4] rounded-lg overflow-hidden border border-gold/30">
+                                  <img
+                                    src={heroImages.side}
+                                    alt="Side view"
+                                    className="w-full h-full object-cover"
+                                  />
+                                </div>
+                                <Badge variant="outline" className="w-full justify-center text-xs">Side</Badge>
+                              </div>
+                            )}
+                            {heroImages.back && (
+                              <div className="space-y-1">
+                                <div className="aspect-[3/4] rounded-lg overflow-hidden border border-gold/30">
+                                  <img
+                                    src={heroImages.back}
+                                    alt="Back view"
+                                    className="w-full h-full object-cover"
+                                  />
+                                </div>
+                                <Badge variant="outline" className="w-full justify-center text-xs">Back</Badge>
+                              </div>
+                            )}
+                          </div>
+                          
+                          <Card className="p-2.5 bg-gold/5 border-gold/20">
+                            <p className="text-xs text-muted-foreground">
+                              These hero images will be used as references for all AI-generated scenes.
+                            </p>
+                          </Card>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </CollapsibleContent>
+              </Collapsible>
 
               {/* Credit Estimate */}
               <Card className="p-4 bg-primary/5 border-primary/20">
