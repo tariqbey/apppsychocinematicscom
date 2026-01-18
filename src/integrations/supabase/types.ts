@@ -985,6 +985,86 @@ export type Database = {
         }
         Relationships: []
       }
+      knowledge_entries: {
+        Row: {
+          category: string
+          content: string
+          created_at: string
+          id: string
+          is_active: boolean
+          source_id: string | null
+          summary: string | null
+          tags: string[] | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          category: string
+          content: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          source_id?: string | null
+          summary?: string | null
+          tags?: string[] | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          content?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          source_id?: string | null
+          summary?: string | null
+          tags?: string[] | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "knowledge_entries_source_id_fkey"
+            columns: ["source_id"]
+            isOneToOne: false
+            referencedRelation: "knowledge_sources"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      knowledge_sources: {
+        Row: {
+          author: string | null
+          created_at: string
+          id: string
+          notes: string | null
+          title: string
+          type: string
+          updated_at: string
+          year: string | null
+        }
+        Insert: {
+          author?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          title: string
+          type?: string
+          updated_at?: string
+          year?: string | null
+        }
+        Update: {
+          author?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          title?: string
+          type?: string
+          updated_at?: string
+          year?: string | null
+        }
+        Relationships: []
+      }
       mind_movie_scripts: {
         Row: {
           chief_aim_snapshot: Json | null
