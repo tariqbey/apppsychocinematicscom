@@ -76,6 +76,86 @@ export type Database = {
         }
         Relationships: []
       }
+      adversity_challenges: {
+        Row: {
+          action_taken: string | null
+          at_peace: boolean | null
+          challenge_date: string
+          completed: boolean | null
+          completed_at: string | null
+          created_at: string
+          cut_notes: string | null
+          did_cut: boolean | null
+          emotional_trigger: string
+          episode_id: string | null
+          feeling: string | null
+          id: string
+          insight_gained: string | null
+          part_challenged: string | null
+          response_type: string | null
+          scenario_type: string
+          situation_description: string
+          target_trait: string
+          trait_xp_earned: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          action_taken?: string | null
+          at_peace?: boolean | null
+          challenge_date?: string
+          completed?: boolean | null
+          completed_at?: string | null
+          created_at?: string
+          cut_notes?: string | null
+          did_cut?: boolean | null
+          emotional_trigger: string
+          episode_id?: string | null
+          feeling?: string | null
+          id?: string
+          insight_gained?: string | null
+          part_challenged?: string | null
+          response_type?: string | null
+          scenario_type: string
+          situation_description: string
+          target_trait: string
+          trait_xp_earned?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          action_taken?: string | null
+          at_peace?: boolean | null
+          challenge_date?: string
+          completed?: boolean | null
+          completed_at?: string | null
+          created_at?: string
+          cut_notes?: string | null
+          did_cut?: boolean | null
+          emotional_trigger?: string
+          episode_id?: string | null
+          feeling?: string | null
+          id?: string
+          insight_gained?: string | null
+          part_challenged?: string | null
+          response_type?: string | null
+          scenario_type?: string
+          situation_description?: string
+          target_trait?: string
+          trait_xp_earned?: number | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "adversity_challenges_episode_id_fkey"
+            columns: ["episode_id"]
+            isOneToOne: false
+            referencedRelation: "episodes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       annual_awards: {
         Row: {
           award_category: string
@@ -436,6 +516,74 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      daily_character_checkins: {
+        Row: {
+          character_rating: number | null
+          checkin_date: string
+          chose_transformation: boolean | null
+          clarity_received: string | null
+          created_at: string
+          did_cut: boolean | null
+          emotional_awareness: string | null
+          episode_id: string | null
+          hit_midpoint_conflict: boolean | null
+          id: string
+          midpoint_description: string | null
+          old_pattern_description: string | null
+          old_pattern_triggered: boolean | null
+          reflection_notes: string | null
+          transformation_action: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          character_rating?: number | null
+          checkin_date?: string
+          chose_transformation?: boolean | null
+          clarity_received?: string | null
+          created_at?: string
+          did_cut?: boolean | null
+          emotional_awareness?: string | null
+          episode_id?: string | null
+          hit_midpoint_conflict?: boolean | null
+          id?: string
+          midpoint_description?: string | null
+          old_pattern_description?: string | null
+          old_pattern_triggered?: boolean | null
+          reflection_notes?: string | null
+          transformation_action?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          character_rating?: number | null
+          checkin_date?: string
+          chose_transformation?: boolean | null
+          clarity_received?: string | null
+          created_at?: string
+          did_cut?: boolean | null
+          emotional_awareness?: string | null
+          episode_id?: string | null
+          hit_midpoint_conflict?: boolean | null
+          id?: string
+          midpoint_description?: string | null
+          old_pattern_description?: string | null
+          old_pattern_triggered?: boolean | null
+          reflection_notes?: string | null
+          transformation_action?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "daily_character_checkins_episode_id_fkey"
+            columns: ["episode_id"]
+            isOneToOne: false
+            referencedRelation: "episodes"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       daily_rituals: {
         Row: {

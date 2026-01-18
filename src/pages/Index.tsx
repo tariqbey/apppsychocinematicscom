@@ -19,6 +19,7 @@ import { AuthModal } from "@/components/auth/AuthModal";
 import { OnboardingModal, useOnboarding } from "@/components/onboarding/OnboardingModal";
 import { ActiveEpisodeBanner } from "@/components/episodes/ActiveEpisodeBanner";
 import { EpisodeWizard } from "@/components/episodes/EpisodeWizard";
+import { EpisodeCharacterDashboard } from "@/components/dashboard/EpisodeCharacterDashboard";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { useGamification } from "@/hooks/useGamification";
@@ -347,6 +348,11 @@ const Index = () => {
               episode={activeEpisode} 
               clickToNavigate={true}
             />
+          )}
+
+          {/* Episode Character Dashboard - Shows transformation profile for active episode */}
+          {activeEpisode?.character_transformation && (
+            <EpisodeCharacterDashboard episode={activeEpisode} />
           )}
 
           {/* Resume Production Button - When active episode has a Mind Movie in progress */}
