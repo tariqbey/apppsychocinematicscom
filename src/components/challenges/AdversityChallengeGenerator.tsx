@@ -126,150 +126,155 @@ export function AdversityChallengeGenerator({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
+      <DialogContent className="sm:max-w-lg max-h-[90dvh] overflow-hidden flex flex-col">
+        <DialogHeader className="flex-shrink-0">
           <DialogTitle className="flex items-center gap-2 font-display text-xl">
             <Swords className="w-5 h-5 text-red-500" />
             Generate Adversity Challenge
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-6 py-4">
-          {/* Episode Context */}
-          {activeEpisode && (
-            <Card className="p-3 bg-primary/5 border-primary/20">
-              <div className="flex items-center gap-2 text-sm">
-                <Zap className="w-4 h-4 text-primary" />
-                <span>Linked to Episode: <strong>{activeEpisode.title}</strong></span>
-              </div>
-            </Card>
-          )}
-
-          {/* Scenario Type Selection */}
-          <div className="space-y-2">
-            <Label>Scenario Type</Label>
-            <Select value={scenarioType} onValueChange={setScenarioType}>
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select a scenario type..." />
-              </SelectTrigger>
-              <SelectContent 
-                className="max-h-[280px] bg-popover border shadow-lg"
-                position="popper"
-                sideOffset={4}
-              >
-                {SCENARIO_TYPES.map((type) => (
-                  <SelectItem 
-                    key={type.value} 
-                    value={type.value}
-                    className="cursor-pointer py-2"
-                  >
-                    <div className="flex flex-col">
-                      <span className="font-medium">{type.label}</span>
-                      <span className="text-xs text-muted-foreground">{type.desc}</span>
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Target Trait Selection */}
-          <div className="space-y-2">
-            <Label>Target Trait to Develop</Label>
-            <Select value={targetTrait} onValueChange={setTargetTrait}>
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select a trait to train..." />
-              </SelectTrigger>
-              <SelectContent 
-                className="max-h-[280px] bg-popover border shadow-lg"
-                position="popper"
-                sideOffset={4}
-              >
-                {TARGET_TRAITS.map((trait) => (
-                  <SelectItem 
-                    key={trait} 
-                    value={trait}
-                    className="cursor-pointer"
-                  >
-                    {trait}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Generate Button */}
-          {!generatedChallenge && (
-            <Button
-              onClick={handleGenerate}
-              disabled={generating || !scenarioType || !targetTrait}
-              className="w-full"
-              variant="gold"
-            >
-              {generating ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Generating Challenge...
-                </>
-              ) : (
-                <>
-                  <Wand2 className="w-4 h-4 mr-2" />
-                  Generate Challenge
-                </>
-              )}
-            </Button>
-          )}
-
-          {/* Generated Challenge Preview */}
-          {generatedChallenge && (
-            <Card className="p-4 space-y-4 border-gold/30 bg-gold/5">
-              <div className="flex items-center gap-2">
-                <Target className="w-5 h-5 text-gold" />
-                <h3 className="font-display text-lg">Your Challenge</h3>
-              </div>
-
-              <div className="space-y-3">
-                <div>
-                  <Label className="text-xs text-muted-foreground">SITUATION</Label>
-                  <p className="text-sm mt-1">{generatedChallenge.situation}</p>
+        {/* Body wrapper with native scroll - stabilizes dropdown positioning */}
+        <div className="flex-1 min-h-0 overflow-y-auto pr-1 overscroll-contain">
+          <div className="space-y-6 py-4">
+            {/* Episode Context */}
+            {activeEpisode && (
+              <Card className="p-3 bg-primary/5 border-primary/20">
+                <div className="flex items-center gap-2 text-sm">
+                  <Zap className="w-4 h-4 text-primary" />
+                  <span>Linked to Episode: <strong>{activeEpisode.title}</strong></span>
                 </div>
+              </Card>
+            )}
 
-                <div>
-                  <Label className="text-xs text-muted-foreground">EMOTIONAL TRIGGER</Label>
-                  <p className="text-sm mt-1 italic text-amber-400">
-                    "{generatedChallenge.trigger}"
-                  </p>
-                </div>
-
-                <div className="flex gap-2">
-                  <Badge variant="outline">{scenarioType}</Badge>
-                  <Badge className="bg-gold/20 text-gold border-gold/30">{targetTrait}</Badge>
-                </div>
-              </div>
-
-              <div className="flex gap-3 pt-2">
-                <Button
-                  variant="outline"
-                  onClick={() => setGeneratedChallenge(null)}
-                  className="flex-1"
+            {/* Scenario Type Selection */}
+            <div className="space-y-2">
+              <Label>Scenario Type</Label>
+              <Select value={scenarioType} onValueChange={setScenarioType}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select a scenario type..." />
+                </SelectTrigger>
+                <SelectContent 
+                  className="z-[200] bg-popover border shadow-lg"
+                  position="popper"
+                  sideOffset={4}
+                  align="start"
                 >
-                  Regenerate
-                </Button>
-                <Button
-                  variant="gold"
-                  onClick={handleSaveChallenge}
-                  disabled={saving}
-                  className="flex-1"
+                  {SCENARIO_TYPES.map((type) => (
+                    <SelectItem 
+                      key={type.value} 
+                      value={type.value}
+                      className="cursor-pointer py-2"
+                    >
+                      <div className="flex flex-col">
+                        <span className="font-medium">{type.label}</span>
+                        <span className="text-xs text-muted-foreground">{type.desc}</span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Target Trait Selection */}
+            <div className="space-y-2">
+              <Label>Target Trait to Develop</Label>
+              <Select value={targetTrait} onValueChange={setTargetTrait}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select a trait to train..." />
+                </SelectTrigger>
+                <SelectContent 
+                  className="z-[200] bg-popover border shadow-lg"
+                  position="popper"
+                  sideOffset={4}
+                  align="start"
                 >
-                  {saving ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    "Accept Challenge"
-                  )}
-                </Button>
-              </div>
-            </Card>
-          )}
+                  {TARGET_TRAITS.map((trait) => (
+                    <SelectItem 
+                      key={trait} 
+                      value={trait}
+                      className="cursor-pointer"
+                    >
+                      {trait}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Generate Button */}
+            {!generatedChallenge && (
+              <Button
+                onClick={handleGenerate}
+                disabled={generating || !scenarioType || !targetTrait}
+                className="w-full"
+                variant="gold"
+              >
+                {generating ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Generating Challenge...
+                  </>
+                ) : (
+                  <>
+                    <Wand2 className="w-4 h-4 mr-2" />
+                    Generate Challenge
+                  </>
+                )}
+              </Button>
+            )}
+
+            {/* Generated Challenge Preview */}
+            {generatedChallenge && (
+              <Card className="p-4 space-y-4 border-gold/30 bg-gold/5">
+                <div className="flex items-center gap-2">
+                  <Target className="w-5 h-5 text-gold" />
+                  <h3 className="font-display text-lg">Your Challenge</h3>
+                </div>
+
+                <div className="space-y-3">
+                  <div>
+                    <Label className="text-xs text-muted-foreground">SITUATION</Label>
+                    <p className="text-sm mt-1">{generatedChallenge.situation}</p>
+                  </div>
+
+                  <div>
+                    <Label className="text-xs text-muted-foreground">EMOTIONAL TRIGGER</Label>
+                    <p className="text-sm mt-1 italic text-amber-400">
+                      "{generatedChallenge.trigger}"
+                    </p>
+                  </div>
+
+                  <div className="flex gap-2">
+                    <Badge variant="outline">{scenarioType}</Badge>
+                    <Badge className="bg-gold/20 text-gold border-gold/30">{targetTrait}</Badge>
+                  </div>
+                </div>
+
+                <div className="flex gap-3 pt-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => setGeneratedChallenge(null)}
+                    className="flex-1"
+                  >
+                    Regenerate
+                  </Button>
+                  <Button
+                    variant="gold"
+                    onClick={handleSaveChallenge}
+                    disabled={saving}
+                    className="flex-1"
+                  >
+                    {saving ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      "Accept Challenge"
+                    )}
+                  </Button>
+                </div>
+              </Card>
+            )}
+          </div>
         </div>
       </DialogContent>
     </Dialog>
