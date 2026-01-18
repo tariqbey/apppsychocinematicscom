@@ -340,10 +340,18 @@ MINDSET:
 ${characterMindset || 'Not specified'}
 
 ═══════════════════════════════════════════════
-VISUAL DIRECTION
+VISUAL & CINEMATOGRAPHY DIRECTION
 ═══════════════════════════════════════════════
-STYLE: ${visualStyle || "Cinematic and inspiring"}
-ADDITIONAL NOTES: ${userDescription || "None provided"}
+VISUAL STYLE: ${visualStyle || "Cinematic and inspiring"}
+CINEMATOGRAPHY NOTES: ${userDescription || "None provided"}
+
+IMPORTANT: Apply the specified cinematography style consistently across ALL scenes. If a specific style like "dramatic", "warm", or "ethereal" is mentioned, use the corresponding lighting and camera techniques:
+- DRAMATIC: Chiaroscuro lighting, low angles for power, high contrast, bold shadows
+- WARM: Golden hour warmth, soft diffused light, intimate steadicam shots
+- ETHEREAL: Blue hour glow, rim lighting with lens flares, ascending crane shots
+- NOIR: Single-source dramatic lighting, dutch angles, silhouettes
+- VIBRANT: High-key bright lighting, dynamic movement, saturated colors
+- ORGANIC: Natural daylight, gentle following shots, earth tones
 
 ═══════════════════════════════════════════════
 CREATE EXACTLY ${sceneCount} SCENES following the 3-Act structure:

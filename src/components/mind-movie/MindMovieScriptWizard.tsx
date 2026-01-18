@@ -26,6 +26,7 @@ import { CreditCostEstimate } from "./CreditCostEstimate";
 import { LyricsEditor } from "./LyricsEditor";
 import { SoundtrackPlayer } from "./SoundtrackPlayer";
 import { VisionQuestionnaire, buildDescriptionFromAnswers, DEFAULT_VISION_ANSWERS, type VisionAnswers } from "./VisionQuestionnaire";
+import { CinematographyStyleSelector, CINEMATOGRAPHY_STYLES } from "./CinematographyStyleSelector";
 import { VisualsStep } from "./VisualsStep";
 import { useMindMovieScript, type Scene } from "@/hooks/useMindMovieScript";
 import { useMindMovieMusic, MUSIC_STYLES, type MusicStyle } from "@/hooks/useMindMovieMusic";
@@ -150,6 +151,7 @@ export function MindMovieScriptWizard({
 }: MindMovieScriptWizardProps) {
   const [step, setStep] = useState(1);
   const [visualStyle, setVisualStyle] = useState("cinematic");
+  const [cinematographyStyle, setCinematographyStyle] = useState("dramatic");
   const [userDescription, setUserDescription] = useState("");
   const [visionAnswers, setVisionAnswers] = useState<VisionAnswers>(DEFAULT_VISION_ANSWERS);
   const [generatedTitle, setGeneratedTitle] = useState("");
@@ -286,15 +288,21 @@ export function MindMovieScriptWizard({
     // Combine with any additional user description
     const fullDescription = richDescription + (userDescription ? `\n\nADDITIONAL CONTEXT: ${userDescription}` : "");
     
+    // Get the selected cinematography style details
+    const selectedCinematography = CINEMATOGRAPHY_STYLES.find(s => s.value === cinematographyStyle);
+    const cinematographyContext = selectedCinematography 
+      ? `\n\nCINEMATOGRAPHY STYLE: ${selectedCinematography.label}\nLighting Direction: ${selectedCinematography.lighting}\nCamera Techniques: ${selectedCinematography.cameraWork}\nMood: ${selectedCinematography.mood}\nColor Palette: ${selectedCinematography.colorPalette}`
+      : "";
+    
     // For episode mode, pre-fill with episode objective
     const episodeDescription = episodeMode && episode 
-      ? `Episode Focus: ${episode.objective}\n\n${fullDescription}`
-      : fullDescription;
+      ? `Episode Focus: ${episode.objective}\n\n${fullDescription}${cinematographyContext}`
+      : `${fullDescription}${cinematographyContext}`;
     
     const existingScenes = addScenes ? generatedScenes : undefined;
     const result = await generateStoryboard(
       chiefAim, 
-      visualStyle, 
+      `${visualStyle} with ${cinematographyStyle} cinematography`, 
       episodeDescription, 
       existingScenes,
       transformationAnalysis,
@@ -888,6 +896,12 @@ export function MindMovieScriptWizard({
                     ))}
                   </RadioGroup>
                 </div>
+
+                {/* Cinematography Style Selection */}
+                <CinematographyStyleSelector
+                  value={cinematographyStyle}
+                  onChange={setCinematographyStyle}
+                />
 
                 {/* Vision Questionnaire */}
                 <div className="space-y-3">
