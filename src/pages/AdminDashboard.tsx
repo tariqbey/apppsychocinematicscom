@@ -76,82 +76,129 @@ const AdminDashboard = () => {
   const fetchPlatformStats = async () => {
     const oneWeekAgo = subDays(new Date(), 7).toISOString();
 
+    // Prefer auth user count (source of truth for "signed up" accounts)
+    let authUserCount = 0;
+    try {
+      const { data: session } = await supabase.auth.getSession();
+      if (session?.session?.access_token) {
+        const { data: emailData } = await supabase.functions.invoke("get-user-emails", {
+          headers: { Authorization: `Bearer ${session.session.access_token}` },
+        });
+        if (emailData?.count && Number.isFinite(emailData.count)) {
+          authUserCount = Number(emailData.count);
+        }
+      }
+    } catch {
+      // ignore (fallback to profile counts)
+    }
+
     const [
-      { count: totalUsers },
+      { count: profileUsers },
       { count: newUsersThisWeek },
       { data: creditsData },
       { data: transactionsData },
-      { data: mediaData }
+      { data: mediaData },
     ] = await Promise.all([
       supabase.from("user_profiles").select("*", { count: "exact", head: true }),
-      supabase.from("user_profiles").select("*", { count: "exact", head: true }).gte("created_at", oneWeekAgo),
+      supabase
+        .from("user_profiles")
+        .select("*", { count: "exact", head: true })
+        .gte("created_at", oneWeekAgo),
       supabase.from("production_credits").select("monthly_credits, purchased_credits"),
       supabase.from("credit_transactions").select("amount").lt("amount", 0),
-      supabase.from("generated_media").select("media_type")
+      supabase.from("generated_media").select("media_type"),
     ]);
 
-    const totalCreditsAllocated = creditsData?.reduce((sum, c) => sum + Number(c.monthly_credits) + Number(c.purchased_credits), 0) || 0;
-    const totalCreditsUsed = transactionsData?.reduce((sum, t) => sum + Math.abs(Number(t.amount)), 0) || 0;
-    const totalImages = mediaData?.filter(m => m.media_type === "image").length || 0;
-    const totalVideos = mediaData?.filter(m => m.media_type === "video").length || 0;
-    const estimatedApiCost = (totalImages * IMAGE_COST) + (totalVideos * VIDEO_COST);
+    const totalCreditsAllocated =
+      creditsData?.reduce(
+        (sum, c) => sum + Number(c.monthly_credits) + Number(c.purchased_credits),
+        0
+      ) || 0;
+    const totalCreditsUsed =
+      transactionsData?.reduce((sum, t) => sum + Math.abs(Number(t.amount)), 0) || 0;
+    const totalImages = mediaData?.filter((m) => m.media_type === "image").length || 0;
+    const totalVideos = mediaData?.filter((m) => m.media_type === "video").length || 0;
+    const estimatedApiCost = totalImages * IMAGE_COST + totalVideos * VIDEO_COST;
+
+    const totalUsers = Math.max(profileUsers || 0, authUserCount || 0);
 
     setStats({
-      totalUsers: totalUsers || 0,
+      totalUsers,
       newUsersThisWeek: newUsersThisWeek || 0,
       totalCreditsAllocated,
       totalCreditsUsed,
       totalImages,
       totalVideos,
-      estimatedApiCost
+      estimatedApiCost,
     });
   };
 
   const fetchUserData = async () => {
-    // Fetch emails from edge function
+    // Fetch emails + auth user list from backend function
     let emailMap: Record<string, string> = {};
+    let authUsers: Array<{ id: string; email: string | null; created_at: string | null }> = [];
+
     try {
       const { data: session } = await supabase.auth.getSession();
       if (session?.session?.access_token) {
         const { data: emailData } = await supabase.functions.invoke("get-user-emails", {
-          headers: { Authorization: `Bearer ${session.session.access_token}` }
+          headers: { Authorization: `Bearer ${session.session.access_token}` },
         });
-        if (emailData?.emails) {
-          emailMap = emailData.emails;
-        }
+        if (emailData?.emails) emailMap = emailData.emails;
+        if (Array.isArray(emailData?.users)) authUsers = emailData.users;
       }
     } catch (err) {
       console.error("Error fetching emails:", err);
     }
 
+    // Profiles can be restricted by RLS; treat them as optional enrichment
     const { data: profiles } = await supabase
       .from("user_profiles")
       .select("user_id, display_name, created_at")
       .order("created_at", { ascending: false });
 
-    if (!profiles) return;
+    const profileMap = new Map(
+      (profiles || []).map((p) => [p.user_id, { display_name: p.display_name, created_at: p.created_at }])
+    );
+
+    // Base list: prefer auth.users (all signups), fallback to profiles
+    const baseUsers:
+      | Array<{ user_id: string; email: string | null; created_at: string }>
+      | Array<{ user_id: string; email: string | null; created_at: string }> =
+      authUsers.length > 0
+        ? authUsers.map((u) => ({ user_id: u.id, email: u.email, created_at: u.created_at || new Date().toISOString() }))
+        : (profiles || []).map((p) => ({ user_id: p.user_id, email: emailMap[p.user_id] || null, created_at: p.created_at }));
 
     const userStats = await Promise.all(
-      profiles.map(async (profile) => {
+      baseUsers.map(async (u) => {
+        const profile = profileMap.get(u.user_id);
+
         const [{ data: credits }, { data: transactions }, { data: media }] = await Promise.all([
-          supabase.from("production_credits").select("monthly_credits, purchased_credits").eq("user_id", profile.user_id).single(),
-          supabase.from("credit_transactions").select("amount").eq("user_id", profile.user_id).lt("amount", 0),
-          supabase.from("generated_media").select("media_type").eq("user_id", profile.user_id)
+          supabase
+            .from("production_credits")
+            .select("monthly_credits, purchased_credits")
+            .eq("user_id", u.user_id)
+            .maybeSingle(),
+          supabase.from("credit_transactions").select("amount").eq("user_id", u.user_id).lt("amount", 0),
+          supabase.from("generated_media").select("media_type").eq("user_id", u.user_id),
         ]);
 
         return {
-          user_id: profile.user_id,
-          display_name: profile.display_name,
-          email: emailMap[profile.user_id] || null,
-          created_at: profile.created_at,
+          user_id: u.user_id,
+          display_name: profile?.display_name || null,
+          email: u.email ?? emailMap[u.user_id] ?? null,
+          created_at: profile?.created_at || u.created_at,
           monthly_credits: credits?.monthly_credits || 0,
           purchased_credits: credits?.purchased_credits || 0,
           credits_used: transactions?.reduce((sum, t) => sum + Math.abs(Number(t.amount)), 0) || 0,
-          image_count: media?.filter(m => m.media_type === "image").length || 0,
-          video_count: media?.filter(m => m.media_type === "video").length || 0
+          image_count: media?.filter((m) => m.media_type === "image").length || 0,
+          video_count: media?.filter((m) => m.media_type === "video").length || 0,
         };
       })
     );
+
+    // Sort newest first
+    userStats.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
     setUsers(userStats);
   };
