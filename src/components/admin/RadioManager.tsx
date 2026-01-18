@@ -1,8 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { 
   Radio, Plus, Music, Trash2, Edit, Play, Pause, 
   Upload, ExternalLink, Star, ListMusic, Volume2, 
-  Podcast, Link, CheckCircle, XCircle, Clock, Send
+  Podcast, Link, CheckCircle, XCircle, Clock, Send,
+  SkipBack, SkipForward, Square
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,6 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
+import { Slider } from "@/components/ui/slider";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -70,6 +72,15 @@ export const RadioManager = () => {
   const [submissions, setSubmissions] = useState<RadioSubmission[]>([]);
   const [streams, setStreams] = useState<RadioStation[]>([]);
 
+  // ---------- LOCAL PLAYBACK STATE ----------
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [localPlaying, setLocalPlaying] = useState(false);
+  const [localTrack, setLocalTrack] = useState<{ title: string; artist?: string; url: string } | null>(null);
+  const [localTime, setLocalTime] = useState(0);
+  const [localDuration, setLocalDuration] = useState(0);
+  const [localVolume, setLocalVolume] = useState(0.8);
+  const [currentTrackIndex, setCurrentTrackIndex] = useState<number>(-1);
+
   // New playlist form
   const [newPlaylistName, setNewPlaylistName] = useState("");
   const [newPlaylistDescription, setNewPlaylistDescription] = useState("");
@@ -84,6 +95,99 @@ export const RadioManager = () => {
   const [newStreamUrl, setNewStreamUrl] = useState("");
   const [newStreamType, setNewStreamType] = useState<string>("podcast");
   const [newStreamDescription, setNewStreamDescription] = useState("");
+
+  // Initialize audio element
+  useEffect(() => {
+    if (!audioRef.current) {
+      audioRef.current = new Audio();
+      audioRef.current.volume = localVolume;
+    }
+    const audio = audioRef.current;
+    const onTime = () => setLocalTime(audio.currentTime);
+    const onDur = () => setLocalDuration(audio.duration || 0);
+    const onEnd = () => {
+      setLocalPlaying(false);
+      // Auto-advance
+      if (selectedPlaylist && currentTrackIndex >= 0 && currentTrackIndex < selectedPlaylist.tracks.length - 1) {
+        const next = selectedPlaylist.tracks[currentTrackIndex + 1];
+        handleLocalPlay(next.title, next.audio_url, next.artist || undefined, currentTrackIndex + 1);
+      }
+    };
+    const onPlay = () => setLocalPlaying(true);
+    const onPause = () => setLocalPlaying(false);
+
+    audio.addEventListener("timeupdate", onTime);
+    audio.addEventListener("durationchange", onDur);
+    audio.addEventListener("ended", onEnd);
+    audio.addEventListener("play", onPlay);
+    audio.addEventListener("pause", onPause);
+
+    return () => {
+      audio.removeEventListener("timeupdate", onTime);
+      audio.removeEventListener("durationchange", onDur);
+      audio.removeEventListener("ended", onEnd);
+      audio.removeEventListener("play", onPlay);
+      audio.removeEventListener("pause", onPause);
+    };
+  }, [selectedPlaylist, currentTrackIndex]);
+
+  // Sync volume
+  useEffect(() => {
+    if (audioRef.current) audioRef.current.volume = localVolume;
+  }, [localVolume]);
+
+  const handleLocalPlay = (title: string, url: string, artist?: string, idx?: number) => {
+    if (!audioRef.current) return;
+    setLocalTrack({ title, artist, url });
+    if (typeof idx === "number") setCurrentTrackIndex(idx);
+    audioRef.current.src = url;
+    audioRef.current.play().catch(console.error);
+  };
+
+  const toggleLocalPlay = () => {
+    if (!audioRef.current) return;
+    if (localPlaying) {
+      audioRef.current.pause();
+    } else {
+      audioRef.current.play().catch(console.error);
+    }
+  };
+
+  const handleSeek = (val: number) => {
+    if (audioRef.current) {
+      audioRef.current.currentTime = val;
+      setLocalTime(val);
+    }
+  };
+
+  const handlePrev = () => {
+    if (!selectedPlaylist || currentTrackIndex <= 0) return;
+    const prev = selectedPlaylist.tracks[currentTrackIndex - 1];
+    handleLocalPlay(prev.title, prev.audio_url, prev.artist || undefined, currentTrackIndex - 1);
+  };
+
+  const handleNext = () => {
+    if (!selectedPlaylist || currentTrackIndex < 0 || currentTrackIndex >= selectedPlaylist.tracks.length - 1) return;
+    const next = selectedPlaylist.tracks[currentTrackIndex + 1];
+    handleLocalPlay(next.title, next.audio_url, next.artist || undefined, currentTrackIndex + 1);
+  };
+
+  const stopPlayback = () => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+    }
+    setLocalPlaying(false);
+    setLocalTrack(null);
+    setCurrentTrackIndex(-1);
+  };
+
+  const formatTime = (sec: number) => {
+    if (!Number.isFinite(sec)) return "0:00";
+    const m = Math.floor(sec / 60);
+    const s = Math.floor(sec % 60);
+    return `${m}:${s.toString().padStart(2, "0")}`;
+  };
 
   useEffect(() => {
     loadData();
@@ -350,6 +454,87 @@ export const RadioManager = () => {
               </Dialog>
             </div>
 
+            {/* Local Audio Player Bar */}
+            {localTrack && (
+              <Card className="bg-gradient-to-r from-primary/10 via-gold/10 to-transparent border-gold/30 mb-4">
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-10 w-10"
+                        onClick={handlePrev}
+                        disabled={currentTrackIndex <= 0}
+                      >
+                        <SkipBack className="w-5 h-5" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-12 w-12 rounded-full border-gold/50 hover:bg-gold/20"
+                        onClick={toggleLocalPlay}
+                      >
+                        {localPlaying ? (
+                          <Pause className="w-6 h-6 text-gold" />
+                        ) : (
+                          <Play className="w-6 h-6 text-gold ml-0.5" />
+                        )}
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-10 w-10"
+                        onClick={handleNext}
+                        disabled={!selectedPlaylist || currentTrackIndex >= selectedPlaylist.tracks.length - 1}
+                      >
+                        <SkipForward className="w-5 h-5" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-10 w-10 text-destructive"
+                        onClick={stopPlayback}
+                        title="Stop"
+                      >
+                        <Square className="w-4 h-4" />
+                      </Button>
+                    </div>
+                    <div className="flex-1 space-y-1">
+                      <div className="flex items-center justify-between">
+                        <div className="min-w-0">
+                          <p className="font-medium truncate text-sm">{localTrack.title}</p>
+                          {localTrack.artist && (
+                            <p className="text-xs text-muted-foreground truncate">{localTrack.artist}</p>
+                          )}
+                        </div>
+                        <div className="text-xs text-muted-foreground whitespace-nowrap ml-2">
+                          {formatTime(localTime)} / {formatTime(localDuration)}
+                        </div>
+                      </div>
+                      <Slider
+                        value={[localTime]}
+                        max={localDuration || 100}
+                        step={0.1}
+                        onValueChange={([v]) => handleSeek(v)}
+                        className="cursor-pointer"
+                      />
+                    </div>
+                    <div className="flex items-center gap-2 min-w-[120px]">
+                      <Volume2 className="w-4 h-4 text-muted-foreground" />
+                      <Slider
+                        value={[localVolume * 100]}
+                        max={100}
+                        step={1}
+                        onValueChange={([v]) => setLocalVolume(v / 100)}
+                        className="w-20"
+                      />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
             <div className="grid md:grid-cols-2 gap-4">
               {/* Playlist List */}
               <ScrollArea className="h-[400px] border rounded-lg p-4">
@@ -383,6 +568,23 @@ export const RadioManager = () => {
                             {playlist.tracks.length} tracks
                           </p>
                         </div>
+                        {/* Play entire playlist */}
+                        {playlist.tracks.length > 0 && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedPlaylist(playlist);
+                              const first = playlist.tracks[0];
+                              handleLocalPlay(first.title, first.audio_url, first.artist || undefined, 0);
+                            }}
+                            title="Play Playlist"
+                          >
+                            <Play className="w-4 h-4 text-gold" />
+                          </Button>
+                        )}
                       </button>
                     ))}
                   </div>
@@ -404,7 +606,21 @@ export const RadioManager = () => {
                       </div>
                     </div>
 
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 flex-wrap">
+                      {/* Play All button */}
+                      {selectedPlaylist.tracks.length > 0 && (
+                        <Button
+                          variant="gold"
+                          size="sm"
+                          onClick={() => {
+                            const first = selectedPlaylist.tracks[0];
+                            handleLocalPlay(first.title, first.audio_url, first.artist || undefined, 0);
+                          }}
+                        >
+                          <Play className="w-4 h-4 mr-1" />
+                          Play All
+                        </Button>
+                      )}
                       <Dialog open={showAddTrackDialog} onOpenChange={setShowAddTrackDialog}>
                         <DialogTrigger asChild>
                           <Button variant="outline" size="sm">
@@ -463,50 +679,80 @@ export const RadioManager = () => {
                         </p>
                       ) : (
                         <div className="space-y-2">
-                          {selectedPlaylist.tracks.map((track, index) => (
-                            <div
-                              key={track.id}
-                              className="flex items-center gap-3 p-2 rounded hover:bg-muted/10 group"
-                            >
-                              <span className="w-6 text-center text-sm text-muted-foreground">
-                                {index + 1}
-                              </span>
-                              <div className="flex-1 min-w-0">
-                                <p className="font-medium truncate text-sm">{track.title}</p>
-                                {track.artist && (
-                                  <p className="text-xs text-muted-foreground truncate">
-                                    {track.artist}
+                          {selectedPlaylist.tracks.map((track, index) => {
+                            const isCurrentTrack = localTrack?.url === track.audio_url;
+                            return (
+                              <div
+                                key={track.id}
+                                className={`flex items-center gap-3 p-2 rounded hover:bg-muted/10 ${
+                                  isCurrentTrack ? "bg-gold/10 border border-gold/30" : ""
+                                }`}
+                              >
+                                <span className="w-6 text-center text-sm text-muted-foreground">
+                                  {index + 1}
+                                </span>
+                                <div className="flex-1 min-w-0">
+                                  <p className={`font-medium truncate text-sm ${isCurrentTrack ? "text-gold" : ""}`}>
+                                    {track.title}
                                   </p>
-                                )}
+                                  {track.artist && (
+                                    <p className="text-xs text-muted-foreground truncate">
+                                      {track.artist}
+                                    </p>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-1">
+                                  {/* Local Play */}
+                                  <Button
+                                    variant={isCurrentTrack && localPlaying ? "default" : "outline"}
+                                    size="icon"
+                                    className="h-8 w-8 border-gold/30 hover:bg-gold/20"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      if (isCurrentTrack && localPlaying) {
+                                        toggleLocalPlay();
+                                      } else {
+                                        handleLocalPlay(track.title, track.audio_url, track.artist || undefined, index);
+                                      }
+                                    }}
+                                    title={isCurrentTrack && localPlaying ? "Pause" : "Play"}
+                                  >
+                                    {isCurrentTrack && localPlaying ? (
+                                      <Pause className="w-4 h-4 text-gold" />
+                                    ) : (
+                                      <Play className="w-4 h-4 text-gold" />
+                                    )}
+                                  </Button>
+                                  {/* Broadcast (Set Now Playing) */}
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleSetNowPlaying(track.title, track.audio_url, track.artist || undefined);
+                                    }}
+                                    title="Broadcast to All Users"
+                                  >
+                                    <Radio className="w-4 h-4 text-muted-foreground" />
+                                  </Button>
+                                  {/* Delete */}
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 text-destructive hover:bg-destructive/20"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleDeleteTrack(track.id);
+                                    }}
+                                    title="Delete Track"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </Button>
+                                </div>
                               </div>
-                              <div className="flex items-center gap-1">
-                                <Button
-                                  variant="outline"
-                                  size="icon"
-                                  className="h-8 w-8 border-gold/30 hover:bg-gold/20"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleSetNowPlaying(track.title, track.audio_url, track.artist || undefined);
-                                  }}
-                                  title="Set as Now Playing"
-                                >
-                                  <Play className="w-4 h-4 text-gold" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-8 w-8 text-destructive hover:bg-destructive/20"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleDeleteTrack(track.id);
-                                  }}
-                                  title="Delete Track"
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </Button>
-                              </div>
-                            </div>
-                          ))}
+                            );
+                          })}
                         </div>
                       )}
                     </ScrollArea>
