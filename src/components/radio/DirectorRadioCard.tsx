@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
-import { Radio, Play, Pause, Volume2, VolumeX, Music, Headphones } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Radio, Play, Pause, Volume2, VolumeX, Music, Headphones, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Card, CardContent } from "@/components/ui/card";
@@ -13,6 +14,7 @@ interface NowPlaying {
 }
 
 export const DirectorRadioCard = () => {
+  const navigate = useNavigate();
   const [nowPlaying, setNowPlaying] = useState<NowPlaying | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [volume, setVolume] = useState(0.7);
@@ -212,6 +214,16 @@ export const DirectorRadioCard = () => {
                   className="w-16"
                 />
               </div>
+
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => navigate('/music')}
+                className="text-gold hover:text-gold hover:bg-gold/10"
+              >
+                <ExternalLink className="w-4 h-4 mr-1" />
+                Browse All
+              </Button>
             </div>
           </div>
         )}

@@ -282,9 +282,18 @@ export const useVoiceInput = (options: UseVoiceInputOptions = {}) => {
   }, [continuous, language, autoStart, clearSilenceTimer, startSilenceTimer, stopAudioAnalysis]);
 
   const startListening = useCallback(async () => {
+    console.log("[VoiceInput] startListening called", { 
+      hasRecognition: !!recognitionRef.current, 
+      isSupported, 
+      isStarting: isStartingRef.current,
+      hasStarted: hasStartedRef.current,
+      isMobile: isMobile(),
+      isIOS: isIOS()
+    });
+    
     if (!recognitionRef.current || !isSupported) {
       console.log("[VoiceInput] Cannot start - not supported");
-      onErrorRef.current?.("Voice input is not supported on this device");
+      onErrorRef.current?.("Voice input is not supported on this device. Please use Chrome, Safari, or Edge.");
       return;
     }
     
@@ -306,8 +315,8 @@ export const useVoiceInput = (options: UseVoiceInputOptions = {}) => {
     
     // On mobile, we MUST request microphone permission explicitly before starting speech recognition
     // This is especially important on iOS where the permission prompt may not show otherwise
-    if (isMobile() && !permissionGranted) {
-      console.log("[VoiceInput] Mobile detected - requesting explicit microphone permission");
+    if (!permissionGranted) {
+      console.log("[VoiceInput] Requesting microphone permission");
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         // Keep the stream alive briefly to ensure permission sticks
@@ -315,12 +324,14 @@ export const useVoiceInput = (options: UseVoiceInputOptions = {}) => {
           setTimeout(() => track.stop(), 500);
         });
         setPermissionGranted(true);
-        console.log("[VoiceInput] Microphone permission granted on mobile");
+        console.log("[VoiceInput] Microphone permission granted");
       } catch (error: any) {
         console.error("[VoiceInput] Microphone permission denied:", error);
         isStartingRef.current = false;
         if (error.name === "NotAllowedError" || error.name === "PermissionDeniedError") {
           onErrorRef.current?.("Microphone access denied. Please enable it in your browser settings and try again.");
+        } else if (error.name === "NotFoundError") {
+          onErrorRef.current?.("No microphone found. Please connect a microphone and try again.");
         } else {
           onErrorRef.current?.("Could not access microphone. Please check your device settings.");
         }
@@ -332,10 +343,12 @@ export const useVoiceInput = (options: UseVoiceInputOptions = {}) => {
     
     // Small delay on iOS to ensure audio context is ready
     if (isIOS()) {
-      await new Promise(resolve => setTimeout(resolve, 200));
+      console.log("[VoiceInput] iOS detected - adding delay before starting recognition");
+      await new Promise(resolve => setTimeout(resolve, 300));
     }
     
     try {
+      console.log("[VoiceInput] Calling recognition.start()");
       recognitionRef.current.start();
       hasStartedRef.current = true;
       console.log("[VoiceInput] Speech recognition started successfully");
@@ -345,6 +358,7 @@ export const useVoiceInput = (options: UseVoiceInputOptions = {}) => {
       
       // If already running, just mark as started
       if (error.name === "InvalidStateError") {
+        console.log("[VoiceInput] Recognition already running, marking as started");
         hasStartedRef.current = true;
       } else {
         hasStartedRef.current = false;
