@@ -150,9 +150,21 @@ const tutorialSections: TutorialSection[] = [
   {
     id: "character-builder",
     icon: <User className="w-6 h-6" />,
-    title: "Character Builder",
-    description: "Discover your Director archetype and transform your character",
+    title: "Character Builder & Hero Creator",
+    description: "Create your hero identity and discover your Director archetype",
     steps: [
+      {
+        title: "Create Your Hero Character (NEW!)",
+        content: "Go to Character Builder → Create tab. Upload a reference photo of yourself, then describe your 'best self' traits: height, weight, build, and distinguishing features. This data powers all AI-generated images."
+      },
+      {
+        title: "Generate Hero Images",
+        content: "Click 'Generate Hero Images' to create professional front, side, and back views. These become your standardized character identity used across Mind Movies, Challenge Storyboards, and all visualizations."
+      },
+      {
+        title: "Download & Save",
+        content: "Hover over any hero image to download it individually, or use 'Download All' to save the complete set. Images are automatically saved to your profile and used as AI generation references."
+      },
       {
         title: "Take the Archetype Survey",
         content: "Complete the 28-question Napoleon Hill character assessment. Answer honestly — 'Shadow' options reveal growth areas. Your responses determine your dominant Director archetype."
@@ -170,24 +182,16 @@ const tutorialSections: TutorialSection[] = [
         content: "Track your character development daily. Rate yourself on key traits required for your Chief Aim and see your progress over time."
       },
       {
-        title: "Weekly Character Summary",
-        content: "Review your weekly transformation progress, including trait averages, consistency patterns, and AI-generated insights."
-      },
-      {
         title: "Transformation Coach",
         content: "Get AI-powered coaching tailored to your archetype and Chief Aim. The coach identifies gaps between who you are and who you need to become. Click 'Create Your Transformation Script' to generate a Mind Movie based on your required character."
-      },
-      {
-        title: "Annual Self-Analysis",
-        content: "Complete Napoleon Hill's year-end self-analysis with 40+ questions. Shadow behavior options ensure honest reflection. Export as PDF for your records."
       }
     ],
     tips: [
+      "Create your Hero Character BEFORE generating Mind Movies for consistent identity",
+      "Your hero images appear in all AI-generated scenes featuring you",
       "Shadow answers reveal your biggest growth opportunities — don't avoid them",
       "Retake the survey after major life changes to see how you've evolved",
-      "Your archetype influences the Director AI coaching style recommendations",
-      "The Character Scorecard is separate from the Daily Scorecard — use both",
-      "Use the Transformation Coach to create a Mind Movie script based on your required character"
+      "Download hero images to use in external video editors if needed"
     ]
   },
   {
@@ -684,7 +688,7 @@ const DirectorsGuide = () => {
 
         {/* Main Navigation Tabs */}
         <Tabs defaultValue="quick-start" className="space-y-8">
-          <TabsList className="grid w-full max-w-lg mx-auto grid-cols-3 h-auto">
+          <TabsList className="grid w-full max-w-2xl mx-auto grid-cols-4 h-auto">
             <TabsTrigger value="quick-start" className="gap-2 py-3">
               <GraduationCap className="w-4 h-4" />
               <span className="hidden sm:inline">Quick Start</span>
@@ -694,6 +698,11 @@ const DirectorsGuide = () => {
               <BookOpen className="w-4 h-4" />
               <span className="hidden sm:inline">Full Manual</span>
               <span className="sm:hidden">Manual</span>
+            </TabsTrigger>
+            <TabsTrigger value="user-manual" className="gap-2 py-3">
+              <FileText className="w-4 h-4" />
+              <span className="hidden sm:inline">User Manual</span>
+              <span className="sm:hidden">Guide</span>
             </TabsTrigger>
             <TabsTrigger value="faq" className="gap-2 py-3">
               <HelpCircle className="w-4 h-4" />
@@ -821,6 +830,10 @@ const DirectorsGuide = () => {
                 <TabsTrigger value="chief-aim" className="gap-2">
                   <Target className="w-4 h-4" />
                   Chief Aim
+                </TabsTrigger>
+                <TabsTrigger value="hero-character" className="gap-2">
+                  <User className="w-4 h-4" />
+                  Hero
                 </TabsTrigger>
                 <TabsTrigger value="edit-bay" className="gap-2">
                   <Palette className="w-4 h-4" />
@@ -1014,6 +1027,118 @@ const DirectorsGuide = () => {
                           </p>
                         </div>
                       </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              {/* Hero Character */}
+              <TabsContent value="hero-character" className="space-y-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <User className="w-6 h-6 text-gold" />
+                      Hero Character Creator
+                    </CardTitle>
+                    <CardDescription>
+                      Create your standardized "Best Self" identity for all AI-generated visualizations
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    <div className="p-4 rounded-xl bg-gold/10 border border-gold/30">
+                      <h4 className="font-semibold text-gold mb-2">Why Create a Hero Character?</h4>
+                      <p className="text-sm text-muted-foreground">
+                        Your Hero Character is the visual representation of your "Best Self" — the person you are becoming. 
+                        By defining your physical traits and generating standardized hero images (front, side, back), the AI 
+                        can consistently place YOU into all generated scenes across Mind Movies, Challenge Storyboards, and visualizations.
+                      </p>
+                    </div>
+
+                    <div>
+                      <h4 className="font-semibold mb-4">Step-by-Step Process</h4>
+                      <ol className="space-y-4">
+                        <li className="flex gap-4">
+                          <span className="w-8 h-8 rounded-full bg-gold text-background font-bold flex items-center justify-center shrink-0">1</span>
+                          <div>
+                            <p className="font-medium">Upload Reference Photo</p>
+                            <p className="text-sm text-muted-foreground">
+                              Go to <strong>Character Builder → Create</strong> tab. Upload a clear, front-facing photo of yourself. 
+                              Good lighting and neutral backgrounds work best.
+                            </p>
+                          </div>
+                        </li>
+                        <li className="flex gap-4">
+                          <span className="w-8 h-8 rounded-full bg-gold text-background font-bold flex items-center justify-center shrink-0">2</span>
+                          <div>
+                            <p className="font-medium">Describe Your Ideal Self</p>
+                            <p className="text-sm text-muted-foreground">
+                              Enter your desired physical characteristics: height, weight, build (muscular, lean, athletic), 
+                              and any additional features (hair style, clothing preferences, distinguishing characteristics).
+                            </p>
+                          </div>
+                        </li>
+                        <li className="flex gap-4">
+                          <span className="w-8 h-8 rounded-full bg-gold text-background font-bold flex items-center justify-center shrink-0">3</span>
+                          <div>
+                            <p className="font-medium">Save Description</p>
+                            <p className="text-sm text-muted-foreground">
+                              Click "Save Description" to persist your character traits. These are stored in your profile 
+                              and used to enhance all AI image generation prompts.
+                            </p>
+                          </div>
+                        </li>
+                        <li className="flex gap-4">
+                          <span className="w-8 h-8 rounded-full bg-gold text-background font-bold flex items-center justify-center shrink-0">4</span>
+                          <div>
+                            <p className="font-medium">Generate Hero Images</p>
+                            <p className="text-sm text-muted-foreground">
+                              Click "Generate Hero Images" to create professional front, side, and back views on a neutral gray background. 
+                              This creates your standardized character sheet.
+                            </p>
+                          </div>
+                        </li>
+                        <li className="flex gap-4">
+                          <span className="w-8 h-8 rounded-full bg-gold text-background font-bold flex items-center justify-center shrink-0">5</span>
+                          <div>
+                            <p className="font-medium">Download & Use</p>
+                            <p className="text-sm text-muted-foreground">
+                              Hover over any image to download individually, or use "Download All" for the complete set. 
+                              These images are automatically used as references for all future AI generations.
+                            </p>
+                          </div>
+                        </li>
+                      </ol>
+                    </div>
+
+                    <Separator />
+
+                    <div>
+                      <h4 className="font-semibold mb-4">Where Hero Images Are Used</h4>
+                      <div className="grid sm:grid-cols-2 gap-3">
+                        <div className="p-3 rounded-lg bg-muted/30 border border-border/50">
+                          <p className="font-medium text-sm">🎬 Mind Movie Wizard</p>
+                          <p className="text-xs text-muted-foreground">Scene generation uses your hero as the main character</p>
+                        </div>
+                        <div className="p-3 rounded-lg bg-muted/30 border border-border/50">
+                          <p className="font-medium text-sm">⚔️ Challenge Storyboards</p>
+                          <p className="text-xs text-muted-foreground">Adversity visualizations feature your hero identity</p>
+                        </div>
+                        <div className="p-3 rounded-lg bg-muted/30 border border-border/50">
+                          <p className="font-medium text-sm">🎨 Edit Bay Generations</p>
+                          <p className="text-xs text-muted-foreground">Reference photos auto-load from your hero set</p>
+                        </div>
+                        <div className="p-3 rounded-lg bg-muted/30 border border-border/50">
+                          <p className="font-medium text-sm">📺 Episode Productions</p>
+                          <p className="text-xs text-muted-foreground">Episode-specific Mind Movies use your identity</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="p-3 rounded-lg bg-green-500/10 border border-green-500/30">
+                      <p className="text-sm text-muted-foreground">
+                        <strong className="text-green-400">Pro Tip:</strong> Create your Hero Character BEFORE generating Mind Movies 
+                        or Challenge Storyboards. This ensures visual consistency across all your content.
+                      </p>
                     </div>
                   </CardContent>
                 </Card>
@@ -1729,6 +1854,416 @@ const DirectorsGuide = () => {
                 </Card>
               </TabsContent>
             </Tabs>
+          </TabsContent>
+
+          {/* Detailed User Manual Tab */}
+          <TabsContent value="user-manual" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <FileText className="w-6 h-6 text-gold" />
+                  Complete User Manual
+                </CardTitle>
+                <CardDescription>
+                  Comprehensive documentation for training and reference — covers every feature in detail
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="prose prose-invert max-w-none">
+                <div className="space-y-8">
+                  {/* Table of Contents */}
+                  <div className="p-4 rounded-xl bg-muted/30 border border-border/50">
+                    <h4 className="font-semibold mb-3">Table of Contents</h4>
+                    <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-2 text-sm">
+                      <a href="#manual-overview" className="text-gold hover:underline">1. System Overview</a>
+                      <a href="#manual-chief-aim" className="text-gold hover:underline">2. Definite Chief Aim</a>
+                      <a href="#manual-hero-character" className="text-gold hover:underline">3. Hero Character Creator</a>
+                      <a href="#manual-character-builder" className="text-gold hover:underline">4. Character Builder</a>
+                      <a href="#manual-mind-movie" className="text-gold hover:underline">5. Mind Movie Studio</a>
+                      <a href="#manual-edit-bay" className="text-gold hover:underline">6. Edit Bay & AI Studio</a>
+                      <a href="#manual-timeline" className="text-gold hover:underline">7. Timeline Editor</a>
+                      <a href="#manual-director-ai" className="text-gold hover:underline">8. Director AI Coach</a>
+                      <a href="#manual-daily-rituals" className="text-gold hover:underline">9. Daily Rituals</a>
+                      <a href="#manual-cycles" className="text-gold hover:underline">10. 21-Day Cycles</a>
+                      <a href="#manual-integrations" className="text-gold hover:underline">11. Integrations</a>
+                      <a href="#manual-community" className="text-gold hover:underline">12. Community & Awards</a>
+                    </div>
+                  </div>
+
+                  <Separator />
+
+                  {/* Section 1: System Overview */}
+                  <section id="manual-overview">
+                    <h3 className="text-xl font-semibold text-gold mb-4">1. System Overview</h3>
+                    <div className="space-y-4 text-sm text-muted-foreground">
+                      <p>
+                        <strong>Psycho-Cinematics™ Director's OS</strong> is a comprehensive identity transformation platform that combines 
+                        visualization technology, behavioral tracking, AI coaching, and community support. The system treats your life as 
+                        a movie where you are both the Director and the star.
+                      </p>
+                      <h4 className="font-semibold text-foreground">Core Philosophy</h4>
+                      <p>
+                        Based on Maxwell Maltz's Psycho-Cybernetics and Napoleon Hill's Think and Grow Rich, the platform helps users 
+                        reprogram their self-image through consistent visualization and identity-aligned action.
+                      </p>
+                      <h4 className="font-semibold text-foreground">The 7-Phase Framework</h4>
+                      <ul className="list-disc list-inside space-y-1">
+                        <li><strong>Phase 1: The Awakening</strong> — Realizing you can rewrite your story</li>
+                        <li><strong>Phase 2: The Vision</strong> — Defining your Definite Chief Aim</li>
+                        <li><strong>Phase 3: The Script</strong> — Writing your new identity narrative</li>
+                        <li><strong>Phase 4: Pre-Production</strong> — Building habits and support systems</li>
+                        <li><strong>Phase 5: Principal Photography</strong> — Daily aligned action</li>
+                        <li><strong>Phase 6: Post-Production</strong> — Refining and adjusting course</li>
+                        <li><strong>Phase 7: The Premiere</strong> — Achieving and celebrating your goal</li>
+                      </ul>
+                    </div>
+                  </section>
+
+                  <Separator />
+
+                  {/* Section 2: Chief Aim */}
+                  <section id="manual-chief-aim">
+                    <h3 className="text-xl font-semibold text-gold mb-4">2. Definite Chief Aim</h3>
+                    <div className="space-y-4 text-sm text-muted-foreground">
+                      <p>
+                        The Definite Chief Aim is the foundation of your entire transformation. It is a crystal-clear statement containing 
+                        four essential components that define exactly what you want and how you'll achieve it.
+                      </p>
+                      <h4 className="font-semibold text-foreground">The Four Components</h4>
+                      <ol className="list-decimal list-inside space-y-2">
+                        <li><strong>The Dream (What)</strong> — Exactly what you want to achieve or become. Be specific and vivid.</li>
+                        <li><strong>The Deadline (By When)</strong> — A specific date that creates urgency. Ambitious yet believable.</li>
+                        <li><strong>The Exchange (What You'll Give)</strong> — The habits, time, comfort, and sacrifices you'll commit.</li>
+                        <li><strong>The Plan (First Steps)</strong> — Immediate actions you'll take to begin your transformation today.</li>
+                      </ol>
+                      <h4 className="font-semibold text-foreground">How to Access</h4>
+                      <p>
+                        Click the gold "Start Here: Definite Chief Aim" card on your dashboard. The AI-guided wizard walks you through 
+                        each phase with personalized coaching and examples.
+                      </p>
+                      <h4 className="font-semibold text-foreground">Daily Practice</h4>
+                      <p>
+                        Your Chief Aim appears on your dashboard. Read it aloud every morning and evening. This statement becomes the 
+                        foundation for your Mind Movie's scenes and lyrics.
+                      </p>
+                    </div>
+                  </section>
+
+                  <Separator />
+
+                  {/* Section 3: Hero Character */}
+                  <section id="manual-hero-character">
+                    <h3 className="text-xl font-semibold text-gold mb-4">3. Hero Character Creator</h3>
+                    <div className="space-y-4 text-sm text-muted-foreground">
+                      <p>
+                        The Hero Character Creator allows you to define and generate a standardized visual identity for your "Best Self." 
+                        This ensures visual consistency across all AI-generated content.
+                      </p>
+                      <h4 className="font-semibold text-foreground">Location</h4>
+                      <p>Character Builder → Create tab</p>
+                      <h4 className="font-semibold text-foreground">Step-by-Step Process</h4>
+                      <ol className="list-decimal list-inside space-y-2">
+                        <li><strong>Upload Reference Photo</strong> — Upload a clear, front-facing photo with good lighting</li>
+                        <li><strong>Enter Character Description</strong> — Define height, weight, build, and additional features</li>
+                        <li><strong>Save Description</strong> — Click "Save Description" to persist to your profile</li>
+                        <li><strong>Generate Hero Images</strong> — Click to generate front, side, and back views</li>
+                        <li><strong>Download Images</strong> — Hover to download individually or use "Download All"</li>
+                      </ol>
+                      <h4 className="font-semibold text-foreground">Character Description Fields</h4>
+                      <ul className="list-disc list-inside space-y-1">
+                        <li><strong>Height</strong> — e.g., "6 feet", "5'10"</li>
+                        <li><strong>Weight/Size</strong> — e.g., "180 lbs", "athletic"</li>
+                        <li><strong>Physical Build</strong> — e.g., "muscular", "lean", "athletic"</li>
+                        <li><strong>Additional Features</strong> — Hair style, clothing preferences, distinguishing characteristics</li>
+                      </ul>
+                      <h4 className="font-semibold text-foreground">Where Hero Images Are Used</h4>
+                      <ul className="list-disc list-inside space-y-1">
+                        <li>Mind Movie Wizard scene generation</li>
+                        <li>Challenge Storyboard visualizations</li>
+                        <li>Edit Bay image generation (auto-loaded as reference)</li>
+                        <li>Episode-specific Mind Movie productions</li>
+                      </ul>
+                      <div className="p-3 rounded-lg bg-gold/10 border border-gold/20 mt-4">
+                        <p><strong>Best Practice:</strong> Create your Hero Character BEFORE generating any Mind Movies or Challenge 
+                        Storyboards to ensure consistent identity across all content.</p>
+                      </div>
+                    </div>
+                  </section>
+
+                  <Separator />
+
+                  {/* Section 4: Character Builder */}
+                  <section id="manual-character-builder">
+                    <h3 className="text-xl font-semibold text-gold mb-4">4. Character Builder</h3>
+                    <div className="space-y-4 text-sm text-muted-foreground">
+                      <p>
+                        The Character Builder is a comprehensive system for understanding and developing your character through archetype 
+                        discovery, transformation coaching, and progress tracking.
+                      </p>
+                      <h4 className="font-semibold text-foreground">Tabs Available</h4>
+                      <ul className="list-disc list-inside space-y-1">
+                        <li><strong>Create</strong> — Hero Character Creator (see Section 3)</li>
+                        <li><strong>21 Days</strong> — Cycle progress and transformation roadmap</li>
+                        <li><strong>Survey</strong> — 28-question archetype assessment</li>
+                        <li><strong>Archetype</strong> — Your dominant archetype results</li>
+                        <li><strong>Coach</strong> — AI Transformation Coach</li>
+                        <li><strong>Scorecard</strong> — Character trait scoring</li>
+                        <li><strong>Annual</strong> — Year-end self-analysis</li>
+                      </ul>
+                      <h4 className="font-semibold text-foreground">Archetype Survey</h4>
+                      <p>
+                        Complete the 28-question Napoleon Hill character assessment. Each question offers "Light" (strengths) and 
+                        "Shadow" (growth areas) options. Shadow answers reveal your biggest transformation opportunities.
+                      </p>
+                      <h4 className="font-semibold text-foreground">The 12 Director Archetypes</h4>
+                      <p>
+                        Sovereign, Master Builder, Wayfinder, Alchemist, Divine Analyst, Truth Keeper, Sacred Judge, Protector, 
+                        Harmonizer, Weaver, Still Center, and more. Each has unique strengths and shadow tendencies.
+                      </p>
+                      <h4 className="font-semibold text-foreground">Transformation Coach</h4>
+                      <p>
+                        AI-powered coaching that analyzes your archetype, Chief Aim, and survey responses to identify the gap between 
+                        who you are and who you need to become. Generates a personalized transformation analysis with required traits 
+                        and daily practices.
+                      </p>
+                    </div>
+                  </section>
+
+                  <Separator />
+
+                  {/* Section 5: Mind Movie */}
+                  <section id="manual-mind-movie">
+                    <h3 className="text-xl font-semibold text-gold mb-4">5. Mind Movie Studio</h3>
+                    <div className="space-y-4 text-sm text-muted-foreground">
+                      <h4 className="font-semibold text-foreground">Overview</h4>
+                      <p>
+                        The Mind Movie Studio is a complete production pipeline for creating personalized visualization videos. 
+                        It includes script generation, AI image/video creation, soundtrack production, and a movie vault for 
+                        managing multiple projects.
+                      </p>
+                      <h4 className="font-semibold text-foreground">5-Step Wizard Process</h4>
+                      <ol className="list-decimal list-inside space-y-2">
+                        <li><strong>Foundation</strong> — Set title, cinematography style, and confirm Chief Aim</li>
+                        <li><strong>Generate Script</strong> — AI generates 12-scene storyboard based on Chief Aim</li>
+                        <li><strong>Visuals</strong> — Generate/upload images and videos for each scene</li>
+                        <li><strong>Soundtrack</strong> — Create custom AI music with optional Chief Aim lyrics</li>
+                        <li><strong>Finalize</strong> — Review and save to Movie Vault</li>
+                      </ol>
+                      <h4 className="font-semibold text-foreground">Cinematography Styles</h4>
+                      <p>
+                        Choose from Dramatic, Noir, Ethereal, Documentary, Epic, and more. Each style dictates lighting, camera 
+                        techniques, and visual grammar.
+                      </p>
+                      <h4 className="font-semibold text-foreground">Movie Vault</h4>
+                      <p>
+                        Manage multiple Mind Movies. Set one as "active" for your daily viewing ritual. Preview, rename, duplicate, 
+                        submit to community, or delete projects.
+                      </p>
+                      <h4 className="font-semibold text-foreground">The Theater</h4>
+                      <p>
+                        Watch your active Mind Movie in a distraction-free cinematic experience. The Theater tracks your viewing 
+                        streak and integrates with the morning ritual workflow.
+                      </p>
+                    </div>
+                  </section>
+
+                  <Separator />
+
+                  {/* Section 6: Edit Bay */}
+                  <section id="manual-edit-bay">
+                    <h3 className="text-xl font-semibold text-gold mb-4">6. Edit Bay & AI Studio</h3>
+                    <div className="space-y-4 text-sm text-muted-foreground">
+                      <h4 className="font-semibold text-foreground">Image Generation</h4>
+                      <p>
+                        Generate AI images using text prompts. Upload reference photos for personal likeness integration. 
+                        Your Hero Character images are automatically loaded as references.
+                      </p>
+                      <h4 className="font-semibold text-foreground">Video Generation Models</h4>
+                      <ul className="list-disc list-inside space-y-1">
+                        <li><strong>Google Veo 3</strong> — Best quality with audio generation, 8-second clips</li>
+                        <li><strong>Wan 2.1</strong> — Fast, high-quality general content</li>
+                        <li><strong>Kling v2.5</strong> — Professional quality, supports image-to-video</li>
+                      </ul>
+                      <h4 className="font-semibold text-foreground">Voice Changer</h4>
+                      <p>
+                        Transform video audio using ElevenLabs voices. Choose from 10+ premium voices or connect your own 
+                        ElevenLabs API key for cloned voices.
+                      </p>
+                      <h4 className="font-semibold text-foreground">Media Library</h4>
+                      <p>
+                        All generated assets are saved to your Media Library (20GB limit). Filter by type (images, videos, audio), 
+                        sort by date, multi-select to import into Timeline Editor, or submit audio to Director Radio.
+                      </p>
+                    </div>
+                  </section>
+
+                  <Separator />
+
+                  {/* Section 7: Timeline */}
+                  <section id="manual-timeline">
+                    <h3 className="text-xl font-semibold text-gold mb-4">7. Timeline Editor</h3>
+                    <div className="space-y-4 text-sm text-muted-foreground">
+                      <h4 className="font-semibold text-foreground">Overview</h4>
+                      <p>
+                        Professional non-linear video editing right in your browser. Multi-track support for video and audio, 
+                        razor cuts, audio fades, and VU meters for audio monitoring.
+                      </p>
+                      <h4 className="font-semibold text-foreground">Keyboard Shortcuts</h4>
+                      <ul className="list-disc list-inside space-y-1">
+                        <li><strong>V</strong> — Select tool</li>
+                        <li><strong>C</strong> — Razor tool (cut clips)</li>
+                        <li><strong>R</strong> — Range tool</li>
+                        <li><strong>H</strong> — Hand tool (pan)</li>
+                        <li><strong>A</strong> — Add audio to timeline</li>
+                        <li><strong>Ctrl/Cmd + Z</strong> — Undo</li>
+                        <li><strong>Ctrl/Cmd + Shift + Z</strong> — Redo</li>
+                        <li><strong>Delete/Backspace</strong> — Delete selected clips</li>
+                      </ul>
+                      <h4 className="font-semibold text-foreground">Export Options</h4>
+                      <p>Export in 720p, 1080p, or HD quality. Review your export before saving to Movie Vault or downloading.</p>
+                    </div>
+                  </section>
+
+                  <Separator />
+
+                  {/* Section 8: Director AI */}
+                  <section id="manual-director-ai">
+                    <h3 className="text-xl font-semibold text-gold mb-4">8. Director AI Coach</h3>
+                    <div className="space-y-4 text-sm text-muted-foreground">
+                      <h4 className="font-semibold text-foreground">Overview</h4>
+                      <p>
+                        Your personal voice-enabled AI coach trained in Psycho-Cinematics methodology. It knows your Chief Aim, 
+                        active Episode, character archetype, and daily progress.
+                      </p>
+                      <h4 className="font-semibold text-foreground">Voice Options (10 total)</h4>
+                      <p>Male: Adam, Antoni, Charlie, Daniel, Marcus</p>
+                      <p>Female: Charlotte, Jessica, Lily, Sarah, Nicole</p>
+                      <h4 className="font-semibold text-foreground">Personality Presets (6 total)</h4>
+                      <ul className="list-disc list-inside space-y-1">
+                        <li><strong>Swag Coach</strong> — Confident, street-smart energy</li>
+                        <li><strong>Executive Coach</strong> — Professional, strategic</li>
+                        <li><strong>Hype Master</strong> — High energy, motivational</li>
+                        <li><strong>Zen Guide</strong> — Calm, mindful approach</li>
+                        <li><strong>Drill Sergeant</strong> — Direct, no-nonsense</li>
+                        <li><strong>Best Friend</strong> — Warm, supportive</li>
+                      </ul>
+                      <h4 className="font-semibold text-foreground">The CUT! Technique</h4>
+                      <ol className="list-decimal list-inside space-y-1">
+                        <li><strong>Recognize</strong> — Notice the off-script thought</li>
+                        <li><strong>Cut</strong> — Mentally yell "CUT!" to stop the scene</li>
+                        <li><strong>Reset</strong> — Take 3 deep breaths, reconnect with Director self</li>
+                        <li><strong>Resume</strong> — Take an aligned action matching your Chief Aim</li>
+                      </ol>
+                    </div>
+                  </section>
+
+                  <Separator />
+
+                  {/* Section 9: Daily Rituals */}
+                  <section id="manual-daily-rituals">
+                    <h3 className="text-xl font-semibold text-gold mb-4">9. Daily Rituals & Scorecard</h3>
+                    <div className="space-y-4 text-sm text-muted-foreground">
+                      <h4 className="font-semibold text-foreground">Morning Ritual</h4>
+                      <ol className="list-decimal list-inside space-y-1">
+                        <li>Read your Definite Chief Aim aloud</li>
+                        <li>Watch your Mind Movie in The Theater</li>
+                        <li>Set your "Three Things" — 3 priority tasks for the day</li>
+                      </ol>
+                      <h4 className="font-semibold text-foreground">Evening Scorecard</h4>
+                      <p>Rate yourself 0-3 on four categories:</p>
+                      <ul className="list-disc list-inside space-y-1">
+                        <li><strong>Identity Alignment</strong> — Did you think/act as your future self?</li>
+                        <li><strong>Behavior Execution</strong> — Did you complete your Three Things?</li>
+                        <li><strong>Emotional Regulation</strong> — Did you manage your state effectively?</li>
+                        <li><strong>Forward Progress</strong> — Did you move closer to your Chief Aim?</li>
+                      </ul>
+                      <h4 className="font-semibold text-foreground">Scoring Rubric (0-3)</h4>
+                      <ul className="list-disc list-inside space-y-1">
+                        <li><strong>0 — Off-Script</strong> — Did not embody this at all</li>
+                        <li><strong>1 — Rehearsing</strong> — Made some effort, inconsistent</li>
+                        <li><strong>2 — In Character</strong> — Solid performance, minor lapses</li>
+                        <li><strong>3 — Oscar-Worthy</strong> — Exemplary embodiment</li>
+                      </ul>
+                    </div>
+                  </section>
+
+                  <Separator />
+
+                  {/* Section 10: Cycles */}
+                  <section id="manual-cycles">
+                    <h3 className="text-xl font-semibold text-gold mb-4">10. 21-Day Transformation Cycles</h3>
+                    <div className="space-y-4 text-sm text-muted-foreground">
+                      <h4 className="font-semibold text-foreground">The Science</h4>
+                      <p>
+                        Research shows it takes approximately 21 days to form new neural pathways and habits. Each 21-day cycle 
+                        is a focused period for embedding one aspect of your transformation.
+                      </p>
+                      <h4 className="font-semibold text-foreground">The 3-4-3 Act Structure</h4>
+                      <p>Your full transformation spans 210 days across 3 Acts:</p>
+                      <ul className="list-disc list-inside space-y-1">
+                        <li><strong>Act I: Awakening</strong> — 3 cycles (63 days)</li>
+                        <li><strong>Act II: Integration</strong> — 4 cycles (84 days)</li>
+                        <li><strong>Act III: Mastery</strong> — 3 cycles (63 days)</li>
+                      </ul>
+                      <h4 className="font-semibold text-foreground">Cycle Review</h4>
+                      <p>On Day 21, complete a Cycle Review including:</p>
+                      <ul className="list-disc list-inside space-y-1">
+                        <li>Scorecard averages for the cycle</li>
+                        <li>Character archetype comparison (before/after)</li>
+                        <li>AI-generated progress analysis</li>
+                        <li>Personal reflection on wins and challenges</li>
+                        <li>Commitment for the next cycle</li>
+                      </ul>
+                    </div>
+                  </section>
+
+                  <Separator />
+
+                  {/* Section 11: Integrations */}
+                  <section id="manual-integrations">
+                    <h3 className="text-xl font-semibold text-gold mb-4">11. Integrations</h3>
+                    <div className="space-y-4 text-sm text-muted-foreground">
+                      <p>All integrations are managed in Settings → Integrations.</p>
+                      <h4 className="font-semibold text-foreground">Available Integrations</h4>
+                      <ul className="list-disc list-inside space-y-1">
+                        <li><strong>Notion</strong> — Auto-sync journal, scorecards, and Chief Aim</li>
+                        <li><strong>Slack</strong> — Morning ritual and evening scorecard reminders</li>
+                        <li><strong>Telegram</strong> — Mobile push notifications for all reminders</li>
+                        <li><strong>ElevenLabs</strong> — Use your cloned voices in Voice Changer</li>
+                        <li><strong>Social Media</strong> — Direct posting to Facebook, Instagram, X, TikTok</li>
+                      </ul>
+                    </div>
+                  </section>
+
+                  <Separator />
+
+                  {/* Section 12: Community */}
+                  <section id="manual-community">
+                    <h3 className="text-xl font-semibold text-gold mb-4">12. Community & Awards</h3>
+                    <div className="space-y-4 text-sm text-muted-foreground">
+                      <h4 className="font-semibold text-foreground">Director's Corner</h4>
+                      <p>
+                        Share your Mind Movies with the community. Vote for others' work. Get inspired by seeing what 
+                        fellow Directors are manifesting.
+                      </p>
+                      <h4 className="font-semibold text-foreground">Recognition Programs</h4>
+                      <ul className="list-disc list-inside space-y-1">
+                        <li><strong>Movie of the Week</strong> — Highest-voted community Mind Movie</li>
+                        <li><strong>Director of the Month</strong> — Top performer based on streaks and scores</li>
+                      </ul>
+                      <h4 className="font-semibold text-foreground">Annual Awards</h4>
+                      <ul className="list-disc list-inside space-y-1">
+                        <li>🏆 Best Mind Movie</li>
+                        <li>🔥 Longest Streak</li>
+                        <li>⭐ Top Director Score</li>
+                        <li>🎬 Most Movies Created</li>
+                        <li>💫 Community Favorite</li>
+                        <li>🌟 Rising Star</li>
+                      </ul>
+                    </div>
+                  </section>
+                </div>
+              </CardContent>
+            </Card>
           </TabsContent>
 
           {/* FAQ Tab */}
