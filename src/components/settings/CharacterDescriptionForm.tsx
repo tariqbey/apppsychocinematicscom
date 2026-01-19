@@ -20,7 +20,9 @@ import {
   RefreshCw,
   Download,
   CheckCircle,
-  Star
+  Star,
+  Trash2,
+  ThumbsUp
 } from "lucide-react";
 
 interface CharacterDescription {
@@ -29,6 +31,8 @@ interface CharacterDescription {
   build: string;
   features: string;
 }
+
+type ViewType = "front" | "side" | "back";
 
 interface Props {
   referencePhotoUrl: string | null;
@@ -40,6 +44,8 @@ export function CharacterDescriptionForm({ referencePhotoUrl, onHeroImageGenerat
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [regeneratingView, setRegeneratingView] = useState<ViewType | null>(null);
+  const [approvedViews, setApprovedViews] = useState<Set<ViewType>>(new Set());
   const [description, setDescription] = useState<CharacterDescription>({
     height: "",
     weight: "",
@@ -188,6 +194,125 @@ export function CharacterDescriptionForm({ referencePhotoUrl, onHeroImageGenerat
     } finally {
       setIsGenerating(false);
     }
+  };
+
+  const regenerateSingleView = async (view: ViewType) => {
+    if (!user || !referencePhotoUrl) {
+      toast.error("Please upload a reference photo first");
+      return;
+    }
+
+    setRegeneratingView(view);
+    try {
+      const characterDesc = buildCharacterPrompt();
+      const poses: Record<ViewType, string> = {
+        front: "heroic front-facing pose, arms crossed confidently, looking directly at camera",
+        side: "profile view from the side, standing tall with confident posture",
+        back: "back view showing full body from behind, confident stance",
+      };
+
+      toast.info(`Regenerating ${view} view...`);
+      
+      const prompt = `Full body character reference sheet, ${characterDesc}, ${poses[view]}, plain neutral gray background, professional studio lighting, ultra high resolution, clean character turnaround sheet style, no props or distractions`;
+
+      const { data, error } = await supabase.functions.invoke("lovable-generate-image", {
+        body: {
+          prompt,
+          images: [referencePhotoUrl],
+          aspect_ratio: "3:4",
+        },
+      });
+
+      if (error) throw error;
+
+      if (data?.imageUrl) {
+        const fieldMap: Record<ViewType, string> = {
+          front: "hero_image_url",
+          side: "hero_image_side_url",
+          back: "hero_image_back_url",
+        };
+
+        const { error: updateError } = await supabase
+          .from("user_profiles")
+          .update({
+            [fieldMap[view]]: data.imageUrl,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("user_id", user.id);
+
+        if (updateError) throw updateError;
+
+        setHeroImages((prev) => ({ ...prev, [view]: data.imageUrl }));
+        setApprovedViews((prev) => {
+          const next = new Set(prev);
+          next.delete(view);
+          return next;
+        });
+        toast.success(`${view.charAt(0).toUpperCase() + view.slice(1)} view regenerated!`);
+      }
+    } catch (error) {
+      console.error("Error regenerating view:", error);
+      toast.error(`Failed to regenerate ${view} view`);
+    } finally {
+      setRegeneratingView(null);
+    }
+  };
+
+  const deleteView = async (view: ViewType) => {
+    if (!user) return;
+
+    try {
+      const fieldMap: Record<ViewType, string> = {
+        front: "hero_image_url",
+        side: "hero_image_side_url",
+        back: "hero_image_back_url",
+      };
+
+      const { error } = await supabase
+        .from("user_profiles")
+        .update({
+          [fieldMap[view]]: null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("user_id", user.id);
+
+      if (error) throw error;
+
+      setHeroImages((prev) => ({ ...prev, [view]: null }));
+      setApprovedViews((prev) => {
+        const next = new Set(prev);
+        next.delete(view);
+        return next;
+      });
+      toast.success(`${view.charAt(0).toUpperCase() + view.slice(1)} image deleted`);
+    } catch (error) {
+      console.error("Error deleting view:", error);
+      toast.error("Failed to delete image");
+    }
+  };
+
+  const approveView = (view: ViewType) => {
+    setApprovedViews((prev) => {
+      const next = new Set(prev);
+      if (next.has(view)) {
+        next.delete(view);
+      } else {
+        next.add(view);
+      }
+      return next;
+    });
+    toast.success(`${view.charAt(0).toUpperCase() + view.slice(1)} view ${approvedViews.has(view) ? "unapproved" : "approved"}!`);
+  };
+
+  const downloadImage = (url: string, view: string) => {
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `hero-${view}.png`;
+    link.target = '_blank';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast.success(`${view.charAt(0).toUpperCase() + view.slice(1)} image downloaded`);
   };
 
   const buildCharacterPrompt = () => {
@@ -360,119 +485,118 @@ export function CharacterDescriptionForm({ referencePhotoUrl, onHeroImageGenerat
               </div>
             </div>
             
-            <div className="grid grid-cols-3 gap-3">
-              {heroImages.front && (
-                <div className="space-y-2">
-                  <div className="aspect-[3/4] rounded-lg overflow-hidden border border-gold/30 relative group">
-                    <img
-                      src={heroImages.front}
-                      alt="Front view"
-                      className="w-full h-full object-cover"
-                    />
-                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="text-xs"
-                        onClick={() => {
-                          const link = document.createElement('a');
-                          link.href = heroImages.front!;
-                          link.download = 'hero-front.png';
-                          link.target = '_blank';
-                          document.body.appendChild(link);
-                          link.click();
-                          document.body.removeChild(link);
-                          toast.success("Front image downloaded");
-                        }}
-                      >
-                        <Download className="w-3 h-3 mr-1" />
-                        Download
-                      </Button>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              {(["front", "side", "back"] as ViewType[]).map((view) => {
+                const imageUrl = heroImages[view];
+                const isRegenerating = regeneratingView === view;
+                const isApproved = approvedViews.has(view);
+
+                if (!imageUrl) {
+                  return (
+                    <div key={view} className="space-y-2">
+                      <div className="aspect-[3/4] rounded-lg border-2 border-dashed border-muted-foreground/30 flex items-center justify-center bg-muted/20">
+                        <div className="text-center p-4">
+                          <Camera className="w-8 h-8 mx-auto text-muted-foreground/50 mb-2" />
+                          <p className="text-xs text-muted-foreground">No {view} image</p>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="mt-2 text-xs"
+                            onClick={() => regenerateSingleView(view)}
+                            disabled={regeneratingView !== null || !referencePhotoUrl}
+                          >
+                            <Sparkles className="w-3 h-3 mr-1" />
+                            Generate
+                          </Button>
+                        </div>
+                      </div>
+                      <Badge variant="outline" className="w-full justify-center gap-1 text-muted-foreground">
+                        {view.charAt(0).toUpperCase() + view.slice(1)}
+                      </Badge>
                     </div>
-                  </div>
-                  <Badge variant="outline" className="w-full justify-center gap-1">
-                    <CheckCircle className="w-3 h-3 text-green-500" />
-                    Front
-                  </Badge>
-                </div>
-              )}
-              {heroImages.side && (
-                <div className="space-y-2">
-                  <div className="aspect-[3/4] rounded-lg overflow-hidden border border-gold/30 relative group">
-                    <img
-                      src={heroImages.side}
-                      alt="Side view"
-                      className="w-full h-full object-cover"
-                    />
-                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="text-xs"
-                        onClick={() => {
-                          const link = document.createElement('a');
-                          link.href = heroImages.side!;
-                          link.download = 'hero-side.png';
-                          link.target = '_blank';
-                          document.body.appendChild(link);
-                          link.click();
-                          document.body.removeChild(link);
-                          toast.success("Side image downloaded");
-                        }}
-                      >
-                        <Download className="w-3 h-3 mr-1" />
-                        Download
-                      </Button>
+                  );
+                }
+
+                return (
+                  <div key={view} className="space-y-2">
+                    <div className={`aspect-[3/4] rounded-lg overflow-hidden border-2 relative group ${isApproved ? 'border-green-500 ring-2 ring-green-500/30' : 'border-gold/30'}`}>
+                      {isRegenerating ? (
+                        <div className="absolute inset-0 flex items-center justify-center bg-background/80 z-10">
+                          <Loader2 className="w-8 h-8 animate-spin text-gold" />
+                        </div>
+                      ) : null}
+                      <img
+                        src={imageUrl}
+                        alt={`${view} view`}
+                        className="w-full h-full object-cover"
+                      />
+                      {/* Hover overlay with actions */}
+                      <div className="absolute inset-0 bg-black/70 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2 p-2">
+                        <Button
+                          size="sm"
+                          variant={isApproved ? "default" : "outline"}
+                          className={`w-full text-xs ${isApproved ? 'bg-green-600 hover:bg-green-700' : ''}`}
+                          onClick={() => approveView(view)}
+                        >
+                          <ThumbsUp className="w-3 h-3 mr-1" />
+                          {isApproved ? "Approved ✓" : "Approve"}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="w-full text-xs"
+                          onClick={() => regenerateSingleView(view)}
+                          disabled={regeneratingView !== null || !referencePhotoUrl}
+                        >
+                          <RefreshCw className={`w-3 h-3 mr-1 ${isRegenerating ? 'animate-spin' : ''}`} />
+                          Regenerate
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="w-full text-xs"
+                          onClick={() => downloadImage(imageUrl, view)}
+                        >
+                          <Download className="w-3 h-3 mr-1" />
+                          Download
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          className="w-full text-xs"
+                          onClick={() => deleteView(view)}
+                        >
+                          <Trash2 className="w-3 h-3 mr-1" />
+                          Delete
+                        </Button>
+                      </div>
+                      {/* Approved badge overlay */}
+                      {isApproved && (
+                        <div className="absolute top-2 right-2 bg-green-600 rounded-full p-1">
+                          <Check className="w-3 h-3 text-white" />
+                        </div>
+                      )}
                     </div>
+                    <Badge 
+                      variant={isApproved ? "default" : "outline"} 
+                      className={`w-full justify-center gap-1 ${isApproved ? 'bg-green-600 text-white border-green-600' : ''}`}
+                    >
+                      {isApproved ? (
+                        <CheckCircle className="w-3 h-3" />
+                      ) : null}
+                      {view.charAt(0).toUpperCase() + view.slice(1)}
+                      {isApproved && " ✓"}
+                    </Badge>
                   </div>
-                  <Badge variant="outline" className="w-full justify-center gap-1">
-                    <CheckCircle className="w-3 h-3 text-green-500" />
-                    Side
-                  </Badge>
-                </div>
-              )}
-              {heroImages.back && (
-                <div className="space-y-2">
-                  <div className="aspect-[3/4] rounded-lg overflow-hidden border border-gold/30 relative group">
-                    <img
-                      src={heroImages.back}
-                      alt="Back view"
-                      className="w-full h-full object-cover"
-                    />
-                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="text-xs"
-                        onClick={() => {
-                          const link = document.createElement('a');
-                          link.href = heroImages.back!;
-                          link.download = 'hero-back.png';
-                          link.target = '_blank';
-                          document.body.appendChild(link);
-                          link.click();
-                          document.body.removeChild(link);
-                          toast.success("Back image downloaded");
-                        }}
-                      >
-                        <Download className="w-3 h-3 mr-1" />
-                        Download
-                      </Button>
-                    </div>
-                  </div>
-                  <Badge variant="outline" className="w-full justify-center gap-1">
-                    <CheckCircle className="w-3 h-3 text-green-500" />
-                    Back
-                  </Badge>
-                </div>
-              )}
+                );
+              })}
             </div>
             
             <Card className="p-3 bg-gold/5 border-gold/20">
               <div className="flex items-start gap-2">
                 <Star className="w-4 h-4 text-gold mt-0.5 shrink-0" />
                 <p className="text-sm text-muted-foreground">
-                  <strong>Saved & Active:</strong> These hero images are now your default identity for all AI-generated scenes in Mind Movies, Challenge Storyboards, and visualizations.
+                  <strong>Hero Images Active:</strong> Hover over each image to approve, regenerate, download, or delete. Approved images will be used as your identity for all AI-generated scenes.
                 </p>
               </div>
             </Card>
