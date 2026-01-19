@@ -71,6 +71,7 @@ export default function ScorePage() {
   const [isShuffle, setIsShuffle] = useState(false);
   const [isRepeat, setIsRepeat] = useState(false);
   const [isUploadingTrack, setIsUploadingTrack] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<{ current: number; total: number } | null>(null);
   
   // Playlist management
   const [newPlaylistName, setNewPlaylistName] = useState("");
@@ -183,48 +184,82 @@ export default function ScorePage() {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  // Handle file upload
-  const handleUploadTrack = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !user) return;
+  // Handle multiple file uploads
+  const handleUploadTracks = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0 || !user) return;
 
     const allowedTypes = ['audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/ogg', 'audio/m4a', 'audio/x-m4a'];
-    if (!allowedTypes.includes(file.type) && !file.name.match(/\.(mp3|wav|ogg|m4a)$/i)) {
-      toast.error('Please upload an audio file (MP3, WAV, OGG, or M4A)');
+    const validFiles = Array.from(files).filter(file => 
+      allowedTypes.includes(file.type) || file.name.match(/\.(mp3|wav|ogg|m4a)$/i)
+    );
+
+    if (validFiles.length === 0) {
+      toast.error('Please upload audio files (MP3, WAV, OGG, or M4A)');
       return;
     }
 
+    if (validFiles.length < files.length) {
+      toast.warning(`${files.length - validFiles.length} non-audio files were skipped`);
+    }
+
     setIsUploadingTrack(true);
-    try {
-      const fileName = `${user.id}/${Date.now()}-${file.name}`;
-      const { error: uploadError } = await supabase.storage
-        .from('generated-media')
-        .upload(fileName, file);
+    setUploadProgress({ current: 0, total: validFiles.length });
 
-      if (uploadError) throw uploadError;
+    const targetPlaylist = currentPlaylist || await getDefaultPlaylist();
+    if (!targetPlaylist) {
+      toast.error('No playlist available');
+      setIsUploadingTrack(false);
+      setUploadProgress(null);
+      return;
+    }
 
-      const { data: { publicUrl } } = supabase.storage
-        .from('generated-media')
-        .getPublicUrl(fileName);
+    let successCount = 0;
+    let failCount = 0;
 
-      // Add to current playlist or default
-      const targetPlaylist = currentPlaylist || await getDefaultPlaylist();
-      if (targetPlaylist) {
+    for (let i = 0; i < validFiles.length; i++) {
+      const file = validFiles[i];
+      setUploadProgress({ current: i + 1, total: validFiles.length });
+
+      try {
+        const fileName = `${user.id}/${Date.now()}-${file.name}`;
+        const { error: uploadError } = await supabase.storage
+          .from('generated-media')
+          .upload(fileName, file);
+
+        if (uploadError) throw uploadError;
+
+        const { data: { publicUrl } } = supabase.storage
+          .from('generated-media')
+          .getPublicUrl(fileName);
+
         await addTrackToPlaylist(targetPlaylist.id, {
           title: file.name.replace(/\.[^/.]+$/, ''),
           audio_url: publicUrl,
           source_type: 'upload',
         });
-        // Refresh tracks
-        await fetchPlaylistTracks(targetPlaylist.id);
-        toast.success('Track uploaded!');
+        successCount++;
+      } catch (error) {
+        console.error(`Upload error for ${file.name}:`, error);
+        failCount++;
       }
-    } catch (error) {
-      console.error('Upload error:', error);
-      toast.error('Failed to upload track');
-    } finally {
-      setIsUploadingTrack(false);
     }
+
+    // Refresh tracks after all uploads
+    await fetchPlaylistTracks(targetPlaylist.id);
+
+    if (successCount > 0) {
+      toast.success(`${successCount} track${successCount > 1 ? 's' : ''} uploaded!`);
+    }
+    if (failCount > 0) {
+      toast.error(`${failCount} track${failCount > 1 ? 's' : ''} failed to upload`);
+    }
+
+    setIsUploadingTrack(false);
+    setUploadProgress(null);
+    
+    // Reset the input
+    e.target.value = '';
   };
 
   const handlePlayTrack = (track: PlaylistTrack) => {
@@ -373,15 +408,18 @@ export default function ScorePage() {
             <label>
               <input 
                 type="file" 
-                accept="audio/*" 
+                accept="audio/*"
+                multiple
                 className="hidden" 
-                onChange={handleUploadTrack}
+                onChange={handleUploadTracks}
                 disabled={isUploadingTrack}
               />
               <Button variant="outline" size="sm" asChild disabled={isUploadingTrack}>
                 <span className="cursor-pointer">
                   <Upload className="w-4 h-4 mr-2" />
-                  {isUploadingTrack ? 'Uploading...' : 'Upload'}
+                  {isUploadingTrack && uploadProgress
+                    ? `Uploading ${uploadProgress.current}/${uploadProgress.total}...`
+                    : 'Upload Tracks'}
                 </span>
               </Button>
             </label>
@@ -434,7 +472,7 @@ export default function ScorePage() {
               </CardContent>
             </Card>
 
-            {/* Now Playing Card */}
+            {/* Now Playing Card with Enhanced Waveform */}
             {currentTrack && (
               <Card className="bg-card border-border/50 overflow-hidden">
                 <CardContent className="p-4">
@@ -459,12 +497,26 @@ export default function ScorePage() {
                     </div>
                   </div>
                   
-                  <div className="h-16 bg-muted/30 rounded-lg overflow-hidden">
+                  {/* Enhanced Audio Visualizer */}
+                  <div className="h-24 bg-gradient-to-b from-muted/20 to-muted/40 rounded-lg overflow-hidden relative">
+                    <div className="absolute inset-0 bg-gradient-to-r from-gold/5 via-transparent to-gold/5" />
                     <AudioVisualizer 
                       audioElement={audioRef.current} 
                       isPlaying={isPlaying}
-                      barCount={48}
+                      barCount={64}
+                      barColor="#D4AF37"
                     />
+                    {!isPlaying && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+                        <Play className="w-8 h-8 text-gold/60" />
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Time display */}
+                  <div className="flex justify-between text-xs text-muted-foreground mt-2">
+                    <span>{formatTime(currentTime)}</span>
+                    <span>{formatTime(duration)}</span>
                   </div>
                 </CardContent>
               </Card>
@@ -509,14 +561,15 @@ export default function ScorePage() {
                             <label>
                               <input 
                                 type="file" 
-                                accept="audio/*" 
+                                accept="audio/*"
+                                multiple
                                 className="hidden" 
-                                onChange={handleUploadTrack}
+                                onChange={handleUploadTracks}
                               />
                               <Button size="sm" variant="outline" asChild>
                                 <span className="cursor-pointer">
                                   <Upload className="w-4 h-4 mr-2" />
-                                  Upload
+                                  Upload Tracks
                                 </span>
                               </Button>
                             </label>
