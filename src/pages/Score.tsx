@@ -42,6 +42,10 @@ export default function ScorePage() {
   const { user, loading: authLoading } = useAuth();
   const { profile } = useUserProfile();
   const audioRef = useRef<HTMLAudioElement>(null);
+
+  const isIOSDevice =
+    /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+    (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
   
   // User playlists hook
   const {
@@ -590,6 +594,7 @@ export default function ScorePage() {
                       isPlaying={isPlaying}
                       barCount={64}
                       barColor="#D4AF37"
+                      enableWebAudio={!isIOSDevice}
                     />
                     {!isPlaying && (
                       <div className="absolute inset-0 flex items-center justify-center bg-black/20">
