@@ -33,7 +33,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { AudioVisualizer, SimpleWaveformBars } from "@/components/music/AudioVisualizer";
-import { useMediaSession, configureAudioForBackground } from "@/hooks/useMediaSession";
+import { useMediaSession, configureAudioForBackground, useIOSBackgroundAudio } from "@/hooks/useMediaSession";
 import { useOfflineTracks } from "@/hooks/useOfflineTracks";
 import { Badge } from "@/components/ui/badge";
 
@@ -198,6 +198,9 @@ export default function ScorePage() {
     const cleanup = configureAudioForBackground(audio);
     return cleanup;
   }, []);
+
+  // iOS-specific background audio handling
+  useIOSBackgroundAudio(audioRef, isPlaying);
 
   // Media Session API for lock screen controls and background playback
   const handleSeekTo = useCallback((time: number) => {
@@ -465,10 +468,10 @@ export default function ScorePage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-background via-background to-muted/20 flex flex-col">
       {/* Hidden audio element with background playback support */}
+      {/* Note: crossOrigin removed as it can cause issues with iOS background playback */}
       <audio 
         ref={audioRef} 
-        preload="auto" 
-        crossOrigin="anonymous"
+        preload="auto"
         playsInline
         // @ts-ignore - webkit attribute for iOS background playback
         webkit-playsinline="true"
