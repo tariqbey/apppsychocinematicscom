@@ -17,6 +17,7 @@ import { useRadio } from "@/hooks/useRadio";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { AudioVisualizer, SimpleWaveformBars } from "@/components/music/AudioVisualizer";
 
 export default function MusicPage() {
   const navigate = useNavigate();
@@ -62,76 +63,81 @@ export default function MusicPage() {
   const [isShuffle, setIsShuffle] = useState(false);
   const [isRepeat, setIsRepeat] = useState(false);
   const [isUploadingTrack, setIsUploadingTrack] = useState(false);
+  const [audioReady, setAudioReady] = useState(false);
 
-  // Audio playback effects - handle source changes
+  // Audio playback - handle track changes
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio || !currentTrack) return;
 
-    // Only update source if it's different
-    if (audio.src !== currentTrack.audio_url) {
-      audio.src = currentTrack.audio_url;
-      audio.load(); // Ensure the new source is loaded
+    // Update source if different
+    const trackUrl = currentTrack.audio_url;
+    if (audio.src !== trackUrl) {
+      audio.src = trackUrl;
+      audio.load();
+      setAudioReady(false);
     }
     audio.volume = isMuted ? 0 : volume;
-    
-    // Auto-play when track changes
+  }, [currentTrack, isMuted, volume]);
+
+  // Handle play/pause state changes
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio || !currentTrack) return;
+
     if (isPlaying) {
       const playPromise = audio.play();
       if (playPromise !== undefined) {
         playPromise.catch((err) => {
           console.error('Playback error:', err);
-          // Try again after a short delay
-          setTimeout(() => {
-            audio.play().catch(console.error);
-          }, 100);
+          // If autoplay blocked, wait for user interaction
+          if (err.name === 'NotAllowedError') {
+            toast.error('Click play again to start playback');
+            setIsPlaying(false);
+          }
         });
       }
-    }
-  }, [currentTrack, isPlaying, isMuted, volume]);
-
-  useEffect(() => {
-    const audio = audioRef.current;
-    if (!audio) return;
-
-    if (isPlaying) {
-      audio.play().catch(console.error);
     } else {
       audio.pause();
     }
-  }, [isPlaying]);
+  }, [isPlaying, currentTrack, setIsPlaying]);
 
-  useEffect(() => {
-    const audio = audioRef.current;
-    if (!audio) return;
-    audio.volume = isMuted ? 0 : volume;
-  }, [volume, isMuted]);
-
+  // Audio event listeners
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
 
     const handleTimeUpdate = () => setCurrentTime(audio.currentTime);
-    const handleDurationChange = () => setDuration(audio.duration);
+    const handleDurationChange = () => setDuration(audio.duration || 0);
+    const handleCanPlay = () => setAudioReady(true);
     const handleEnded = () => {
       if (isRepeat) {
         audio.currentTime = 0;
-        audio.play();
+        audio.play().catch(console.error);
       } else {
         playNextTrack();
       }
     };
+    const handleError = (e: Event) => {
+      console.error('Audio error:', e);
+      toast.error('Error playing track. Please try again.');
+      setIsPlaying(false);
+    };
 
     audio.addEventListener('timeupdate', handleTimeUpdate);
     audio.addEventListener('durationchange', handleDurationChange);
+    audio.addEventListener('canplay', handleCanPlay);
     audio.addEventListener('ended', handleEnded);
+    audio.addEventListener('error', handleError);
 
     return () => {
       audio.removeEventListener('timeupdate', handleTimeUpdate);
       audio.removeEventListener('durationchange', handleDurationChange);
+      audio.removeEventListener('canplay', handleCanPlay);
       audio.removeEventListener('ended', handleEnded);
+      audio.removeEventListener('error', handleError);
     };
-  }, [isRepeat, playNextTrack]);
+  }, [isRepeat, playNextTrack, setIsPlaying]);
 
   // Redirect if not logged in
   useEffect(() => {
@@ -150,13 +156,16 @@ export default function MusicPage() {
   const handleVolumeChange = (value: number[]) => {
     setVolume(value[0]);
     setIsMuted(value[0] === 0);
+    if (audioRef.current) {
+      audioRef.current.volume = value[0];
+    }
   };
 
   const togglePlay = () => {
     if (currentTrack) {
       setIsPlaying(!isPlaying);
     } else if (tracks.length > 0) {
-      playTrack(tracks[0]);
+      handlePlayTrack(tracks[0]);
     }
   };
 
@@ -172,8 +181,8 @@ export default function MusicPage() {
     const file = e.target.files?.[0];
     if (!file || !user) return;
 
-    const allowedTypes = ['audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/ogg', 'audio/m4a'];
-    if (!allowedTypes.includes(file.type)) {
+    const allowedTypes = ['audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/ogg', 'audio/m4a', 'audio/x-m4a'];
+    if (!allowedTypes.includes(file.type) && !file.name.match(/\.(mp3|wav|ogg|m4a)$/i)) {
       toast.error('Please upload an audio file (MP3, WAV, OGG, or M4A)');
       return;
     }
@@ -214,21 +223,29 @@ export default function MusicPage() {
   };
 
   const handlePlayTrack = (track: PlaylistTrack) => {
+    const audio = audioRef.current;
+    
     // If same track, toggle play/pause
     if (currentTrack?.id === track.id) {
       setIsPlaying(!isPlaying);
       return;
     }
-    // Set the track and trigger playback
+    
+    // Set the track - this triggers the useEffect to load and play
     setCurrentTrack(track);
     setIsPlaying(true);
     
-    // Force audio to play immediately
-    const audio = audioRef.current;
+    // Force audio to load and play immediately
     if (audio) {
       audio.src = track.audio_url;
       audio.load();
-      audio.play().catch(console.error);
+      audio.volume = isMuted ? 0 : volume;
+      audio.play().catch((err) => {
+        console.error('Play error:', err);
+        if (err.name === 'NotAllowedError') {
+          toast.info('Click the play button to start');
+        }
+      });
     }
   };
 
@@ -248,7 +265,7 @@ export default function MusicPage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-background via-background to-muted/20 flex flex-col">
       {/* Hidden audio element */}
-      <audio ref={audioRef} preload="metadata" />
+      <audio ref={audioRef} preload="auto" crossOrigin="anonymous" />
 
       {/* Header */}
       <header className="sticky top-0 z-40 border-b border-border/50 bg-background/80 backdrop-blur-sm">
@@ -281,7 +298,7 @@ export default function MusicPage() {
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 container mx-auto px-4 py-6 pb-32 overflow-hidden">
+      <main className="flex-1 container mx-auto px-4 py-6 pb-40 overflow-hidden">
         <div className="grid lg:grid-cols-3 gap-6 h-full">
           {/* Left Column - Featured Artist / Now Playing */}
           <div className="lg:col-span-1 space-y-6">
@@ -331,17 +348,22 @@ export default function MusicPage() {
               </CardContent>
             </Card>
 
-            {/* Now Playing Card */}
+            {/* Now Playing Card with Visualizer */}
             {currentTrack && (
-              <Card className="bg-card border-border/50">
+              <Card className="bg-card border-border/50 overflow-hidden">
                 <CardContent className="p-4">
                   <div className="flex items-center gap-2 mb-3">
                     <Mic2 className="w-4 h-4 text-gold animate-pulse" />
                     <span className="text-xs text-muted-foreground uppercase tracking-wide">Now Playing</span>
                   </div>
-                  <div className="flex items-center gap-4">
-                    <div className="w-16 h-16 rounded-lg bg-gradient-to-br from-gold/30 to-amber-500/20 flex items-center justify-center flex-shrink-0">
+                  <div className="flex items-center gap-4 mb-4">
+                    <div className="w-16 h-16 rounded-lg bg-gradient-to-br from-gold/30 to-amber-500/20 flex items-center justify-center flex-shrink-0 relative overflow-hidden">
                       <Music className="w-8 h-8 text-gold" />
+                      {isPlaying && (
+                        <div className="absolute inset-0 flex items-end justify-center pb-1">
+                          <SimpleWaveformBars isPlaying={isPlaying} barCount={5} />
+                        </div>
+                      )}
                     </div>
                     <div className="flex-1 min-w-0">
                       <h4 className="font-medium truncate">{currentTrack.title}</h4>
@@ -349,6 +371,15 @@ export default function MusicPage() {
                         {currentTrack.artist || displayName}
                       </p>
                     </div>
+                  </div>
+                  
+                  {/* Audio Visualizer */}
+                  <div className="h-16 bg-muted/30 rounded-lg overflow-hidden">
+                    <AudioVisualizer 
+                      audioElement={audioRef.current} 
+                      isPlaying={isPlaying}
+                      barCount={48}
+                    />
                   </div>
                 </CardContent>
               </Card>
@@ -412,21 +443,18 @@ export default function MusicPage() {
                             key={track.id}
                             onClick={() => handlePlayTrack(track)}
                             className={cn(
-                              "w-full flex items-center gap-4 p-3 rounded-lg transition-colors text-left",
+                              "w-full flex items-center gap-4 p-3 rounded-lg transition-all text-left group",
                               "hover:bg-muted/50",
                               currentTrack?.id === track.id && "bg-gold/10 border border-gold/30"
                             )}
                           >
                             <div className="w-8 h-8 flex items-center justify-center text-muted-foreground">
                               {currentTrack?.id === track.id && isPlaying ? (
-                                <div className="flex items-end gap-0.5 h-4">
-                                  <div className="w-1 bg-gold animate-pulse" style={{ height: '60%' }} />
-                                  <div className="w-1 bg-gold animate-pulse" style={{ height: '100%', animationDelay: '0.1s' }} />
-                                  <div className="w-1 bg-gold animate-pulse" style={{ height: '40%', animationDelay: '0.2s' }} />
-                                </div>
+                                <SimpleWaveformBars isPlaying={true} barCount={4} />
                               ) : (
-                                <span className="text-sm">{index + 1}</span>
+                                <span className="text-sm group-hover:hidden">{index + 1}</span>
                               )}
+                              <Play className="w-4 h-4 hidden group-hover:block" />
                             </div>
                             <div className="w-10 h-10 rounded bg-gradient-to-br from-gold/20 to-amber-500/10 flex items-center justify-center flex-shrink-0">
                               <Music className="w-5 h-5 text-gold/70" />
@@ -494,7 +522,7 @@ export default function MusicPage() {
                               </div>
                               <h4 className="font-medium truncate">{playlist.name}</h4>
                               <p className="text-sm text-muted-foreground">
-                                {playlist.track_count} tracks
+                                {playlist.track_count || 0} tracks
                               </p>
                             </button>
                           ))}
@@ -571,7 +599,29 @@ export default function MusicPage() {
       {/* Bottom Player Bar */}
       <div className="fixed bottom-0 left-0 right-0 bg-card/95 backdrop-blur-xl border-t border-border z-50">
         <div className="container mx-auto px-4">
-          {/* Progress bar */}
+          {/* Mini visualizer in progress bar area */}
+          <div className="h-1 bg-muted/30 relative overflow-hidden">
+            <div 
+              className="h-full bg-gold transition-all duration-150"
+              style={{ width: duration ? `${(currentTime / duration) * 100}%` : '0%' }}
+            />
+            {isPlaying && (
+              <div className="absolute inset-0 flex items-center">
+                {Array.from({ length: 50 }).map((_, i) => (
+                  <div
+                    key={i}
+                    className="flex-1 h-full bg-gold/30 mx-px animate-pulse"
+                    style={{ 
+                      animationDelay: `${i * 0.05}s`,
+                      opacity: currentTime / duration > i / 50 ? 1 : 0.3
+                    }}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+          
+          {/* Progress Slider */}
           <div className="py-2">
             <Slider
               value={[currentTime]}
@@ -587,8 +637,13 @@ export default function MusicPage() {
           <div className="flex items-center justify-between py-3">
             {/* Track info */}
             <div className="flex items-center gap-3 flex-1 min-w-0">
-              <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-gold/20 to-amber-500/10 flex items-center justify-center flex-shrink-0">
+              <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-gold/20 to-amber-500/10 flex items-center justify-center flex-shrink-0 relative overflow-hidden">
                 <Music className="w-6 h-6 text-gold" />
+                {isPlaying && currentTrack && (
+                  <div className="absolute inset-0 flex items-end justify-center pb-1">
+                    <SimpleWaveformBars isPlaying={true} barCount={4} className="h-3" />
+                  </div>
+                )}
               </div>
               <div className="min-w-0">
                 <p className="font-medium truncate text-sm">

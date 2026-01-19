@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { toast } from 'sonner';
@@ -36,37 +36,29 @@ export function useUserPlaylists() {
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
   const [currentPlaylist, setCurrentPlaylist] = useState<Playlist | null>(null);
   const [tracks, setTracks] = useState<PlaylistTrack[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [currentTrack, setCurrentTrack] = useState<PlaylistTrack | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
+  const initializedRef = useRef(false);
 
-  // Fetch all user playlists
-  const fetchPlaylists = useCallback(async () => {
-    if (!user) return;
-    
-    setIsLoading(true);
+  // Fetch tracks for a playlist
+  const fetchPlaylistTracks = useCallback(async (playlistId: string) => {
     try {
       const { data, error } = await supabase
-        .from('user_playlists')
+        .from('user_playlist_tracks')
         .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
+        .eq('playlist_id', playlistId)
+        .order('track_order', { ascending: true });
 
       if (error) throw error;
       
-      // Type assertion since the table is new
-      setPlaylists((data || []) as Playlist[]);
-      
-      // Auto-create default playlist if none exist
-      if (!data || data.length === 0) {
-        await createPlaylist('My Transformation Tracks', 'Your personal collection of generated songs', true);
-      }
+      setTracks((data || []) as PlaylistTrack[]);
+      return (data || []) as PlaylistTrack[];
     } catch (error) {
-      console.error('Error fetching playlists:', error);
-    } finally {
-      setIsLoading(false);
+      console.error('Error fetching tracks:', error);
+      return [];
     }
-  }, [user]);
+  }, []);
 
   // Create a new playlist
   const createPlaylist = useCallback(async (
@@ -92,7 +84,6 @@ export function useUserPlaylists() {
       
       const playlist = data as Playlist;
       setPlaylists(prev => [playlist, ...prev]);
-      toast.success(`Playlist "${name}" created`);
       return playlist;
     } catch (error) {
       console.error('Error creating playlist:', error);
@@ -100,6 +91,47 @@ export function useUserPlaylists() {
       return null;
     }
   }, [user]);
+
+  // Fetch all user playlists and auto-load tracks from default
+  const fetchPlaylists = useCallback(async (autoLoadTracks = true) => {
+    if (!user) return;
+    
+    setIsLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('user_playlists')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      
+      let fetchedPlaylists = (data || []) as Playlist[];
+      
+      // Auto-create default playlist if none exist
+      if (fetchedPlaylists.length === 0) {
+        const defaultPlaylist = await createPlaylist('My Transformation Tracks', 'Your personal collection of generated songs', true);
+        if (defaultPlaylist) {
+          fetchedPlaylists = [defaultPlaylist];
+        }
+      }
+      
+      setPlaylists(fetchedPlaylists);
+      
+      // Auto-select the default playlist and load its tracks
+      if (autoLoadTracks && fetchedPlaylists.length > 0) {
+        const defaultPlaylist = fetchedPlaylists.find(p => p.is_default) || fetchedPlaylists[0];
+        if (defaultPlaylist) {
+          setCurrentPlaylist(defaultPlaylist);
+          await fetchPlaylistTracks(defaultPlaylist.id);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching playlists:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [user, createPlaylist, fetchPlaylistTracks]);
 
   // Delete a playlist
   const deletePlaylist = useCallback(async (playlistId: string) => {
@@ -122,23 +154,6 @@ export function useUserPlaylists() {
       toast.error('Failed to delete playlist');
     }
   }, [currentPlaylist]);
-
-  // Fetch tracks for a playlist
-  const fetchPlaylistTracks = useCallback(async (playlistId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('user_playlist_tracks')
-        .select('*')
-        .eq('playlist_id', playlistId)
-        .order('track_order', { ascending: true });
-
-      if (error) throw error;
-      
-      setTracks((data || []) as PlaylistTrack[]);
-    } catch (error) {
-      console.error('Error fetching tracks:', error);
-    }
-  }, []);
 
   // Select a playlist and load its tracks
   const selectPlaylist = useCallback(async (playlist: Playlist) => {
@@ -195,7 +210,7 @@ export function useUserPlaylists() {
       }
       
       // Refresh playlists to get updated counts
-      await fetchPlaylists();
+      await fetchPlaylists(false);
       
       toast.success(`Added "${track.title}" to playlist`);
       return newTrack;
@@ -217,7 +232,7 @@ export function useUserPlaylists() {
       if (error) throw error;
       
       setTracks(prev => prev.filter(t => t.id !== trackId));
-      await fetchPlaylists();
+      await fetchPlaylists(false);
       toast.success('Track removed from playlist');
     } catch (error) {
       console.error('Error removing track:', error);
@@ -281,12 +296,25 @@ export function useUserPlaylists() {
     setIsPlaying(true);
   }, [currentTrack, tracks]);
 
-  // Initial fetch
+  // Initial fetch - only run once per mount
   useEffect(() => {
-    if (user) {
-      fetchPlaylists();
+    if (user && !initializedRef.current) {
+      initializedRef.current = true;
+      fetchPlaylists(true);
     }
   }, [user, fetchPlaylists]);
+
+  // Reset when user changes
+  useEffect(() => {
+    if (!user) {
+      initializedRef.current = false;
+      setPlaylists([]);
+      setTracks([]);
+      setCurrentPlaylist(null);
+      setCurrentTrack(null);
+      setIsPlaying(false);
+    }
+  }, [user]);
 
   return {
     playlists,
@@ -308,5 +336,6 @@ export function useUserPlaylists() {
     playPreviousTrack,
     setIsPlaying,
     setCurrentTrack,
+    fetchPlaylistTracks,
   };
 }
