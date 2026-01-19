@@ -524,7 +524,18 @@ const Index = () => {
             tooltip="Create AI-generated music and lyrics for your Mind Movies. Choose from 50+ genres and styles to match your vision."
           />
 
-          {/* ========== BONUS: DIRECTOR RADIO ========== */}
+          {/* ========== STEP 8: THE SCORE (Personal Music) ========== */}
+          <ModuleCard
+            onClick={() => navigate("/score")}
+            icon={<Music className="w-7 h-7 text-gold" />}
+            title="The Score"
+            description="Your personal music library • Create playlists • Stream your tracks anywhere"
+            actionText="Open Score"
+            colorScheme="gold"
+            tooltip="Your personal music player. Organize tracks into playlists, drag to reorder, and stream your transformation soundtrack."
+          />
+
+          {/* ========== STEP 9: DIRECTOR RADIO ========== */}
           <DirectorRadioCard />
 
           {/* ========== BONUS: SHARE YOUR STORY ========== */}

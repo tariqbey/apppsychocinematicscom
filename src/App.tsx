@@ -21,6 +21,7 @@ import Character from "./pages/Character";
 import Episodes from "./pages/Episodes";
 import Soundtrack from "./pages/Soundtrack";
 import Music from "./pages/Music";
+import Score from "./pages/Score";
 import DoneForYou from "./pages/DoneForYou";
 import DFYSuccess from "./pages/DFYSuccess";
 import Challenges from "./pages/Challenges";
@@ -57,6 +58,7 @@ const App = () => (
           <Route path="/soundtrack" element={<Soundtrack />} />
           <Route path="/music" element={<Music />} />
           <Route path="/radio" element={<Music />} />
+          <Route path="/score" element={<Score />} />
           <Route path="/done-for-you" element={<DoneForYou />} />
           <Route path="/dfy-success" element={<DFYSuccess />} />
           <Route path="/challenges" element={<Challenges />} />

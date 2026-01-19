@@ -1,25 +1,40 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { 
   ArrowLeft, Play, Pause, SkipBack, SkipForward, Volume2, VolumeX,
-  Shuffle, Repeat, Plus, Music, Heart, MoreHorizontal, Upload,
-  ListMusic, Radio, Mic2, User, Crown, Sparkles
+  Shuffle, Repeat, Plus, Music, Heart, Upload, Trash2, GripVertical,
+  ListMusic, Mic2, User, Crown, Sparkles, MoreHorizontal, Edit2,
+  FolderPlus, Download, Check, X
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Slider } from "@/components/ui/slider";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { useUserPlaylists, type PlaylistTrack, type Playlist } from "@/hooks/useUserPlaylists";
-import { useRadio } from "@/hooks/useRadio";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { AudioVisualizer, SimpleWaveformBars } from "@/components/music/AudioVisualizer";
 
-export default function MusicPage() {
+export default function ScorePage() {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
   const { profile } = useUserProfile();
@@ -41,19 +56,12 @@ export default function MusicPage() {
     setIsPlaying,
     setCurrentTrack,
     addTrackToPlaylist,
+    removeTrackFromPlaylist,
     getDefaultPlaylist,
     createPlaylist,
+    deletePlaylist,
+    fetchPlaylistTracks,
   } = useUserPlaylists();
-
-  // Radio hook for admin content
-  const { 
-    playlists: radioPlaylists, 
-    nowPlaying: radioNowPlaying,
-    tracks: radioTracks,
-    loading: radioLoading,
-    selectPlaylist: selectRadioPlaylist,
-    playTrack: playRadioTrack,
-  } = useRadio();
 
   // Audio state
   const [currentTime, setCurrentTime] = useState(0);
@@ -63,19 +71,26 @@ export default function MusicPage() {
   const [isShuffle, setIsShuffle] = useState(false);
   const [isRepeat, setIsRepeat] = useState(false);
   const [isUploadingTrack, setIsUploadingTrack] = useState(false);
-  const [audioReady, setAudioReady] = useState(false);
+  
+  // Playlist management
+  const [newPlaylistName, setNewPlaylistName] = useState("");
+  const [isCreatingPlaylist, setIsCreatingPlaylist] = useState(false);
+  const [editingPlaylistId, setEditingPlaylistId] = useState<string | null>(null);
+  const [editPlaylistName, setEditPlaylistName] = useState("");
+  
+  // Drag and drop for track reordering
+  const [draggedTrack, setDraggedTrack] = useState<PlaylistTrack | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
 
   // Audio playback - handle track changes
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio || !currentTrack) return;
 
-    // Update source if different
     const trackUrl = currentTrack.audio_url;
     if (audio.src !== trackUrl) {
       audio.src = trackUrl;
       audio.load();
-      setAudioReady(false);
     }
     audio.volume = isMuted ? 0 : volume;
   }, [currentTrack, isMuted, volume]);
@@ -86,17 +101,13 @@ export default function MusicPage() {
     if (!audio || !currentTrack) return;
 
     if (isPlaying) {
-      const playPromise = audio.play();
-      if (playPromise !== undefined) {
-        playPromise.catch((err) => {
-          console.error('Playback error:', err);
-          // If autoplay blocked, wait for user interaction
-          if (err.name === 'NotAllowedError') {
-            toast.error('Click play again to start playback');
-            setIsPlaying(false);
-          }
-        });
-      }
+      audio.play().catch((err) => {
+        console.error('Playback error:', err);
+        if (err.name === 'NotAllowedError') {
+          toast.error('Click play again to start playback');
+          setIsPlaying(false);
+        }
+      });
     } else {
       audio.pause();
     }
@@ -109,7 +120,6 @@ export default function MusicPage() {
 
     const handleTimeUpdate = () => setCurrentTime(audio.currentTime);
     const handleDurationChange = () => setDuration(audio.duration || 0);
-    const handleCanPlay = () => setAudioReady(true);
     const handleEnded = () => {
       if (isRepeat) {
         audio.currentTime = 0;
@@ -118,22 +128,19 @@ export default function MusicPage() {
         playNextTrack();
       }
     };
-    const handleError = (e: Event) => {
-      console.error('Audio error:', e);
-      toast.error('Error playing track. Please try again.');
+    const handleError = () => {
+      toast.error('Error playing track');
       setIsPlaying(false);
     };
 
     audio.addEventListener('timeupdate', handleTimeUpdate);
     audio.addEventListener('durationchange', handleDurationChange);
-    audio.addEventListener('canplay', handleCanPlay);
     audio.addEventListener('ended', handleEnded);
     audio.addEventListener('error', handleError);
 
     return () => {
       audio.removeEventListener('timeupdate', handleTimeUpdate);
       audio.removeEventListener('durationchange', handleDurationChange);
-      audio.removeEventListener('canplay', handleCanPlay);
       audio.removeEventListener('ended', handleEnded);
       audio.removeEventListener('error', handleError);
     };
@@ -190,7 +197,7 @@ export default function MusicPage() {
     setIsUploadingTrack(true);
     try {
       const fileName = `${user.id}/${Date.now()}-${file.name}`;
-      const { data: uploadData, error: uploadError } = await supabase.storage
+      const { error: uploadError } = await supabase.storage
         .from('generated-media')
         .upload(fileName, file);
 
@@ -200,19 +207,17 @@ export default function MusicPage() {
         .from('generated-media')
         .getPublicUrl(fileName);
 
-      // Get or create default playlist
-      let playlist = await getDefaultPlaylist();
-      if (!playlist) {
-        playlist = await createPlaylist('My Tracks', 'Personal uploaded tracks', true);
-      }
-
-      if (playlist) {
-        await addTrackToPlaylist(playlist.id, {
+      // Add to current playlist or default
+      const targetPlaylist = currentPlaylist || await getDefaultPlaylist();
+      if (targetPlaylist) {
+        await addTrackToPlaylist(targetPlaylist.id, {
           title: file.name.replace(/\.[^/.]+$/, ''),
           audio_url: publicUrl,
           source_type: 'upload',
         });
-        toast.success('Track uploaded successfully!');
+        // Refresh tracks
+        await fetchPlaylistTracks(targetPlaylist.id);
+        toast.success('Track uploaded!');
       }
     } catch (error) {
       console.error('Upload error:', error);
@@ -225,28 +230,113 @@ export default function MusicPage() {
   const handlePlayTrack = (track: PlaylistTrack) => {
     const audio = audioRef.current;
     
-    // If same track, toggle play/pause
     if (currentTrack?.id === track.id) {
       setIsPlaying(!isPlaying);
       return;
     }
     
-    // Set the track - this triggers the useEffect to load and play
     setCurrentTrack(track);
     setIsPlaying(true);
     
-    // Force audio to load and play immediately
     if (audio) {
       audio.src = track.audio_url;
       audio.load();
       audio.volume = isMuted ? 0 : volume;
-      audio.play().catch((err) => {
-        console.error('Play error:', err);
-        if (err.name === 'NotAllowedError') {
-          toast.info('Click the play button to start');
-        }
-      });
+      audio.play().catch(console.error);
     }
+  };
+
+  // Create new playlist
+  const handleCreatePlaylist = async () => {
+    if (!newPlaylistName.trim()) return;
+    
+    setIsCreatingPlaylist(true);
+    const playlist = await createPlaylist(newPlaylistName.trim());
+    if (playlist) {
+      setNewPlaylistName("");
+      toast.success(`Created "${playlist.name}"`);
+    }
+    setIsCreatingPlaylist(false);
+  };
+
+  // Rename playlist
+  const handleRenamePlaylist = async (playlistId: string) => {
+    if (!editPlaylistName.trim()) return;
+    
+    try {
+      const { error } = await supabase
+        .from('user_playlists')
+        .update({ name: editPlaylistName.trim() })
+        .eq('id', playlistId);
+      
+      if (error) throw error;
+      toast.success('Playlist renamed');
+      setEditingPlaylistId(null);
+      // Refresh playlists
+      window.location.reload();
+    } catch {
+      toast.error('Failed to rename playlist');
+    }
+  };
+
+  // Track reordering via drag and drop
+  const handleDragStart = (track: PlaylistTrack) => {
+    setDraggedTrack(track);
+  };
+
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    setDragOverIndex(index);
+  };
+
+  const handleDrop = async (e: React.DragEvent, targetIndex: number) => {
+    e.preventDefault();
+    if (!draggedTrack || !currentPlaylist) return;
+
+    const sourceIndex = tracks.findIndex(t => t.id === draggedTrack.id);
+    if (sourceIndex === targetIndex) {
+      setDraggedTrack(null);
+      setDragOverIndex(null);
+      return;
+    }
+
+    // Reorder tracks
+    const newTracks = [...tracks];
+    newTracks.splice(sourceIndex, 1);
+    newTracks.splice(targetIndex, 0, draggedTrack);
+
+    // Update track_order in database
+    try {
+      const updates = newTracks.map((track, index) => 
+        supabase
+          .from('user_playlist_tracks')
+          .update({ track_order: index + 1 })
+          .eq('id', track.id)
+      );
+      
+      await Promise.all(updates);
+      await fetchPlaylistTracks(currentPlaylist.id);
+      toast.success('Track order updated');
+    } catch {
+      toast.error('Failed to reorder tracks');
+    }
+
+    setDraggedTrack(null);
+    setDragOverIndex(null);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedTrack(null);
+    setDragOverIndex(null);
+  };
+
+  // Delete track
+  const handleDeleteTrack = async (trackId: string) => {
+    if (currentTrack?.id === trackId) {
+      setIsPlaying(false);
+      setCurrentTrack(null);
+    }
+    await removeTrackFromPlaylist(trackId);
   };
 
   if (authLoading || isLoading) {
@@ -259,8 +349,8 @@ export default function MusicPage() {
 
   if (!user) return null;
 
-  const displayName = profile?.display_name || (profile as any)?.character_name || user.email?.split('@')[0] || 'Director';
-  const avatarUrl = profile?.avatar_url || (profile as any)?.hero_front_url;
+  const displayName = profile?.display_name || user.email?.split('@')[0] || 'Director';
+  const avatarUrl = profile?.avatar_url;
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-background via-background to-muted/20 flex flex-col">
@@ -276,24 +366,26 @@ export default function MusicPage() {
             </Button>
             <div className="flex items-center gap-2">
               <Music className="w-6 h-6 text-gold" />
-              <h1 className="text-xl font-display tracking-wide">Director Radio</h1>
+              <h1 className="text-xl font-display tracking-wide">The Score</h1>
             </div>
           </div>
-          <label>
-            <input 
-              type="file" 
-              accept="audio/*" 
-              className="hidden" 
-              onChange={handleUploadTrack}
-              disabled={isUploadingTrack}
-            />
-            <Button variant="outline" size="sm" asChild disabled={isUploadingTrack}>
-              <span className="cursor-pointer">
-                <Upload className="w-4 h-4 mr-2" />
-                {isUploadingTrack ? 'Uploading...' : 'Upload Track'}
-              </span>
-            </Button>
-          </label>
+          <div className="flex items-center gap-2">
+            <label>
+              <input 
+                type="file" 
+                accept="audio/*" 
+                className="hidden" 
+                onChange={handleUploadTrack}
+                disabled={isUploadingTrack}
+              />
+              <Button variant="outline" size="sm" asChild disabled={isUploadingTrack}>
+                <span className="cursor-pointer">
+                  <Upload className="w-4 h-4 mr-2" />
+                  {isUploadingTrack ? 'Uploading...' : 'Upload'}
+                </span>
+              </Button>
+            </label>
+          </div>
         </div>
       </header>
 
@@ -310,7 +402,6 @@ export default function MusicPage() {
                   <span className="text-xs text-gold font-medium uppercase tracking-wide">Featured Artist</span>
                 </div>
                 
-                {/* Artist Photo */}
                 <div className="relative aspect-square rounded-lg overflow-hidden mb-4 bg-muted">
                   {avatarUrl ? (
                     <img 
@@ -330,8 +421,7 @@ export default function MusicPage() {
                   </div>
                 </div>
 
-                {/* Stats */}
-                <div className="grid grid-cols-3 gap-4 text-center">
+                <div className="grid grid-cols-2 gap-4 text-center">
                   <div>
                     <p className="text-2xl font-display text-gold">{tracks.length}</p>
                     <p className="text-xs text-muted-foreground">Tracks</p>
@@ -340,15 +430,11 @@ export default function MusicPage() {
                     <p className="text-2xl font-display text-gold">{playlists.length}</p>
                     <p className="text-xs text-muted-foreground">Playlists</p>
                   </div>
-                  <div>
-                    <p className="text-2xl font-display text-gold">{profile?.current_streak || 0}</p>
-                    <p className="text-xs text-muted-foreground">Day Streak</p>
-                  </div>
                 </div>
               </CardContent>
             </Card>
 
-            {/* Now Playing Card with Visualizer */}
+            {/* Now Playing Card */}
             {currentTrack && (
               <Card className="bg-card border-border/50 overflow-hidden">
                 <CardContent className="p-4">
@@ -373,7 +459,6 @@ export default function MusicPage() {
                     </div>
                   </div>
                   
-                  {/* Audio Visualizer */}
                   <div className="h-16 bg-muted/30 rounded-lg overflow-hidden">
                     <AudioVisualizer 
                       audioElement={audioRef.current} 
@@ -389,32 +474,36 @@ export default function MusicPage() {
           {/* Right Column - Playlists & Tracks */}
           <div className="lg:col-span-2">
             <Tabs defaultValue="my-tracks" className="h-full flex flex-col">
-              <TabsList className="grid w-full grid-cols-3 mb-4">
+              <TabsList className="grid w-full grid-cols-2 mb-4">
                 <TabsTrigger value="my-tracks" className="gap-2">
                   <ListMusic className="w-4 h-4" />
-                  <span className="hidden sm:inline">My Tracks</span>
+                  <span>My Tracks</span>
                 </TabsTrigger>
                 <TabsTrigger value="playlists" className="gap-2">
                   <Music className="w-4 h-4" />
-                  <span className="hidden sm:inline">Playlists</span>
-                </TabsTrigger>
-                <TabsTrigger value="radio" className="gap-2">
-                  <Radio className="w-4 h-4" />
-                  <span className="hidden sm:inline">Radio</span>
+                  <span>Playlists</span>
                 </TabsTrigger>
               </TabsList>
 
-              {/* My Tracks */}
+              {/* My Tracks - with drag reordering */}
               <TabsContent value="my-tracks" className="flex-1 mt-0">
                 <Card className="h-full">
-                  <ScrollArea className="h-[calc(100vh-380px)] min-h-[300px]">
-                    <div className="p-4 space-y-2">
+                  <div className="p-4 border-b border-border/50 flex items-center justify-between">
+                    <h3 className="font-medium">
+                      {currentPlaylist?.name || 'All Tracks'}
+                    </h3>
+                    <span className="text-sm text-muted-foreground">
+                      {tracks.length} tracks
+                    </span>
+                  </div>
+                  <ScrollArea className="h-[calc(100vh-420px)] min-h-[300px]">
+                    <div className="p-4 space-y-1">
                       {tracks.length === 0 ? (
                         <div className="text-center py-12">
                           <Music className="w-12 h-12 text-muted-foreground/50 mx-auto mb-4" />
                           <h3 className="font-medium mb-2">No tracks yet</h3>
                           <p className="text-sm text-muted-foreground mb-4">
-                            Upload your own tracks or generate music in the Soundtrack Studio
+                            Upload tracks or generate music in Soundtrack Studio
                           </p>
                           <div className="flex gap-2 justify-center">
                             <label>
@@ -439,26 +528,44 @@ export default function MusicPage() {
                         </div>
                       ) : (
                         tracks.map((track, index) => (
-                          <button
+                          <div
                             key={track.id}
-                            onClick={() => handlePlayTrack(track)}
+                            draggable
+                            onDragStart={() => handleDragStart(track)}
+                            onDragOver={(e) => handleDragOver(e, index)}
+                            onDrop={(e) => handleDrop(e, index)}
+                            onDragEnd={handleDragEnd}
                             className={cn(
-                              "w-full flex items-center gap-4 p-3 rounded-lg transition-all text-left group",
-                              "hover:bg-muted/50",
-                              currentTrack?.id === track.id && "bg-gold/10 border border-gold/30"
+                              "flex items-center gap-3 p-3 rounded-lg transition-all group",
+                              "hover:bg-muted/50 cursor-grab active:cursor-grabbing",
+                              currentTrack?.id === track.id && "bg-gold/10 border border-gold/30",
+                              dragOverIndex === index && "border-t-2 border-gold"
                             )}
                           >
-                            <div className="w-8 h-8 flex items-center justify-center text-muted-foreground">
+                            {/* Drag handle */}
+                            <GripVertical className="w-4 h-4 text-muted-foreground/50 opacity-0 group-hover:opacity-100 transition-opacity" />
+                            
+                            {/* Track number / Playing indicator */}
+                            <button 
+                              onClick={() => handlePlayTrack(track)}
+                              className="w-8 h-8 flex items-center justify-center text-muted-foreground"
+                            >
                               {currentTrack?.id === track.id && isPlaying ? (
                                 <SimpleWaveformBars isPlaying={true} barCount={4} />
                               ) : (
-                                <span className="text-sm group-hover:hidden">{index + 1}</span>
+                                <>
+                                  <span className="text-sm group-hover:hidden">{index + 1}</span>
+                                  <Play className="w-4 h-4 hidden group-hover:block" />
+                                </>
                               )}
-                              <Play className="w-4 h-4 hidden group-hover:block" />
-                            </div>
+                            </button>
+                            
+                            {/* Track icon */}
                             <div className="w-10 h-10 rounded bg-gradient-to-br from-gold/20 to-amber-500/10 flex items-center justify-center flex-shrink-0">
                               <Music className="w-5 h-5 text-gold/70" />
                             </div>
+                            
+                            {/* Track info */}
                             <div className="flex-1 min-w-0">
                               <p className={cn(
                                 "font-medium truncate",
@@ -470,10 +577,41 @@ export default function MusicPage() {
                                 {track.artist || displayName}
                               </p>
                             </div>
+                            
+                            {/* Duration */}
                             <span className="text-sm text-muted-foreground">
                               {track.duration_seconds ? formatTime(track.duration_seconds) : '--:--'}
                             </span>
-                          </button>
+                            
+                            {/* Actions */}
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100">
+                                  <MoreHorizontal className="w-4 h-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end" className="bg-popover border-border">
+                                <DropdownMenuItem onClick={() => handlePlayTrack(track)}>
+                                  <Play className="w-4 h-4 mr-2" />
+                                  Play
+                                </DropdownMenuItem>
+                                <DropdownMenuItem asChild>
+                                  <a href={track.audio_url} download className="flex items-center">
+                                    <Download className="w-4 h-4 mr-2" />
+                                    Download
+                                  </a>
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem 
+                                  onClick={() => handleDeleteTrack(track.id)}
+                                  className="text-destructive"
+                                >
+                                  <Trash2 className="w-4 h-4 mr-2" />
+                                  Remove
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
                         ))
                       )}
                     </div>
@@ -484,106 +622,142 @@ export default function MusicPage() {
               {/* Playlists */}
               <TabsContent value="playlists" className="flex-1 mt-0">
                 <Card className="h-full">
-                  <ScrollArea className="h-[calc(100vh-380px)] min-h-[300px]">
+                  <div className="p-4 border-b border-border/50 flex items-center justify-between">
+                    <h3 className="font-medium">Your Playlists</h3>
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <Button size="sm" variant="outline">
+                          <FolderPlus className="w-4 h-4 mr-2" />
+                          New Playlist
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="bg-card border-border">
+                        <DialogHeader>
+                          <DialogTitle>Create New Playlist</DialogTitle>
+                        </DialogHeader>
+                        <div className="space-y-4 pt-4">
+                          <Input
+                            placeholder="Playlist name..."
+                            value={newPlaylistName}
+                            onChange={(e) => setNewPlaylistName(e.target.value)}
+                            onKeyDown={(e) => e.key === 'Enter' && handleCreatePlaylist()}
+                          />
+                          <Button 
+                            onClick={handleCreatePlaylist} 
+                            disabled={!newPlaylistName.trim() || isCreatingPlaylist}
+                            className="w-full"
+                          >
+                            {isCreatingPlaylist ? 'Creating...' : 'Create Playlist'}
+                          </Button>
+                        </div>
+                      </DialogContent>
+                    </Dialog>
+                  </div>
+                  <ScrollArea className="h-[calc(100vh-420px)] min-h-[300px]">
                     <div className="p-4">
                       {playlists.length === 0 ? (
                         <div className="text-center py-12">
                           <ListMusic className="w-12 h-12 text-muted-foreground/50 mx-auto mb-4" />
                           <h3 className="font-medium mb-2">No playlists yet</h3>
                           <p className="text-sm text-muted-foreground">
-                            Your generated and uploaded tracks will appear here
+                            Create playlists to organize your music
                           </p>
                         </div>
                       ) : (
                         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                           {playlists.map((playlist) => (
-                            <button
+                            <div
                               key={playlist.id}
-                              onClick={() => selectPlaylist(playlist)}
                               className={cn(
-                                "group p-4 rounded-lg text-left transition-all",
+                                "group relative rounded-lg overflow-hidden transition-all",
                                 "bg-muted/30 hover:bg-muted/50",
                                 currentPlaylist?.id === playlist.id && "ring-2 ring-gold"
                               )}
                             >
-                              <div className="aspect-square rounded-lg mb-3 bg-gradient-to-br from-gold/20 to-amber-500/10 flex items-center justify-center relative overflow-hidden">
-                                {playlist.cover_image_url ? (
-                                  <img 
-                                    src={playlist.cover_image_url} 
-                                    alt={playlist.name}
-                                    className="w-full h-full object-cover"
+                              {editingPlaylistId === playlist.id ? (
+                                <div className="p-4 space-y-2">
+                                  <Input
+                                    value={editPlaylistName}
+                                    onChange={(e) => setEditPlaylistName(e.target.value)}
+                                    className="text-sm"
+                                    autoFocus
                                   />
-                                ) : (
-                                  <ListMusic className="w-12 h-12 text-gold/50" />
-                                )}
-                                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center">
-                                  <Play className="w-10 h-10 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                                  <div className="flex gap-2">
+                                    <Button 
+                                      size="sm" 
+                                      onClick={() => handleRenamePlaylist(playlist.id)}
+                                      className="flex-1"
+                                    >
+                                      <Check className="w-3 h-3" />
+                                    </Button>
+                                    <Button 
+                                      size="sm" 
+                                      variant="outline"
+                                      onClick={() => setEditingPlaylistId(null)}
+                                      className="flex-1"
+                                    >
+                                      <X className="w-3 h-3" />
+                                    </Button>
+                                  </div>
                                 </div>
-                              </div>
-                              <h4 className="font-medium truncate">{playlist.name}</h4>
-                              <p className="text-sm text-muted-foreground">
-                                {playlist.track_count || 0} tracks
-                              </p>
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </ScrollArea>
-                </Card>
-              </TabsContent>
-
-              {/* Radio */}
-              <TabsContent value="radio" className="flex-1 mt-0">
-                <Card className="h-full">
-                  <ScrollArea className="h-[calc(100vh-380px)] min-h-[300px]">
-                    <div className="p-4 space-y-4">
-                      {radioLoading ? (
-                        <div className="flex items-center justify-center py-12">
-                          <Music className="w-8 h-8 text-gold animate-pulse" />
-                        </div>
-                      ) : radioPlaylists.length === 0 ? (
-                        <div className="text-center py-12">
-                          <Radio className="w-12 h-12 text-muted-foreground/50 mx-auto mb-4" />
-                          <h3 className="font-medium mb-2">No stations available</h3>
-                          <p className="text-sm text-muted-foreground">
-                            Check back soon for curated radio stations
-                          </p>
-                        </div>
-                      ) : (
-                        <div className="grid gap-4">
-                          {radioPlaylists.map((station) => (
-                            <button
-                              key={station.id}
-                              onClick={() => selectRadioPlaylist(station)}
-                              className="flex items-center gap-4 p-4 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors text-left w-full"
-                            >
-                              <div className="w-16 h-16 rounded-lg bg-gradient-to-br from-gold/30 to-amber-500/20 flex items-center justify-center flex-shrink-0">
-                                {station.cover_image_url ? (
-                                  <img 
-                                    src={station.cover_image_url} 
-                                    alt={station.name}
-                                    className="w-full h-full object-cover rounded-lg"
-                                  />
-                                ) : (
-                                  <Radio className="w-8 h-8 text-gold" />
-                                )}
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2">
-                                  <h4 className="font-medium truncate">{station.name}</h4>
-                                  {station.is_featured && (
-                                    <span className="px-2 py-0.5 rounded-full text-xs bg-gold/20 text-gold">
-                                      Featured
-                                    </span>
-                                  )}
-                                </div>
-                                <p className="text-sm text-muted-foreground truncate">
-                                  {station.description || 'Curated by the Director'}
-                                </p>
-                              </div>
-                              <Play className="w-6 h-6 text-muted-foreground" />
-                            </button>
+                              ) : (
+                                <button
+                                  onClick={() => selectPlaylist(playlist)}
+                                  className="w-full p-4 text-left"
+                                >
+                                  <div className="aspect-square rounded-lg mb-3 bg-gradient-to-br from-gold/20 to-amber-500/10 flex items-center justify-center relative overflow-hidden">
+                                    {playlist.cover_image_url ? (
+                                      <img 
+                                        src={playlist.cover_image_url} 
+                                        alt={playlist.name}
+                                        className="w-full h-full object-cover"
+                                      />
+                                    ) : (
+                                      <ListMusic className="w-12 h-12 text-gold/50" />
+                                    )}
+                                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center">
+                                      <Play className="w-10 h-10 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                                    </div>
+                                  </div>
+                                  <h4 className="font-medium truncate">{playlist.name}</h4>
+                                  <p className="text-sm text-muted-foreground">
+                                    {playlist.track_count || 0} tracks
+                                  </p>
+                                </button>
+                              )}
+                              
+                              {/* Playlist menu */}
+                              {editingPlaylistId !== playlist.id && (
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button 
+                                      variant="ghost" 
+                                      size="icon" 
+                                      className="absolute top-2 right-2 h-8 w-8 opacity-0 group-hover:opacity-100 bg-background/80"
+                                    >
+                                      <MoreHorizontal className="w-4 h-4" />
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end" className="bg-popover border-border">
+                                    <DropdownMenuItem onClick={() => {
+                                      setEditingPlaylistId(playlist.id);
+                                      setEditPlaylistName(playlist.name);
+                                    }}>
+                                      <Edit2 className="w-4 h-4 mr-2" />
+                                      Rename
+                                    </DropdownMenuItem>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem 
+                                      onClick={() => deletePlaylist(playlist.id)}
+                                      className="text-destructive"
+                                    >
+                                      <Trash2 className="w-4 h-4 mr-2" />
+                                      Delete
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                              )}
+                            </div>
                           ))}
                         </div>
                       )}
@@ -599,26 +773,12 @@ export default function MusicPage() {
       {/* Bottom Player Bar */}
       <div className="fixed bottom-0 left-0 right-0 bg-card/95 backdrop-blur-xl border-t border-border z-50">
         <div className="container mx-auto px-4">
-          {/* Mini visualizer in progress bar area */}
+          {/* Progress bar */}
           <div className="h-1 bg-muted/30 relative overflow-hidden">
             <div 
               className="h-full bg-gold transition-all duration-150"
               style={{ width: duration ? `${(currentTime / duration) * 100}%` : '0%' }}
             />
-            {isPlaying && (
-              <div className="absolute inset-0 flex items-center">
-                {Array.from({ length: 50 }).map((_, i) => (
-                  <div
-                    key={i}
-                    className="flex-1 h-full bg-gold/30 mx-px animate-pulse"
-                    style={{ 
-                      animationDelay: `${i * 0.05}s`,
-                      opacity: currentTime / duration > i / 50 ? 1 : 0.3
-                    }}
-                  />
-                ))}
-              </div>
-            )}
           </div>
           
           {/* Progress Slider */}
