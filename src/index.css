@@ -92,6 +92,16 @@
   .glass-card {
     @apply bg-card/80 backdrop-blur-xl border border-border/50 rounded-lg;
     box-shadow: var(--shadow-card);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .glass-card:hover {
+    box-shadow: var(--shadow-elevated);
+    transform: translateY(-2px);
+  }
+
+  .glass-card:active {
+    transform: translateY(0) scale(0.995);
   }
 
   .gold-glow {
@@ -206,6 +216,43 @@
     50% {
       filter: drop-shadow(0 0 16px hsl(35 90% 55% / 0.9));
     }
+  }
+
+  /* Module shimmer animation */
+  @keyframes shimmer {
+    0% {
+      background-position: -200% -200%;
+    }
+    100% {
+      background-position: 200% 200%;
+    }
+  }
+
+  /* Icon glow pulse */
+  @keyframes icon-glow {
+    0%, 100% {
+      filter: drop-shadow(0 0 4px currentColor);
+    }
+    50% {
+      filter: drop-shadow(0 0 12px currentColor);
+    }
+  }
+
+  .animate-icon-glow:hover {
+    animation: icon-glow 2s ease-in-out infinite;
+  }
+
+  /* Module card hover scale */
+  .module-hover-scale {
+    transition: transform 0.2s ease-out, box-shadow 0.2s ease-out;
+  }
+
+  .module-hover-scale:hover {
+    transform: translateY(-3px) scale(1.01);
+  }
+
+  .module-hover-scale:active {
+    transform: translateY(0) scale(0.99);
   }
 }
 
