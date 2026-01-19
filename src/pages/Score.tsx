@@ -4,7 +4,7 @@ import {
   ArrowLeft, Play, Pause, SkipBack, SkipForward, Volume2, VolumeX,
   Shuffle, Repeat, Plus, Music, Heart, Upload, Trash2, GripVertical,
   ListMusic, Mic2, User, Crown, Sparkles, MoreHorizontal, Edit2,
-  FolderPlus, Download, Check, X
+  FolderPlus, Download, Check, X, CloudOff, Cloud, HardDrive, Loader2, Wifi, WifiOff
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -34,6 +34,8 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { AudioVisualizer, SimpleWaveformBars } from "@/components/music/AudioVisualizer";
 import { useMediaSession, configureAudioForBackground } from "@/hooks/useMediaSession";
+import { useOfflineTracks } from "@/hooks/useOfflineTracks";
+import { Badge } from "@/components/ui/badge";
 
 export default function ScorePage() {
   const navigate = useNavigate();
@@ -64,6 +66,35 @@ export default function ScorePage() {
     fetchPlaylistTracks,
   } = useUserPlaylists();
 
+  // Offline tracks hook
+  const {
+    offlineTracks,
+    cacheStats,
+    isServiceWorkerReady,
+    downloadTrack,
+    removeOfflineTrack,
+    isTrackCached,
+    isTrackDownloading,
+    clearAllOfflineTracks,
+    formatSize,
+  } = useOfflineTracks();
+
+  // Online/offline status
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
   // Audio state
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -83,6 +114,16 @@ export default function ScorePage() {
   // Drag and drop for track reordering
   const [draggedTrack, setDraggedTrack] = useState<PlaylistTrack | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+
+  // Handle downloading track for offline
+  const handleDownloadForOffline = async (track: PlaylistTrack) => {
+    await downloadTrack(track.id, track.audio_url, track.title, track.artist || undefined);
+  };
+
+  // Handle removing track from offline
+  const handleRemoveFromOffline = async (trackId: string) => {
+    await removeOfflineTrack(trackId);
+  };
 
   // Audio playback - handle track changes
   useEffect(() => {
@@ -562,6 +603,62 @@ export default function ScorePage() {
                 </CardContent>
               </Card>
             )}
+
+            {/* Offline Status Card */}
+            {isServiceWorkerReady && (
+              <Card className={cn(
+                "border-border/50",
+                !isOnline && "border-amber-500/50 bg-amber-500/5"
+              )}>
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    {isOnline ? (
+                      <Wifi className="w-4 h-4 text-green-500" />
+                    ) : (
+                      <WifiOff className="w-4 h-4 text-amber-500" />
+                    )}
+                    <span className="text-xs text-muted-foreground uppercase tracking-wide">
+                      {isOnline ? 'Online' : 'Offline Mode'}
+                    </span>
+                  </div>
+                  
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <HardDrive className="w-4 h-4 text-muted-foreground" />
+                        <span className="text-sm">Cached Tracks</span>
+                      </div>
+                      <span className="text-sm font-medium text-gold">
+                        {offlineTracks.length}
+                      </span>
+                    </div>
+                    
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-muted-foreground">Storage Used</span>
+                      <span className="text-sm">{formatSize(cacheStats.totalSize)}</span>
+                    </div>
+                    
+                    {offlineTracks.length > 0 && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full mt-2"
+                        onClick={clearAllOfflineTracks}
+                      >
+                        <Trash2 className="w-4 h-4 mr-2" />
+                        Clear Offline Cache
+                      </Button>
+                    )}
+                    
+                    {!isOnline && offlineTracks.length === 0 && (
+                      <p className="text-xs text-amber-500 mt-2">
+                        No tracks saved for offline. Connect to internet to download tracks.
+                      </p>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </div>
 
           {/* Right Column - Playlists & Tracks */}
@@ -657,16 +754,29 @@ export default function ScorePage() {
                             {/* Track icon */}
                             <div className="w-10 h-10 rounded bg-gradient-to-br from-gold/20 to-amber-500/10 flex items-center justify-center flex-shrink-0">
                               <Music className="w-5 h-5 text-gold/70" />
+                              {/* Offline indicator */}
+                              {isTrackCached(track.id) && (
+                                <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full flex items-center justify-center">
+                                  <HardDrive className="w-2.5 h-2.5 text-white" />
+                                </div>
+                              )}
                             </div>
                             
                             {/* Track info */}
                             <div className="flex-1 min-w-0">
-                              <p className={cn(
-                                "font-medium truncate",
-                                currentTrack?.id === track.id && "text-gold"
-                              )}>
-                                {track.title}
-                              </p>
+                              <div className="flex items-center gap-2">
+                                <p className={cn(
+                                  "font-medium truncate",
+                                  currentTrack?.id === track.id && "text-gold"
+                                )}>
+                                  {track.title}
+                                </p>
+                                {isTrackCached(track.id) && (
+                                  <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 border-green-500/50 text-green-500">
+                                    Offline
+                                  </Badge>
+                                )}
+                              </div>
                               <p className="text-sm text-muted-foreground truncate">
                                 {track.artist || displayName}
                               </p>
@@ -676,6 +786,37 @@ export default function ScorePage() {
                             <span className="text-sm text-muted-foreground">
                               {track.duration_seconds ? formatTime(track.duration_seconds) : '--:--'}
                             </span>
+                            
+                            {/* Offline download button - quick access */}
+                            {isServiceWorkerReady && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className={cn(
+                                  "h-8 w-8",
+                                  isTrackCached(track.id) 
+                                    ? "text-green-500" 
+                                    : "opacity-0 group-hover:opacity-100"
+                                )}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  if (isTrackCached(track.id)) {
+                                    handleRemoveFromOffline(track.id);
+                                  } else {
+                                    handleDownloadForOffline(track);
+                                  }
+                                }}
+                                disabled={isTrackDownloading(track.id)}
+                              >
+                                {isTrackDownloading(track.id) ? (
+                                  <Loader2 className="w-4 h-4 animate-spin" />
+                                ) : isTrackCached(track.id) ? (
+                                  <HardDrive className="w-4 h-4" />
+                                ) : (
+                                  <CloudOff className="w-4 h-4" />
+                                )}
+                              </Button>
+                            )}
                             
                             {/* Actions */}
                             <DropdownMenu>
@@ -692,9 +833,34 @@ export default function ScorePage() {
                                 <DropdownMenuItem asChild>
                                   <a href={track.audio_url} download className="flex items-center">
                                     <Download className="w-4 h-4 mr-2" />
-                                    Download
+                                    Download to Device
                                   </a>
                                 </DropdownMenuItem>
+                                {isServiceWorkerReady && (
+                                  <>
+                                    <DropdownMenuSeparator />
+                                    {isTrackCached(track.id) ? (
+                                      <DropdownMenuItem 
+                                        onClick={() => handleRemoveFromOffline(track.id)}
+                                      >
+                                        <Cloud className="w-4 h-4 mr-2" />
+                                        Remove Offline Copy
+                                      </DropdownMenuItem>
+                                    ) : (
+                                      <DropdownMenuItem 
+                                        onClick={() => handleDownloadForOffline(track)}
+                                        disabled={isTrackDownloading(track.id)}
+                                      >
+                                        {isTrackDownloading(track.id) ? (
+                                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                        ) : (
+                                          <HardDrive className="w-4 h-4 mr-2" />
+                                        )}
+                                        Save for Offline
+                                      </DropdownMenuItem>
+                                    )}
+                                  </>
+                                )}
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem 
                                   onClick={() => handleDeleteTrack(track.id)}
