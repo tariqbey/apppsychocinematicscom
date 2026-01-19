@@ -659,15 +659,36 @@ export function DirectorAIAgent({ isOpen, onClose, chiefAim }: DirectorAIAgentPr
     streamChat(text);
   };
 
-  const handleVoiceToggle = () => {
+  const handleVoiceToggle = async () => {
+    console.log("[DirectorAI] Voice toggle - current state:", { voiceEnabled, isListening, isSupported });
+    
     if (voiceEnabled || isListening) {
       stopListening();
       setVoiceEnabled(false);
       setOrbState("idle");
+      toast.info("Voice input disabled");
     } else {
+      // Clear stop flag when user explicitly activates voice
+      stopRequestedRef.current = false;
+      
+      if (!isSupported) {
+        toast.error("Voice input is not supported on this browser. Please use Chrome, Safari, or Edge.", {
+          duration: 5000,
+        });
+        return;
+      }
+      
       stopSpeaking();
       setVoiceEnabled(true);
-      startListening();
+      
+      // Provide immediate feedback
+      toast.info("🎤 Activating microphone...", { duration: 1500 });
+      
+      // Force start listening with a slight delay to ensure state is updated
+      setTimeout(() => {
+        console.log("[DirectorAI] Forcing startListening call");
+        startListening();
+      }, 100);
     }
   };
 
