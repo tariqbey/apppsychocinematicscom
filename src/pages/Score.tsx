@@ -33,6 +33,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { AudioVisualizer, SimpleWaveformBars } from "@/components/music/AudioVisualizer";
+import { useMediaSession, configureAudioForBackground } from "@/hooks/useMediaSession";
 
 export default function ScorePage() {
   const navigate = useNavigate();
@@ -146,6 +147,39 @@ export default function ScorePage() {
       audio.removeEventListener('error', handleError);
     };
   }, [isRepeat, playNextTrack, setIsPlaying]);
+
+  // Configure audio element for background playback on mobile
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    // Configure audio for background playback
+    const cleanup = configureAudioForBackground(audio);
+    return cleanup;
+  }, []);
+
+  // Media Session API for lock screen controls and background playback
+  const handleSeekTo = useCallback((time: number) => {
+    const audio = audioRef.current;
+    if (audio) {
+      audio.currentTime = time;
+      setCurrentTime(time);
+    }
+  }, []);
+
+  useMediaSession({
+    title: currentTrack?.title,
+    artist: currentTrack?.artist || profile?.display_name || 'Unknown Artist',
+    album: currentPlaylist?.name || 'The Score',
+    isPlaying,
+    duration,
+    currentTime,
+    onPlay: () => setIsPlaying(true),
+    onPause: () => setIsPlaying(false),
+    onNextTrack: playNextTrack,
+    onPreviousTrack: playPreviousTrack,
+    onSeekTo: handleSeekTo,
+  });
 
   // Redirect if not logged in
   useEffect(() => {
@@ -389,8 +423,15 @@ export default function ScorePage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-background via-background to-muted/20 flex flex-col">
-      {/* Hidden audio element */}
-      <audio ref={audioRef} preload="auto" crossOrigin="anonymous" />
+      {/* Hidden audio element with background playback support */}
+      <audio 
+        ref={audioRef} 
+        preload="auto" 
+        crossOrigin="anonymous"
+        playsInline
+        // @ts-ignore - webkit attribute for iOS background playback
+        webkit-playsinline="true"
+      />
 
       {/* Header */}
       <header className="sticky top-0 z-40 border-b border-border/50 bg-background/80 backdrop-blur-sm">
