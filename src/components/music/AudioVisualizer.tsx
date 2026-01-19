@@ -9,12 +9,30 @@ interface AudioVisualizerProps {
   barColor?: string;
 }
 
+// Resolve CSS variable to actual color value
+function resolveCssColor(color: string): string {
+  if (color.includes('var(--')) {
+    // Extract variable name and get computed value
+    const varMatch = color.match(/var\(--([^)]+)\)/);
+    if (varMatch) {
+      const computedStyle = getComputedStyle(document.documentElement);
+      const value = computedStyle.getPropertyValue(`--${varMatch[1]}`).trim();
+      if (value) {
+        return `hsl(${value})`;
+      }
+    }
+    // Fallback to gold color
+    return '#D4AF37';
+  }
+  return color;
+}
+
 export function AudioVisualizer({ 
   audioElement, 
   isPlaying, 
   className,
   barCount = 32,
-  barColor = 'hsl(var(--gold))'
+  barColor = '#D4AF37' // Use hex fallback for Canvas compatibility
 }: AudioVisualizerProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animationRef = useRef<number>();
@@ -84,6 +102,7 @@ export function AudioVisualizer({
       const barWidth = canvas.width / barCount;
       const gap = 2;
       const step = Math.floor(bufferLength / barCount);
+      const resolvedColor = resolveCssColor(barColor);
 
       for (let i = 0; i < barCount; i++) {
         const dataIndex = i * step;
@@ -93,16 +112,16 @@ export function AudioVisualizer({
         const x = i * barWidth;
         const y = canvas.height - barHeight;
 
-        // Create gradient
+        // Create gradient with resolved color
         const gradient = ctx.createLinearGradient(x, canvas.height, x, y);
-        gradient.addColorStop(0, barColor);
-        gradient.addColorStop(1, adjustColorOpacity(barColor, 0.5));
+        gradient.addColorStop(0, resolvedColor);
+        gradient.addColorStop(1, adjustColorOpacity(resolvedColor, 0.5));
 
         ctx.fillStyle = gradient;
         ctx.fillRect(x + gap / 2, y, barWidth - gap, barHeight);
         
         // Add glow effect
-        ctx.shadowColor = barColor;
+        ctx.shadowColor = resolvedColor;
         ctx.shadowBlur = 10;
       }
 
@@ -140,6 +159,7 @@ function drawIdleBars(
   const barWidth = canvas.width / barCount;
   const gap = 2;
   const time = Date.now() / 1000;
+  const resolvedColor = resolveCssColor(barColor);
 
   for (let i = 0; i < barCount; i++) {
     const x = i * barWidth;
@@ -149,7 +169,7 @@ function drawIdleBars(
     const barHeight = baseHeight + wave;
     const y = canvas.height - barHeight;
 
-    ctx.fillStyle = adjustColorOpacity(barColor, 0.3);
+    ctx.fillStyle = adjustColorOpacity(resolvedColor, 0.3);
     ctx.fillRect(x + gap / 2, y, barWidth - gap, barHeight);
   }
 }
