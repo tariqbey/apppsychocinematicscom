@@ -63,18 +63,32 @@ export default function MusicPage() {
   const [isRepeat, setIsRepeat] = useState(false);
   const [isUploadingTrack, setIsUploadingTrack] = useState(false);
 
-  // Audio playback effects
+  // Audio playback effects - handle source changes
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio || !currentTrack) return;
 
-    audio.src = currentTrack.audio_url;
+    // Only update source if it's different
+    if (audio.src !== currentTrack.audio_url) {
+      audio.src = currentTrack.audio_url;
+      audio.load(); // Ensure the new source is loaded
+    }
     audio.volume = isMuted ? 0 : volume;
     
+    // Auto-play when track changes
     if (isPlaying) {
-      audio.play().catch(console.error);
+      const playPromise = audio.play();
+      if (playPromise !== undefined) {
+        playPromise.catch((err) => {
+          console.error('Playback error:', err);
+          // Try again after a short delay
+          setTimeout(() => {
+            audio.play().catch(console.error);
+          }, 100);
+        });
+      }
     }
-  }, [currentTrack]);
+  }, [currentTrack, isPlaying, isMuted, volume]);
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -200,8 +214,22 @@ export default function MusicPage() {
   };
 
   const handlePlayTrack = (track: PlaylistTrack) => {
+    // If same track, toggle play/pause
+    if (currentTrack?.id === track.id) {
+      setIsPlaying(!isPlaying);
+      return;
+    }
+    // Set the track and trigger playback
     setCurrentTrack(track);
     setIsPlaying(true);
+    
+    // Force audio to play immediately
+    const audio = audioRef.current;
+    if (audio) {
+      audio.src = track.audio_url;
+      audio.load();
+      audio.play().catch(console.error);
+    }
   };
 
   if (authLoading || isLoading) {
