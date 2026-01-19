@@ -17,7 +17,10 @@ import {
   Dumbbell,
   Camera,
   Check,
-  RefreshCw
+  RefreshCw,
+  Download,
+  CheckCircle,
+  Star
 } from "lucide-react";
 
 interface CharacterDescription {
@@ -317,65 +320,161 @@ export function CharacterDescriptionForm({ referencePhotoUrl, onHeroImageGenerat
         {/* Hero Image Preview */}
         {(heroImages.front || heroImages.side || heroImages.back) && (
           <div className="space-y-4">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between flex-wrap gap-2">
               <h4 className="font-medium flex items-center gap-2">
                 <Sparkles className="w-4 h-4 text-gold" />
                 Your Hero Character Sheet
               </h4>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={generateHeroImage}
-                disabled={isGenerating || !referencePhotoUrl}
-              >
-                <RefreshCw className={`w-4 h-4 mr-1 ${isGenerating ? 'animate-spin' : ''}`} />
-                Regenerate
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const urls = [heroImages.front, heroImages.side, heroImages.back].filter(Boolean);
+                    urls.forEach((url, i) => {
+                      if (url) {
+                        const link = document.createElement('a');
+                        link.href = url;
+                        link.download = `hero-${['front', 'side', 'back'][i]}.png`;
+                        link.target = '_blank';
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                      }
+                    });
+                    toast.success("Downloading hero images...");
+                  }}
+                >
+                  <Download className="w-4 h-4 mr-1" />
+                  Download All
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={generateHeroImage}
+                  disabled={isGenerating || !referencePhotoUrl}
+                >
+                  <RefreshCw className={`w-4 h-4 mr-1 ${isGenerating ? 'animate-spin' : ''}`} />
+                  Regenerate
+                </Button>
+              </div>
             </div>
             
             <div className="grid grid-cols-3 gap-3">
               {heroImages.front && (
                 <div className="space-y-2">
-                  <div className="aspect-[3/4] rounded-lg overflow-hidden border border-gold/30">
+                  <div className="aspect-[3/4] rounded-lg overflow-hidden border border-gold/30 relative group">
                     <img
                       src={heroImages.front}
                       alt="Front view"
                       className="w-full h-full object-cover"
                     />
+                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="text-xs"
+                        onClick={() => {
+                          const link = document.createElement('a');
+                          link.href = heroImages.front!;
+                          link.download = 'hero-front.png';
+                          link.target = '_blank';
+                          document.body.appendChild(link);
+                          link.click();
+                          document.body.removeChild(link);
+                          toast.success("Front image downloaded");
+                        }}
+                      >
+                        <Download className="w-3 h-3 mr-1" />
+                        Download
+                      </Button>
+                    </div>
                   </div>
-                  <Badge variant="outline" className="w-full justify-center">Front</Badge>
+                  <Badge variant="outline" className="w-full justify-center gap-1">
+                    <CheckCircle className="w-3 h-3 text-green-500" />
+                    Front
+                  </Badge>
                 </div>
               )}
               {heroImages.side && (
                 <div className="space-y-2">
-                  <div className="aspect-[3/4] rounded-lg overflow-hidden border border-gold/30">
+                  <div className="aspect-[3/4] rounded-lg overflow-hidden border border-gold/30 relative group">
                     <img
                       src={heroImages.side}
                       alt="Side view"
                       className="w-full h-full object-cover"
                     />
+                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="text-xs"
+                        onClick={() => {
+                          const link = document.createElement('a');
+                          link.href = heroImages.side!;
+                          link.download = 'hero-side.png';
+                          link.target = '_blank';
+                          document.body.appendChild(link);
+                          link.click();
+                          document.body.removeChild(link);
+                          toast.success("Side image downloaded");
+                        }}
+                      >
+                        <Download className="w-3 h-3 mr-1" />
+                        Download
+                      </Button>
+                    </div>
                   </div>
-                  <Badge variant="outline" className="w-full justify-center">Side</Badge>
+                  <Badge variant="outline" className="w-full justify-center gap-1">
+                    <CheckCircle className="w-3 h-3 text-green-500" />
+                    Side
+                  </Badge>
                 </div>
               )}
               {heroImages.back && (
                 <div className="space-y-2">
-                  <div className="aspect-[3/4] rounded-lg overflow-hidden border border-gold/30">
+                  <div className="aspect-[3/4] rounded-lg overflow-hidden border border-gold/30 relative group">
                     <img
                       src={heroImages.back}
                       alt="Back view"
                       className="w-full h-full object-cover"
                     />
+                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="text-xs"
+                        onClick={() => {
+                          const link = document.createElement('a');
+                          link.href = heroImages.back!;
+                          link.download = 'hero-back.png';
+                          link.target = '_blank';
+                          document.body.appendChild(link);
+                          link.click();
+                          document.body.removeChild(link);
+                          toast.success("Back image downloaded");
+                        }}
+                      >
+                        <Download className="w-3 h-3 mr-1" />
+                        Download
+                      </Button>
+                    </div>
                   </div>
-                  <Badge variant="outline" className="w-full justify-center">Back</Badge>
+                  <Badge variant="outline" className="w-full justify-center gap-1">
+                    <CheckCircle className="w-3 h-3 text-green-500" />
+                    Back
+                  </Badge>
                 </div>
               )}
             </div>
             
             <Card className="p-3 bg-gold/5 border-gold/20">
-              <p className="text-sm text-muted-foreground">
-                These hero images will be used as references for all AI-generated scenes featuring your character.
-              </p>
+              <div className="flex items-start gap-2">
+                <Star className="w-4 h-4 text-gold mt-0.5 shrink-0" />
+                <p className="text-sm text-muted-foreground">
+                  <strong>Saved & Active:</strong> These hero images are now your default identity for all AI-generated scenes in Mind Movies, Challenge Storyboards, and visualizations.
+                </p>
+              </div>
             </Card>
           </div>
         )}

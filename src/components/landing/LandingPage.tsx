@@ -127,8 +127,8 @@ export const LandingPage = ({ onLogin }: LandingPageProps) => {
     },
     {
       icon: Brain,
-      title: "Character Builder",
-      description: "Discover your archetype with our 28-question survey. Get AI-powered transformation analysis revealing your strengths, required traits, and a personalized roadmap."
+      title: "Character Builder & Hero Creator",
+      description: "Discover your archetype with our 28-question survey. Create your Hero Character with AI-generated front, side, and back views that become YOUR identity in all visualizations."
     },
     {
       icon: Calendar,
@@ -177,7 +177,7 @@ export const LandingPage = ({ onLogin }: LandingPageProps) => {
 
   const transformPillar = [
     { icon: Bot, title: "Director AI Coach", description: "Voice-first, 6 personalities" },
-    { icon: Brain, title: "Character Builder", description: "28-question archetype survey" },
+    { icon: Brain, title: "Hero Character Creator", description: "AI-generated hero images" },
     { icon: Zap, title: "Episode Sprints", description: "1-4 week focused production" },
     { icon: Calendar, title: "21-Day Cycles", description: "10 cycles across 3 Acts" },
     { icon: Mic, title: "Voice Transformation", description: "10+ premium voice options" }
