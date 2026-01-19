@@ -9,9 +9,10 @@ import { CharacterEvolution } from "@/components/character/CharacterEvolution";
 import { CycleProgress } from "@/components/character/CycleProgress";
 import { CycleReviewWizard } from "@/components/character/CycleReviewWizard";
 import { TransformationRoadmap } from "@/components/character/TransformationRoadmap";
+import { CharacterCreator } from "@/components/character/CharacterCreator";
 import { useAuth } from "@/hooks/useAuth";
 import { useCycleTracking } from "@/hooks/useCycleTracking";
-import { Loader2, ArrowLeft, User2, Target, TrendingUp, Brain, Calendar, GitBranch, RotateCcw } from "lucide-react";
+import { Loader2, ArrowLeft, User2, Target, TrendingUp, Brain, Calendar, GitBranch, RotateCcw, UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useNavigate } from "react-router-dom";
@@ -65,8 +66,12 @@ const Character = () => {
           </div>
 
           {/* Tabs Navigation */}
-          <Tabs defaultValue="cycles" className="w-full">
-            <TabsList className="grid w-full grid-cols-7 mb-6">
+          <Tabs defaultValue="create" className="w-full">
+            <TabsList className="grid w-full grid-cols-8 mb-6">
+              <TabsTrigger value="create" className="flex items-center gap-2">
+                <UserPlus className="w-4 h-4" />
+                <span className="hidden sm:inline">Create</span>
+              </TabsTrigger>
               <TabsTrigger value="cycles" className="flex items-center gap-2">
                 <RotateCcw className="w-4 h-4" />
                 <span className="hidden sm:inline">21 Days</span>
@@ -96,6 +101,10 @@ const Character = () => {
                 <span className="hidden sm:inline">Annual</span>
               </TabsTrigger>
             </TabsList>
+
+            <TabsContent value="create" className="space-y-6">
+              <CharacterCreator />
+            </TabsContent>
 
             <TabsContent value="cycles" className="space-y-6">
               <CycleProgress onStartReview={() => setShowCycleReview(true)} />
