@@ -129,36 +129,43 @@ export default function ScorePage() {
     await removeOfflineTrack(trackId);
   };
 
-  // Audio playback - handle track changes
+  // Track the current audio source to avoid unnecessary reloads
+  const currentAudioUrlRef = useRef<string | null>(null);
+
+  // Audio playback - handle track changes and play/pause state
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio || !currentTrack) return;
 
     const trackUrl = currentTrack.audio_url;
-    if (audio.src !== trackUrl) {
+    
+    // Only reload if the track actually changed
+    const needsReload = currentAudioUrlRef.current !== trackUrl;
+    
+    if (needsReload) {
+      console.log('[Score] Loading new track:', trackUrl);
+      currentAudioUrlRef.current = trackUrl;
       audio.src = trackUrl;
       audio.load();
     }
+    
     audio.volume = isMuted ? 0 : volume;
-  }, [currentTrack, isMuted, volume]);
-
-  // Handle play/pause state changes
-  useEffect(() => {
-    const audio = audioRef.current;
-    if (!audio || !currentTrack) return;
 
     if (isPlaying) {
-      audio.play().catch((err) => {
-        console.error('Playback error:', err);
-        if (err.name === 'NotAllowedError') {
-          toast.error('Click play again to start playback');
-          setIsPlaying(false);
-        }
-      });
+      const playPromise = audio.play();
+      if (playPromise !== undefined) {
+        playPromise.catch((err) => {
+          console.error('[Score] Playback error:', err);
+          if (err.name === 'NotAllowedError') {
+            toast.error('Tap play to start playback');
+            setIsPlaying(false);
+          }
+        });
+      }
     } else {
       audio.pause();
     }
-  }, [isPlaying, currentTrack, setIsPlaying]);
+  }, [currentTrack, isPlaying, isMuted, volume, setIsPlaying]);
 
   // Audio event listeners
   useEffect(() => {
@@ -345,22 +352,15 @@ export default function ScorePage() {
   };
 
   const handlePlayTrack = (track: PlaylistTrack) => {
-    const audio = audioRef.current;
-    
+    // If clicking on the same track, just toggle play/pause
     if (currentTrack?.id === track.id) {
       setIsPlaying(!isPlaying);
       return;
     }
     
+    // Set the new track and start playing - useEffect will handle the actual playback
     setCurrentTrack(track);
     setIsPlaying(true);
-    
-    if (audio) {
-      audio.src = track.audio_url;
-      audio.load();
-      audio.volume = isMuted ? 0 : volume;
-      audio.play().catch(console.error);
-    }
   };
 
   // Create new playlist
