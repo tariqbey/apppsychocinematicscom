@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { ForgotPasswordModal } from "./ForgotPasswordModal";
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -16,6 +17,7 @@ export const AuthModal = ({ isOpen, onClose, initialMode = "signup" }: AuthModal
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
   const { signIn, signUp, signInWithGoogle } = useAuth();
   const { toast } = useToast();
 
@@ -27,6 +29,19 @@ export const AuthModal = ({ isOpen, onClose, initialMode = "signup" }: AuthModal
   }, [isOpen, initialMode]);
 
   if (!isOpen) return null;
+
+  if (showForgotPassword) {
+    return (
+      <ForgotPasswordModal
+        isOpen={true}
+        onClose={() => {
+          setShowForgotPassword(false);
+          onClose();
+        }}
+        onBack={() => setShowForgotPassword(false)}
+      />
+    );
+  }
 
   const redirectToCheckout = async () => {
     try {
@@ -142,6 +157,18 @@ export const AuthModal = ({ isOpen, onClose, initialMode = "signup" }: AuthModal
               />
             </div>
           </div>
+
+          {mode === "signin" && (
+            <div className="text-right">
+              <button
+                type="button"
+                onClick={() => setShowForgotPassword(true)}
+                className="text-sm text-gold hover:underline"
+              >
+                Forgot password?
+              </button>
+            </div>
+          )}
 
           <Button
             type="submit"
