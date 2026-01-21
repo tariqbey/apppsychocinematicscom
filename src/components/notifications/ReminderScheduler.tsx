@@ -1,9 +1,8 @@
 import { useState } from "react";
-import { Clock, Bell, BookOpen, Film, BarChart3, X } from "lucide-react";
+import { Clock, Bell, BookOpen, Film, BarChart3, X, Sparkles, Music } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { useScheduledReminders } from "@/hooks/useScheduledReminders";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { cn } from "@/lib/utils";
@@ -112,7 +111,7 @@ function formatTimeDisplay(timeStr: string): string {
 }
 
 export function ReminderScheduler({ compact = false }: ReminderSchedulerProps) {
-  const { settings, isLoading, updateReminderTime } = useScheduledReminders();
+  const { settings, isLoading, updateReminderTime, sendMotivationalNow } = useScheduledReminders();
   const { isEnabled, isSupported } = usePushNotifications();
 
   if (!isSupported) {
@@ -177,30 +176,67 @@ export function ReminderScheduler({ compact = false }: ReminderSchedulerProps) {
 
       <div className="space-y-1">
         <ReminderRow
-          icon={<BookOpen className="h-4 w-4" />}
-          label="Daily Journaling"
-          description="Reminder to record your thoughts"
-          time={settings.journalReminderTime}
-          onTimeChange={(t) => updateReminderTime('journal', t)}
-          disabled={notificationsDisabled || isLoading}
-        />
-        <ReminderRow
           icon={<Film className="h-4 w-4" />}
-          label="Morning Ritual"
-          description="Time for Mind Movie screening"
+          label="Morning Mind Movie"
+          description="Start your day with your vision"
           time={settings.morningRitualReminderTime}
           onTimeChange={(t) => updateReminderTime('ritual', t)}
           disabled={notificationsDisabled || isLoading}
         />
         <ReminderRow
+          icon={<BookOpen className="h-4 w-4" />}
+          label="Daily Journaling"
+          description="Capture your experiences"
+          time={settings.journalReminderTime}
+          onTimeChange={(t) => updateReminderTime('journal', t)}
+          disabled={notificationsDisabled || isLoading}
+        />
+        <ReminderRow
           icon={<BarChart3 className="h-4 w-4" />}
           label="Evening Scorecard"
-          description="Complete your daily reflection"
+          description="Rate your character performance"
           time={settings.eveningScorecardReminderTime}
           onTimeChange={(t) => updateReminderTime('scorecard', t)}
           disabled={notificationsDisabled || isLoading}
         />
       </div>
+
+      {/* Motivational Reminders Section */}
+      {!notificationsDisabled && (
+        <div className="mt-6 pt-4 border-t border-border">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-gold/20 to-amber-500/20 flex items-center justify-center">
+                <Sparkles className="h-4 w-4 text-gold" />
+              </div>
+              <div>
+                <p className="text-sm font-medium">Motivational Reminders</p>
+                <p className="text-xs text-muted-foreground">
+                  Auto-sends every 2-3 hours (8am-9pm)
+                </p>
+              </div>
+            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={sendMotivationalNow}
+              className="h-8 text-xs gap-1"
+            >
+              <Sparkles className="h-3 w-3" />
+              Test Now
+            </Button>
+          </div>
+          
+          <div className="mt-3 p-3 rounded-lg bg-muted/50 text-xs text-muted-foreground">
+            <p className="font-medium text-foreground mb-1">Sample Messages:</p>
+            <ul className="space-y-1">
+              <li>• "Don't get caught up in someone else's movie—unless you're getting paid."</li>
+              <li>• "Take 3 minutes to watch your Mind Movie and realign."</li>
+              <li>• "Put on your soundtrack and get back into character."</li>
+            </ul>
+          </div>
+        </div>
+      )}
     </Card>
   );
 }
