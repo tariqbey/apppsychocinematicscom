@@ -165,6 +165,31 @@ export default function ScorePage() {
     }
   }, [isPlaying]);
 
+  // Track the last played track ID to detect auto-advance
+  const lastPlayedTrackIdRef = useRef<string | null>(null);
+
+  // Handle auto-advance: when currentTrack changes from playNextTrack(), load and play the new track
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio || !isAudioReady || !currentTrack) return;
+    
+    // Only auto-play if this is a different track triggered by playNextTrack
+    if (lastPlayedTrackIdRef.current && lastPlayedTrackIdRef.current !== currentTrack.id && isPlaying) {
+      console.log('[Score] Auto-advancing to:', currentTrack.title);
+      audio.src = currentTrack.audio_url;
+      currentAudioUrlRef.current = currentTrack.audio_url;
+      audio.currentTime = 0;
+      audio.muted = false;
+      audio.volume = isMuted ? 0 : volume;
+      audio.play().catch(err => {
+        console.error('[Score] Auto-advance play error:', err);
+        setIsPlaying(false);
+      });
+    }
+    
+    lastPlayedTrackIdRef.current = currentTrack.id;
+  }, [currentTrack, isAudioReady, isPlaying, volume, isMuted, setIsPlaying]);
+
   // Audio event listeners
   useEffect(() => {
     if (!isAudioReady) return;
