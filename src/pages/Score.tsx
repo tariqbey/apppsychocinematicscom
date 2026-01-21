@@ -132,40 +132,21 @@ export default function ScorePage() {
   // Track the current audio source to avoid unnecessary reloads
   const currentAudioUrlRef = useRef<string | null>(null);
 
-  // Audio playback - handle track changes and play/pause state
+  // Sync volume/mute to audio element
   useEffect(() => {
     const audio = audioRef.current;
-    if (!audio || !currentTrack) return;
-
-    const trackUrl = currentTrack.audio_url;
-    
-    // Only reload if the track actually changed
-    const needsReload = currentAudioUrlRef.current !== trackUrl;
-    
-    if (needsReload) {
-      console.log('[Score] Loading new track:', trackUrl);
-      currentAudioUrlRef.current = trackUrl;
-      audio.src = trackUrl;
-      audio.load();
-    }
-    
+    if (!audio) return;
     audio.volume = isMuted ? 0 : volume;
+  }, [isMuted, volume]);
 
-    if (isPlaying) {
-      const playPromise = audio.play();
-      if (playPromise !== undefined) {
-        playPromise.catch((err) => {
-          console.error('[Score] Playback error:', err);
-          if (err.name === 'NotAllowedError') {
-            toast.error('Tap play to start playback');
-            setIsPlaying(false);
-          }
-        });
-      }
-    } else {
+  // Handle pause state only (play is done in click handler for gesture safety)
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    if (!isPlaying && !audio.paused) {
       audio.pause();
     }
-  }, [currentTrack, isPlaying, isMuted, volume, setIsPlaying]);
+  }, [isPlaying]);
 
   // Audio event listeners
   useEffect(() => {
@@ -258,11 +239,26 @@ export default function ScorePage() {
     }
   };
 
-  const togglePlay = () => {
+  // GESTURE-SAFE: Toggle play directly on audio element
+  const togglePlay = async () => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
     if (currentTrack) {
-      setIsPlaying(!isPlaying);
+      if (isPlaying) {
+        audio.pause();
+        setIsPlaying(false);
+      } else {
+        try {
+          await audio.play();
+          setIsPlaying(true);
+        } catch (err) {
+          console.error('[Score] Toggle play error:', err);
+          toast.error('Tap again to play');
+        }
+      }
     } else if (tracks.length > 0) {
-      handlePlayTrack(tracks[0]);
+      await handlePlayTrack(tracks[0]);
     }
   };
 
@@ -351,16 +347,44 @@ export default function ScorePage() {
     e.target.value = '';
   };
 
-  const handlePlayTrack = (track: PlaylistTrack) => {
+  // GESTURE-SAFE: Play audio directly in click handler for mobile compatibility
+  const handlePlayTrack = async (track: PlaylistTrack) => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
     // If clicking on the same track, just toggle play/pause
     if (currentTrack?.id === track.id) {
-      setIsPlaying(!isPlaying);
+      if (isPlaying) {
+        audio.pause();
+        setIsPlaying(false);
+      } else {
+        try {
+          await audio.play();
+          setIsPlaying(true);
+        } catch (err) {
+          console.error('[Score] Play error:', err);
+          toast.error('Tap again to play');
+        }
+      }
       return;
     }
+
+    // New track: load and play directly in the click handler
+    console.log('[Score] Playing new track:', track.audio_url);
+    currentAudioUrlRef.current = track.audio_url;
+    audio.src = track.audio_url;
+    audio.load();
     
-    // Set the new track and start playing - useEffect will handle the actual playback
     setCurrentTrack(track);
-    setIsPlaying(true);
+
+    try {
+      await audio.play();
+      setIsPlaying(true);
+    } catch (err) {
+      console.error('[Score] Play error:', err);
+      toast.error('Tap again to play');
+      setIsPlaying(false);
+    }
   };
 
   // Create new playlist
