@@ -218,8 +218,15 @@ export default function ScorePage() {
     isPlaying,
     duration,
     currentTime,
-    onPlay: () => setIsPlaying(true),
-    onPause: () => setIsPlaying(false),
+    audioElement: audioRef.current,
+    onPlay: () => {
+      // Called from lock screen play button - audio.play() is handled in useMediaSession
+      setIsPlaying(true);
+    },
+    onPause: () => {
+      // Called from lock screen pause button - audio.pause() is handled in useMediaSession
+      setIsPlaying(false);
+    },
     onNextTrack: playNextTrack,
     onPreviousTrack: playPreviousTrack,
     onSeekTo: handleSeekTo,
@@ -566,35 +573,56 @@ export default function ScorePage() {
       <main className="flex-1 container mx-auto px-3 sm:px-4 py-4 sm:py-6 pb-36 sm:pb-40 overflow-x-hidden w-full">
         <div className="grid lg:grid-cols-3 gap-6 h-full">
           {/* Left Column - Featured Artist / Now Playing */}
-          <div className="lg:col-span-1 space-y-6">
-            {/* Featured Artist Card */}
+          <div className="lg:col-span-1 space-y-4 sm:space-y-6">
+            {/* Featured Artist Card - Compact on mobile */}
             <Card className="overflow-hidden bg-gradient-to-br from-gold/10 via-card to-card border-gold/20">
-              <CardContent className="p-6">
-                <div className="flex items-center gap-2 mb-4">
-                  <Crown className="w-4 h-4 text-gold" />
-                  <span className="text-xs text-gold font-medium uppercase tracking-wide">Featured Artist</span>
+              <CardContent className="p-3 sm:p-6">
+                <div className="flex items-center gap-2 mb-2 sm:mb-4">
+                  <Crown className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gold" />
+                  <span className="text-[10px] sm:text-xs text-gold font-medium uppercase tracking-wide">Featured Artist</span>
                 </div>
                 
-                <div className="relative aspect-square rounded-lg overflow-hidden mb-4 bg-muted">
-                  {avatarUrl ? (
-                    <img 
-                      src={avatarUrl} 
-                      alt={displayName}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gold/20 to-amber-500/10">
-                      <User className="w-20 h-20 text-gold/50" />
+                {/* Mobile: horizontal layout, Desktop: vertical square */}
+                <div className="flex sm:flex-col gap-3 sm:gap-0">
+                  <div className="relative w-24 h-24 sm:w-full sm:aspect-square rounded-lg overflow-hidden sm:mb-4 bg-muted flex-shrink-0">
+                    {avatarUrl ? (
+                      <img 
+                        src={avatarUrl} 
+                        alt={displayName}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gold/20 to-amber-500/10">
+                        <User className="w-10 h-10 sm:w-20 sm:h-20 text-gold/50" />
+                      </div>
+                    )}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                    {/* Name overlay only on desktop */}
+                    <div className="hidden sm:block absolute bottom-4 left-4 right-4">
+                      <h2 className="text-2xl font-display text-white drop-shadow-lg">{displayName}</h2>
+                      <p className="text-sm text-white/80">Director • Artist</p>
                     </div>
-                  )}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-                  <div className="absolute bottom-4 left-4 right-4">
-                    <h2 className="text-2xl font-display text-white drop-shadow-lg">{displayName}</h2>
-                    <p className="text-sm text-white/80">Director • Artist</p>
+                  </div>
+                  
+                  {/* Mobile: name and stats beside image */}
+                  <div className="flex-1 flex flex-col justify-center sm:hidden">
+                    <h2 className="text-lg font-display text-foreground mb-0.5">{displayName}</h2>
+                    <p className="text-xs text-muted-foreground mb-2">Director • Artist</p>
+                    <div className="flex gap-4">
+                      <div>
+                        <span className="text-lg font-display text-gold">{tracks.length}</span>
+                        <span className="text-[10px] text-muted-foreground ml-1">Tracks</span>
+                      </div>
+                      <div>
+                        <span className="text-lg font-display text-gold">{playlists.length}</span>
+                        <span className="text-[10px] text-muted-foreground ml-1">Playlists</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4 text-center">
+                {/* Desktop stats */}
+                <div className="hidden sm:grid grid-cols-2 gap-4 text-center">
                   <div>
                     <p className="text-2xl font-display text-gold">{tracks.length}</p>
                     <p className="text-xs text-muted-foreground">Tracks</p>
