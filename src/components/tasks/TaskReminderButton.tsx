@@ -74,11 +74,7 @@ export function TaskReminderButton({ taskText, onSchedule, prominent = false }: 
     onSchedule?.(option.minutes);
   };
 
-  if (!isSupported) {
-    return null;
-  }
-
-  // Prominent version - clear button with text
+  // Don't hide - always show and prompt to enable if needed
   if (prominent) {
     return (
       <Popover open={isOpen} onOpenChange={setIsOpen}>

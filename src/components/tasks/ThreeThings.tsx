@@ -4,8 +4,9 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { 
   Target, Plus, Loader2, Sparkles, ChevronLeft, ChevronRight,
-  Calendar, RefreshCw, X, AlertCircle, BarChart3, Flame, Check, XCircle, Trash2
+  Calendar, RefreshCw, X, AlertCircle, BarChart3, Flame, Check, XCircle, Trash2, Bell
 } from "lucide-react";
+import { TaskReminderButton } from "./TaskReminderButton";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserProfile } from "@/hooks/useUserProfile";
@@ -612,6 +613,11 @@ export function ThreeThings({ showAnalyticsDefault = false }: ThreeThingsProps) 
                   <span className={`flex-1 ${task.is_completed ? "text-primary" : task.incomplete_reason ? "text-muted-foreground" : ""}`}>
                     {task.task_text}
                   </span>
+                  
+                  {/* Reminder Button - Show for incomplete tasks */}
+                  {!task.is_completed && !task.incomplete_reason && (
+                    <TaskReminderButton taskText={task.task_text} prominent />
+                  )}
                   
                   {/* Yes/No Buttons */}
                   <div className="flex items-center gap-1.5">
