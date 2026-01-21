@@ -810,63 +810,56 @@ export default function ScorePage() {
                             onDrop={(e) => handleDrop(e, index)}
                             onDragEnd={handleDragEnd}
                             className={cn(
-                              "flex items-center gap-3 p-3 rounded-lg transition-all group",
+                              "flex items-center gap-2 sm:gap-3 p-2 sm:p-3 rounded-lg transition-all group",
                               "hover:bg-muted/50 cursor-grab active:cursor-grabbing",
                               currentTrack?.id === track.id && "bg-gold/10 border border-gold/30",
                               dragOverIndex === index && "border-t-2 border-gold"
                             )}
                           >
-                            {/* Drag handle */}
-                            <GripVertical className="w-4 h-4 text-muted-foreground/50 opacity-0 group-hover:opacity-100 transition-opacity" />
+                            {/* Drag handle - hidden on mobile */}
+                            <GripVertical className="hidden sm:block w-4 h-4 text-muted-foreground/50 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
                             
                             {/* Track number / Playing indicator */}
                             <button 
                               onClick={() => handlePlayTrack(track)}
-                              className="w-8 h-8 flex items-center justify-center text-muted-foreground"
+                              className="w-6 sm:w-8 h-6 sm:h-8 flex items-center justify-center text-muted-foreground flex-shrink-0"
                             >
                               {currentTrack?.id === track.id && isPlaying ? (
-                                <SimpleWaveformBars isPlaying={true} barCount={4} />
+                                <SimpleWaveformBars isPlaying={true} barCount={3} />
                               ) : (
                                 <>
-                                  <span className="text-sm group-hover:hidden">{index + 1}</span>
-                                  <Play className="w-4 h-4 hidden group-hover:block" />
+                                  <span className="text-xs sm:text-sm group-hover:hidden">{index + 1}</span>
+                                  <Play className="w-3 h-3 sm:w-4 sm:h-4 hidden group-hover:block" />
                                 </>
                               )}
                             </button>
                             
-                            {/* Track icon */}
-                            <div className="w-10 h-10 rounded bg-gradient-to-br from-gold/20 to-amber-500/10 flex items-center justify-center flex-shrink-0">
-                              <Music className="w-5 h-5 text-gold/70" />
+                            {/* Track icon - smaller on mobile */}
+                            <div className="relative w-8 h-8 sm:w-10 sm:h-10 rounded bg-gradient-to-br from-gold/20 to-amber-500/10 flex items-center justify-center flex-shrink-0">
+                              <Music className="w-4 h-4 sm:w-5 sm:h-5 text-gold/70" />
                               {/* Offline indicator */}
                               {isTrackCached(track.id) && (
-                                <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full flex items-center justify-center">
-                                  <HardDrive className="w-2.5 h-2.5 text-white" />
+                                <div className="absolute -bottom-1 -right-1 w-3 h-3 sm:w-4 sm:h-4 bg-green-500 rounded-full flex items-center justify-center">
+                                  <HardDrive className="w-2 h-2 sm:w-2.5 sm:h-2.5 text-white" />
                                 </div>
                               )}
                             </div>
                             
-                            {/* Track info */}
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2">
-                                <p className={cn(
-                                  "font-medium truncate",
-                                  currentTrack?.id === track.id && "text-gold"
-                                )}>
-                                  {track.title}
-                                </p>
-                                {isTrackCached(track.id) && (
-                                  <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 border-green-500/50 text-green-500">
-                                    Offline
-                                  </Badge>
-                                )}
-                              </div>
-                              <p className="text-sm text-muted-foreground truncate">
+                            {/* Track info - full width on mobile */}
+                            <div className="flex-1 min-w-0 overflow-hidden">
+                              <p className={cn(
+                                "text-sm sm:text-base font-medium",
+                                currentTrack?.id === track.id && "text-gold"
+                              )}>
+                                {track.title}
+                              </p>
+                              <p className="text-xs sm:text-sm text-muted-foreground truncate">
                                 {track.artist || displayName}
                               </p>
                             </div>
                             
-                            {/* Duration */}
-                            <span className="text-sm text-muted-foreground">
+                            {/* Duration - hidden on xs */}
+                            <span className="hidden xs:block text-xs sm:text-sm text-muted-foreground flex-shrink-0">
                               {track.duration_seconds ? formatTime(track.duration_seconds) : '--:--'}
                             </span>
                             
