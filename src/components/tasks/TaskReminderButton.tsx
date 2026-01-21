@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Bell, BellOff, Clock, Check } from "lucide-react";
+import { Bell, BellRing, Clock, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Popover,
@@ -12,6 +12,7 @@ import { toast } from "sonner";
 interface TaskReminderButtonProps {
   taskText: string;
   onSchedule?: (minutes: number) => void;
+  prominent?: boolean;
 }
 
 const REMINDER_OPTIONS = [
@@ -22,7 +23,7 @@ const REMINDER_OPTIONS = [
   { label: "This evening (6 PM)", minutes: -1, time: "18:00" },
 ];
 
-export function TaskReminderButton({ taskText, onSchedule }: TaskReminderButtonProps) {
+export function TaskReminderButton({ taskText, onSchedule, prominent = false }: TaskReminderButtonProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [scheduledReminder, setScheduledReminder] = useState<string | null>(null);
   const { isSubscribed, isSupported, showNotification, requestPermission } = usePushNotifications();
@@ -77,6 +78,70 @@ export function TaskReminderButton({ taskText, onSchedule }: TaskReminderButtonP
     return null;
   }
 
+  // Prominent version - clear button with text
+  if (prominent) {
+    return (
+      <Popover open={isOpen} onOpenChange={setIsOpen}>
+        <PopoverTrigger asChild>
+          <Button
+            variant={scheduledReminder ? "default" : "outline"}
+            size="sm"
+            className={`h-7 px-2 text-xs gap-1.5 shrink-0 ${
+              scheduledReminder 
+                ? 'bg-gold text-primary-foreground hover:bg-gold/90' 
+                : 'border-gold/50 text-gold hover:bg-gold/10'
+            }`}
+          >
+            {scheduledReminder ? (
+              <>
+                <BellRing className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Reminder Set</span>
+              </>
+            ) : (
+              <>
+                <Bell className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Remind Me</span>
+              </>
+            )}
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-64 p-3" align="end">
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 pb-2 border-b border-border">
+              <Bell className="h-4 w-4 text-gold" />
+              <p className="text-sm font-medium">Set a Reminder</p>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Get notified to "Stick to the Script" and complete this action:
+            </p>
+            <div className="space-y-1 pt-1">
+              {REMINDER_OPTIONS.map((option) => (
+                <Button
+                  key={option.label}
+                  variant={scheduledReminder === option.label ? "default" : "ghost"}
+                  size="sm"
+                  className={`w-full justify-start gap-2 text-sm ${
+                    scheduledReminder === option.label 
+                      ? 'bg-gold text-primary-foreground' 
+                      : ''
+                  }`}
+                  onClick={() => handleScheduleReminder(option)}
+                >
+                  <Clock className="h-3.5 w-3.5" />
+                  {option.label}
+                  {scheduledReminder === option.label && (
+                    <Check className="h-3.5 w-3.5 ml-auto" />
+                  )}
+                </Button>
+              ))}
+            </div>
+          </div>
+        </PopoverContent>
+      </Popover>
+    );
+  }
+
+  // Compact icon version
   return (
     <Popover open={isOpen} onOpenChange={setIsOpen}>
       <PopoverTrigger asChild>
@@ -87,9 +152,9 @@ export function TaskReminderButton({ taskText, onSchedule }: TaskReminderButtonP
           title={scheduledReminder ? `Reminder: ${scheduledReminder}` : "Set reminder"}
         >
           {scheduledReminder ? (
-            <Bell className="h-4 w-4" />
+            <BellRing className="h-4 w-4" />
           ) : (
-            <BellOff className="h-4 w-4" />
+            <Bell className="h-4 w-4" />
           )}
         </Button>
       </PopoverTrigger>
