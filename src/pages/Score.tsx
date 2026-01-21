@@ -41,7 +41,9 @@ export default function ScorePage() {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
   const { profile } = useUserProfile();
-  const audioRef = useRef<HTMLAudioElement>(null);
+  // Use a standalone HTMLAudioElement (like Director Radio) for maximum mobile compatibility.
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [isAudioReady, setIsAudioReady] = useState(false);
 
   const isIOSDevice =
     /iPad|iPhone|iPod/.test(navigator.userAgent) ||
@@ -132,10 +134,23 @@ export default function ScorePage() {
   // Track the current audio source to avoid unnecessary reloads
   const currentAudioUrlRef = useRef<string | null>(null);
 
+  // Initialize the audio element once (similar to Director Radio's approach)
+  useEffect(() => {
+    if (!audioRef.current) {
+      audioRef.current = new Audio();
+      audioRef.current.preload = 'auto';
+    }
+
+    const cleanup = configureAudioForBackground(audioRef.current);
+    setIsAudioReady(true);
+    return cleanup;
+  }, []);
+
   // Sync volume/mute to audio element
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
+    audio.muted = isMuted;
     audio.volume = isMuted ? 0 : volume;
   }, [isMuted, volume]);
 
@@ -150,6 +165,7 @@ export default function ScorePage() {
 
   // Audio event listeners
   useEffect(() => {
+    if (!isAudioReady) return;
     const audio = audioRef.current;
     if (!audio) return;
 
@@ -179,17 +195,7 @@ export default function ScorePage() {
       audio.removeEventListener('ended', handleEnded);
       audio.removeEventListener('error', handleError);
     };
-  }, [isRepeat, playNextTrack, setIsPlaying]);
-
-  // Configure audio element for background playback on mobile
-  useEffect(() => {
-    const audio = audioRef.current;
-    if (!audio) return;
-
-    // Configure audio for background playback
-    const cleanup = configureAudioForBackground(audio);
-    return cleanup;
-  }, []);
+  }, [isAudioReady, isRepeat, playNextTrack, setIsPlaying]);
 
   // iOS-specific background audio handling
   useIOSBackgroundAudio(audioRef, isPlaying);
@@ -235,6 +241,7 @@ export default function ScorePage() {
     setVolume(value[0]);
     setIsMuted(value[0] === 0);
     if (audioRef.current) {
+      audioRef.current.muted = value[0] === 0;
       audioRef.current.volume = value[0];
     }
   };
@@ -250,6 +257,8 @@ export default function ScorePage() {
         setIsPlaying(false);
       } else {
         try {
+          audio.muted = false;
+          audio.volume = isMuted ? 0 : volume;
           await audio.play();
           setIsPlaying(true);
         } catch (err) {
@@ -359,6 +368,8 @@ export default function ScorePage() {
         setIsPlaying(false);
       } else {
         try {
+          audio.muted = false;
+          audio.volume = isMuted ? 0 : volume;
           await audio.play();
           setIsPlaying(true);
         } catch (err) {
@@ -373,7 +384,9 @@ export default function ScorePage() {
     console.log('[Score] Playing new track:', track.audio_url);
     currentAudioUrlRef.current = track.audio_url;
     audio.src = track.audio_url;
-    audio.load();
+    audio.currentTime = 0;
+    audio.muted = false;
+    audio.volume = isMuted ? 0 : volume;
     
     setCurrentTrack(track);
 
@@ -495,16 +508,6 @@ export default function ScorePage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-background via-background to-muted/20 flex flex-col">
-      {/* Hidden audio element with background playback support */}
-      {/* Note: crossOrigin removed as it can cause issues with iOS background playback */}
-      <audio 
-        ref={audioRef} 
-        preload="auto"
-        playsInline
-        // @ts-ignore - webkit attribute for iOS background playback
-        webkit-playsinline="true"
-      />
-
       {/* Header */}
       <header className="sticky top-0 z-40 border-b border-border/50 bg-background/80 backdrop-blur-sm">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
