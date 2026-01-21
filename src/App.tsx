@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { SplashScreenWrapper } from "@/components/pwa/SplashScreenWrapper";
 import { PWAInstallPrompt } from "@/components/pwa/PWAInstallPrompt";
+import { PWAUpdatePrompt } from "@/components/pwa/PWAUpdatePrompt";
 import Index from "./pages/Index";
 import Signup from "./pages/Signup";
 import DirectorCorner from "./pages/DirectorCorner";
@@ -67,6 +68,7 @@ const App = () => (
             <Route path="*" element={<NotFound />} />
           </Routes>
           <PWAInstallPrompt />
+          <PWAUpdatePrompt />
         </BrowserRouter>
       </SplashScreenWrapper>
     </TooltipProvider>
