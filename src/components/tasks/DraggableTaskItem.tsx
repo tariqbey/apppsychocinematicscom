@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Trash2, Check, XCircle, GripVertical, AlertCircle } from "lucide-react";
+import { TaskReminderButton } from "./TaskReminderButton";
 
 interface Task {
   id: string;
@@ -89,6 +90,11 @@ export function DraggableTaskItem({
         >
           {task.task_text}
         </span>
+
+        {/* Reminder Button - only show for incomplete tasks */}
+        {!task.is_completed && !task.incomplete_reason && (
+          <TaskReminderButton taskText={task.task_text} />
+        )}
 
         {/* Yes/No Buttons */}
         <div className="flex items-center gap-1.5">
