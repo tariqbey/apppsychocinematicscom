@@ -263,23 +263,23 @@ export default function MusicPage() {
   const avatarUrl = profile?.avatar_url || (profile as any)?.hero_front_url;
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background via-background to-muted/20 flex flex-col">
+    <div className="min-h-screen bg-gradient-to-b from-background via-background to-muted/20 flex flex-col overflow-x-hidden w-full max-w-[100vw]">
       {/* Hidden audio element */}
       <audio ref={audioRef} preload="auto" crossOrigin="anonymous" />
 
       {/* Header */}
-      <header className="sticky top-0 z-40 border-b border-border/50 bg-background/80 backdrop-blur-sm">
-        <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Button variant="ghost" size="icon" onClick={() => navigate('/')}>
-              <ArrowLeft className="w-5 h-5" />
+      <header className="sticky top-0 z-40 border-b border-border/50 bg-background/80 backdrop-blur-sm w-full">
+        <div className="container mx-auto px-3 sm:px-4 h-14 sm:h-16 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-shrink-0">
+            <Button variant="ghost" size="icon" className="h-8 w-8 sm:h-10 sm:w-10 flex-shrink-0" onClick={() => navigate('/')}>
+              <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
             </Button>
-            <div className="flex items-center gap-2">
-              <Music className="w-6 h-6 text-gold" />
-              <h1 className="text-xl font-display tracking-wide">Director Radio</h1>
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <Music className="w-5 h-5 sm:w-6 sm:h-6 text-gold flex-shrink-0" />
+              <h1 className="text-lg sm:text-xl font-display tracking-wide truncate">Director Radio</h1>
             </div>
           </div>
-          <label>
+          <label className="flex-shrink-0">
             <input 
               type="file" 
               accept="audio/*" 
@@ -287,10 +287,10 @@ export default function MusicPage() {
               onChange={handleUploadTrack}
               disabled={isUploadingTrack}
             />
-            <Button variant="outline" size="sm" asChild disabled={isUploadingTrack}>
-              <span className="cursor-pointer">
-                <Upload className="w-4 h-4 mr-2" />
-                {isUploadingTrack ? 'Uploading...' : 'Upload Track'}
+            <Button variant="outline" size="sm" asChild disabled={isUploadingTrack} className="h-8 px-2 sm:px-3 text-xs sm:text-sm">
+              <span className="cursor-pointer flex items-center gap-1 sm:gap-2">
+                <Upload className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                <span className="hidden xs:inline">{isUploadingTrack ? 'Uploading...' : 'Upload'}</span>
               </span>
             </Button>
           </label>
@@ -298,8 +298,8 @@ export default function MusicPage() {
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 container mx-auto px-4 py-6 pb-40 overflow-hidden">
-        <div className="grid lg:grid-cols-3 gap-6 h-full">
+      <main className="flex-1 container mx-auto px-3 sm:px-4 py-4 sm:py-6 pb-36 sm:pb-40 overflow-x-hidden w-full">
+        <div className="grid lg:grid-cols-3 gap-4 sm:gap-6 h-full">
           {/* Left Column - Featured Artist / Now Playing */}
           <div className="lg:col-span-1 space-y-6">
             {/* Featured Artist Card */}
@@ -597,8 +597,8 @@ export default function MusicPage() {
       </main>
 
       {/* Bottom Player Bar */}
-      <div className="fixed bottom-0 left-0 right-0 bg-card/95 backdrop-blur-xl border-t border-border z-50">
-        <div className="container mx-auto px-4">
+      <div className="fixed bottom-0 left-0 right-0 bg-card/95 backdrop-blur-xl border-t border-border z-50 w-full max-w-[100vw] overflow-hidden safe-area-bottom">
+        <div className="container mx-auto px-2 sm:px-4 max-w-full">
           {/* Mini visualizer in progress bar area */}
           <div className="h-1 bg-muted/30 relative overflow-hidden">
             <div 
@@ -607,13 +607,13 @@ export default function MusicPage() {
             />
             {isPlaying && (
               <div className="absolute inset-0 flex items-center">
-                {Array.from({ length: 50 }).map((_, i) => (
+                {Array.from({ length: 30 }).map((_, i) => (
                   <div
                     key={i}
                     className="flex-1 h-full bg-gold/30 mx-px animate-pulse"
                     style={{ 
                       animationDelay: `${i * 0.05}s`,
-                      opacity: currentTime / duration > i / 50 ? 1 : 0.3
+                      opacity: currentTime / duration > i / 30 ? 1 : 0.3
                     }}
                   />
                 ))}
@@ -622,7 +622,7 @@ export default function MusicPage() {
           </div>
           
           {/* Progress Slider */}
-          <div className="py-2">
+          <div className="py-1.5 sm:py-2 px-1">
             <Slider
               value={[currentTime]}
               min={0}
@@ -634,91 +634,89 @@ export default function MusicPage() {
           </div>
           
           {/* Controls */}
-          <div className="flex items-center justify-between py-3">
-            {/* Track info */}
-            <div className="flex items-center gap-3 flex-1 min-w-0">
-              <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-gold/20 to-amber-500/10 flex items-center justify-center flex-shrink-0 relative overflow-hidden">
-                <Music className="w-6 h-6 text-gold" />
+          <div className="flex items-center justify-between py-2 sm:py-3 gap-2">
+            {/* Track info - smaller on mobile */}
+            <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0 max-w-[30%] sm:max-w-none">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-gradient-to-br from-gold/20 to-amber-500/10 flex items-center justify-center flex-shrink-0 relative overflow-hidden">
+                <Music className="w-5 h-5 sm:w-6 sm:h-6 text-gold" />
                 {isPlaying && currentTrack && (
                   <div className="absolute inset-0 flex items-end justify-center pb-1">
-                    <SimpleWaveformBars isPlaying={true} barCount={4} className="h-3" />
+                    <SimpleWaveformBars isPlaying={true} barCount={3} className="h-2 sm:h-3" />
                   </div>
                 )}
               </div>
-              <div className="min-w-0">
-                <p className="font-medium truncate text-sm">
-                  {currentTrack?.title || 'No track selected'}
+              <div className="min-w-0 hidden xs:block">
+                <p className="font-medium truncate text-xs sm:text-sm max-w-[80px] sm:max-w-none">
+                  {currentTrack?.title || 'No track'}
                 </p>
-                <p className="text-xs text-muted-foreground truncate">
+                <p className="text-xs text-muted-foreground truncate max-w-[80px] sm:max-w-none">
                   {currentTrack?.artist || displayName}
                 </p>
               </div>
             </div>
 
-            {/* Main controls */}
-            <div className="flex items-center gap-2 px-4">
+            {/* Main controls - compact on mobile */}
+            <div className="flex items-center gap-1 sm:gap-2 px-1 sm:px-4 flex-shrink-0">
               <Button
                 variant="ghost"
                 size="icon"
-                className={cn("h-8 w-8", isShuffle && "text-gold")}
+                className={cn("h-7 w-7 sm:h-8 sm:w-8 hidden sm:flex", isShuffle && "text-gold")}
                 onClick={() => setIsShuffle(!isShuffle)}
               >
-                <Shuffle className="w-4 h-4" />
+                <Shuffle className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               </Button>
-              <Button variant="ghost" size="icon" onClick={playPreviousTrack}>
-                <SkipBack className="w-5 h-5" />
+              <Button variant="ghost" size="icon" className="h-8 w-8 sm:h-10 sm:w-10" onClick={playPreviousTrack}>
+                <SkipBack className="w-4 h-4 sm:w-5 sm:h-5" />
               </Button>
               <Button
                 size="icon"
-                className="h-12 w-12 rounded-full bg-gold hover:bg-gold/90 text-black"
+                className="h-10 w-10 sm:h-12 sm:w-12 rounded-full bg-gold hover:bg-gold/90 text-black flex-shrink-0"
                 onClick={togglePlay}
               >
                 {isPlaying ? (
-                  <Pause className="w-6 h-6" />
+                  <Pause className="w-5 h-5 sm:w-6 sm:h-6" />
                 ) : (
-                  <Play className="w-6 h-6 ml-1" />
+                  <Play className="w-5 h-5 sm:w-6 sm:h-6 ml-0.5" />
                 )}
               </Button>
-              <Button variant="ghost" size="icon" onClick={playNextTrack}>
-                <SkipForward className="w-5 h-5" />
+              <Button variant="ghost" size="icon" className="h-8 w-8 sm:h-10 sm:w-10" onClick={playNextTrack}>
+                <SkipForward className="w-4 h-4 sm:w-5 sm:h-5" />
               </Button>
               <Button
                 variant="ghost"
                 size="icon"
-                className={cn("h-8 w-8", isRepeat && "text-gold")}
+                className={cn("h-7 w-7 sm:h-8 sm:w-8 hidden sm:flex", isRepeat && "text-gold")}
                 onClick={() => setIsRepeat(!isRepeat)}
               >
-                <Repeat className="w-4 h-4" />
+                <Repeat className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               </Button>
             </div>
 
-            {/* Volume & Time */}
-            <div className="flex items-center gap-3 flex-1 justify-end">
-              <span className="text-xs text-muted-foreground hidden sm:block">
-                {formatTime(currentTime)} / {formatTime(duration)}
+            {/* Volume & Time - hide on small mobile */}
+            <div className="flex items-center gap-2 sm:gap-3 flex-1 justify-end min-w-0 max-w-[25%] sm:max-w-none">
+              <span className="text-[10px] sm:text-xs text-muted-foreground hidden xs:block whitespace-nowrap">
+                {formatTime(currentTime)}
               </span>
-              <div className="hidden sm:flex items-center gap-2">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8"
-                  onClick={() => setIsMuted(!isMuted)}
-                >
-                  {isMuted ? (
-                    <VolumeX className="w-4 h-4" />
-                  ) : (
-                    <Volume2 className="w-4 h-4" />
-                  )}
-                </Button>
-                <Slider
-                  value={[isMuted ? 0 : volume]}
-                  min={0}
-                  max={1}
-                  step={0.01}
-                  onValueChange={handleVolumeChange}
-                  className="w-24"
-                />
-              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 sm:h-8 sm:w-8 flex-shrink-0"
+                onClick={() => setIsMuted(!isMuted)}
+              >
+                {isMuted ? (
+                  <VolumeX className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                ) : (
+                  <Volume2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                )}
+              </Button>
+              <Slider
+                value={[isMuted ? 0 : volume]}
+                min={0}
+                max={1}
+                step={0.01}
+                onValueChange={handleVolumeChange}
+                className="w-12 sm:w-24 hidden xs:block"
+              />
             </div>
           </div>
         </div>

@@ -275,18 +275,18 @@ const Index = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background spotlight film-grain">
+    <div className="min-h-screen bg-background spotlight film-grain overflow-x-hidden w-full max-w-[100vw]">
       <Header />
 
       {/* Main Content */}
-      <main className="container mx-auto px-4 pt-24 pb-32">
-        <div className="max-w-4xl mx-auto space-y-6">
+      <main className="container mx-auto px-3 sm:px-4 pt-20 sm:pt-24 pb-28 sm:pb-32 overflow-x-hidden w-full">
+        <div className="max-w-4xl mx-auto space-y-4 sm:space-y-6">
           {/* Welcome Message */}
-          <div className="text-center mb-8 animate-fade-in">
-            <h2 className="text-4xl font-display tracking-wide mb-2">
+          <div className="text-center mb-6 sm:mb-8 animate-fade-in">
+            <h2 className="text-2xl sm:text-4xl font-display tracking-wide mb-2">
               Welcome Back, <span className="text-gold-gradient">Director</span>
             </h2>
-            <p className="text-muted-foreground">
+            <p className="text-sm sm:text-base text-muted-foreground px-2">
               The set is ready. Let's make today's scene count.
             </p>
           </div>
