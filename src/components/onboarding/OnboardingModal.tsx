@@ -11,11 +11,15 @@ import {
   Check,
   Music,
   Radio,
-  UserPlus
+  UserPlus,
+  Bell,
+  BellRing,
+  Loader2
 } from "lucide-react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
+import { usePushNotifications } from "@/hooks/usePushNotifications";
 
 interface OnboardingStep {
   id: string;
@@ -23,6 +27,7 @@ interface OnboardingStep {
   title: string;
   description: string;
   tip: string;
+  action?: "enable-notifications";
 }
 
 const onboardingSteps: OnboardingStep[] = [
@@ -34,44 +39,45 @@ const onboardingSteps: OnboardingStep[] = [
     tip: "Everything starts with ONE thing: Your Definite Chief Aim. Let's get you set up."
   },
   {
+    id: "notifications",
+    icon: <Bell className="w-12 h-12" />,
+    title: "🔔 Stay on Script",
+    description: "Enable push notifications to receive daily reminders for your morning ritual, journaling prompts, and evening scorecard. Directors who use reminders are 3x more likely to build lasting habits.",
+    tip: "You'll get gentle nudges to watch your Mind Movie, complete your Three Things, and stay in character.",
+    action: "enable-notifications"
+  },
+  {
     id: "chief-aim",
     icon: <Target className="w-12 h-12" />,
-    title: "⭐ First: Your Definite Chief Aim",
+    title: "⭐ Your Definite Chief Aim",
     description: "This is THE FOUNDATION of everything. Your Definite Chief Aim is a crystal-clear statement of what you want, when you'll achieve it, what you'll give in exchange, and your plan. Nothing else works without this.",
     tip: "Click the gold 'Start Here: Definite Chief Aim' card on your dashboard. The AI will guide you through Napoleon Hill's proven 4-phase framework."
   },
   {
     id: "hero-character",
     icon: <UserPlus className="w-12 h-12" />,
-    title: "Step 2: Create Your Hero Character",
+    title: "Create Your Hero Character",
     description: "Upload a reference photo and describe your 'best self' — height, weight, build, and features. AI generates hero images (front, side, back) that become YOUR identity in all visualizations.",
     tip: "Go to Character Builder → Create tab. These hero images are used everywhere: Mind Movies, Challenge Storyboards, and more."
   },
   {
     id: "mind-movie",
     icon: <Film className="w-12 h-12" />,
-    title: "Step 3: Create Your Mind Movie",
+    title: "Create Your Mind Movie",
     description: "Bring your Chief Aim to life with AI-generated scenes and a custom soundtrack. Your Mind Movie is the visual representation of your goals that you'll watch daily.",
     tip: "The Mind Movie Wizard uses your Chief Aim and Hero Character to auto-generate scenes featuring YOU."
   },
   {
     id: "edit-bay",
     icon: <Palette className="w-12 h-12" />,
-    title: "Step 4: The AI Studio",
+    title: "The AI Studio",
     description: "Generate powerful images and videos of your future self using AI. Your hero character images ensure visual consistency across all generated content.",
     tip: "Use the Edit Bay for additional AI generations, Timeline Editor for video assembly, and Voice Changer for narration."
   },
   {
-    id: "soundtrack",
-    icon: <Music className="w-12 h-12" />,
-    title: "Step 5: Your Soundtrack",
-    description: "Create AI-powered custom soundtracks for your Mind Movie with 50+ genres. The music carries your Chief Aim's message deep into your subconscious.",
-    tip: "Your Chief Aim can become song lyrics that play in your Mind Movie!"
-  },
-  {
     id: "daily-ritual",
     icon: <Calendar className="w-12 h-12" />,
-    title: "Step 6: Daily Rituals",
+    title: "Daily Rituals",
     description: "Each morning, read your Chief Aim, watch your Mind Movie, and set your Three Things. Each evening, complete your Director Scorecard. Consistency compounds.",
     tip: "A 90-day viewing streak creates permanent neural pathways for your new identity."
   }
@@ -85,11 +91,28 @@ interface OnboardingModalProps {
 
 export const OnboardingModal = ({ isOpen, onClose, onComplete }: OnboardingModalProps) => {
   const [currentStep, setCurrentStep] = useState(0);
+  const [isEnablingNotifications, setIsEnablingNotifications] = useState(false);
+  const { isSubscribed, subscribe } = usePushNotifications();
+  
   const totalSteps = onboardingSteps.length;
   const progress = ((currentStep + 1) / totalSteps) * 100;
   const step = onboardingSteps[currentStep];
   const isLastStep = currentStep === totalSteps - 1;
   const isFirstStep = currentStep === 0;
+  const isNotificationStep = step.action === "enable-notifications";
+
+  const handleEnableNotifications = async () => {
+    setIsEnablingNotifications(true);
+    try {
+      await subscribe();
+      // Auto-advance after enabling
+      setTimeout(() => {
+        setCurrentStep(prev => prev + 1);
+      }, 500);
+    } finally {
+      setIsEnablingNotifications(false);
+    }
+  };
 
   const handleNext = () => {
     if (isLastStep) {
@@ -189,23 +212,62 @@ export const OnboardingModal = ({ isOpen, onClose, onComplete }: OnboardingModal
             Back
           </Button>
 
-          <Button
-            variant="gold"
-            onClick={handleNext}
-            className="gap-2 min-w-[140px]"
-          >
-            {isLastStep ? (
-              <>
-                <Check className="w-4 h-4" />
-                Get Started
-              </>
-            ) : (
-              <>
-                Next
-                <ChevronRight className="w-4 h-4" />
-              </>
-            )}
-          </Button>
+          {/* Special button for notification step */}
+          {isNotificationStep ? (
+            <div className="flex items-center gap-2">
+              {isSubscribed ? (
+                <Button
+                  variant="gold"
+                  onClick={handleNext}
+                  className="gap-2 min-w-[140px]"
+                >
+                  <BellRing className="w-4 h-4" />
+                  Enabled! Continue
+                </Button>
+              ) : (
+                <>
+                  <Button
+                    variant="outline"
+                    onClick={handleNext}
+                    className="text-muted-foreground"
+                  >
+                    Skip
+                  </Button>
+                  <Button
+                    variant="gold"
+                    onClick={handleEnableNotifications}
+                    disabled={isEnablingNotifications}
+                    className="gap-2 min-w-[160px]"
+                  >
+                    {isEnablingNotifications ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Bell className="w-4 h-4" />
+                    )}
+                    Enable Notifications
+                  </Button>
+                </>
+              )}
+            </div>
+          ) : (
+            <Button
+              variant="gold"
+              onClick={handleNext}
+              className="gap-2 min-w-[140px]"
+            >
+              {isLastStep ? (
+                <>
+                  <Check className="w-4 h-4" />
+                  Get Started
+                </>
+              ) : (
+                <>
+                  Next
+                  <ChevronRight className="w-4 h-4" />
+                </>
+              )}
+            </Button>
+          )}
         </div>
       </DialogContent>
     </Dialog>
