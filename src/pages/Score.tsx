@@ -139,6 +139,8 @@ export default function ScorePage() {
     if (!audioRef.current) {
       audioRef.current = new Audio();
       audioRef.current.preload = 'auto';
+      // Safe defaults
+      audioRef.current.crossOrigin = 'anonymous';
     }
 
     const cleanup = configureAudioForBackground(audioRef.current);
@@ -257,8 +259,13 @@ export default function ScorePage() {
         setIsPlaying(false);
       } else {
         try {
+          // Force an audible state (users report it feels muted)
+          const effectiveVolume = !isMuted && volume > 0 ? volume : 0.8;
           audio.muted = false;
-          audio.volume = isMuted ? 0 : volume;
+          audio.volume = effectiveVolume;
+          if (isMuted) setIsMuted(false);
+          if (volume === 0) setVolume(effectiveVolume);
+          console.log('[Score] togglePlay() muted=%s volume=%s src=%s', audio.muted, audio.volume, audio.currentSrc || audio.src);
           await audio.play();
           setIsPlaying(true);
         } catch (err) {
@@ -368,8 +375,12 @@ export default function ScorePage() {
         setIsPlaying(false);
       } else {
         try {
+          const effectiveVolume = !isMuted && volume > 0 ? volume : 0.8;
           audio.muted = false;
-          audio.volume = isMuted ? 0 : volume;
+          audio.volume = effectiveVolume;
+          if (isMuted) setIsMuted(false);
+          if (volume === 0) setVolume(effectiveVolume);
+          console.log('[Score] resume same track muted=%s volume=%s src=%s', audio.muted, audio.volume, audio.currentSrc || audio.src);
           await audio.play();
           setIsPlaying(true);
         } catch (err) {
@@ -385,8 +396,14 @@ export default function ScorePage() {
     currentAudioUrlRef.current = track.audio_url;
     audio.src = track.audio_url;
     audio.currentTime = 0;
-    audio.muted = false;
-    audio.volume = isMuted ? 0 : volume;
+    {
+      const effectiveVolume = !isMuted && volume > 0 ? volume : 0.8;
+      audio.muted = false;
+      audio.volume = effectiveVolume;
+      if (isMuted) setIsMuted(false);
+      if (volume === 0) setVolume(effectiveVolume);
+    }
+    console.log('[Score] new track pre-play muted=%s volume=%s src=%s', audio.muted, audio.volume, audio.currentSrc || audio.src);
     
     setCurrentTrack(track);
 
@@ -621,7 +638,8 @@ export default function ScorePage() {
                       isPlaying={isPlaying}
                       barCount={64}
                       barColor="#D4AF37"
-                      enableWebAudio={!isIOSDevice}
+                      // Keep WebAudio OFF here to match Director Radio's (working) approach.
+                      enableWebAudio={false}
                     />
                     {!isPlaying && (
                       <div className="absolute inset-0 flex items-center justify-center bg-black/20">
