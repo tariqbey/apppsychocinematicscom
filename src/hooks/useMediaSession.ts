@@ -8,6 +8,7 @@ interface MediaSessionOptions {
   isPlaying: boolean;
   duration?: number;
   currentTime?: number;
+  audioElement?: HTMLAudioElement | null;
   onPlay?: () => void;
   onPause?: () => void;
   onNextTrack?: () => void;
@@ -27,6 +28,7 @@ export function useMediaSession({
   isPlaying,
   duration,
   currentTime,
+  audioElement,
   onPlay,
   onPause,
   onNextTrack,
@@ -87,43 +89,57 @@ export function useMediaSession({
     }
   }, [duration, currentTime]);
 
-  // Set up action handlers
+  // Set up action handlers - these MUST control the audio element directly
   useEffect(() => {
     if (!('mediaSession' in navigator)) return;
 
-    const handlers: { [key: string]: () => void } = {};
-
+    // Play handler - actually plays the audio
     if (onPlay) {
-      handlers['play'] = onPlay;
       try {
-        navigator.mediaSession.setActionHandler('play', onPlay);
+        navigator.mediaSession.setActionHandler('play', () => {
+          console.log('[MediaSession] Play action triggered');
+          if (audioElement) {
+            audioElement.play().catch(console.error);
+          }
+          onPlay();
+        });
       } catch (e) {
         console.warn('Media Session play handler not supported');
       }
     }
 
+    // Pause handler - actually pauses the audio
     if (onPause) {
-      handlers['pause'] = onPause;
       try {
-        navigator.mediaSession.setActionHandler('pause', onPause);
+        navigator.mediaSession.setActionHandler('pause', () => {
+          console.log('[MediaSession] Pause action triggered');
+          if (audioElement) {
+            audioElement.pause();
+          }
+          onPause();
+        });
       } catch (e) {
         console.warn('Media Session pause handler not supported');
       }
     }
 
     if (onNextTrack) {
-      handlers['nexttrack'] = onNextTrack;
       try {
-        navigator.mediaSession.setActionHandler('nexttrack', onNextTrack);
+        navigator.mediaSession.setActionHandler('nexttrack', () => {
+          console.log('[MediaSession] Next track action triggered');
+          onNextTrack();
+        });
       } catch (e) {
         console.warn('Media Session nexttrack handler not supported');
       }
     }
 
     if (onPreviousTrack) {
-      handlers['previoustrack'] = onPreviousTrack;
       try {
-        navigator.mediaSession.setActionHandler('previoustrack', onPreviousTrack);
+        navigator.mediaSession.setActionHandler('previoustrack', () => {
+          console.log('[MediaSession] Previous track action triggered');
+          onPreviousTrack();
+        });
       } catch (e) {
         console.warn('Media Session previoustrack handler not supported');
       }
@@ -132,7 +148,11 @@ export function useMediaSession({
     if (onSeekTo) {
       try {
         navigator.mediaSession.setActionHandler('seekto', (details) => {
+          console.log('[MediaSession] Seek action triggered:', details.seekTime);
           if (details.seekTime !== undefined) {
+            if (audioElement) {
+              audioElement.currentTime = details.seekTime;
+            }
             onSeekTo(details.seekTime);
           }
         });
@@ -141,11 +161,25 @@ export function useMediaSession({
       }
     }
 
+    // Stop handler for lock screen stop button
+    try {
+      navigator.mediaSession.setActionHandler('stop', () => {
+        console.log('[MediaSession] Stop action triggered');
+        if (audioElement) {
+          audioElement.pause();
+          audioElement.currentTime = 0;
+        }
+        onPause?.();
+      });
+    } catch (e) {
+      // Stop not supported on all platforms
+    }
+
     // Cleanup handlers on unmount
     return () => {
       if (!('mediaSession' in navigator)) return;
       
-      const actionTypes: MediaSessionAction[] = ['play', 'pause', 'nexttrack', 'previoustrack', 'seekto'];
+      const actionTypes: MediaSessionAction[] = ['play', 'pause', 'nexttrack', 'previoustrack', 'seekto', 'stop'];
       actionTypes.forEach(action => {
         try {
           navigator.mediaSession.setActionHandler(action, null);
@@ -154,7 +188,7 @@ export function useMediaSession({
         }
       });
     };
-  }, [onPlay, onPause, onNextTrack, onPreviousTrack, onSeekTo]);
+  }, [audioElement, onPlay, onPause, onNextTrack, onPreviousTrack, onSeekTo]);
 }
 
 /**
