@@ -1,4 +1,4 @@
-import { forwardRef, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { cn } from '@/lib/utils';
 
 interface AudioVisualizerProps {
@@ -251,16 +251,17 @@ function adjustColorOpacity(color: string, opacity: number): string {
 }
 
 // Simpler bars-only visualizer for inline use (doesn't need audio context)
-export const SimpleWaveformBars = forwardRef<
-  HTMLDivElement,
-  {
-    isPlaying: boolean;
-    className?: string;
-    barCount?: number;
-  }
->(function SimpleWaveformBars({ isPlaying, className, barCount = 5 }, ref) {
+export function SimpleWaveformBars({
+  isPlaying,
+  className,
+  barCount = 5,
+}: {
+  isPlaying: boolean;
+  className?: string;
+  barCount?: number;
+}) {
   return (
-    <div ref={ref} className={cn('flex items-end gap-0.5 h-4', className)}>
+    <div className={cn('flex items-end gap-0.5 h-4', className)}>
       {Array.from({ length: barCount }).map((_, i) => (
         <div
           key={i}
@@ -277,4 +278,4 @@ export const SimpleWaveformBars = forwardRef<
       ))}
     </div>
   );
-});
+}
