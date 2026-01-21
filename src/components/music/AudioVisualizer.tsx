@@ -32,6 +32,12 @@ function resolveCssColor(color: string): string {
   return color;
 }
 
+// Detect mobile devices to force safe mode (no Web Audio)
+const isMobileDevice = () => {
+  if (typeof navigator === 'undefined') return false;
+  return /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+};
+
 export function AudioVisualizer({
   audioElement,
   isPlaying,
@@ -47,17 +53,21 @@ export function AudioVisualizer({
   const sourceRef = useRef<MediaElementAudioSourceNode | null>(null);
   const [isConnected, setIsConnected] = useState(false);
 
+  // SAFE MODE: Disable Web Audio entirely on mobile to prevent silent playback
+  const isMobile = isMobileDevice();
+  const shouldUseWebAudio = enableWebAudio && !isMobile;
+
   useEffect(() => {
     if (!audioElement || !canvasRef.current) return;
 
-    // If Web Audio is disabled, ensure we never touch createMediaElementSource.
-    if (!enableWebAudio) {
+    // SAFE MODE: Never touch createMediaElementSource on mobile
+    if (!shouldUseWebAudio) {
       setIsConnected(false);
       analyzerRef.current = null;
       return;
     }
 
-    // Create audio context and analyzer only once
+    // Create audio context and analyzer only once (desktop only)
     if (!audioContextRef.current) {
       audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
     }
@@ -87,7 +97,7 @@ export function AudioVisualizer({
         cancelAnimationFrame(animationRef.current);
       }
     };
-  }, [audioElement, enableWebAudio]);
+  }, [audioElement, shouldUseWebAudio]);
 
   useEffect(() => {
     if (!canvasRef.current) return;
@@ -103,8 +113,8 @@ export function AudioVisualizer({
     const dataArray = analyzer ? new Uint8Array(bufferLength) : null;
 
     const draw = () => {
-      // No WebAudio analyzer available (disabled or not connected): draw a nice animated fallback.
-      if (!analyzer || !dataArray || !enableWebAudio || !isConnected) {
+      // No WebAudio analyzer available (disabled, mobile, or not connected): draw animated fallback
+      if (!analyzer || !dataArray || !shouldUseWebAudio || !isConnected) {
         if (isPlaying) {
           drawPseudoPlayingBars(ctx, canvas, barCount, resolvedColor);
         } else {
@@ -158,7 +168,7 @@ export function AudioVisualizer({
         cancelAnimationFrame(animationRef.current);
       }
     };
-  }, [isPlaying, barCount, barColor, isConnected, enableWebAudio]);
+  }, [isPlaying, barCount, barColor, isConnected, shouldUseWebAudio]);
 
   return (
     <canvas

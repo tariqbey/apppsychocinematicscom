@@ -22,10 +22,8 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// Fetch event - serve from cache if available
+// Fetch event - NETWORK-FIRST for audio to ensure streaming works
 self.addEventListener('fetch', (event) => {
-  const url = new URL(event.request.url);
-  
   // Only intercept audio file requests
   if (event.request.url.includes('/storage/') && 
       (event.request.url.includes('.mp3') || 
@@ -35,20 +33,22 @@ self.addEventListener('fetch', (event) => {
        event.request.url.includes('audio'))) {
     
     event.respondWith(
-      caches.match(event.request).then((cachedResponse) => {
-        if (cachedResponse) {
-          console.log('[SW] Serving from cache:', event.request.url);
-          return cachedResponse;
-        }
-        
-        // Not in cache, fetch from network
-        return fetch(event.request).then((networkResponse) => {
+      // NETWORK-FIRST: Try network first, fall back to cache only if offline
+      fetch(event.request)
+        .then((networkResponse) => {
+          console.log('[SW] Serving from network:', event.request.url);
           return networkResponse;
-        }).catch((error) => {
-          console.error('[SW] Fetch failed:', error);
+        })
+        .catch(async (error) => {
+          console.log('[SW] Network failed, trying cache:', event.request.url);
+          const cachedResponse = await caches.match(event.request);
+          if (cachedResponse) {
+            console.log('[SW] Serving from cache:', event.request.url);
+            return cachedResponse;
+          }
+          console.error('[SW] No cache available:', error);
           throw error;
-        });
-      })
+        })
     );
   }
 });
