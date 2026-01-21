@@ -13,36 +13,44 @@ interface TestimonialRecorderProps {
 
 const MAX_DURATION = 30; // 30 seconds
 
-// Get supported video mime type
+const isIOS = () => /iPad|iPhone|iPod/i.test(navigator.userAgent);
+
+const canPlayVideoType = (mimeType: string) => {
+  try {
+    const v = document.createElement("video");
+    return v.canPlayType(mimeType) !== "";
+  } catch {
+    return true;
+  }
+};
+
+// Get supported recording mime type (browser support != playback support on iOS)
 const getSupportedMimeType = (isVideo: boolean): string => {
+  if (typeof MediaRecorder === "undefined" || typeof MediaRecorder.isTypeSupported !== "function") {
+    return isVideo ? "video/mp4" : "audio/mp4";
+  }
+
   if (isVideo) {
-    // Try different codecs in order of preference
     const videoTypes = [
-      'video/mp4',
-      'video/webm;codecs=h264',
-      'video/webm;codecs=vp9,opus',
-      'video/webm;codecs=vp8,opus',
-      'video/webm'
+      // iOS Safari is most reliable with MP4/H264
+      "video/mp4;codecs=avc1.42E01E,mp4a.40.2",
+      "video/mp4",
+      // WebM fallbacks for Chrome/Android
+      "video/webm;codecs=vp9,opus",
+      "video/webm;codecs=vp8,opus",
+      "video/webm",
     ];
     for (const type of videoTypes) {
-      if (MediaRecorder.isTypeSupported(type)) {
-        return type;
-      }
+      if (MediaRecorder.isTypeSupported(type)) return type;
     }
-    return 'video/webm';
-  } else {
-    const audioTypes = [
-      'audio/webm;codecs=opus',
-      'audio/webm',
-      'audio/mp4'
-    ];
-    for (const type of audioTypes) {
-      if (MediaRecorder.isTypeSupported(type)) {
-        return type;
-      }
-    }
-    return 'audio/webm';
+    return "video/webm";
   }
+
+  const audioTypes = ["audio/mp4", "audio/webm;codecs=opus", "audio/webm"];
+  for (const type of audioTypes) {
+    if (MediaRecorder.isTypeSupported(type)) return type;
+  }
+  return "audio/webm";
 };
 
 export function TestimonialRecorder({ type, onRecordingComplete, onCancel }: TestimonialRecorderProps) {
@@ -93,19 +101,17 @@ export function TestimonialRecorder({ type, onRecordingComplete, onCancel }: Tes
 
   // Clean up object URLs to prevent memory leaks
   const cleanupPreviewUrl = useCallback(() => {
-    if (previewUrl) {
-      URL.revokeObjectURL(previewUrl);
-      setPreviewUrl(null);
-    }
-  }, [previewUrl]);
+    setPreviewUrl((prev) => {
+      if (prev) URL.revokeObjectURL(prev);
+      return null;
+    });
+  }, []);
 
   useEffect(() => {
     return () => {
       stopStream();
       clearTimer();
-      if (previewUrl) {
-        URL.revokeObjectURL(previewUrl);
-      }
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
     };
   }, [stopStream, clearTimer, previewUrl]);
 
@@ -133,9 +139,20 @@ export function TestimonialRecorder({ type, onRecordingComplete, onCancel }: Tes
       setCompressionProgress(0);
       setOriginalSize(inputBlob.size);
 
-      // Check if file is already small enough (under 5MB)
-      if (inputBlob.size < 5 * 1024 * 1024) {
-        console.log("Video already under 5MB, skipping compression");
+      const needsPlaybackTranscode =
+        isIOS() &&
+        !!inputBlob.type &&
+        inputBlob.type.includes("webm") &&
+        !canPlayVideoType(inputBlob.type);
+
+      const needsSizeCompression = inputBlob.size >= 5 * 1024 * 1024;
+
+      // Skip FFmpeg entirely if we don't need it
+      if (!needsPlaybackTranscode && !needsSizeCompression) {
+        console.log("Video does not need processing; using original", {
+          type: inputBlob.type,
+          size: inputBlob.size,
+        });
         setCompressedSize(inputBlob.size);
         return { blob: inputBlob, isCompressed: false };
       }
@@ -169,25 +186,35 @@ export function TestimonialRecorder({ type, onRecordingComplete, onCancel }: Tes
           ffmpegRef.current = ffmpeg;
         }
 
-        const ffmpeg = ffmpegRef.current;
-        const inputFileName = "input.webm";
+         const ffmpeg = ffmpegRef.current;
+
+         const inputExt = inputBlob.type.includes("mp4") ? "mp4" : "webm";
+         const inputFileName = `input.${inputExt}`;
         const outputFileName = "output.mp4";
 
         // Write input file
         await ffmpeg.writeFile(inputFileName, await fetchFile(inputBlob));
 
-        // Compress video with good quality/size balance
-        await ffmpeg.exec([
-          "-i", inputFileName,
-          "-c:v", "libx264",
-          "-crf", "28",
-          "-preset", "fast",
-          "-vf", "scale=-2:720",
-          "-c:a", "aac",
-          "-b:a", "64k",
-          "-movflags", "+faststart",
-          outputFileName
-        ]);
+         // Transcode/compress video with good quality/size balance (and iOS-friendly container)
+         await ffmpeg.exec([
+           "-i",
+           inputFileName,
+           "-c:v",
+           "libx264",
+           "-crf",
+           needsSizeCompression ? "28" : "23",
+           "-preset",
+           "fast",
+           "-vf",
+           "scale=-2:720",
+           "-c:a",
+           "aac",
+           "-b:a",
+           "64k",
+           "-movflags",
+           "+faststart",
+           outputFileName,
+         ]);
 
         // Read the output file
         const data = await ffmpeg.readFile(outputFileName);
@@ -214,6 +241,46 @@ export function TestimonialRecorder({ type, onRecordingComplete, onCancel }: Tes
       setIsCompressing(false);
     }
   }, []);
+
+  // Ensure preview video reloads when URL changes (important on iOS)
+  useEffect(() => {
+    if (type !== "video" || !isPreviewing || !previewUrl || !videoPreviewRef.current) return;
+    const video = videoPreviewRef.current;
+
+    const handleLoadedMetadata = () => {
+      console.log("[TestimonialRecorder] preview loadedmetadata", {
+        duration: video.duration,
+        videoWidth: video.videoWidth,
+        videoHeight: video.videoHeight,
+      });
+    };
+
+    const handleCanPlay = () => {
+      try {
+        // Seek slightly forward for a non-black thumbnail frame
+        const t = Math.min(0.1, Math.max(0, (video.duration || 0) - 0.1));
+        video.currentTime = t;
+      } catch {
+        // ignore
+      }
+    };
+
+    const handleSeeked = async () => {
+      const thumb = await generateThumbnail();
+      if (thumb) setThumbnailBlob(thumb);
+    };
+
+    video.addEventListener("loadedmetadata", handleLoadedMetadata);
+    video.addEventListener("canplay", handleCanPlay);
+    video.addEventListener("seeked", handleSeeked);
+    video.load();
+
+    return () => {
+      video.removeEventListener("loadedmetadata", handleLoadedMetadata);
+      video.removeEventListener("canplay", handleCanPlay);
+      video.removeEventListener("seeked", handleSeeked);
+    };
+  }, [type, isPreviewing, previewUrl, generateThumbnail]);
 
   const prepareRecording = async () => {
     setError(null);
@@ -310,51 +377,52 @@ export function TestimonialRecorder({ type, onRecordingComplete, onCancel }: Tes
       };
       
       mediaRecorder.onstop = async () => {
-        // Create blob from all chunks
-        const blobType = type === "video" ? "video/webm" : "audio/webm";
-        const blob = new Blob(chunksRef.current, { type: blobType });
-        
-        console.log("Recording complete, blob size:", blob.size, "bytes");
-        
+        const recorderMime = mediaRecorder.mimeType || chunksRef.current?.[0]?.type || "";
+
+        // IMPORTANT: don't hardcode webm here; iOS may record mp4
+        const blob = new Blob(chunksRef.current, {
+          type: recorderMime || (type === "video" ? "video/mp4" : "audio/mp4"),
+        });
+
+        console.log("[TestimonialRecorder] recording complete", {
+          chunks: chunksRef.current.length,
+          mime: recorderMime,
+          blobType: blob.type,
+          size: blob.size,
+        });
+
+        if (!blob.size) {
+          setError("No video data was captured. Please try again.");
+          stopStream();
+          setIsReady(false);
+          setIsRecording(false);
+          return;
+        }
+
         setRecordedBlob(blob);
+        setIsPreviewing(true);
+
+        // Show preview immediately (then swap to processed MP4 if needed)
+        setPreviewUrl((prev) => {
+          if (prev) URL.revokeObjectURL(prev);
+          return URL.createObjectURL(blob);
+        });
+
         stopStream();
         setIsReady(false);
-        
-        // Compress video before preview
-        let finalBlob = blob;
+
         if (type === "video") {
           const result = await compressVideo(blob);
-          finalBlob = result.blob;
           setIsVideoCompressed(result.isCompressed);
-          setCompressedBlob(finalBlob);
-        }
-        
-        setIsPreviewing(true);
-        
-        // Create object URL for preview
-        const url = URL.createObjectURL(finalBlob);
-        setPreviewUrl(url);
-        
-        // Set video source and generate thumbnail
-        if (type === "video" && videoPreviewRef.current) {
-          videoPreviewRef.current.src = url;
-          videoPreviewRef.current.load();
-          
-          videoPreviewRef.current.onloadedmetadata = () => {
-            console.log("Video duration:", videoPreviewRef.current?.duration);
-          };
-          
-          videoPreviewRef.current.oncanplay = async () => {
-            // Seek to start and generate thumbnail
-            if (videoPreviewRef.current) {
-              videoPreviewRef.current.currentTime = 0.1;
-            }
-          };
-          
-          videoPreviewRef.current.onseeked = async () => {
-            const thumb = await generateThumbnail();
-            if (thumb) setThumbnailBlob(thumb);
-          };
+          setCompressedBlob(result.blob);
+
+          // If we generated a new blob (transcode/compress), update preview URL
+          if (result.blob !== blob) {
+            setPreviewUrl((prev) => {
+              if (prev) URL.revokeObjectURL(prev);
+              return URL.createObjectURL(result.blob);
+            });
+          }
         }
       };
       
@@ -363,8 +431,12 @@ export function TestimonialRecorder({ type, onRecordingComplete, onCancel }: Tes
         setError("Recording error occurred. Please try again.");
       };
       
-      // Start recording - collect data more frequently for smoother results
-      mediaRecorder.start(100); // Collect data every 100ms
+      // Start recording - iOS can be flaky with very small timeslices
+      if (isIOS()) {
+        mediaRecorder.start();
+      } else {
+        mediaRecorder.start(100); // Collect data every 100ms
+      }
       setIsRecording(true);
       setTimeElapsed(0);
       
@@ -508,28 +580,27 @@ export function TestimonialRecorder({ type, onRecordingComplete, onCancel }: Tes
         </div>
       )}
 
-      {/* Compression Progress */}
+      {/* Compression / Processing Progress */}
       {isCompressing && (
         <div className="space-y-3 p-4 bg-muted rounded-lg">
           <div className="flex items-center gap-3 justify-center">
             <Loader2 className="h-5 w-5 animate-spin text-primary" />
-            <span className="text-lg font-medium">Compressing video...</span>
+            <span className="text-lg font-medium">Processing video…</span>
           </div>
           <Progress value={compressionProgress} className="h-2" />
-          <p className="text-sm text-muted-foreground text-center">
-            {compressionProgress}% complete
-          </p>
+          <p className="text-sm text-muted-foreground text-center">{compressionProgress}% complete</p>
         </div>
       )}
 
       {/* Preview */}
-      {isPreviewing && recordedBlob && previewUrl && !isCompressing && (
+      {isPreviewing && recordedBlob && previewUrl && (
         <div className="space-y-3">
           {type === "video" ? (
             <>
               <div className="aspect-[9/16] max-h-[400px] bg-muted rounded-lg overflow-hidden">
                 <video
                   ref={videoPreviewRef}
+                  src={previewUrl}
                   className="w-full h-full object-cover"
                   controls
                   playsInline
@@ -613,7 +684,7 @@ export function TestimonialRecorder({ type, onRecordingComplete, onCancel }: Tes
         )}
 
         {/* Preview state */}
-        {isPreviewing && !isCompressing && (
+        {isPreviewing && (
           <>
             <Button onClick={resetRecording} variant="outline" className="gap-2">
               <RotateCcw className="h-4 w-4" />
