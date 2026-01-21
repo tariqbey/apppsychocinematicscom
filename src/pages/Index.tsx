@@ -33,6 +33,7 @@ import { InfoTooltip } from "@/components/ui/info-tooltip";
 import { toast } from "sonner";
 import { DirectorRadioCard } from "@/components/radio/DirectorRadioCard";
 import { TestimonialSubmissionDialog } from "@/components/testimonials/TestimonialSubmissionDialog";
+import { EnableNotificationsBanner } from "@/components/notifications/EnableNotificationsBanner";
 
 // Custom module icons
 import iconChiefAim from "@/assets/icons/icon-chief-aim.png";
@@ -290,6 +291,9 @@ const Index = () => {
               The set is ready. Let's make today's scene count.
             </p>
           </div>
+
+          {/* Push Notifications Banner - Reminds users to enable */}
+          <EnableNotificationsBanner className="animate-slide-up" />
 
           {/* Production Status */}
           <ProductionStatus currentAct={currentAct} dayNumber={dayNumber} />
