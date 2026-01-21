@@ -26,6 +26,7 @@ import Score from "./pages/Score";
 import DoneForYou from "./pages/DoneForYou";
 import DFYSuccess from "./pages/DFYSuccess";
 import Challenges from "./pages/Challenges";
+import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
 import { RequireAdmin } from "./components/auth/RequireAdmin";
 
@@ -64,6 +65,7 @@ const App = () => (
             <Route path="/done-for-you" element={<DoneForYou />} />
             <Route path="/dfy-success" element={<DFYSuccess />} />
             <Route path="/challenges" element={<Challenges />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
