@@ -680,15 +680,28 @@ export function DirectorAIAgent({ isOpen, onClose, chiefAim }: DirectorAIAgentPr
       
       stopSpeaking();
       setVoiceEnabled(true);
+      setOrbState("listening");
       
-      // Provide immediate feedback
-      toast.info("🎤 Activating microphone...", { duration: 1500 });
+      // Provide immediate visual and toast feedback
+      toast.info("🎤 Tap and speak clearly...", { duration: 2000 });
       
-      // Force start listening with a slight delay to ensure state is updated
-      setTimeout(() => {
-        console.log("[DirectorAI] Forcing startListening call");
-        startListening();
-      }, 100);
+      // Force start listening - on mobile we need to call this directly in the gesture handler
+      try {
+        console.log("[DirectorAI] Starting voice input from toggle");
+        await startListening();
+        
+        // If still not listening after a moment, show helpful message
+        setTimeout(() => {
+          if (!isListening && voiceEnabled) {
+            toast.info("Speak now - I'm listening!", { duration: 2000 });
+          }
+        }, 500);
+      } catch (error) {
+        console.error("[DirectorAI] Failed to start listening:", error);
+        setVoiceEnabled(false);
+        setOrbState("idle");
+        toast.error("Could not start microphone. Please check permissions.");
+      }
     }
   };
 

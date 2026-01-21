@@ -31,6 +31,17 @@ const isIOS = () => {
     (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 };
 
+// Provide haptic feedback on mobile devices
+const vibrate = (pattern: number | number[] = 50) => {
+  if ('vibrate' in navigator) {
+    try {
+      navigator.vibrate(pattern);
+    } catch (e) {
+      // Ignore vibration errors
+    }
+  }
+};
+
 export const useVoiceInput = (options: UseVoiceInputOptions = {}) => {
   const { 
     continuous = false, 
@@ -317,17 +328,40 @@ export const useVoiceInput = (options: UseVoiceInputOptions = {}) => {
     // This is especially important on iOS where the permission prompt may not show otherwise
     if (!permissionGranted) {
       console.log("[VoiceInput] Requesting microphone permission");
+      
+      // Provide haptic feedback on mobile to indicate we're requesting permission
+      if (isMobile()) {
+        vibrate([50, 30, 50]);
+      }
+      
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const stream = await navigator.mediaDevices.getUserMedia({ 
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true,
+          }
+        });
         // Keep the stream alive briefly to ensure permission sticks
         stream.getTracks().forEach(track => {
           setTimeout(() => track.stop(), 500);
         });
         setPermissionGranted(true);
         console.log("[VoiceInput] Microphone permission granted");
+        
+        // Haptic feedback on success
+        if (isMobile()) {
+          vibrate(100);
+        }
       } catch (error: any) {
         console.error("[VoiceInput] Microphone permission denied:", error);
         isStartingRef.current = false;
+        
+        // Haptic feedback on error
+        if (isMobile()) {
+          vibrate([100, 50, 100]);
+        }
+        
         if (error.name === "NotAllowedError" || error.name === "PermissionDeniedError") {
           onErrorRef.current?.("Microphone access denied. Please enable it in your browser settings and try again.");
         } else if (error.name === "NotFoundError") {
@@ -341,10 +375,11 @@ export const useVoiceInput = (options: UseVoiceInputOptions = {}) => {
     
     startAudioAnalysis();
     
-    // Small delay on iOS to ensure audio context is ready
-    if (isIOS()) {
-      console.log("[VoiceInput] iOS detected - adding delay before starting recognition");
-      await new Promise(resolve => setTimeout(resolve, 300));
+    // Longer delay on mobile/iOS to ensure audio context is ready
+    const delayMs = isIOS() ? 400 : isMobile() ? 200 : 0;
+    if (delayMs > 0) {
+      console.log(`[VoiceInput] Mobile/iOS detected - adding ${delayMs}ms delay before starting recognition`);
+      await new Promise(resolve => setTimeout(resolve, delayMs));
     }
     
     try {
@@ -352,6 +387,11 @@ export const useVoiceInput = (options: UseVoiceInputOptions = {}) => {
       recognitionRef.current.start();
       hasStartedRef.current = true;
       console.log("[VoiceInput] Speech recognition started successfully");
+      
+      // Haptic feedback when listening starts
+      if (isMobile()) {
+        vibrate(30);
+      }
     } catch (error: any) {
       console.warn("[VoiceInput] Start error:", error);
       isStartingRef.current = false;
