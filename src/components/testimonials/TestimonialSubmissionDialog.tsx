@@ -93,22 +93,37 @@ export function TestimonialSubmissionDialog({ open, onOpenChange }: TestimonialS
 
       // Upload media if present
       if (mediaBlob && (testimonialType === "audio" || testimonialType === "video")) {
-        const ext = testimonialType === "video" ? "webm" : "webm";
+        // Determine format based on blob type
+        const isCompressedMp4 = mediaBlob.type === "video/mp4";
+        const ext = testimonialType === "video" 
+          ? (isCompressedMp4 ? "mp4" : "webm")
+          : "webm";
+        const contentType = testimonialType === "video"
+          ? (isCompressedMp4 ? "video/mp4" : "video/webm")
+          : "audio/webm";
+        
         const filePath = `${user.id}/${Date.now()}-${testimonialType}.${ext}`;
+        
+        console.log(`Uploading ${testimonialType} as ${contentType}, size: ${mediaBlob.size}`);
         
         const { error: uploadError } = await supabase.storage
           .from("testimonials")
           .upload(filePath, mediaBlob, { 
-            contentType: testimonialType === "video" ? "video/webm" : "audio/webm" 
+            contentType,
+            cacheControl: '3600'
           });
 
-        if (uploadError) throw uploadError;
+        if (uploadError) {
+          console.error("Upload error:", uploadError);
+          throw uploadError;
+        }
 
         const { data: urlData } = supabase.storage
           .from("testimonials")
           .getPublicUrl(filePath);
         
         mediaUrl = urlData.publicUrl;
+        console.log("Upload successful, URL:", mediaUrl);
 
         // Upload thumbnail for video
         if (thumbnailBlob && testimonialType === "video") {

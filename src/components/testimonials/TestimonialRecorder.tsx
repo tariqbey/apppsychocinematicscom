@@ -55,6 +55,7 @@ export function TestimonialRecorder({ type, onRecordingComplete, onCancel }: Tes
   const [compressionProgress, setCompressionProgress] = useState(0);
   const [recordedBlob, setRecordedBlob] = useState<Blob | null>(null);
   const [compressedBlob, setCompressedBlob] = useState<Blob | null>(null);
+  const [isVideoCompressed, setIsVideoCompressed] = useState(false);
   const [thumbnailBlob, setThumbnailBlob] = useState<Blob | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [timeElapsed, setTimeElapsed] = useState(0);
@@ -126,67 +127,89 @@ export function TestimonialRecorder({ type, onRecordingComplete, onCancel }: Tes
     return null;
   }, [type]);
 
-  const compressVideo = useCallback(async (inputBlob: Blob): Promise<Blob> => {
+  const compressVideo = useCallback(async (inputBlob: Blob): Promise<{ blob: Blob; isCompressed: boolean }> => {
     try {
       setIsCompressing(true);
       setCompressionProgress(0);
       setOriginalSize(inputBlob.size);
 
-      // Initialize FFmpeg if not already done
-      if (!ffmpegRef.current) {
-        const ffmpeg = new FFmpeg();
-        ffmpeg.on("progress", ({ progress }) => {
-          setCompressionProgress(Math.round(progress * 100));
-        });
-
-        const baseURL = "https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd";
-        await ffmpeg.load({
-          coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, "text/javascript"),
-          wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, "application/wasm"),
-        });
-        ffmpegRef.current = ffmpeg;
+      // Check if file is already small enough (under 5MB)
+      if (inputBlob.size < 5 * 1024 * 1024) {
+        console.log("Video already under 5MB, skipping compression");
+        setCompressedSize(inputBlob.size);
+        return { blob: inputBlob, isCompressed: false };
       }
 
-      const ffmpeg = ffmpegRef.current;
-      const inputFileName = "input.webm";
-      const outputFileName = "output.mp4";
-
-      // Write input file
-      await ffmpeg.writeFile(inputFileName, await fetchFile(inputBlob));
-
-      // Compress video with good quality/size balance
-      // -crf 28: Good quality with smaller file size (range 0-51, lower = better quality)
-      // -preset fast: Faster encoding
-      // -vf scale=-2:720: Scale to 720p height while maintaining aspect ratio
-      // -b:a 64k: Compress audio to 64kbps
-      await ffmpeg.exec([
-        "-i", inputFileName,
-        "-c:v", "libx264",
-        "-crf", "28",
-        "-preset", "fast",
-        "-vf", "scale=-2:720",
-        "-c:a", "aac",
-        "-b:a", "64k",
-        "-movflags", "+faststart",
-        outputFileName
-      ]);
-
-      // Read the output file
-      const data = await ffmpeg.readFile(outputFileName);
-      const compressedVideoBlob = new Blob([new Uint8Array(data as unknown as ArrayBuffer).buffer], { type: "video/mp4" });
+      // Check if we're on a mobile device - FFmpeg WASM may have issues
+      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
       
-      setCompressedSize(compressedVideoBlob.size);
-      console.log(`Compressed video from ${(inputBlob.size / 1024 / 1024).toFixed(2)}MB to ${(compressedVideoBlob.size / 1024 / 1024).toFixed(2)}MB`);
+      // Try FFmpeg compression
+      try {
+        // Initialize FFmpeg if not already done
+        if (!ffmpegRef.current) {
+          const ffmpeg = new FFmpeg();
+          ffmpeg.on("progress", ({ progress }) => {
+            setCompressionProgress(Math.round(progress * 100));
+          });
 
-      // Clean up
-      await ffmpeg.deleteFile(inputFileName);
-      await ffmpeg.deleteFile(outputFileName);
+          const baseURL = "https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd";
+          
+          // Use smaller timeout for mobile
+          const loadPromise = ffmpeg.load({
+            coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, "text/javascript"),
+            wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, "application/wasm"),
+          });
 
-      return compressedVideoBlob;
+          // Add timeout for FFmpeg load
+          const timeoutPromise = new Promise<never>((_, reject) => 
+            setTimeout(() => reject(new Error("FFmpeg load timeout")), isMobile ? 15000 : 30000)
+          );
+
+          await Promise.race([loadPromise, timeoutPromise]);
+          ffmpegRef.current = ffmpeg;
+        }
+
+        const ffmpeg = ffmpegRef.current;
+        const inputFileName = "input.webm";
+        const outputFileName = "output.mp4";
+
+        // Write input file
+        await ffmpeg.writeFile(inputFileName, await fetchFile(inputBlob));
+
+        // Compress video with good quality/size balance
+        await ffmpeg.exec([
+          "-i", inputFileName,
+          "-c:v", "libx264",
+          "-crf", "28",
+          "-preset", "fast",
+          "-vf", "scale=-2:720",
+          "-c:a", "aac",
+          "-b:a", "64k",
+          "-movflags", "+faststart",
+          outputFileName
+        ]);
+
+        // Read the output file
+        const data = await ffmpeg.readFile(outputFileName);
+        const compressedVideoBlob = new Blob([new Uint8Array(data as unknown as ArrayBuffer).buffer], { type: "video/mp4" });
+        
+        setCompressedSize(compressedVideoBlob.size);
+        console.log(`Compressed video from ${(inputBlob.size / 1024 / 1024).toFixed(2)}MB to ${(compressedVideoBlob.size / 1024 / 1024).toFixed(2)}MB`);
+
+        // Clean up
+        await ffmpeg.deleteFile(inputFileName);
+        await ffmpeg.deleteFile(outputFileName);
+
+        return { blob: compressedVideoBlob, isCompressed: true };
+      } catch (ffmpegError) {
+        console.warn("FFmpeg compression failed, using original:", ffmpegError);
+        setCompressedSize(inputBlob.size);
+        return { blob: inputBlob, isCompressed: false };
+      }
     } catch (err) {
       console.error("Video compression failed:", err);
-      // Return original blob if compression fails
-      return inputBlob;
+      setCompressedSize(inputBlob.size);
+      return { blob: inputBlob, isCompressed: false };
     } finally {
       setIsCompressing(false);
     }
@@ -300,7 +323,9 @@ export function TestimonialRecorder({ type, onRecordingComplete, onCancel }: Tes
         // Compress video before preview
         let finalBlob = blob;
         if (type === "video") {
-          finalBlob = await compressVideo(blob);
+          const result = await compressVideo(blob);
+          finalBlob = result.blob;
+          setIsVideoCompressed(result.isCompressed);
           setCompressedBlob(finalBlob);
         }
         
@@ -371,6 +396,7 @@ export function TestimonialRecorder({ type, onRecordingComplete, onCancel }: Tes
     cleanupPreviewUrl();
     setRecordedBlob(null);
     setCompressedBlob(null);
+    setIsVideoCompressed(false);
     setThumbnailBlob(null);
     setIsPreviewing(false);
     setIsCompressing(false);
