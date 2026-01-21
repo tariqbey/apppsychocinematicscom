@@ -10,6 +10,42 @@ interface ReminderSettings {
   eveningScorecardReminderTime: string | null;
 }
 
+// Motivational messages that rotate throughout the day
+const MOTIVATIONAL_MESSAGES = [
+  {
+    title: "🎬 Director's Reminder",
+    body: "Don't get caught up in someone else's movie—unless you're getting paid for it.",
+  },
+  {
+    title: "🎯 Stay on Script",
+    body: "Your character has goals today. Are you living them?",
+  },
+  {
+    title: "🎥 Mind Movie Time",
+    body: "Take 3 minutes to watch your Mind Movie and realign with your vision.",
+  },
+  {
+    title: "🎵 Soundtrack Check",
+    body: "Put on your personal soundtrack and get back into character.",
+  },
+  {
+    title: "⭐ Oscar-Worthy Moment",
+    body: "This scene matters. How would your ideal character handle it?",
+  },
+  {
+    title: "🎭 Character Check",
+    body: "Are you acting as the director of your life or an extra in someone else's?",
+  },
+  {
+    title: "📽️ Production Update",
+    body: "Your life is the greatest movie ever made. Make this scene count.",
+  },
+  {
+    title: "🌟 Leading Role Reminder",
+    body: "You're the star of this production. Act like it.",
+  },
+];
+
 export function useScheduledReminders() {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -24,6 +60,7 @@ export function useScheduledReminders() {
   
   // Keep track of scheduled timeouts
   const timeoutRefs = useRef<{ [key: string]: NodeJS.Timeout }>({});
+  const motivationalIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Load settings from database
   const loadSettings = useCallback(async () => {
@@ -108,6 +145,30 @@ export function useScheduledReminders() {
     }, msUntilTime);
   }, [isEnabled, showNotification, getMillisecondsUntilTime]);
 
+  // Start motivational reminders (every 2-3 hours during active hours)
+  const startMotivationalReminders = useCallback(() => {
+    if (!isEnabled) return;
+    
+    // Clear existing interval
+    if (motivationalIntervalRef.current) {
+      clearInterval(motivationalIntervalRef.current);
+    }
+    
+    // Send a random motivational message every 2.5 hours (9000000ms)
+    motivationalIntervalRef.current = setInterval(() => {
+      const now = new Date();
+      const hour = now.getHours();
+      
+      // Only send between 8am and 9pm
+      if (hour >= 8 && hour < 21) {
+        const randomMessage = MOTIVATIONAL_MESSAGES[
+          Math.floor(Math.random() * MOTIVATIONAL_MESSAGES.length)
+        ];
+        showNotification(randomMessage.title, { body: randomMessage.body });
+      }
+    }, 2.5 * 60 * 60 * 1000); // 2.5 hours
+  }, [isEnabled, showNotification]);
+
   // Schedule all reminders based on current settings
   const scheduleAllReminders = useCallback(() => {
     if (settings.journalReminderTime) {
@@ -119,7 +180,10 @@ export function useScheduledReminders() {
     if (settings.eveningScorecardReminderTime) {
       scheduleNotificationForTime('scorecard', settings.eveningScorecardReminderTime);
     }
-  }, [settings, scheduleNotificationForTime]);
+    
+    // Also start motivational reminders
+    startMotivationalReminders();
+  }, [settings, scheduleNotificationForTime, startMotivationalReminders]);
 
   // Auto-schedule when settings change
   useEffect(() => {
@@ -130,6 +194,9 @@ export function useScheduledReminders() {
     // Cleanup on unmount
     return () => {
       Object.values(timeoutRefs.current).forEach(clearTimeout);
+      if (motivationalIntervalRef.current) {
+        clearInterval(motivationalIntervalRef.current);
+      }
     };
   }, [isEnabled, scheduleAllReminders]);
 
@@ -195,11 +262,22 @@ export function useScheduledReminders() {
     }
   }, [user, toast, scheduleNotificationForTime]);
 
+  // Send an immediate motivational notification
+  const sendMotivationalNow = useCallback(() => {
+    if (!isEnabled) return;
+    const randomMessage = MOTIVATIONAL_MESSAGES[
+      Math.floor(Math.random() * MOTIVATIONAL_MESSAGES.length)
+    ];
+    showNotification(randomMessage.title, { body: randomMessage.body });
+  }, [isEnabled, showNotification]);
+
   return {
     settings,
     isLoading,
     updateReminderTime,
     scheduleAllReminders,
+    sendMotivationalNow,
+    motivationalMessages: MOTIVATIONAL_MESSAGES,
   };
 }
 
