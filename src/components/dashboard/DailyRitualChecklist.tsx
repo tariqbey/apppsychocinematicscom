@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Check, Play, FileText, Target, ClipboardCheck, Sparkles, LightbulbIcon } from "lucide-react";
+import { Check, Sparkles, LightbulbIcon, Film, ScrollText, Rocket, Moon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { InfoTooltip } from "@/components/ui/info-tooltip";
 import { TutorialTipCard } from "@/components/community/TutorialTipCard";
@@ -32,7 +32,7 @@ export const DailyRitualChecklist = ({ onTheaterClick, onScorecardClick, onEveni
       dbField: "morning_screening",
       title: "Morning Screening",
       subtitle: "Watch your Mind Movie",
-      icon: <Play className="w-5 h-5" />,
+      icon: <Film className="w-5 h-5" />,
       completed: false,
     },
     {
@@ -40,7 +40,7 @@ export const DailyRitualChecklist = ({ onTheaterClick, onScorecardClick, onEveni
       dbField: "script_review",
       title: "Script Review",
       subtitle: "Read your Definite Chief Aim",
-      icon: <FileText className="w-5 h-5" />,
+      icon: <ScrollText className="w-5 h-5" />,
       completed: false,
     },
     {
@@ -48,7 +48,7 @@ export const DailyRitualChecklist = ({ onTheaterClick, onScorecardClick, onEveni
       dbField: "action_execution",
       title: "Action Execution",
       subtitle: "Complete 3 key tasks",
-      icon: <Target className="w-5 h-5" />,
+      icon: <Rocket className="w-5 h-5" />,
       completed: false,
     },
     {
@@ -56,7 +56,7 @@ export const DailyRitualChecklist = ({ onTheaterClick, onScorecardClick, onEveni
       dbField: "evening_review",
       title: "Evening Session",
       subtitle: "Watch Mind Movie + Complete Scorecard",
-      icon: <ClipboardCheck className="w-5 h-5" />,
+      icon: <Moon className="w-5 h-5" />,
       completed: false,
     },
   ]);
