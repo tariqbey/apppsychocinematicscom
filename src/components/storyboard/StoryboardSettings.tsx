@@ -6,20 +6,15 @@ import {
   Monitor, 
   Smartphone, 
   Square, 
-  Clock,
-  Cpu,
-  Sparkles
+  Clock
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export type AspectRatio = "16:9" | "9:16" | "1:1" | "4:3";
-export type ImageModel = "nano-banana-pro" | "gemini";
 
 interface StoryboardSettingsProps {
   aspectRatio: AspectRatio;
   onAspectRatioChange: (ratio: AspectRatio) => void;
-  imageModel: ImageModel;
-  onImageModelChange: (model: ImageModel) => void;
   duration: number;
   onDurationChange: (duration: number) => void;
   clipDuration?: number;
@@ -32,25 +27,9 @@ const ASPECT_RATIOS: { value: AspectRatio; icon: typeof Monitor; label: string; 
   { value: "4:3", icon: Monitor, label: "Standard", description: "Classic format" },
 ];
 
-const IMAGE_MODELS: { value: ImageModel; label: string; description: string; badge?: string }[] = [
-  { 
-    value: "nano-banana-pro", 
-    label: "Nano Banana Pro", 
-    description: "Best for character consistency with reference photos",
-    badge: "Recommended"
-  },
-  { 
-    value: "gemini", 
-    label: "Gemini Flash", 
-    description: "Fast generation, good for general scenes"
-  },
-];
-
 export function StoryboardSettings({
   aspectRatio,
   onAspectRatioChange,
-  imageModel,
-  onImageModelChange,
   duration,
   onDurationChange,
   clipDuration = 8,
@@ -117,46 +96,6 @@ export function StoryboardSettings({
                   <span className="text-sm font-medium">{ratio.value}</span>
                 </div>
                 <p className="text-xs text-muted-foreground">{ratio.label}</p>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Image Model */}
-      <div className="space-y-3">
-        <span className="text-sm font-medium flex items-center gap-2">
-          <Cpu className="w-4 h-4 text-muted-foreground" />
-          Image Model
-        </span>
-        <div className="space-y-2">
-          {IMAGE_MODELS.map((model) => {
-            const isSelected = imageModel === model.value;
-            return (
-              <button
-                key={model.value}
-                onClick={() => onImageModelChange(model.value)}
-                className={cn(
-                  "w-full p-3 rounded-lg border text-left transition-all",
-                  isSelected
-                    ? "border-gold bg-gold/10"
-                    : "border-border hover:border-gold/50"
-                )}
-              >
-                <div className="flex items-center justify-between mb-1">
-                  <span className={cn(
-                    "text-sm font-medium",
-                    isSelected && "text-gold"
-                  )}>
-                    {model.label}
-                  </span>
-                  {model.badge && (
-                    <Badge variant="outline" className="text-xs border-gold/50 text-gold">
-                      {model.badge}
-                    </Badge>
-                  )}
-                </div>
-                <p className="text-xs text-muted-foreground">{model.description}</p>
               </button>
             );
           })}
