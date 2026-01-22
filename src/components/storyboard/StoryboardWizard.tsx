@@ -175,59 +175,75 @@ export function StoryboardWizard({ isOpen, onClose, onAddToTimeline, chiefAim }:
 
   const activeReferencePhotoUrl = storyboardReferencePhotoUrl || referencePhotoUrl;
 
+  // IMPORTANT: For likeness retention, we always convert the reference upload into a
+  // consistent, face-focused 1024x1024 JPEG "anchor" (FaceDetector when available, otherwise center-crop).
   const convertToJpeg = async (file: File): Promise<{ blob: Blob; ext: string }> => {
-    const originalType = file.type.toLowerCase();
-    const originalName = file.name.toLowerCase();
+    const toBlob = (canvas: HTMLCanvasElement, type: string, quality: number) =>
+      new Promise<Blob>((resolve, reject) => {
+        canvas.toBlob(
+          (b) => (b ? resolve(b) : reject(new Error("Failed to convert image"))),
+          type,
+          quality
+        );
+      });
 
-    const supportedFormats = ["image/png", "image/jpeg", "image/jpg", "image/webp", "image/gif"];
-    const unsupportedExtensions = ["heic", "heif", "avif", "bmp", "tiff", "tif"];
-
-    const ext = originalName.split(".").pop() || "";
-    const needsConversion = unsupportedExtensions.includes(ext) || !supportedFormats.includes(originalType);
-
-    if (!needsConversion) {
-      return { blob: file, ext: ext === "jpg" ? "jpeg" : ext || "jpeg" };
+    let bitmap: ImageBitmap;
+    try {
+      bitmap = await createImageBitmap(file);
+    } catch {
+      throw new Error("Failed to read image. If this is HEIC, please convert it to JPG/PNG and try again.");
     }
 
-    return new Promise((resolve, reject) => {
-      const img = new Image();
-      const url = URL.createObjectURL(file);
+    const imgW = bitmap.width;
+    const imgH = bitmap.height;
 
-      img.onload = () => {
-        URL.revokeObjectURL(url);
+    // Default crop = centered square
+    let cx = imgW / 2;
+    let cy = imgH / 2;
+    let cropSize = Math.min(imgW, imgH);
 
-        const canvas = document.createElement("canvas");
-        canvas.width = img.naturalWidth;
-        canvas.height = img.naturalHeight;
+    // Best effort face detection
+    try {
+      const FaceDetectorCtor = (window as any).FaceDetector as
+        | (new (options?: { fastMode?: boolean; maxDetectedFaces?: number }) => { detect: (image: ImageBitmap) => Promise<any[]> })
+        | undefined;
 
-        const ctx = canvas.getContext("2d");
-        if (!ctx) {
-          reject(new Error("Failed to get canvas context"));
-          return;
+      if (FaceDetectorCtor) {
+        const detector = new FaceDetectorCtor({ fastMode: true, maxDetectedFaces: 1 });
+        const faces = await detector.detect(bitmap);
+        const box = faces?.[0]?.boundingBox;
+        if (box && typeof box.x === "number") {
+          cx = box.x + box.width / 2;
+          cy = box.y + box.height / 2;
+          // Pad so hairline/ears are included
+          cropSize = Math.min(
+            Math.max(box.width, box.height) * 2.2,
+            Math.min(imgW, imgH)
+          );
         }
+      }
+    } catch {
+      // ignore face detect failures
+    }
 
-        ctx.drawImage(img, 0, 0);
+    const sx = Math.max(0, Math.min(imgW - cropSize, cx - cropSize / 2));
+    const sy = Math.max(0, Math.min(imgH - cropSize, cy - cropSize / 2));
 
-        canvas.toBlob(
-          (blob) => {
-            if (blob) {
-              resolve({ blob, ext: "jpeg" });
-            } else {
-              reject(new Error("Failed to convert image"));
-            }
-          },
-          "image/jpeg",
-          0.92
-        );
-      };
+    // Normalize to 1024 square for consistent conditioning
+    const outSize = 1024;
+    const canvas = document.createElement("canvas");
+    canvas.width = outSize;
+    canvas.height = outSize;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) {
+      bitmap.close?.();
+      throw new Error("Failed to get canvas context");
+    }
+    ctx.drawImage(bitmap, sx, sy, cropSize, cropSize, 0, 0, outSize, outSize);
+    bitmap.close?.();
 
-      img.onerror = () => {
-        URL.revokeObjectURL(url);
-        reject(new Error("Failed to load image for conversion. HEIC may not be supported in this browser."));
-      };
-
-      img.src = url;
-    });
+    const blob = await toBlob(canvas, "image/jpeg", 0.92);
+    return { blob, ext: "jpeg" };
   };
 
   const persistStoryboardReferencePhoto = async (url: string | null) => {
@@ -466,21 +482,34 @@ export function StoryboardWizard({ isOpen, onClose, onAddToTimeline, chiefAim }:
 
     setGeneratingSceneIndex(sceneIndex);
     try {
-      // Collect all reference images from elements
-      const referenceImages: string[] = [];
-      for (const el of elements) {
-        if (el.referenceImage && !referenceImages.includes(el.referenceImage)) referenceImages.push(el.referenceImage);
+      // Ensure we have a script row so generated images persist when you leave/return.
+      let scriptId = currentScript?.id;
+      if (!scriptId) {
+        const created = await saveScript(
+          title || "Untitled Mind Movie",
+          scenes,
+          chiefAim || null,
+          visualStyle,
+          undefined,
+          {
+            visionAnswers,
+            scriptInput,
+            elements,
+            inputMode,
+            targetDuration,
+            aspectRatio,
+          }
+        );
+        scriptId = created?.id;
+        if (created) setCurrentScript(created);
       }
-
-      // Ensure active reference photo is first (storyboard-local overrides global)
-      const finalReferenceImages = referenceImages.filter((u) => u !== activeReferencePhotoUrl);
-      finalReferenceImages.unshift(activeReferencePhotoUrl);
 
       const characterContext = buildCharacterConsistencyContext();
 
       // Build a CHARACTER-LOCKED prompt with explicit physical traits
       const promptWithCharacterLock = [
-        "EXACT LIKENESS REQUIRED: Generate an image of the EXACT SAME PERSON shown in the reference photo.",
+        "REFERENCE IMAGE PROVIDED AS INPUT: The attached reference image is the ONE AND ONLY identity anchor.",
+        "EXACT LIKENESS REQUIRED: This must be the EXACT SAME PERSON from the reference image (not a similar person).",
         "",
         characterContext ? `CHARACTER PROFILE:\n${characterContext}` : "",
         "",
@@ -502,32 +531,33 @@ export function StoryboardWizard({ isOpen, onClose, onAddToTimeline, chiefAim }:
         aspect_ratio: aspectRatio === "4:3" ? "16:9" : aspectRatio,
         resolution: "2k",
         model: modelForGeneration,
-        images: finalReferenceImages.slice(0, 5),
+        // Start-over behavior: ALWAYS use ONLY the chosen reference photo (single identity anchor).
+        // Atlas Nano Banana Pro edit currently uses ONLY the first image anyway.
+        images: [activeReferencePhotoUrl],
         mode: "edit",
       });
 
       if (imageUrl) {
-        // Update local state
+        let updatedScenesForSave: Scene[] | null = null;
         setScenes((prev) => {
           const next = [...prev];
           const current = next[sceneIndex];
           if (!current) return prev;
           next[sceneIndex] = { ...current, generatedImageUrl: imageUrl };
+          updatedScenesForSave = next;
           return next;
         });
-        
+
         // Auto-save to backend so generated images persist
-        if (currentScript?.id) {
-          const updatedScenes = scenes.map((s, i) => 
-            i === sceneIndex ? { ...s, generatedImageUrl: imageUrl } : s
-          );
+        if (scriptId && updatedScenesForSave) {
           await supabase
             .from("mind_movie_scripts")
-            .update({ 
-              scenes: updatedScenes as any,
-              updated_at: new Date().toISOString()
+            .update({
+              scenes: updatedScenesForSave as any,
+              updated_at: new Date().toISOString(),
             })
-            .eq("id", currentScript.id);
+            .eq("id", scriptId)
+            .eq("user_id", user!.id);
         }
         
         toast.success(`Image generated for Scene ${sceneIndex + 1}`);
