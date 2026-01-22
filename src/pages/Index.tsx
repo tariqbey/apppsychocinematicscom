@@ -447,6 +447,18 @@ const Index = () => {
             animationIndex={6}
           />
 
+          {/* ========== CUT / RESET ========== */}
+          <ModuleCard
+            onClick={() => setShowCutReset(true)}
+            icon={<XCircle className="w-7 h-7 text-red-500" />}
+            title="Cut! Reset"
+            description="Pattern interrupt • Break old reactions • Return to character"
+            actionText="Cut Now"
+            colorScheme="red"
+            tooltip="When old patterns show up, use the CUT technique to reset your nervous system and return to your Director's Chair."
+            animationIndex={7}
+          />
+
           {/* ========== MIND MOVIE VAULT ========== */}
           <div className="flex flex-col sm:flex-row gap-4">
             <ModuleCard
