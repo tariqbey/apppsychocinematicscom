@@ -103,11 +103,23 @@ serve(async (req) => {
     // Build Atlas request
     const generateUrl = "https://api.atlascloud.ai/api/v1/model/generateImage";
     
-    // Clean prompt for Atlas - avoid trigger words that cause content filter issues
+    // Build a strong character-locked prompt for edit mode
     let cleanPrompt = prompt;
     if (isEdit) {
-      // Simple, clean prompt that focuses on the scene while preserving likeness
-      cleanPrompt = `Portrait of the same person from the reference photo in a new scene: ${prompt}. Photorealistic, professional lighting, high quality.`;
+      // Comprehensive prompt that forces facial likeness retention
+      cleanPrompt = [
+        "EXACT LIKENESS REQUIRED: Generate an image featuring the EXACT SAME PERSON from the reference photo.",
+        "",
+        "CRITICAL REQUIREMENTS:",
+        "1. The person's FACE must be IDENTICAL to the reference - same bone structure, eyes, nose, mouth, jawline, skin tone, ethnicity.",
+        "2. This is the SAME individual in a new scene, NOT a different person or lookalike.",
+        "3. Preserve their exact age, hair, and distinguishing facial features.",
+        "",
+        "SCENE TO GENERATE:",
+        prompt,
+        "",
+        "PRODUCTION QUALITY: Photorealistic, professional cinematography, volumetric lighting, shallow depth of field."
+      ].join("\n");
     }
     
     const generateBody: any = {
