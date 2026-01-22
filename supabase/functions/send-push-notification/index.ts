@@ -216,7 +216,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { user_id, payload } = await req.json();
+    const { user_id, payload, targetEndpoint } = await req.json();
 
     if (!user_id || !payload) {
       return new Response(
@@ -225,7 +225,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    console.log(`[Push] Sending notification to user: ${user_id}`);
+    console.log(`[Push] Sending notification to user: ${user_id}${targetEndpoint ? ' (specific device)' : ' (all devices)'}`);
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -241,17 +241,27 @@ Deno.serve(async (req) => {
       );
     }
 
-    const { data: subscriptions, error: subError } = await supabase
+    // Build query - optionally filter by specific endpoint
+    let query = supabase
       .from('push_subscriptions')
       .select('*')
       .eq('user_id', user_id);
+    
+    if (targetEndpoint) {
+      query = query.eq('endpoint', targetEndpoint);
+    }
+
+    const { data: subscriptions, error: subError } = await query;
 
     if (subError || !subscriptions || subscriptions.length === 0) {
+      console.log('[Push] No subscriptions found', subError);
       return new Response(
         JSON.stringify({ message: 'No subscriptions found', sent: 0 }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    console.log(`[Push] Found ${subscriptions.length} subscription(s)`);
 
     const notificationPayload = JSON.stringify({
       title: payload.title || 'Psycho-Cinematics™',
@@ -262,9 +272,12 @@ Deno.serve(async (req) => {
     });
 
     let successCount = 0;
+    const errors: string[] = [];
 
     for (const subscription of subscriptions) {
       try {
+        console.log(`[Push] Sending to: ${subscription.endpoint.substring(0, 60)}...`);
+        
         const subscriberPublicKey = base64UrlToUint8Array(subscription.p256dh);
         const subscriberAuth = base64UrlToUint8Array(subscription.auth);
 
@@ -294,26 +307,38 @@ Deno.serve(async (req) => {
           body,
         });
 
+        const responseText = await response.text();
+        console.log(`[Push] Response: ${response.status} ${responseText.substring(0, 100)}`);
+
         if (response.ok || response.status === 201) {
           successCount++;
-          console.log(`[Push] Successfully sent to endpoint: ${subscription.endpoint.substring(0, 50)}...`);
+          console.log(`[Push] Successfully sent to: ${subscription.endpoint.substring(0, 50)}...`);
         } else if (response.status === 410 || response.status === 404) {
           // Subscription expired, remove it
-          console.log(`[Push] Subscription expired, removing: ${subscription.id}`);
+          console.log(`[Push] Subscription expired (${response.status}), removing: ${subscription.id}`);
           await supabase
             .from('push_subscriptions')
             .delete()
             .eq('id', subscription.id);
+          errors.push(`Subscription expired: ${subscription.endpoint.substring(0, 30)}...`);
         } else {
-          console.error(`[Push] Failed to send, status: ${response.status}`);
+          console.error(`[Push] Failed to send, status: ${response.status}, body: ${responseText}`);
+          errors.push(`Status ${response.status}: ${responseText.substring(0, 100)}`);
         }
       } catch (error) {
-        console.error(`[Push] Error sending:`, error);
+        const errMsg = error instanceof Error ? error.message : 'Unknown error';
+        console.error(`[Push] Error sending:`, errMsg);
+        errors.push(errMsg);
       }
     }
 
     return new Response(
-      JSON.stringify({ success: true, sent: successCount, total: subscriptions.length }),
+      JSON.stringify({ 
+        success: successCount > 0, 
+        sent: successCount, 
+        total: subscriptions.length,
+        errors: errors.length > 0 ? errors : undefined
+      }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 

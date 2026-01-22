@@ -26,6 +26,8 @@ interface PushNotificationState {
   permission: NotificationPermission | 'unsupported';
   isiOS: boolean;
   isPWA: boolean;
+  activeServiceWorker: string | null;
+  currentEndpoint: string | null;
 }
 
 export function usePushNotifications() {
@@ -41,6 +43,8 @@ export function usePushNotifications() {
     permission: 'unsupported',
     isiOS: false,
     isPWA: false,
+    activeServiceWorker: null,
+    currentEndpoint: null,
   });
 
   // Fetch VAPID public key from edge function
@@ -54,6 +58,50 @@ export function usePushNotifications() {
       return data.publicKey;
     } catch (error) {
       console.error('[Push] Error fetching VAPID key:', error);
+      return null;
+    }
+  }, []);
+
+  // Get the unified service worker registration
+  const getServiceWorkerRegistration = useCallback(async (): Promise<ServiceWorkerRegistration | null> => {
+    if (!('serviceWorker' in navigator)) return null;
+    
+    try {
+      // Wait for service worker to be ready first
+      await navigator.serviceWorker.ready;
+      
+      // Get registration by SCOPE (correct method for iOS)
+      let registration = await navigator.serviceWorker.getRegistration('/');
+      
+      if (!registration) {
+        // Register the unified SW if not present
+        console.log('[Push] No SW found, registering unified sw.js...');
+        registration = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
+        
+        // Wait for activation
+        await new Promise<void>((resolve) => {
+          if (registration!.active) {
+            resolve();
+          } else {
+            const sw = registration!.installing || registration!.waiting;
+            if (sw) {
+              sw.addEventListener('statechange', function listener() {
+                if (sw.state === 'activated') {
+                  sw.removeEventListener('statechange', listener);
+                  resolve();
+                }
+              });
+            } else {
+              resolve();
+            }
+          }
+        });
+      }
+      
+      console.log('[Push] Active SW:', registration.active?.scriptURL);
+      return registration;
+    } catch (error) {
+      console.error('[Push] SW registration error:', error);
       return null;
     }
   }, []);
@@ -92,25 +140,27 @@ export function usePushNotifications() {
 
   const checkSubscription = async () => {
     try {
-      if (!('serviceWorker' in navigator)) return;
-
-      // Wait for service worker to be ready first
-      await navigator.serviceWorker.ready;
-
-      // Get registration by SCOPE (not script path) - scope is '/'
-      const registration = await navigator.serviceWorker.getRegistration('/');
+      const registration = await getServiceWorkerRegistration();
       
       if (!registration) {
-        console.log('[Push] No service worker registration found at scope /');
-        setState(prev => ({ ...prev, isSubscribed: false }));
+        console.log('[Push] No service worker registration found');
+        setState(prev => ({ ...prev, isSubscribed: false, activeServiceWorker: null, currentEndpoint: null }));
         return;
       }
 
       console.log('[Push] Found registration:', registration.scope, 'active:', !!registration.active);
-
+      
       const subscription = await registration.pushManager.getSubscription();
-      console.log('[Push] Current subscription endpoint:', subscription?.endpoint?.substring(0, 60) || 'none');
-      setState(prev => ({ ...prev, isSubscribed: !!subscription }));
+      const endpoint = subscription?.endpoint || null;
+      
+      console.log('[Push] Current subscription endpoint:', endpoint?.substring(0, 60) || 'none');
+      
+      setState(prev => ({ 
+        ...prev, 
+        isSubscribed: !!subscription,
+        activeServiceWorker: registration.active?.scriptURL || null,
+        currentEndpoint: endpoint
+      }));
     } catch (error) {
       console.error('[Push] Error checking subscription:', error);
       setState(prev => ({ ...prev, isSubscribed: false }));
@@ -143,46 +193,31 @@ export function usePushNotifications() {
         throw new Error('Notification permission denied');
       }
 
-      // Check for existing registration first - don't unregister on iOS as it can cause issues
-      let registration = await navigator.serviceWorker.getRegistration('/');
-      
-      const isIOSDevice = /iPad|iPhone|iPod/.test(navigator.userAgent);
-      
+      // Get the unified service worker
+      const registration = await getServiceWorkerRegistration();
       if (!registration) {
-        // Only unregister old sw-push workers if no valid registration exists
-        const existingRegistrations = await navigator.serviceWorker.getRegistrations();
-        for (const reg of existingRegistrations) {
-          if (reg.active?.scriptURL.includes('sw-push')) {
-            console.log('[Push] Unregistering old service worker');
-            await reg.unregister();
-          }
-        }
-
-        // Register push service worker with cache-busting
-        registration = await navigator.serviceWorker.register('/sw-push.js?v=' + Date.now(), {
-          scope: '/'
-        });
-        console.log('[Push] New service worker registered');
-      } else {
-        console.log('[Push] Using existing service worker registration');
+        throw new Error('Service worker registration failed');
       }
 
-      console.log('[Push] Service worker registered:', registration);
+      console.log('[Push] Using service worker:', registration.active?.scriptURL);
 
-      // Wait for service worker to be ready and active
-      await navigator.serviceWorker.ready;
-      
-      // Give it a moment to activate
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // Unsubscribe from any existing subscription first (clean slate for this device)
+      const existingSub = await registration.pushManager.getSubscription();
+      if (existingSub) {
+        console.log('[Push] Unsubscribing from old subscription...');
+        await existingSub.unsubscribe();
+      }
 
-      // Subscribe to push
+      // Subscribe to push with the VAPID key
       const applicationServerKey = urlBase64ToUint8Array(vapidKey);
       const subscription = await registration.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: applicationServerKey.buffer as ArrayBuffer
       });
 
-      console.log('[Push] Push subscription created:', subscription.endpoint);
+      console.log('[Push] New subscription created:', subscription.endpoint.substring(0, 60) + '...');
+      console.log('[Push] Endpoint type:', subscription.endpoint.includes('apple') ? 'APNS (iOS)' : 
+                  subscription.endpoint.includes('fcm') ? 'FCM (Android/Chrome)' : 'Web Push');
 
       // Extract keys
       const p256dhKey = subscription.getKey('p256dh');
@@ -195,54 +230,28 @@ export function usePushNotifications() {
       const p256dh = btoa(String.fromCharCode(...new Uint8Array(p256dhKey)));
       const auth = btoa(String.fromCharCode(...new Uint8Array(authKey)));
 
-      console.log('[Push] Storing subscription for user:', user.id);
-      console.log('[Push] Endpoint type:', subscription.endpoint.includes('apple') ? 'APNS (iOS)' : 
-                  subscription.endpoint.includes('fcm') ? 'FCM (Android/Chrome)' : 'Other');
-
-      // Store subscription in database - each device gets its own subscription
-      // Check if THIS EXACT endpoint already exists for this user
-      const { data: existingSubscriptions } = await supabase
+      // Store subscription in database - use upsert based on endpoint
+      const { error: dbError } = await supabase
         .from('push_subscriptions')
-        .select('id, endpoint')
-        .eq('user_id', user.id)
-        .eq('endpoint', subscription.endpoint);
+        .upsert({
+          user_id: user.id,
+          endpoint: subscription.endpoint,
+          p256dh,
+          auth,
+          updated_at: new Date().toISOString()
+        }, {
+          onConflict: 'endpoint'
+        });
 
-      if (existingSubscriptions && existingSubscriptions.length > 0) {
-        // Update existing subscription for this endpoint
-        const { error } = await supabase
-          .from('push_subscriptions')
-          .update({
-            p256dh,
-            auth,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', existingSubscriptions[0].id);
-
-        if (error) {
-          console.error('[Push] Error updating subscription:', error);
-          throw error;
-        }
-        console.log('[Push] Updated existing subscription for this device');
-      } else {
-        // Insert new subscription - this allows multiple devices per user
-        const { error } = await supabase
-          .from('push_subscriptions')
-          .insert({
-            user_id: user.id,
-            endpoint: subscription.endpoint,
-            p256dh,
-            auth
-          });
-
-        if (error) {
-          console.error('[Push] Error inserting subscription:', error);
-          throw error;
-        }
-        console.log('[Push] Inserted new subscription for this device');
+      if (dbError) {
+        console.error('[Push] Error saving subscription:', dbError);
+        throw new Error('Failed to save subscription');
       }
 
+      console.log('[Push] Subscription saved to database');
+
       // Update user profile
-      const { error: profileError } = await supabase
+      await supabase
         .from('user_profiles')
         .update({ 
           push_notifications_enabled: true,
@@ -250,15 +259,13 @@ export function usePushNotifications() {
         })
         .eq('user_id', user.id);
 
-      if (profileError) {
-        console.warn('[Push] Error updating profile:', profileError);
-      }
-
       setState(prev => ({ 
         ...prev, 
         isSubscribed: true, 
         isEnabled: true,
-        isLoading: false 
+        isLoading: false,
+        activeServiceWorker: registration.active?.scriptURL || null,
+        currentEndpoint: subscription.endpoint
       }));
       
       console.log('[Push] Successfully subscribed to push notifications');
@@ -268,14 +275,13 @@ export function usePushNotifications() {
       setState(prev => ({ ...prev, isLoading: false }));
       throw error;
     }
-  }, [state.isSupported, user, fetchVapidKey]);
+  }, [state.isSupported, user, fetchVapidKey, getServiceWorkerRegistration]);
 
   const unsubscribe = useCallback(async () => {
     setState(prev => ({ ...prev, isLoading: true }));
 
     try {
-      // Get registration by SCOPE (not script path)
-      const registration = await navigator.serviceWorker.getRegistration('/');
+      const registration = await getServiceWorkerRegistration();
       if (!registration) {
         setState(prev => ({ ...prev, isSubscribed: false, isLoading: false }));
         return;
@@ -283,32 +289,34 @@ export function usePushNotifications() {
 
       const subscription = await registration.pushManager.getSubscription();
       if (subscription) {
-        await subscription.unsubscribe();
-
-        // Remove from database
+        // Remove from database first
         if (user) {
           await supabase
             .from('push_subscriptions')
             .delete()
-            .eq('user_id', user.id)
             .eq('endpoint', subscription.endpoint);
-
-          // Update user profile
-          await supabase
-            .from('user_profiles')
-            .update({ 
-              push_notifications_enabled: false,
-              updated_at: new Date().toISOString(),
-            })
-            .eq('user_id', user.id);
         }
+
+        await subscription.unsubscribe();
+      }
+
+      // Update user profile
+      if (user) {
+        await supabase
+          .from('user_profiles')
+          .update({ 
+            push_notifications_enabled: false,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('user_id', user.id);
       }
 
       setState(prev => ({ 
         ...prev, 
         isSubscribed: false, 
         isEnabled: false,
-        isLoading: false 
+        isLoading: false,
+        currentEndpoint: null
       }));
       
       console.log('[Push] Successfully unsubscribed from push notifications');
@@ -318,7 +326,53 @@ export function usePushNotifications() {
       setState(prev => ({ ...prev, isLoading: false }));
       throw error;
     }
-  }, [user]);
+  }, [user, getServiceWorkerRegistration]);
+
+  // Re-register device (force new subscription)
+  const reRegisterDevice = useCallback(async () => {
+    if (!user) return false;
+    
+    setState(prev => ({ ...prev, isLoading: true }));
+    
+    try {
+      // Force unregister all service workers and re-register
+      const registrations = await navigator.serviceWorker.getRegistrations();
+      for (const reg of registrations) {
+        console.log('[Push] Unregistering SW:', reg.active?.scriptURL);
+        await reg.unregister();
+      }
+      
+      // Wait a moment
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Register fresh SW
+      const newReg = await navigator.serviceWorker.register('/sw.js?v=' + Date.now(), { scope: '/' });
+      console.log('[Push] Fresh SW registered');
+      
+      // Wait for activation
+      await navigator.serviceWorker.ready;
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Now subscribe
+      await subscribe();
+      
+      toast({
+        title: "Device Re-registered",
+        description: "Push notifications should now work on this device.",
+      });
+      
+      return true;
+    } catch (error) {
+      console.error('[Push] Re-register error:', error);
+      setState(prev => ({ ...prev, isLoading: false }));
+      toast({
+        title: "Re-registration Failed",
+        description: error instanceof Error ? error.message : 'Unknown error',
+        variant: "destructive"
+      });
+      return false;
+    }
+  }, [user, subscribe, toast]);
 
   // Legacy compatibility methods
   const requestPermission = useCallback(async () => {
@@ -373,6 +427,52 @@ export function usePushNotifications() {
     }
   }, [state.isEnabled, state.permission]);
 
+  // Send test notification to THIS device only
+  const sendTestNotification = useCallback(async () => {
+    if (!user || !state.currentEndpoint) {
+      toast({
+        title: "Cannot Send Test",
+        description: state.currentEndpoint ? "Not logged in" : "No subscription found. Enable notifications first.",
+        variant: "destructive"
+      });
+      return false;
+    }
+
+    try {
+      const { data, error } = await supabase.functions.invoke('send-push-notification', {
+        body: {
+          user_id: user.id,
+          payload: {
+            title: '🎬 Test Notification',
+            body: 'Push notifications are working on this device!',
+            url: '/'
+          },
+          targetEndpoint: state.currentEndpoint
+        }
+      });
+
+      if (error) {
+        console.error('[Push] Test notification error:', error);
+        toast({
+          title: "Test Failed",
+          description: error.message,
+          variant: "destructive"
+        });
+        return false;
+      }
+
+      console.log('[Push] Test notification response:', data);
+      toast({
+        title: "Test Sent",
+        description: "Check for the notification on this device."
+      });
+      return true;
+    } catch (error) {
+      console.error('[Push] Test notification error:', error);
+      return false;
+    }
+  }, [user, state.currentEndpoint, toast]);
+
   // Schedule a reminder notification (sends via edge function)
   const scheduleReminder = useCallback(async (type: 'journal' | 'ritual' | 'scorecard', delayMinutes: number = 0) => {
     if (!state.isSubscribed || !user) return null;
@@ -418,7 +518,6 @@ export function usePushNotifications() {
       return true;
     } catch (error) {
       console.error('[Push] Error sending notification:', error);
-      // Fallback to local notification
       return showNotification(message.title, { body: message.body });
     }
   }, [state.isSubscribed, user, showNotification]);
@@ -427,9 +526,12 @@ export function usePushNotifications() {
     ...state,
     subscribe,
     unsubscribe,
+    reRegisterDevice,
     requestPermission,
     disableNotifications,
     showNotification,
+    sendTestNotification,
     scheduleReminder,
+    checkSubscription,
   };
 }
