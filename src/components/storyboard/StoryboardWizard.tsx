@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -87,6 +87,10 @@ export function StoryboardWizard({ isOpen, onClose, onAddToTimeline, chiefAim }:
   const [elements, setElements] = useState<StoryboardElement[]>([]);
   const [scenes, setScenes] = useState<Scene[]>([]);
   const [title, setTitle] = useState("");
+  // Optional per-storyboard reference photo (overrides global reference for this storyboard)
+  const [storyboardReferencePhotoUrl, setStoryboardReferencePhotoUrl] = useState<string | null>(null);
+  const [isUploadingStoryboardRef, setIsUploadingStoryboardRef] = useState(false);
+  const storyboardRefInput = useRef<HTMLInputElement>(null);
   const [generatingSceneIndex, setGeneratingSceneIndex] = useState<number | null>(null);
   const [animatingSceneIndex, setAnimatingSceneIndex] = useState<number | null>(null);
   const [batchGenerating, setBatchGenerating] = useState(false);
@@ -112,6 +116,8 @@ export function StoryboardWizard({ isOpen, onClose, onAddToTimeline, chiefAim }:
           setTitle(script.title || "");
           setScenes(script.scenes);
           setVisualStyle(script.visual_style || "cinematic-dramatic");
+          // Restore storyboard-local reference photo if present
+          setStoryboardReferencePhotoUrl((script as any).reference_photo_url || null);
           // Load new columns (with fallbacks)
           const rawScript = script as any;
           if (rawScript.vision_answers) setVisionAnswers(rawScript.vision_answers);
@@ -131,6 +137,7 @@ export function StoryboardWizard({ isOpen, onClose, onAddToTimeline, chiefAim }:
           setVisionAnswers({});
           setScriptInput("");
           setElements([]);
+          setStoryboardReferencePhotoUrl(null);
         }
       };
       loadScript();
@@ -165,6 +172,171 @@ export function StoryboardWizard({ isOpen, onClose, onAddToTimeline, chiefAim }:
 
     return parts.join("\n");
   }, [profile]);
+
+  const activeReferencePhotoUrl = storyboardReferencePhotoUrl || referencePhotoUrl;
+
+  const convertToJpeg = async (file: File): Promise<{ blob: Blob; ext: string }> => {
+    const originalType = file.type.toLowerCase();
+    const originalName = file.name.toLowerCase();
+
+    const supportedFormats = ["image/png", "image/jpeg", "image/jpg", "image/webp", "image/gif"];
+    const unsupportedExtensions = ["heic", "heif", "avif", "bmp", "tiff", "tif"];
+
+    const ext = originalName.split(".").pop() || "";
+    const needsConversion = unsupportedExtensions.includes(ext) || !supportedFormats.includes(originalType);
+
+    if (!needsConversion) {
+      return { blob: file, ext: ext === "jpg" ? "jpeg" : ext || "jpeg" };
+    }
+
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      const url = URL.createObjectURL(file);
+
+      img.onload = () => {
+        URL.revokeObjectURL(url);
+
+        const canvas = document.createElement("canvas");
+        canvas.width = img.naturalWidth;
+        canvas.height = img.naturalHeight;
+
+        const ctx = canvas.getContext("2d");
+        if (!ctx) {
+          reject(new Error("Failed to get canvas context"));
+          return;
+        }
+
+        ctx.drawImage(img, 0, 0);
+
+        canvas.toBlob(
+          (blob) => {
+            if (blob) {
+              resolve({ blob, ext: "jpeg" });
+            } else {
+              reject(new Error("Failed to convert image"));
+            }
+          },
+          "image/jpeg",
+          0.92
+        );
+      };
+
+      img.onerror = () => {
+        URL.revokeObjectURL(url);
+        reject(new Error("Failed to load image for conversion. HEIC may not be supported in this browser."));
+      };
+
+      img.src = url;
+    });
+  };
+
+  const persistStoryboardReferencePhoto = async (url: string | null) => {
+    if (!user) {
+      toast.error("Please sign in to upload a reference photo");
+      return;
+    }
+
+    // Ensure we have a script row to attach this to
+    let scriptId = currentScript?.id;
+    if (!scriptId) {
+      const created = await saveScript(
+        title || "Untitled Mind Movie",
+        scenes,
+        chiefAim || null,
+        visualStyle,
+        undefined,
+        {
+          visionAnswers,
+          scriptInput,
+          elements,
+          inputMode,
+          targetDuration,
+          aspectRatio,
+        }
+      );
+      scriptId = created?.id;
+    }
+
+    if (!scriptId) return;
+
+    const { error } = await supabase
+      .from("mind_movie_scripts")
+      .update({ reference_photo_url: url, updated_at: new Date().toISOString() })
+      .eq("id", scriptId)
+      .eq("user_id", user.id);
+
+    if (error) {
+      console.error("Failed to save storyboard reference photo:", error);
+      toast.error("Failed to save reference photo");
+      return;
+    }
+
+    setStoryboardReferencePhotoUrl(url);
+  };
+
+  const handleStoryboardRefFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!user) {
+      toast.error("Please sign in to upload a reference photo");
+      return;
+    }
+
+    setIsUploadingStoryboardRef(true);
+    try {
+      // Convert to supported format if needed
+      const { blob, ext } = await convertToJpeg(file);
+
+      // Ensure script exists (so we can namespace the file path)
+      let scriptId = currentScript?.id;
+      if (!scriptId) {
+        const created = await saveScript(
+          title || "Untitled Mind Movie",
+          scenes,
+          chiefAim || null,
+          visualStyle,
+          undefined,
+          {
+            visionAnswers,
+            scriptInput,
+            elements,
+            inputMode,
+            targetDuration,
+            aspectRatio,
+          }
+        );
+        scriptId = created?.id;
+      }
+
+      if (!scriptId) return;
+
+      const fileName = `${user.id}/storyboard-reference-${scriptId}-${Date.now()}.${ext}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("generated-media")
+        .upload(fileName, blob, {
+          upsert: true,
+          contentType: `image/${ext}`,
+        });
+
+      if (uploadError) throw uploadError;
+
+      const {
+        data: { publicUrl },
+      } = supabase.storage.from("generated-media").getPublicUrl(fileName);
+
+      await persistStoryboardReferencePhoto(publicUrl);
+      toast.success("Reference photo set for this storyboard");
+    } catch (error) {
+      console.error("Reference photo upload failed:", error);
+      toast.error(error instanceof Error ? error.message : "Failed to upload reference photo");
+    } finally {
+      setIsUploadingStoryboardRef(false);
+      // allow re-uploading same file
+      if (storyboardRefInput.current) storyboardRefInput.current.value = "";
+    }
+  };
 
   // Build elements context for generation
   const buildElementsContext = () => {
@@ -287,8 +459,8 @@ export function StoryboardWizard({ isOpen, onClose, onAddToTimeline, chiefAim }:
     if (!scene) return;
 
     // Prevent wasting credits: require a loaded reference photo for character-lock generations.
-    if (!referencePhotoUrl) {
-      toast.error("No character reference photo loaded. Set your default character photo in Settings first.");
+    if (!activeReferencePhotoUrl) {
+      toast.error("No reference photo loaded. Upload one above or set your default character photo in Settings.");
       return;
     }
 
@@ -300,9 +472,9 @@ export function StoryboardWizard({ isOpen, onClose, onAddToTimeline, chiefAim }:
         if (el.referenceImage && !referenceImages.includes(el.referenceImage)) referenceImages.push(el.referenceImage);
       }
 
-      // Ensure user's global reference photo is first
-      const finalReferenceImages = referenceImages.filter((u) => u !== referencePhotoUrl);
-      finalReferenceImages.unshift(referencePhotoUrl);
+      // Ensure active reference photo is first (storyboard-local overrides global)
+      const finalReferenceImages = referenceImages.filter((u) => u !== activeReferencePhotoUrl);
+      finalReferenceImages.unshift(activeReferencePhotoUrl);
 
       const characterContext = buildCharacterConsistencyContext();
 
@@ -711,6 +883,88 @@ export function StoryboardWizard({ isOpen, onClose, onAddToTimeline, chiefAim }:
             {/* Step: Generate Images */}
             {step === "images" && (
               <div className="space-y-6">
+                <div className="glass-card p-4 space-y-3">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium">Reference Photo</span>
+                        {storyboardReferencePhotoUrl ? (
+                          <Badge variant="secondary">Storyboard</Badge>
+                        ) : referencePhotoUrl ? (
+                          <Badge variant="outline">Default</Badge>
+                        ) : null}
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        Upload a photo here to make these scene images match you (overrides your default reference photo for this storyboard).
+                      </p>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <input
+                        ref={storyboardRefInput}
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={handleStoryboardRefFileChange}
+                      />
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => storyboardRefInput.current?.click()}
+                        disabled={isUploadingStoryboardRef}
+                      >
+                        {isUploadingStoryboardRef ? (
+                          <>
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            Uploading…
+                          </>
+                        ) : (
+                          <>
+                            <Upload className="w-4 h-4 mr-2" />
+                            {activeReferencePhotoUrl ? "Change" : "Upload"}
+                          </>
+                        )}
+                      </Button>
+                      {storyboardReferencePhotoUrl && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => persistStoryboardReferencePhoto(null)}
+                          disabled={isUploadingStoryboardRef}
+                        >
+                          Use default
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+
+                  {activeReferencePhotoUrl ? (
+                    <div className="relative rounded-lg overflow-hidden border border-border/50 bg-background/30">
+                      <img
+                        src={activeReferencePhotoUrl}
+                        alt="Reference photo for storyboard"
+                        className="w-full h-40 object-contain"
+                        loading="lazy"
+                      />
+                      {storyboardReferencePhotoUrl && (
+                        <Button
+                          size="icon"
+                          variant="destructive"
+                          className="absolute top-2 right-2 h-8 w-8"
+                          onClick={() => persistStoryboardReferencePhoto(null)}
+                          disabled={isUploadingStoryboardRef}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="rounded-lg border border-dashed border-border/60 p-4 text-sm text-muted-foreground">
+                      No reference photo selected yet.
+                    </div>
+                  )}
+                </div>
+
                 <div className="glass-card p-4">
                   <div className="flex items-center justify-between mb-2">
                     <span className="font-medium">Images Generated</span>
