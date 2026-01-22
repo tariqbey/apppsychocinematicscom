@@ -156,19 +156,23 @@ export function ImageGenerator({
       imagesToUse.push(uploadedImage);
     }
 
-    // Enhance prompt with reference photo context
+    // Enhance prompt with reference photo context for better likeness retention
     let enhancedPrompt = prompt.trim();
     if (referencePhotos.length > 0 && !uploadedImage) {
-      enhancedPrompt = `Generate an image featuring the person from the reference photo(s). ${enhancedPrompt}`;
+      enhancedPrompt = `CRITICAL: The main subject MUST look exactly like the person in the reference photo(s) - preserve their exact facial features, likeness, and identity. Generate a new scene with this person: ${enhancedPrompt}`;
     } else if (referencePhotos.length > 0 && uploadedImage) {
-      enhancedPrompt = `Edit this image to feature the person from the reference photo(s). ${enhancedPrompt}`;
+      enhancedPrompt = `CRITICAL: Edit this image while maintaining the exact likeness of the person from the reference photo(s). ${enhancedPrompt}`;
     }
+
+    // Always use Nano Banana Pro when reference images are provided for better likeness retention
+    const useNanoBanana = imagesToUse.length > 0;
 
     const url = await generateImage({
       prompt: enhancedPrompt,
       aspect_ratio: aspectRatio,
       resolution,
       images: imagesToUse.length > 0 ? imagesToUse : undefined,
+      model: useNanoBanana ? "nano-banana-pro" : "gemini",
     });
 
     if (url && onImageGenerated) {

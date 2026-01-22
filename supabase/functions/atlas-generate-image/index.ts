@@ -91,19 +91,38 @@ serve(async (req) => {
     const isEdit = Array.isArray(images) && images.length > 0;
     const model = isEdit ? "google/nano-banana-pro/edit" : "google/nano-banana-pro/text-to-image";
 
-    console.log("Starting image generation with prompt:", prompt);
+    console.log("Starting Nano Banana Pro image generation:", { 
+      prompt: prompt.substring(0, 100),
+      isEdit,
+      imageCount: images?.length || 0,
+      model 
+    });
 
     const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
     // Build Atlas request
     const generateUrl = "https://api.atlascloud.ai/api/v1/model/generateImage";
+    
+    // Enhanced prompt for reference photo likeness retention
+    let enhancedPrompt = prompt;
+    if (isEdit) {
+      enhancedPrompt = `CRITICAL INSTRUCTION: The generated image MUST feature the EXACT same person from the reference image(s). Preserve their facial structure, skin tone, hair, and all distinguishing features with photorealistic accuracy.
+
+${prompt}
+
+TECHNICAL REQUIREMENTS:
+- Maintain 100% facial likeness to reference photo(s)
+- Professional cinematic lighting (ARRI Alexa style)
+- Ultra high resolution photorealistic quality
+- Natural skin tones and textures`;
+    }
+    
     const generateBody: any = {
       model,
       enable_base64_output: false,
       enable_sync_mode: false,
       output_format: "png",
-      prompt,
-      // Keep these (Atlas accepts them for Nano Banana family)
+      prompt: enhancedPrompt,
       aspect_ratio,
       resolution,
     };
@@ -117,8 +136,9 @@ serve(async (req) => {
         console.log("Edit mode: received data URL, uploading to storage first...");
         const { publicUrl } = await dataUrlToPublicUrl({ supabaseAdmin, dataUrl: first, userId: user_id });
         generateBody.image = publicUrl;
+        console.log("Uploaded reference image for Nano Banana:", publicUrl);
       } else {
-        console.log("Edit mode: using provided image URL");
+        console.log("Edit mode: using provided image URL:", first.substring(0, 50));
         generateBody.image = first;
       }
     }
