@@ -134,15 +134,27 @@ export function usePushNotifications() {
         throw new Error('Notification permission denied');
       }
 
-      // Register push service worker
-      const registration = await navigator.serviceWorker.register('/sw-push.js', {
+      // Unregister old service workers first to ensure clean state
+      const existingRegistrations = await navigator.serviceWorker.getRegistrations();
+      for (const reg of existingRegistrations) {
+        if (reg.scope.includes('/') && reg.active?.scriptURL.includes('sw-push')) {
+          console.log('[Push] Unregistering old service worker');
+          await reg.unregister();
+        }
+      }
+
+      // Register push service worker with cache-busting
+      const registration = await navigator.serviceWorker.register('/sw-push.js?v=' + Date.now(), {
         scope: '/'
       });
 
       console.log('[Push] Service worker registered:', registration);
 
-      // Wait for service worker to be ready
+      // Wait for service worker to be ready and active
       await navigator.serviceWorker.ready;
+      
+      // Give it a moment to activate
+      await new Promise(resolve => setTimeout(resolve, 500));
 
       // Subscribe to push
       const applicationServerKey = urlBase64ToUint8Array(vapidKey);
