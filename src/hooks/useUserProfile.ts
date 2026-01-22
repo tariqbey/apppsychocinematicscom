@@ -7,6 +7,17 @@ export interface UserProfile {
   user_id: string;
   display_name: string | null;
   director_character_name: string | null;
+  reference_photo_url?: string | null;
+
+  // Hero / character consistency fields
+  character_height?: string | null;
+  character_weight?: string | null;
+  character_build?: string | null;
+  character_features?: string | null;
+  hero_image_url?: string | null;
+  hero_image_side_url?: string | null;
+  hero_image_back_url?: string | null;
+
   chief_aim_what: string | null;
   chief_aim_by_when: string | null;
   chief_aim_exchange: string | null;
