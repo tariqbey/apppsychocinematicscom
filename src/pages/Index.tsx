@@ -437,6 +437,7 @@ const Index = () => {
             actionText="Build Character"
             colorScheme="cyan"
             tooltip="Discover your Director archetype, define required character traits, and track daily alignment. Build the identity needed to achieve your Chief Aim."
+            animationIndex={0}
           />
 
           {/* ========== STEP 3: MIND MOVIE VAULT ========== */}
@@ -451,6 +452,7 @@ const Index = () => {
               colorScheme="amber"
               tooltip="Create and manage multiple Mind Movies for different goals and scenarios. Each movie has its own Chief Aim snapshot, storyboard, and soundtrack."
               className="flex-1"
+              animationIndex={1}
             />
 
             {/* Quick Create New Movie Button */}
@@ -480,6 +482,7 @@ const Index = () => {
             actionText="Enter Studio"
             colorScheme="gold"
             tooltip="Generate AI images of your future self and goals, then animate them into videos. Use reference photos of yourself to see YOU living your Chief Aim. Great for creating Mind Movie visuals."
+            animationIndex={2}
           />
 
           {/* ========== CHALLENGES & ADVERSITY ========== */}
@@ -491,6 +494,7 @@ const Index = () => {
             actionText="Train Now"
             colorScheme="red"
             tooltip="Train your character through scenario-based emotional adversity. Earn XP by responding transformatively to challenges."
+            animationIndex={3}
           />
 
           {/* ========== STEP 5: ACTION EXECUTION ========== */}
@@ -503,6 +507,7 @@ const Index = () => {
             actionText="Open Actions"
             colorScheme="primary"
             tooltip="Focus on just 3 priority tasks per day that move you toward your Chief Aim. Track your excuse patterns and build accountability."
+            animationIndex={4}
           />
 
           {/* ========== STEP 6: DIRECTOR'S JOURNAL ========== */}
@@ -515,6 +520,7 @@ const Index = () => {
             actionText="Open Journal"
             colorScheme="purple"
             tooltip="Record your experiences, breakthroughs, and challenges. Get AI-powered feedback on your progress and accountability reports to track your transformation journey."
+            animationIndex={5}
           />
 
           {/* ========== STEP 7: SOUNDTRACK STUDIO ========== */}
@@ -527,6 +533,7 @@ const Index = () => {
             actionText="Create Music"
             colorScheme="pink"
             tooltip="Create AI-generated music and lyrics for your Mind Movies. Choose from 50+ genres and styles to match your vision."
+            animationIndex={6}
           />
 
           {/* ========== STEP 8: THE SCORE (Personal Music) ========== */}
@@ -538,6 +545,7 @@ const Index = () => {
             actionText="Open Score"
             colorScheme="gold"
             tooltip="Your personal music player. Organize tracks into playlists, drag to reorder, and stream your transformation soundtrack."
+            animationIndex={7}
           />
 
           {/* ========== STEP 9: DIRECTOR RADIO ========== */}
@@ -551,6 +559,7 @@ const Index = () => {
             description="Record a testimonial • Inspire other directors • Get featured on the landing page"
             actionText="Share"
             colorScheme="emerald"
+            animationIndex={8}
           />
 
           {/* Two Column Layout */}

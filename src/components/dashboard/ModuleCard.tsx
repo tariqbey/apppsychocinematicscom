@@ -2,6 +2,7 @@ import { ReactNode, useEffect, useState } from "react";
 import { Sparkles, Zap } from "lucide-react";
 import { InfoTooltip } from "@/components/ui/info-tooltip";
 import { cn } from "@/lib/utils";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface ModuleCardProps {
   onClick: () => void;
@@ -23,6 +24,8 @@ interface ModuleCardProps {
   tooltip?: string;
   className?: string;
   featured?: boolean;
+  /** Stagger index for entrance animation (0, 1, 2...) */
+  animationIndex?: number;
 }
 
 const colorConfig = {
@@ -154,15 +157,36 @@ export function ModuleCard({
   tooltip,
   className,
   featured = false,
+  animationIndex = 0,
 }: ModuleCardProps) {
   const colors = colorConfig[colorScheme];
+  const isMobile = useIsMobile();
   const [isHovered, setIsHovered] = useState(false);
+  const [isTouched, setIsTouched] = useState(false);
+  const [hasAnimatedIn, setHasAnimatedIn] = useState(false);
+
+  // On mobile, trigger entrance animation with stagger
+  useEffect(() => {
+    if (isMobile) {
+      const timer = setTimeout(() => {
+        setHasAnimatedIn(true);
+      }, 100 + animationIndex * 80);
+      return () => clearTimeout(timer);
+    } else {
+      setHasAnimatedIn(true);
+    }
+  }, [isMobile, animationIndex]);
+
+  // On mobile, the "active" state replaces hover
+  const isActive = isHovered || isTouched;
 
   return (
     <button
       onClick={onClick}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
+      onTouchStart={() => setIsTouched(true)}
+      onTouchEnd={() => setTimeout(() => setIsTouched(false), 200)}
       className={cn(
         // Base styles
         "w-full relative p-5 sm:p-6 group text-left overflow-hidden",
@@ -179,68 +203,86 @@ export function ModuleCard({
         "active:scale-[0.98] hover:scale-[1.02]",
         // Featured ring effect
         featured && "ring-2 ring-gold/30 hover:ring-gold/60",
+        // Entrance animation
+        !hasAnimatedIn && "opacity-0 translate-y-4",
+        hasAnimatedIn && "opacity-100 translate-y-0",
         className
       )}
       style={{
-        boxShadow: isHovered ? `0 0 40px ${colors.glowColor}, inset 0 1px 0 rgba(255,255,255,0.1)` : 'none',
+        boxShadow: isActive ? `0 0 40px ${colors.glowColor}, inset 0 1px 0 rgba(255,255,255,0.1)` : 'none',
+        transitionDelay: !hasAnimatedIn ? `${animationIndex * 80}ms` : '0ms',
       }}
     >
-      {/* Animated corner accents */}
+      {/* Animated corner accents - show on mobile when hasAnimatedIn */}
       <div className="absolute top-0 left-0 w-8 h-8 pointer-events-none">
         <div className={cn(
-          "absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r opacity-0 group-hover:opacity-100 transition-opacity duration-500",
-          colors.scanlineColor
+          "absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r transition-opacity duration-500",
+          colors.scanlineColor,
+          (isActive || (isMobile && hasAnimatedIn)) ? "opacity-100" : "opacity-0"
         )} />
         <div className={cn(
-          "absolute top-0 left-0 h-full w-[2px] bg-gradient-to-b opacity-0 group-hover:opacity-100 transition-opacity duration-500",
-          colors.scanlineColor
+          "absolute top-0 left-0 h-full w-[2px] bg-gradient-to-b transition-opacity duration-500",
+          colors.scanlineColor,
+          (isActive || (isMobile && hasAnimatedIn)) ? "opacity-100" : "opacity-0"
         )} />
       </div>
       <div className="absolute top-0 right-0 w-8 h-8 pointer-events-none">
         <div className={cn(
-          "absolute top-0 right-0 w-full h-[2px] bg-gradient-to-l opacity-0 group-hover:opacity-100 transition-opacity duration-500",
-          colors.scanlineColor
+          "absolute top-0 right-0 w-full h-[2px] bg-gradient-to-l transition-opacity duration-500",
+          colors.scanlineColor,
+          (isActive || (isMobile && hasAnimatedIn)) ? "opacity-100" : "opacity-0"
         )} />
         <div className={cn(
-          "absolute top-0 right-0 h-full w-[2px] bg-gradient-to-b opacity-0 group-hover:opacity-100 transition-opacity duration-500",
-          colors.scanlineColor
+          "absolute top-0 right-0 h-full w-[2px] bg-gradient-to-b transition-opacity duration-500",
+          colors.scanlineColor,
+          (isActive || (isMobile && hasAnimatedIn)) ? "opacity-100" : "opacity-0"
         )} />
       </div>
       <div className="absolute bottom-0 left-0 w-8 h-8 pointer-events-none">
         <div className={cn(
-          "absolute bottom-0 left-0 w-full h-[2px] bg-gradient-to-r opacity-0 group-hover:opacity-100 transition-opacity duration-500",
-          colors.scanlineColor
+          "absolute bottom-0 left-0 w-full h-[2px] bg-gradient-to-r transition-opacity duration-500",
+          colors.scanlineColor,
+          (isActive || (isMobile && hasAnimatedIn)) ? "opacity-100" : "opacity-0"
         )} />
         <div className={cn(
-          "absolute bottom-0 left-0 h-full w-[2px] bg-gradient-to-t opacity-0 group-hover:opacity-100 transition-opacity duration-500",
-          colors.scanlineColor
+          "absolute bottom-0 left-0 h-full w-[2px] bg-gradient-to-t transition-opacity duration-500",
+          colors.scanlineColor,
+          (isActive || (isMobile && hasAnimatedIn)) ? "opacity-100" : "opacity-0"
         )} />
       </div>
       <div className="absolute bottom-0 right-0 w-8 h-8 pointer-events-none">
         <div className={cn(
-          "absolute bottom-0 right-0 w-full h-[2px] bg-gradient-to-l opacity-0 group-hover:opacity-100 transition-opacity duration-500",
-          colors.scanlineColor
+          "absolute bottom-0 right-0 w-full h-[2px] bg-gradient-to-l transition-opacity duration-500",
+          colors.scanlineColor,
+          (isActive || (isMobile && hasAnimatedIn)) ? "opacity-100" : "opacity-0"
         )} />
         <div className={cn(
-          "absolute bottom-0 right-0 h-full w-[2px] bg-gradient-to-t opacity-0 group-hover:opacity-100 transition-opacity duration-500",
-          colors.scanlineColor
+          "absolute bottom-0 right-0 h-full w-[2px] bg-gradient-to-t transition-opacity duration-500",
+          colors.scanlineColor,
+          (isActive || (isMobile && hasAnimatedIn)) ? "opacity-100" : "opacity-0"
         )} />
       </div>
 
       {/* Scanning line animation */}
       <div 
-        className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none overflow-hidden"
+        className={cn(
+          "absolute inset-0 transition-opacity duration-300 pointer-events-none overflow-hidden",
+          isActive ? "opacity-100" : "opacity-0"
+        )}
       >
         <div 
           className={cn("absolute h-[1px] w-full bg-gradient-to-r", colors.scanlineColor)}
           style={{
-            animation: isHovered ? 'scan-line 2s ease-in-out infinite' : 'none',
+            animation: isActive ? 'scan-line 2s ease-in-out infinite' : 'none',
           }}
         />
       </div>
 
-      {/* Floating particles */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+      {/* Floating particles - always show on mobile after entrance */}
+      <div className={cn(
+        "absolute inset-0 overflow-hidden pointer-events-none transition-opacity duration-500",
+        (isActive || (isMobile && hasAnimatedIn)) ? "opacity-100" : "opacity-0"
+      )}>
         {[0, 0.5, 1, 1.5, 2].map((delay, i) => (
           <FloatingParticle key={i} color={colors.particleColor} delay={delay} />
         ))}
@@ -248,7 +290,10 @@ export function ModuleCard({
 
       {/* Holographic shimmer overlay */}
       <div 
-        className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none"
+        className={cn(
+          "absolute inset-0 transition-opacity duration-700 pointer-events-none",
+          isActive ? "opacity-100" : "opacity-0"
+        )}
         style={{
           background: `linear-gradient(
             105deg,
@@ -259,7 +304,7 @@ export function ModuleCard({
             transparent 60%
           )`,
           backgroundSize: '200% 100%',
-          animation: isHovered ? 'holographic-shimmer 2s ease-in-out infinite' : 'none',
+          animation: isActive ? 'holographic-shimmer 2s ease-in-out infinite' : 'none',
         }}
       />
 
@@ -272,18 +317,23 @@ export function ModuleCard({
             "bg-gradient-to-br transition-all duration-500",
             colors.iconBg,
             "relative overflow-hidden",
-            "group-hover:scale-110"
+            isActive && "scale-110"
           )}
           style={{
-            boxShadow: isHovered ? `0 0 30px ${colors.glowColor}, inset 0 0 20px ${colors.glowColor}` : `0 0 15px ${colors.glowColor}`,
+            boxShadow: (isActive || (isMobile && hasAnimatedIn)) 
+              ? `0 0 30px ${colors.glowColor}, inset 0 0 20px ${colors.glowColor}` 
+              : `0 0 15px ${colors.glowColor}`,
           }}
         >
-          {/* Pulsing ring */}
+          {/* Pulsing ring - show on mobile after animation */}
           <div 
-            className="absolute inset-0 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity"
+            className={cn(
+              "absolute inset-0 rounded-xl transition-opacity",
+              (isActive || (isMobile && hasAnimatedIn)) ? "opacity-100" : "opacity-0"
+            )}
             style={{
               border: `1px solid ${colors.particleColor}`,
-              animation: isHovered ? 'pulse-ring 1.5s ease-out infinite' : 'none',
+              animation: (isActive || (isMobile && hasAnimatedIn)) ? 'pulse-ring 1.5s ease-out infinite' : 'none',
             }}
           />
           
@@ -292,17 +342,20 @@ export function ModuleCard({
             className="absolute inset-0 rounded-xl"
             style={{
               background: `radial-gradient(circle at center, ${colors.glowColor} 0%, transparent 70%)`,
-              opacity: isHovered ? 0.6 : 0.3,
+              opacity: (isActive || (isMobile && hasAnimatedIn)) ? 0.6 : 0.3,
               transition: 'opacity 0.5s',
             }}
           />
           
           {/* Rotating border */}
           <div 
-            className="absolute inset-[-2px] rounded-xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"
+            className={cn(
+              "absolute inset-[-2px] rounded-xl transition-opacity pointer-events-none",
+              (isActive || (isMobile && hasAnimatedIn)) ? "opacity-100" : "opacity-0"
+            )}
             style={{
               background: `conic-gradient(from 0deg, transparent, ${colors.particleColor}, transparent)`,
-              animation: isHovered ? 'rotate-border 3s linear infinite' : 'none',
+              animation: (isActive || (isMobile && hasAnimatedIn)) ? 'rotate-border 3s linear infinite' : 'none',
               mask: 'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)',
               maskComposite: 'xor',
               WebkitMaskComposite: 'xor',
@@ -337,25 +390,29 @@ export function ModuleCard({
               <Sparkles 
                 className={cn(
                   "w-4 h-4 transition-all duration-500",
-                  "group-hover:rotate-12 group-hover:scale-125",
+                  (isActive || (isMobile && hasAnimatedIn)) && "rotate-12 scale-125",
                   "drop-shadow-lg",
                   colors.sparkle
                 )} 
                 style={{
-                  filter: isHovered ? `drop-shadow(0 0 4px ${colors.particleColor})` : 'none',
+                  filter: (isActive || (isMobile && hasAnimatedIn)) ? `drop-shadow(0 0 4px ${colors.particleColor})` : 'none',
                 }}
               />
               <Zap 
                 className={cn(
-                  "w-3 h-3 opacity-0 group-hover:opacity-100 transition-all duration-300",
+                  "w-3 h-3 transition-all duration-300",
                   "animate-pulse",
-                  colors.sparkle
+                  colors.sparkle,
+                  (isActive || (isMobile && hasAnimatedIn)) ? "opacity-100" : "opacity-0"
                 )} 
               />
             </div>
             {tooltip && <InfoTooltip content={tooltip} />}
           </div>
-          <p className="text-xs sm:text-sm text-muted-foreground line-clamp-2 group-hover:text-foreground/80 transition-colors duration-300">
+          <p className={cn(
+            "text-xs sm:text-sm text-muted-foreground line-clamp-2 transition-colors duration-300",
+            (isActive || (isMobile && hasAnimatedIn)) && "text-foreground/80"
+          )}>
             {description}
           </p>
         </div>
@@ -368,13 +425,19 @@ export function ModuleCard({
             colors.action
           )}
         >
-          <span className="group-hover:translate-x-1 transition-transform duration-300 whitespace-nowrap">
+          <span className={cn(
+            "transition-transform duration-300 whitespace-nowrap",
+            isActive && "translate-x-1"
+          )}>
             {actionText}
           </span>
           <span 
-            className="text-lg transition-all duration-300 group-hover:translate-x-2 group-hover:scale-125"
+            className={cn(
+              "text-lg transition-all duration-300",
+              isActive && "translate-x-2 scale-125"
+            )}
             style={{
-              filter: isHovered ? `drop-shadow(0 0 6px ${colors.particleColor})` : 'none',
+              filter: isActive ? `drop-shadow(0 0 6px ${colors.particleColor})` : 'none',
             }}
           >
             →
