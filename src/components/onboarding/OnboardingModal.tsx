@@ -43,7 +43,7 @@ const onboardingSteps: OnboardingStep[] = [
     icon: <Bell className="w-12 h-12" />,
     title: "🔔 Stay on Script",
     description: "Enable push notifications to receive daily reminders for your morning ritual, journaling prompts, and evening scorecard. Directors who use reminders are 3x more likely to build lasting habits.",
-    tip: "You'll get gentle nudges to watch your Mind Movie, complete your Three Things, and stay in character.",
+    tip: "You'll get gentle nudges to watch your Mind Movie, complete your Three Things, and stay in character. If notifications stop working, use 'Repair Push' in Settings.",
     action: "enable-notifications"
   },
   {
@@ -51,35 +51,42 @@ const onboardingSteps: OnboardingStep[] = [
     icon: <Target className="w-12 h-12" />,
     title: "⭐ Your Definite Chief Aim",
     description: "This is THE FOUNDATION of everything. Your Definite Chief Aim is a crystal-clear statement of what you want, when you'll achieve it, what you'll give in exchange, and your plan. Nothing else works without this.",
-    tip: "Click the gold 'Start Here: Definite Chief Aim' card on your dashboard. The AI will guide you through Napoleon Hill's proven 4-phase framework."
+    tip: "Click the animated gold 'Definite Chief Aim' module on your dashboard. The AI will guide you through Napoleon Hill's proven 4-phase framework."
   },
   {
-    id: "hero-character",
+    id: "character-builder",
     icon: <UserPlus className="w-12 h-12" />,
-    title: "Create Your Hero Character",
-    description: "Upload a reference photo and describe your 'best self' — height, weight, build, and features. AI generates hero images (front, side, back) that become YOUR identity in all visualizations.",
-    tip: "Go to Character Builder → Create tab. These hero images are used everywhere: Mind Movies, Challenge Storyboards, and more."
+    title: "Character Builder",
+    description: "Discover your Director archetype with our 28-question survey, then create your Hero Character — AI generates front, side, and back views that become YOUR identity in all visualizations.",
+    tip: "Your Character Builder is Step 2 on the dashboard. Hero images appear in Mind Movies, Challenge Storyboards, and all AI-generated content."
   },
   {
-    id: "mind-movie",
+    id: "soundtrack",
+    icon: <Music className="w-12 h-12" />,
+    title: "Soundtrack Studio",
+    description: "Create custom AI-generated soundtracks in 50+ genres with lyrics based on your Chief Aim. Your soundtrack becomes the audio identity of your transformation.",
+    tip: "Access Soundtrack Studio from the dashboard. Generate motivational tracks or tune into Director Radio for curated playlists."
+  },
+  {
+    id: "storyboard",
     icon: <Film className="w-12 h-12" />,
-    title: "Create Your Mind Movie",
-    description: "Bring your Chief Aim to life with AI-generated scenes and a custom soundtrack. Your Mind Movie is the visual representation of your goals that you'll watch daily.",
-    tip: "The Mind Movie Wizard uses your Chief Aim and Hero Character to auto-generate scenes featuring YOU."
+    title: "Storyboard & Mind Movie",
+    description: "The Mind Movie Wizard creates AI-generated scenes featuring YOU. Upload reference photos and watch as AI visualizes your Chief Aim in cinematic quality.",
+    tip: "Use the 5-step wizard to go from vision to finished Mind Movie. Your storyboard becomes the visual script of your transformation."
   },
   {
     id: "edit-bay",
     icon: <Palette className="w-12 h-12" />,
-    title: "The AI Studio",
-    description: "Generate powerful images and videos of your future self using AI. Your hero character images ensure visual consistency across all generated content.",
-    tip: "Use the Edit Bay for additional AI generations, Timeline Editor for video assembly, and Voice Changer for narration."
+    title: "Edit Bay & Timeline",
+    description: "A full AI production studio: generate images and videos, edit in the Timeline Editor with multi-track support, and export in up to 4K quality.",
+    tip: "Open the Edit Bay for AI generation, then use the Timeline tab for professional editing with razor cuts, audio fades, and VU meters."
   },
   {
     id: "daily-ritual",
     icon: <Calendar className="w-12 h-12" />,
-    title: "Daily Rituals",
-    description: "Each morning, read your Chief Aim, watch your Mind Movie, and set your Three Things. Each evening, complete your Director Scorecard. Consistency compounds.",
-    tip: "A 90-day viewing streak creates permanent neural pathways for your new identity."
+    title: "Daily Rituals & Score",
+    description: "Each morning, read your Chief Aim and watch your Mind Movie. Each evening, complete your Director Scorecard. Your Daily Rituals section tracks all four steps.",
+    tip: "A 90-day viewing streak creates permanent neural pathways for your new identity. Track progress with the animated ritual checklist."
   }
 ];
 
