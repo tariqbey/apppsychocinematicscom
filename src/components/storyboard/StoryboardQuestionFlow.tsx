@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { MessageSquare, Sparkles, Star, Zap, Heart, Mountain, Crown, Wand2, Loader2 } from "lucide-react";
+import { MessageSquare, Sparkles, Star, Zap, Heart, Mountain, Crown, Wand2, Loader2, User, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -15,6 +15,7 @@ interface StoryboardQuestionFlowProps {
   };
   onAnswersChange: (answers: Record<string, string>) => void;
   characterDescription?: string;
+  referencePhotoUrl?: string | null;
 }
 
 const QUESTIONS = [
@@ -60,7 +61,7 @@ const QUESTIONS = [
   },
 ];
 
-export function StoryboardQuestionFlow({ chiefAim, onAnswersChange, characterDescription }: StoryboardQuestionFlowProps) {
+export function StoryboardQuestionFlow({ chiefAim, onAnswersChange, characterDescription, referencePhotoUrl }: StoryboardQuestionFlowProps) {
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [expandedQuestion, setExpandedQuestion] = useState<string | null>("setting");
   const [generatingId, setGeneratingId] = useState<string | null>(null);
@@ -86,7 +87,7 @@ By When: ${chiefAim?.byWhen || "Within the next year"}
 Character: ${characterDescription || "A confident, successful individual"}
       `.trim();
 
-      const { data, error } = await supabase.functions.invoke('director-ai', {
+      const { data, error } = await supabase.functions.invoke('storyboard-ai', {
         body: {
           messages: [
             {
@@ -97,17 +98,18 @@ Character: ${characterDescription || "A confident, successful individual"}
               role: 'user',
               content: `${question.aiPrompt} based on this context:\n${context}\n\nQuestion: ${question.question}`
             }
-          ],
-          stream: false
+          ]
         }
       });
 
       if (error) throw error;
 
-      const content = data?.choices?.[0]?.message?.content || data?.content;
+      const content = data?.choices?.[0]?.message?.content;
       if (content) {
         updateAnswer(questionId, content.trim());
         toast.success("AI suggestion generated!");
+      } else {
+        throw new Error("No content returned");
       }
     } catch (error) {
       console.error("AI generation error:", error);
@@ -126,7 +128,7 @@ Character: ${characterDescription || "A confident, successful individual"}
 
     setImprovingId(questionId);
     try {
-      const { data, error } = await supabase.functions.invoke('director-ai', {
+      const { data, error } = await supabase.functions.invoke('storyboard-ai', {
         body: {
           messages: [
             {
@@ -137,17 +139,18 @@ Character: ${characterDescription || "A confident, successful individual"}
               role: 'user',
               content: `Improve this for a Mind Movie:\n\n"${currentAnswer}"\n\nMake it more cinematic and emotionally powerful.`
             }
-          ],
-          stream: false
+          ]
         }
       });
 
       if (error) throw error;
 
-      const content = data?.choices?.[0]?.message?.content || data?.content;
+      const content = data?.choices?.[0]?.message?.content;
       if (content) {
         updateAnswer(questionId, content.trim());
         toast.success("Your description has been enhanced!");
+      } else {
+        throw new Error("No content returned");
       }
     } catch (error) {
       console.error("AI improve error:", error);
@@ -173,25 +176,25 @@ Plan: ${chiefAim?.plan}
 Character: ${characterDescription || "The ideal, transformed self"}
       `.trim();
 
-      const { data, error } = await supabase.functions.invoke('director-ai', {
+      const { data, error } = await supabase.functions.invoke('storyboard-ai', {
         body: {
           messages: [
             {
               role: 'system',
-              content: `You are creating a Mind Movie visualization blueprint. Generate vivid, cinematic answers for ALL 5 questions. Return a JSON object with keys: setting, appearance, moments, emotions, symbols. Each value should be 50-80 words of evocative prose. No bullet points.`
+              content: `You are creating a Mind Movie visualization blueprint. Generate vivid, cinematic answers for ALL 5 questions. Return ONLY a JSON object with keys: setting, appearance, moments, emotions, symbols. Each value should be 50-80 words of evocative prose. No bullet points. Return ONLY valid JSON, no markdown.`
             },
             {
               role: 'user',
               content: `Create a complete Mind Movie visualization for:\n${context}\n\nReturn JSON with: setting, appearance, moments, emotions, symbols`
             }
           ],
-          stream: false
+          returnJson: true
         }
       });
 
       if (error) throw error;
 
-      const content = data?.choices?.[0]?.message?.content || data?.content;
+      const content = data?.choices?.[0]?.message?.content;
       if (content) {
         // Try to parse as JSON
         try {
@@ -206,12 +209,15 @@ Character: ${characterDescription || "The ideal, transformed self"}
             });
             setAnswers(prev => ({ ...prev, ...newAnswers }));
             toast.success("All questions auto-filled by AI!");
+          } else {
+            throw new Error("No JSON found");
           }
-        } catch {
-          // If JSON parsing fails, just set the first answer
-          updateAnswer("setting", content.trim());
-          toast.info("Generated initial content. Fill in the rest!");
+        } catch (parseErr) {
+          console.error("JSON parse error:", parseErr, content);
+          toast.error("AI returned unexpected format. Try individual questions.");
         }
+      } else {
+        throw new Error("No content returned");
       }
     } catch (error) {
       console.error("AI auto-fill error:", error);
@@ -223,6 +229,31 @@ Character: ${characterDescription || "The ideal, transformed self"}
 
   return (
     <div className="space-y-4">
+      {/* Character Reference Photo Indicator */}
+      {referencePhotoUrl && (
+        <div className="glass-card p-3 border-l-4 border-cyan-500 flex items-center gap-3">
+          <div className="relative w-12 h-12 rounded-lg overflow-hidden border-2 border-cyan-500/50 flex-shrink-0">
+            <img 
+              src={referencePhotoUrl} 
+              alt="Your character" 
+              className="w-full h-full object-cover"
+            />
+            <div className="absolute bottom-0 right-0 bg-green-500 rounded-full p-0.5">
+              <Check className="w-2 h-2 text-white" />
+            </div>
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2">
+              <User className="w-4 h-4 text-cyan-500" />
+              <span className="text-sm font-medium text-cyan-400">Your Character Loaded</span>
+            </div>
+            <p className="text-xs text-muted-foreground truncate">
+              This photo will appear in all generated scenes
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Chief Aim Preview */}
       {chiefAim?.what && (
         <div className="glass-card p-4 border-l-4 border-gold">
