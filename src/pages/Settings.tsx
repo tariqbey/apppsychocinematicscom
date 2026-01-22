@@ -12,6 +12,7 @@ import { Link } from "react-router-dom";
 import { format } from "date-fns";
 import { IntegrationsTab } from "@/components/settings/IntegrationsTab";
 import { NotificationSettings } from "@/components/notifications/NotificationSettings";
+import { PushDiagnosticsPanel } from "@/components/notifications/PushDiagnosticsPanel";
 import { AccessCodeRedemption } from "@/components/settings/AccessCodeRedemption";
 import { ReminderScheduler } from "@/components/notifications/ReminderScheduler";
 import { DirectorAIPreferences } from "@/components/settings/DirectorAIPreferences";
@@ -303,6 +304,8 @@ export default function Settings() {
               </Card>
 
               <ReminderScheduler />
+
+              <PushDiagnosticsPanel />
 
               <Card className="bg-card border-border">
                 <CardHeader>

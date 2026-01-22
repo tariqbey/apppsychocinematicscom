@@ -87,7 +87,7 @@ const tutorialSections: TutorialSection[] = [
       },
       {
         title: "Launch the AI Wizard",
-        content: "On your dashboard, click the gold 'Start Here: Definite Chief Aim' card. The AI-guided wizard walks you through Napoleon Hill's proven 4-phase framework with personalized coaching."
+        content: "On your dashboard, click the animated gold 'Definite Chief Aim' module. The AI-guided wizard walks you through Napoleon Hill's proven 4-phase framework with personalized coaching."
       },
       {
         title: "Phase 1: The Dream (What)",
@@ -107,7 +107,7 @@ const tutorialSections: TutorialSection[] = [
       },
       {
         title: "Review Daily",
-        content: "Your Chief Aim appears on your dashboard. Read it aloud every morning and evening as part of your ritual. This statement becomes the lyrics of your Mind Movie."
+        content: "Your Chief Aim appears in the Daily Rituals section. Read it aloud every morning and evening as part of your ritual. This statement becomes the lyrics of your Mind Movie."
       }
     ],
     tips: [
@@ -119,22 +119,56 @@ const tutorialSections: TutorialSection[] = [
     ]
   },
   {
+    id: "character-builder",
+    icon: <User className="w-6 h-6" />,
+    title: "Character Builder & Hero Creator",
+    description: "Step 2: Create your hero identity and discover your Director archetype",
+    steps: [
+      {
+        title: "Take the Archetype Survey",
+        content: "Complete the 28-question Napoleon Hill character assessment. Answer honestly — 'Shadow' options reveal growth areas. Your responses determine your dominant Director archetype."
+      },
+      {
+        title: "Understand Your Archetype",
+        content: "Discover which of the 12 Director archetypes you embody: Sovereign, Master Builder, Wayfinder, Alchemist, Divine Analyst, Truth Keeper, Sacred Judge, Protector, Harmonizer, Weaver, or Still Center."
+      },
+      {
+        title: "Create Your Hero Character",
+        content: "Go to Character Builder → Create tab. Upload a reference photo of yourself, then describe your 'best self' traits: height, weight, build, and distinguishing features. This data powers all AI-generated images."
+      },
+      {
+        title: "Generate Hero Images",
+        content: "Click 'Generate Hero Images' to create professional front, side, and back views. These become your standardized character identity used across Mind Movies, Challenge Storyboards, and all visualizations."
+      },
+      {
+        title: "Use the Character Scorecard",
+        content: "Track your character development daily. Rate yourself on key traits required for your Chief Aim and see your progress over time."
+      }
+    ],
+    tips: [
+      "Create your Hero Character BEFORE generating Mind Movies for consistent identity",
+      "Shadow answers reveal your biggest growth opportunities — don't avoid them",
+      "Your hero images appear in all AI-generated scenes featuring you",
+      "Retake the survey after major life changes to see how you've evolved"
+    ]
+  },
+  {
     id: "getting-started",
     icon: <Play className="w-6 h-6" />,
-    title: "Getting Started",
-    description: "Your first steps as a Director of your own life story",
+    title: "Getting Started & Notifications",
+    description: "Account setup and push notification configuration",
     steps: [
       {
         title: "Create Your Account",
         content: "Sign up with your email or Google account. You'll receive a 3-day free trial with 250 credits to explore all features."
       },
       {
-        title: "Complete Your Chief Aim FIRST",
-        content: "Before anything else, click the gold 'Start Here: Definite Chief Aim' card on your dashboard. This is THE foundation that everything else builds upon."
+        title: "Enable Push Notifications",
+        content: "Go to Settings → Preferences to enable push notifications. You'll receive morning ritual reminders, journal prompts, and evening scorecard check-ins."
       },
       {
-        title: "Explore the Dashboard",
-        content: "Your dashboard is mission control. Once your Chief Aim is set, you'll see it displayed prominently along with daily tasks, streak progress, and access to all studio tools."
+        title: "Push Diagnostics (iOS)",
+        content: "If notifications stop working on iOS, use the 'Push Diagnostics' panel in Settings → Preferences. The 'Repair Push' button re-registers your device with a fresh subscription."
       },
       {
         title: "Connect Integrations",
@@ -142,8 +176,8 @@ const tutorialSections: TutorialSection[] = [
       }
     ],
     tips: [
-      "Your Chief Aim must be defined before you can create effective Mind Movies",
-      "Enable notifications to stay on track with your daily rituals",
+      "iOS users must install the app to Home Screen for push notifications to work",
+      "Use 'Repair Push' if test notifications don't arrive on your device",
       "Connect Notion to automatically sync your journal and scorecards"
     ]
   },
