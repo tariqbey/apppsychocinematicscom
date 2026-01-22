@@ -89,13 +89,24 @@ serve(async (req) => {
       
       // Create a comprehensive cinematic prompt with detailed camera specifications
       // Build aspect ratio instruction
-      const ratioInstruction = aspect_ratio ? `Use a ${aspect_ratio} aspect ratio (IMPORTANT: generate at exactly this aspect ratio).` : "Use a cinematic 16:9 aspect ratio.";
+      // Build explicit dimension requirements
+      const dimensionMap: Record<string, string> = {
+        "16:9": "1920x1080 pixels (WIDE LANDSCAPE)",
+        "9:16": "1080x1920 pixels (TALL PORTRAIT)", 
+        "4:3": "1440x1080 pixels (STANDARD)",
+        "1:1": "1024x1024 pixels (SQUARE)"
+      };
+      const targetDimension = aspect_ratio ? dimensionMap[aspect_ratio] : dimensionMap["16:9"];
       
-      let enhancedPrompt = `Generate a completely new CINEMATIC IMAGE for the following scene. 
+      let enhancedPrompt = `Generate a completely new CINEMATIC IMAGE.
+
+**MANDATORY ASPECT RATIO: ${aspect_ratio || "16:9"}**
+**TARGET DIMENSIONS: ${targetDimension}**
+The output image MUST be ${aspect_ratio === "16:9" || aspect_ratio === "4:3" ? "WIDER than it is tall (landscape orientation)" : aspect_ratio === "9:16" ? "TALLER than it is wide (portrait orientation)" : "a perfect square"}.
 
 CRITICAL REQUIREMENTS:
 1. The main character MUST look exactly like the person in the reference photo - same face, same features, same identity
-2. ${ratioInstruction}
+2. The image dimensions MUST match the specified aspect ratio
 
 SCENE TO GENERATE:
 ${prompt}
@@ -116,25 +127,60 @@ PRODUCTION QUALITY:
         }
       ];
     } else {
-      // Build aspect ratio instruction
-      const ratioInstruction = aspect_ratio ? `Use a ${aspect_ratio} aspect ratio (IMPORTANT: generate at exactly this aspect ratio).` : "Use a cinematic 16:9 aspect ratio.";
+      // Build explicit dimension requirements for create mode
+      const dimensionMapCreate: Record<string, string> = {
+        "16:9": "1920x1080 pixels (WIDE LANDSCAPE)",
+        "9:16": "1080x1920 pixels (TALL PORTRAIT)", 
+        "4:3": "1440x1080 pixels (STANDARD)",
+        "1:1": "1024x1024 pixels (SQUARE)"
+      };
+      const targetDimensionCreate = aspect_ratio ? dimensionMapCreate[aspect_ratio] : dimensionMapCreate["16:9"];
       
       // For image creation without reference: comprehensive cinematic prompt
       let enhancedPrompt = `Generate a CINEMATIC IMAGE with the following specifications:
+
+**MANDATORY ASPECT RATIO: ${aspect_ratio || "16:9"}**
+**TARGET DIMENSIONS: ${targetDimensionCreate}**
+The output image MUST be ${aspect_ratio === "16:9" || aspect_ratio === "4:3" ? "WIDER than it is tall (landscape orientation)" : aspect_ratio === "9:16" ? "TALLER than it is wide (portrait orientation)" : "a perfect square"}.
 
 SCENE DESCRIPTION:
 ${prompt}
 
 REQUIREMENTS:
-- ${ratioInstruction}
+- The image dimensions MUST strictly match ${aspect_ratio || "16:9"} aspect ratio
 - Professional cinematography with volumetric lighting
 - Shallow depth of field, creamy bokeh
 - Natural film grain, Hollywood-grade color grading`;
       messageContent = [{ type: "text", text: enhancedPrompt }];
     }
 
+    // Map aspect ratio to pixel dimensions for stricter enforcement
+    const getAspectDimensions = (ratio: string | undefined): { width: number; height: number } | null => {
+      switch (ratio) {
+        case "16:9": return { width: 1920, height: 1080 };
+        case "9:16": return { width: 1080, height: 1920 };
+        case "4:3": return { width: 1440, height: 1080 };
+        case "1:1": return { width: 1024, height: 1024 };
+        default: return null;
+      }
+    };
+
+    const dimensions = getAspectDimensions(aspect_ratio);
+    const dimensionInstruction = dimensions 
+      ? `OUTPUT DIMENSIONS: Generate the image at exactly ${dimensions.width}x${dimensions.height} pixels (${aspect_ratio} aspect ratio). This is a strict requirement.`
+      : "";
+
     // Helper to make the API call
-    const callImageAPI = async (content: any[]) => {
+    const callImageAPI = async (content: any[], enforceAspect = true) => {
+      // Prepend dimension instruction to the first text block if aspect ratio specified
+      let finalContent = content;
+      if (enforceAspect && dimensions && content.length > 0 && content[0].type === "text") {
+        finalContent = [
+          { type: "text", text: `${dimensionInstruction}\n\n${content[0].text}` },
+          ...content.slice(1)
+        ];
+      }
+      
       const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
         method: "POST",
         headers: {
@@ -143,7 +189,7 @@ REQUIREMENTS:
         },
         body: JSON.stringify({
           model: "google/gemini-2.5-flash-image-preview",
-          messages: [{ role: "user", content }],
+          messages: [{ role: "user", content: finalContent }],
           modalities: ["image", "text"]
         }),
       });
