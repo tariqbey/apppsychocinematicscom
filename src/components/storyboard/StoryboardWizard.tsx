@@ -71,7 +71,7 @@ const VISUAL_STYLES = [
 export function StoryboardWizard({ isOpen, onClose, onAddToTimeline, chiefAim }: StoryboardWizardProps) {
   const { user } = useAuth();
   const { profile } = useUserProfile();
-  const { referencePhotoUrl, isLoading: loadingRef } = useGlobalReferencePhoto();
+  const { referencePhotoUrl, isLoading: loadingRef, fetchReferencePhoto } = useGlobalReferencePhoto();
   const { generateStoryboard, saveScript, isGenerating, currentScript, setCurrentScript } = useMindMovieScript();
   const { generateImage, generateVideo, isGeneratingImage, isGeneratingVideo } = useMediaGeneration();
 
@@ -95,7 +95,7 @@ export function StoryboardWizard({ isOpen, onClose, onAddToTimeline, chiefAim }:
 
   const sceneCount = Math.ceil(targetDuration / 8);
 
-  // Reset state when dialog closes
+  // Reset state when dialog closes, fetch reference photo when opens
   useEffect(() => {
     if (!isOpen) {
       setStep("setup");
@@ -105,8 +105,11 @@ export function StoryboardWizard({ isOpen, onClose, onAddToTimeline, chiefAim }:
       setScriptInput("");
       setElements([]);
       setCurrentScript(null);
+    } else {
+      // Fetch reference photo when wizard opens
+      fetchReferencePhoto();
     }
-  }, [isOpen, setCurrentScript]);
+  }, [isOpen, setCurrentScript, fetchReferencePhoto]);
 
   // Auto-add main character from reference photo
   useEffect(() => {
@@ -476,7 +479,8 @@ export function StoryboardWizard({ isOpen, onClose, onAddToTimeline, chiefAim }:
                       <StoryboardQuestionFlow
                         chiefAim={chiefAim}
                         onAnswersChange={setVisionAnswers}
-                        characterDescription={profile?.display_name ? `${profile.display_name} - the protagonist and ideal self` : undefined}
+                        characterDescription={profile?.director_character_name || profile?.display_name ? `${profile?.director_character_name || profile?.display_name || 'Main Character'} - the protagonist and ideal self` : undefined}
+                        referencePhotoUrl={referencePhotoUrl}
                       />
                     ) : (
                       <StoryboardScriptInput
