@@ -926,14 +926,40 @@ export function StoryboardWizard({ isOpen, onClose, onAddToTimeline, chiefAim }:
                         )}
                       </Button>
                       {storyboardReferencePhotoUrl && (
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => persistStoryboardReferencePhoto(null)}
-                          disabled={isUploadingStoryboardRef}
-                        >
-                          Use default
-                        </Button>
+                        <>
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            onClick={async () => {
+                              // Save storyboard reference as global default
+                              if (!user || !storyboardReferencePhotoUrl) return;
+                              try {
+                                const { error } = await supabase
+                                  .from("user_profiles")
+                                  .update({ 
+                                    reference_photo_url: storyboardReferencePhotoUrl,
+                                    updated_at: new Date().toISOString()
+                                  })
+                                  .eq("user_id", user.id);
+                                if (error) throw error;
+                                toast.success("Set as your default reference photo for all future generations");
+                              } catch (error) {
+                                toast.error("Failed to set as default");
+                              }
+                            }}
+                            disabled={isUploadingStoryboardRef}
+                          >
+                            Set as Default
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => persistStoryboardReferencePhoto(null)}
+                            disabled={isUploadingStoryboardRef}
+                          >
+                            Use default
+                          </Button>
+                        </>
                       )}
                     </div>
                   </div>

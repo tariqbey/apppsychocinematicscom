@@ -104,6 +104,8 @@ export function MediaLibrary({ filter = "all", onSelect, onAddToTimeline, onAddM
     }
   };
 
+  const [isDeletingBatch, setIsDeletingBatch] = useState(false);
+
   const handleDelete = async (media: GeneratedMedia, e?: React.MouseEvent) => {
     e?.stopPropagation();
     setIsDeleting(media.id);
@@ -237,6 +239,43 @@ export function MediaLibrary({ filter = "all", onSelect, onAddToTimeline, onAddM
       clearSelection();
     } else {
       setSelectedIds(new Set(completedMedia.map(m => m.id)));
+    }
+  };
+
+  // Batch delete selected items
+  const handleBatchDelete = async () => {
+    if (selectedIds.size === 0) return;
+    
+    const confirmed = window.confirm(`Delete ${selectedIds.size} item(s)? This cannot be undone.`);
+    if (!confirmed) return;
+    
+    setIsDeletingBatch(true);
+    try {
+      const idsToDelete = Array.from(selectedIds);
+      
+      const { error } = await supabase
+        .from("generated_media")
+        .delete()
+        .in("id", idsToDelete);
+
+      if (error) throw error;
+
+      setHistory((prev) => prev.filter((item) => !selectedIds.has(item.id)));
+      clearSelection();
+      calculateUsage();
+      
+      toast({
+        title: "Deleted",
+        description: `${idsToDelete.length} item(s) removed from library.`,
+      });
+    } catch (error) {
+      toast({
+        title: "Delete failed",
+        description: "Unable to delete some files.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeletingBatch(false);
     }
   };
 
@@ -474,6 +513,22 @@ export function MediaLibrary({ filter = "all", onSelect, onAddToTimeline, onAddM
               >
                 <Plus className="h-3 w-3" />
                 Add {selectedIds.size} to Timeline
+              </Button>
+            )}
+            {selectedIds.size > 0 && (
+              <Button
+                size="sm"
+                variant="destructive"
+                className="h-7 text-xs gap-1"
+                onClick={handleBatchDelete}
+                disabled={isDeletingBatch}
+              >
+                {isDeletingBatch ? (
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                ) : (
+                  <Trash2 className="h-3 w-3" />
+                )}
+                Delete {selectedIds.size}
               </Button>
             )}
             {selectedIds.size > 0 && (

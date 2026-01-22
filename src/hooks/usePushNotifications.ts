@@ -330,35 +330,86 @@ export function usePushNotifications() {
 
   // Re-register device (force new subscription)
   const reRegisterDevice = useCallback(async () => {
-    if (!user) return false;
+    if (!user) {
+      toast({
+        title: "Not logged in",
+        description: "Please sign in to enable notifications.",
+        variant: "destructive"
+      });
+      return false;
+    }
     
     setState(prev => ({ ...prev, isLoading: true }));
     
     try {
-      // Force unregister all service workers and re-register
+      console.log('[Push] Starting device re-registration...');
+      
+      // 1. First, remove existing subscriptions from DB for this user (clean slate)
+      const { error: deleteError } = await supabase
+        .from('push_subscriptions')
+        .delete()
+        .eq('user_id', user.id);
+      
+      if (deleteError) {
+        console.warn('[Push] Could not clean old subscriptions:', deleteError);
+      } else {
+        console.log('[Push] Cleaned old subscriptions from DB');
+      }
+      
+      // 2. Unregister ALL service workers
       const registrations = await navigator.serviceWorker.getRegistrations();
       for (const reg of registrations) {
         console.log('[Push] Unregistering SW:', reg.active?.scriptURL);
+        // Also unsubscribe from push if possible
+        try {
+          const sub = await reg.pushManager.getSubscription();
+          if (sub) {
+            await sub.unsubscribe();
+            console.log('[Push] Unsubscribed from push on old SW');
+          }
+        } catch (e) {
+          console.warn('[Push] Could not unsubscribe from old SW:', e);
+        }
         await reg.unregister();
       }
       
-      // Wait a moment
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // 3. Wait for cleanup
+      await new Promise(resolve => setTimeout(resolve, 800));
       
-      // Register fresh SW
+      // 4. Register fresh SW with cache bust
+      console.log('[Push] Registering fresh service worker...');
       const newReg = await navigator.serviceWorker.register('/sw.js?v=' + Date.now(), { scope: '/' });
-      console.log('[Push] Fresh SW registered');
       
-      // Wait for activation
-      await navigator.serviceWorker.ready;
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // 5. Wait for activation
+      await new Promise<void>((resolve) => {
+        if (newReg.active) {
+          resolve();
+        } else {
+          const sw = newReg.installing || newReg.waiting;
+          if (sw) {
+            sw.addEventListener('statechange', function listener() {
+              if (sw.state === 'activated') {
+                sw.removeEventListener('statechange', listener);
+                resolve();
+              }
+            });
+          } else {
+            resolve();
+          }
+        }
+      });
       
-      // Now subscribe
+      console.log('[Push] Fresh SW activated:', newReg.active?.scriptURL);
+      
+      // 6. Small delay to ensure browser is ready
+      await new Promise(resolve => setTimeout(resolve, 300));
+      
+      // 7. Now subscribe
       await subscribe();
       
       toast({
         title: "Device Re-registered",
-        description: "Push notifications should now work on this device.",
+        description: "Push notifications should now work. Test it!",
       });
       
       return true;
@@ -429,16 +480,43 @@ export function usePushNotifications() {
 
   // Send test notification to THIS device only
   const sendTestNotification = useCallback(async () => {
-    if (!user || !state.currentEndpoint) {
+    if (!user) {
       toast({
         title: "Cannot Send Test",
-        description: state.currentEndpoint ? "Not logged in" : "No subscription found. Enable notifications first.",
+        description: "Not logged in",
+        variant: "destructive"
+      });
+      return false;
+    }
+
+    // If we don't have the current endpoint in state, try to get it
+    let endpoint = state.currentEndpoint;
+    if (!endpoint) {
+      console.log('[Push] No endpoint in state, checking subscription...');
+      try {
+        const registration = await navigator.serviceWorker.getRegistration('/');
+        if (registration) {
+          const subscription = await registration.pushManager.getSubscription();
+          endpoint = subscription?.endpoint || null;
+          console.log('[Push] Found endpoint from browser:', endpoint?.substring(0, 50));
+        }
+      } catch (e) {
+        console.warn('[Push] Could not check subscription:', e);
+      }
+    }
+
+    if (!endpoint) {
+      toast({
+        title: "No Subscription",
+        description: "Enable notifications first, or try 'Repair Push'.",
         variant: "destructive"
       });
       return false;
     }
 
     try {
+      console.log('[Push] Sending test to endpoint:', endpoint.substring(0, 50) + '...');
+      
       const { data, error } = await supabase.functions.invoke('send-push-notification', {
         body: {
           user_id: user.id,
@@ -447,7 +525,7 @@ export function usePushNotifications() {
             body: 'Push notifications are working on this device!',
             url: '/'
           },
-          targetEndpoint: state.currentEndpoint
+          targetEndpoint: endpoint
         }
       });
 
@@ -455,20 +533,35 @@ export function usePushNotifications() {
         console.error('[Push] Test notification error:', error);
         toast({
           title: "Test Failed",
-          description: error.message,
+          description: error.message || "Edge function error",
           variant: "destructive"
         });
         return false;
       }
 
       console.log('[Push] Test notification response:', data);
+      
+      if (data?.sent === 0) {
+        toast({
+          title: "Subscription Not Found",
+          description: data.errors?.[0] || "No matching subscription in database. Try 'Repair Push'.",
+          variant: "destructive"
+        });
+        return false;
+      }
+      
       toast({
         title: "Test Sent",
-        description: "Check for the notification on this device."
+        description: `Notification sent! Check your device. (${data?.sent || 0} delivered)`
       });
       return true;
     } catch (error) {
       console.error('[Push] Test notification error:', error);
+      toast({
+        title: "Test Failed",
+        description: error instanceof Error ? error.message : "Unknown error",
+        variant: "destructive"
+      });
       return false;
     }
   }, [user, state.currentEndpoint, toast]);
