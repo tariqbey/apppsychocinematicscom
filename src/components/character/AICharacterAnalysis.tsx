@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -16,14 +17,27 @@ import {
   Loader2,
   ChevronRight,
   Activity,
-  Eye
+  Eye,
+  Save,
+  BookOpen,
+  Archive,
+  Trash2,
+  Calendar
 } from "lucide-react";
+import { format } from "date-fns";
+
+interface NapoleonHillLaw {
+  lawNumber: number;
+  lawName: string;
+  application: string;
+}
 
 interface CharacterAnalysis {
   assessment: string;
   strengths: string[];
   growthEdges: string[];
   patterns: string[];
+  napoleonHillPrescription?: NapoleonHillLaw[];
   directorsNote: string;
   nextScene: string;
   overallScore: number;
@@ -41,15 +55,63 @@ interface AnalysisData {
     journalEntries: number;
     recentMoods: string[];
   };
+  napoleonHillLaws?: Array<{ lawNumber: number; name: string; application: string; quote: string }>;
+  chiefAimSnapshot?: {
+    what: string;
+    byWhen: string;
+    exchange: string;
+    plan: string;
+  };
   generatedAt: string;
+}
+
+interface SavedAnalysis {
+  id: string;
+  created_at: string;
+  analysis: CharacterAnalysis;
+  metrics: AnalysisData['metrics'];
+  napoleon_hill_laws: AnalysisData['napoleonHillLaws'];
+  chief_aim_snapshot: AnalysisData['chiefAimSnapshot'];
 }
 
 export function AICharacterAnalysis() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [data, setData] = useState<AnalysisData | null>(null);
   const [expanded, setExpanded] = useState(false);
+  const [showArchive, setShowArchive] = useState(false);
+  const [savedAnalyses, setSavedAnalyses] = useState<SavedAnalysis[]>([]);
+  const [loadingArchive, setLoadingArchive] = useState(false);
+
+  // Fetch saved analyses on mount
+  useEffect(() => {
+    if (user) {
+      fetchSavedAnalyses();
+    }
+  }, [user]);
+
+  const fetchSavedAnalyses = async () => {
+    if (!user) return;
+    
+    setLoadingArchive(true);
+    try {
+      const { data: analyses, error } = await supabase
+        .from('saved_character_analyses' as any)
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(20);
+      
+      if (error) throw error;
+      setSavedAnalyses((analyses || []) as unknown as SavedAnalysis[]);
+    } catch (error) {
+      console.error('Error fetching saved analyses:', error);
+    } finally {
+      setLoadingArchive(false);
+    }
+  };
 
   const generateAnalysis = async () => {
     if (!user) return;
@@ -65,7 +127,7 @@ export function AICharacterAnalysis() {
       
       toast({
         title: "Analysis Complete",
-        description: "Your Director AI has analyzed your character data.",
+        description: "Your Director AI has analyzed your character data with Napoleon Hill guidance.",
       });
     } catch (error) {
       console.error('Error generating analysis:', error);
@@ -77,6 +139,81 @@ export function AICharacterAnalysis() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const saveAnalysis = async () => {
+    if (!user || !data) return;
+    
+    setSaving(true);
+    try {
+      const { error } = await supabase
+        .from('saved_character_analyses' as any)
+        .insert({
+          user_id: user.id,
+          analysis: data.analysis,
+          metrics: data.metrics,
+          napoleon_hill_laws: data.napoleonHillLaws,
+          chief_aim_snapshot: data.chiefAimSnapshot
+        });
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Analysis Saved",
+        description: "Your character analysis has been saved to your archive.",
+      });
+      
+      fetchSavedAnalyses();
+    } catch (error) {
+      console.error('Error saving analysis:', error);
+      toast({
+        title: "Save Failed",
+        description: "Could not save the analysis. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const deleteAnalysis = async (id: string) => {
+    if (!user) return;
+    
+    try {
+      const { error } = await supabase
+        .from('saved_character_analyses' as any)
+        .delete()
+        .eq('id', id)
+        .eq('user_id', user.id);
+      
+      if (error) throw error;
+      
+      setSavedAnalyses(prev => prev.filter(a => a.id !== id));
+      
+      toast({
+        title: "Analysis Deleted",
+        description: "The saved analysis has been removed.",
+      });
+    } catch (error) {
+      console.error('Error deleting analysis:', error);
+      toast({
+        title: "Delete Failed",
+        description: "Could not delete the analysis.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const loadSavedAnalysis = (saved: SavedAnalysis) => {
+    setData({
+      analysis: saved.analysis,
+      metrics: saved.metrics,
+      napoleonHillLaws: saved.napoleon_hill_laws,
+      chiefAimSnapshot: saved.chief_aim_snapshot,
+      generatedAt: saved.created_at
+    });
+    setExpanded(true);
+    setShowArchive(false);
   };
 
   const getScoreColor = (score: number) => {
@@ -95,227 +232,376 @@ export function AICharacterAnalysis() {
 
   return (
     <div className="space-y-4">
-      {/* Generate Button */}
-      {!data && (
-        <Card className="bg-gradient-to-br from-purple-500/10 via-background to-gold/5 border-purple-500/30 overflow-hidden">
-          <CardContent className="p-6 text-center">
-            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-br from-purple-500/30 to-gold/30 flex items-center justify-center animate-pulse">
-              <Brain className="w-8 h-8 text-purple-400" />
-            </div>
-            <h3 className="text-xl font-display text-gold mb-2">Director AI Analysis</h3>
-            <p className="text-muted-foreground mb-4 text-sm">
-              Get an AI-powered breakdown of your character transformation progress based on your actions, journals, and scorecards.
-            </p>
-            <Button
-              onClick={generateAnalysis}
-              disabled={loading}
-              className="bg-gradient-to-r from-purple-600 to-gold hover:from-purple-700 hover:to-amber-600"
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Analyzing...
-                </>
-              ) : (
-                <>
-                  <Sparkles className="w-4 h-4 mr-2" />
-                  Generate Analysis
-                </>
-              )}
-            </Button>
+      {/* Archive Toggle */}
+      <div className="flex gap-2">
+        <Button
+          variant={showArchive ? "outline" : "default"}
+          size="sm"
+          onClick={() => setShowArchive(false)}
+          className={!showArchive ? "bg-gold hover:bg-gold/90 text-black" : ""}
+        >
+          <Brain className="w-4 h-4 mr-2" />
+          Analysis
+        </Button>
+        <Button
+          variant={showArchive ? "default" : "outline"}
+          size="sm"
+          onClick={() => setShowArchive(true)}
+          className={showArchive ? "bg-gold hover:bg-gold/90 text-black" : ""}
+        >
+          <Archive className="w-4 h-4 mr-2" />
+          Saved ({savedAnalyses.length})
+        </Button>
+      </div>
+
+      {/* Archive View */}
+      {showArchive && (
+        <Card className="bg-card/50 border-border">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Archive className="w-5 h-5 text-gold" />
+              Saved Analyses
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {loadingArchive ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+              </div>
+            ) : savedAnalyses.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <Archive className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                <p>No saved analyses yet.</p>
+                <p className="text-sm">Generate an analysis and save it to track your progress over time.</p>
+              </div>
+            ) : (
+              <ScrollArea className="h-[400px]">
+                <div className="space-y-3">
+                  {savedAnalyses.map((saved) => (
+                    <div
+                      key={saved.id}
+                      className="p-4 rounded-lg border border-border hover:border-gold/50 transition-colors bg-background/50"
+                    >
+                      <div className="flex items-start justify-between mb-2">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <Badge className={`${getScoreColor(saved.analysis.overallScore)} bg-current/10 border-current/30`}>
+                              {saved.analysis.overallScore}/100
+                            </Badge>
+                            <span className="text-xs text-muted-foreground">
+                              {getScoreLabel(saved.analysis.overallScore)}
+                            </span>
+                          </div>
+                          <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
+                            <Calendar className="w-3 h-3" />
+                            {format(new Date(saved.created_at), 'MMM d, yyyy h:mm a')}
+                          </p>
+                        </div>
+                        <div className="flex gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => loadSavedAnalysis(saved)}
+                            className="text-gold hover:text-gold/80"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => deleteAnalysis(saved.id)}
+                            className="text-red-400 hover:text-red-300"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </div>
+                      <p className="text-sm line-clamp-2">{saved.analysis.assessment}</p>
+                      {saved.napoleon_hill_laws && saved.napoleon_hill_laws.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-2">
+                          {saved.napoleon_hill_laws.slice(0, 3).map((law, i) => (
+                            <Badge key={i} variant="outline" className="text-xs border-purple-500/30 text-purple-400">
+                              Law #{law.lawNumber}
+                            </Badge>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </ScrollArea>
+            )}
           </CardContent>
         </Card>
       )}
 
-      {/* Analysis Results */}
-      {data && (
-        <div className="space-y-4 animate-fade-in">
-          {/* Overall Score Card */}
-          <Card className="bg-gradient-to-br from-gold/10 via-background to-purple-500/5 border-gold/30 overflow-hidden relative">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-gold/20 to-transparent rounded-bl-full" />
-            <CardHeader className="pb-2">
-              <div className="flex items-center justify-between">
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <Activity className="w-5 h-5 text-gold" />
-                  Character Score
-                </CardTitle>
+      {/* Main Analysis View */}
+      {!showArchive && (
+        <>
+          {/* Generate Button */}
+          {!data && (
+            <Card className="bg-gradient-to-br from-purple-500/10 via-background to-gold/5 border-purple-500/30 overflow-hidden">
+              <CardContent className="p-6 text-center">
+                <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-br from-purple-500/30 to-gold/30 flex items-center justify-center animate-pulse">
+                  <Brain className="w-8 h-8 text-purple-400" />
+                </div>
+                <h3 className="text-xl font-display text-gold mb-2">Director AI Analysis</h3>
+                <p className="text-muted-foreground mb-4 text-sm">
+                  Get an AI-powered breakdown of your character transformation with Napoleon Hill's Laws of Success guidance.
+                </p>
                 <Button
-                  variant="ghost"
-                  size="sm"
                   onClick={generateAnalysis}
                   disabled={loading}
-                  className="text-muted-foreground hover:text-gold"
+                  className="bg-gradient-to-r from-purple-600 to-gold hover:from-purple-700 hover:to-amber-600"
                 >
-                  <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+                  {loading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Analyzing...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-4 h-4 mr-2" />
+                      Generate Analysis
+                    </>
+                  )}
                 </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center gap-6">
-                <div className="relative">
-                  <svg className="w-24 h-24 transform -rotate-90">
-                    <circle
-                      cx="48"
-                      cy="48"
-                      r="40"
-                      stroke="currentColor"
-                      strokeWidth="8"
-                      fill="transparent"
-                      className="text-muted/30"
-                    />
-                    <circle
-                      cx="48"
-                      cy="48"
-                      r="40"
-                      stroke="url(#scoreGradient)"
-                      strokeWidth="8"
-                      fill="transparent"
-                      strokeDasharray={`${(data.analysis.overallScore / 100) * 251.2} 251.2`}
-                      strokeLinecap="round"
-                      className="transition-all duration-1000"
-                    />
-                    <defs>
-                      <linearGradient id="scoreGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                        <stop offset="0%" stopColor="hsl(var(--gold))" />
-                        <stop offset="100%" stopColor="#9333ea" />
-                      </linearGradient>
-                    </defs>
-                  </svg>
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <span className={`text-2xl font-bold ${getScoreColor(data.analysis.overallScore)}`}>
-                      {data.analysis.overallScore}
-                    </span>
-                  </div>
-                </div>
-                <div className="flex-1">
-                  <Badge className={`mb-2 ${getScoreColor(data.analysis.overallScore)} bg-current/10 border-current/30`}>
-                    {getScoreLabel(data.analysis.overallScore)}
-                  </Badge>
-                  <p className="text-sm text-muted-foreground">{data.analysis.assessment}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Quick Metrics */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <Card className="bg-card/50 border-border hover:border-gold/30 transition-colors">
-              <CardContent className="p-3 text-center">
-                <p className="text-xl font-bold text-gold">{data.metrics.taskCompletionRate}%</p>
-                <p className="text-xs text-muted-foreground">Task Rate</p>
               </CardContent>
             </Card>
-            <Card className="bg-card/50 border-border hover:border-gold/30 transition-colors">
-              <CardContent className="p-3 text-center">
-                <p className="text-xl font-bold text-foreground">{data.metrics.avgScorecardScore}/12</p>
-                <p className="text-xs text-muted-foreground">Avg Score</p>
-              </CardContent>
-            </Card>
-            <Card className="bg-card/50 border-border hover:border-gold/30 transition-colors">
-              <CardContent className="p-3 text-center">
-                <p className="text-xl font-bold text-green-400">{data.metrics.completedChallenges}</p>
-                <p className="text-xs text-muted-foreground">Challenges Won</p>
-              </CardContent>
-            </Card>
-            <Card className="bg-card/50 border-border hover:border-gold/30 transition-colors">
-              <CardContent className="p-3 text-center">
-                <p className="text-xl font-bold text-red-400">{data.metrics.cutChallenges}</p>
-                <p className="text-xs text-muted-foreground">Cuts Called</p>
-              </CardContent>
-            </Card>
-          </div>
+          )}
 
-          {/* Expandable Sections */}
-          <Card className="bg-card/50 border-border">
-            <CardHeader 
-              className="cursor-pointer hover:bg-muted/50 transition-colors"
-              onClick={() => setExpanded(!expanded)}
-            >
-              <CardTitle className="flex items-center justify-between text-base">
-                <span className="flex items-center gap-2">
-                  <Eye className="w-5 h-5 text-gold" />
-                  Full Analysis
-                </span>
-                <ChevronRight className={`w-5 h-5 transition-transform ${expanded ? 'rotate-90' : ''}`} />
-              </CardTitle>
-            </CardHeader>
-            
-            {expanded && (
-              <CardContent className="space-y-6 pt-0 animate-fade-in">
-                {/* Strengths */}
-                <div>
-                  <h4 className="flex items-center gap-2 text-sm font-semibold text-green-400 mb-3">
-                    <TrendingUp className="w-4 h-4" />
-                    Strengths Spotlight
-                  </h4>
-                  <div className="space-y-2">
-                    {data.analysis.strengths.map((strength, i) => (
-                      <div key={i} className="flex items-start gap-2 text-sm">
-                        <Sparkles className="w-4 h-4 text-green-400 shrink-0 mt-0.5" />
-                        <span>{strength}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Growth Edges */}
-                <div>
-                  <h4 className="flex items-center gap-2 text-sm font-semibold text-amber-500 mb-3">
-                    <AlertTriangle className="w-4 h-4" />
-                    Growth Edges
-                  </h4>
-                  <div className="space-y-2">
-                    {data.analysis.growthEdges.map((edge, i) => (
-                      <div key={i} className="flex items-start gap-2 text-sm">
-                        <Zap className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
-                        <span>{edge}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Patterns */}
-                {data.analysis.patterns.length > 0 && (
-                  <div>
-                    <h4 className="flex items-center gap-2 text-sm font-semibold text-purple-400 mb-3">
-                      <Brain className="w-4 h-4" />
-                      Pattern Recognition
-                    </h4>
-                    <div className="flex flex-wrap gap-2">
-                      {data.analysis.patterns.map((pattern, i) => (
-                        <Badge key={i} variant="outline" className="border-purple-500/30 text-purple-400">
-                          {pattern}
-                        </Badge>
-                      ))}
+          {/* Analysis Results */}
+          {data && (
+            <div className="space-y-4 animate-fade-in">
+              {/* Overall Score Card */}
+              <Card className="bg-gradient-to-br from-gold/10 via-background to-purple-500/5 border-gold/30 overflow-hidden relative">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-gold/20 to-transparent rounded-bl-full" />
+                <CardHeader className="pb-2">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="flex items-center gap-2 text-base">
+                      <Activity className="w-5 h-5 text-gold" />
+                      Character Score
+                    </CardTitle>
+                    <div className="flex gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={saveAnalysis}
+                        disabled={saving}
+                        className="text-muted-foreground hover:text-gold"
+                        title="Save to Archive"
+                      >
+                        {saving ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <Save className="w-4 h-4" />
+                        )}
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={generateAnalysis}
+                        disabled={loading}
+                        className="text-muted-foreground hover:text-gold"
+                      >
+                        <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+                      </Button>
                     </div>
                   </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center gap-6">
+                    <div className="relative">
+                      <svg className="w-24 h-24 transform -rotate-90">
+                        <circle
+                          cx="48"
+                          cy="48"
+                          r="40"
+                          stroke="currentColor"
+                          strokeWidth="8"
+                          fill="transparent"
+                          className="text-muted/30"
+                        />
+                        <circle
+                          cx="48"
+                          cy="48"
+                          r="40"
+                          stroke="url(#scoreGradient)"
+                          strokeWidth="8"
+                          fill="transparent"
+                          strokeDasharray={`${(data.analysis.overallScore / 100) * 251.2} 251.2`}
+                          strokeLinecap="round"
+                          className="transition-all duration-1000"
+                        />
+                        <defs>
+                          <linearGradient id="scoreGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                            <stop offset="0%" stopColor="hsl(var(--gold))" />
+                            <stop offset="100%" stopColor="#9333ea" />
+                          </linearGradient>
+                        </defs>
+                      </svg>
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <span className={`text-2xl font-bold ${getScoreColor(data.analysis.overallScore)}`}>
+                          {data.analysis.overallScore}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex-1">
+                      <Badge className={`mb-2 ${getScoreColor(data.analysis.overallScore)} bg-current/10 border-current/30`}>
+                        {getScoreLabel(data.analysis.overallScore)}
+                      </Badge>
+                      <p className="text-sm text-muted-foreground">{data.analysis.assessment}</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Quick Metrics */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <Card className="bg-card/50 border-border hover:border-gold/30 transition-colors">
+                  <CardContent className="p-3 text-center">
+                    <p className="text-xl font-bold text-gold">{data.metrics.taskCompletionRate}%</p>
+                    <p className="text-xs text-muted-foreground">Task Rate</p>
+                  </CardContent>
+                </Card>
+                <Card className="bg-card/50 border-border hover:border-gold/30 transition-colors">
+                  <CardContent className="p-3 text-center">
+                    <p className="text-xl font-bold text-foreground">{data.metrics.avgScorecardScore}/12</p>
+                    <p className="text-xs text-muted-foreground">Avg Score</p>
+                  </CardContent>
+                </Card>
+                <Card className="bg-card/50 border-border hover:border-gold/30 transition-colors">
+                  <CardContent className="p-3 text-center">
+                    <p className="text-xl font-bold text-green-400">{data.metrics.completedChallenges}</p>
+                    <p className="text-xs text-muted-foreground">Challenges Won</p>
+                  </CardContent>
+                </Card>
+                <Card className="bg-card/50 border-border hover:border-gold/30 transition-colors">
+                  <CardContent className="p-3 text-center">
+                    <p className="text-xl font-bold text-red-400">{data.metrics.cutChallenges}</p>
+                    <p className="text-xs text-muted-foreground">Cuts Called</p>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Napoleon Hill Prescription */}
+              {data.analysis.napoleonHillPrescription && data.analysis.napoleonHillPrescription.length > 0 && (
+                <Card className="bg-gradient-to-br from-purple-500/10 to-transparent border-purple-500/30">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="flex items-center gap-2 text-base">
+                      <BookOpen className="w-5 h-5 text-purple-400" />
+                      Napoleon Hill Prescription
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    {data.analysis.napoleonHillPrescription.map((law, i) => (
+                      <div key={i} className="p-3 rounded-lg bg-purple-500/10 border border-purple-500/20">
+                        <div className="flex items-center gap-2 mb-1">
+                          <Badge variant="outline" className="border-purple-500/50 text-purple-400">
+                            Law #{law.lawNumber}
+                          </Badge>
+                          <span className="font-semibold text-sm">{law.lawName}</span>
+                        </div>
+                        <p className="text-sm text-muted-foreground">{law.application}</p>
+                      </div>
+                    ))}
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Expandable Sections */}
+              <Card className="bg-card/50 border-border">
+                <CardHeader 
+                  className="cursor-pointer hover:bg-muted/50 transition-colors"
+                  onClick={() => setExpanded(!expanded)}
+                >
+                  <CardTitle className="flex items-center justify-between text-base">
+                    <span className="flex items-center gap-2">
+                      <Eye className="w-5 h-5 text-gold" />
+                      Full Analysis
+                    </span>
+                    <ChevronRight className={`w-5 h-5 transition-transform ${expanded ? 'rotate-90' : ''}`} />
+                  </CardTitle>
+                </CardHeader>
+                
+                {expanded && (
+                  <CardContent className="space-y-6 pt-0 animate-fade-in">
+                    {/* Strengths */}
+                    <div>
+                      <h4 className="flex items-center gap-2 text-sm font-semibold text-green-400 mb-3">
+                        <TrendingUp className="w-4 h-4" />
+                        Strengths Spotlight
+                      </h4>
+                      <div className="space-y-2">
+                        {data.analysis.strengths.map((strength, i) => (
+                          <div key={i} className="flex items-start gap-2 text-sm">
+                            <Sparkles className="w-4 h-4 text-green-400 shrink-0 mt-0.5" />
+                            <span>{strength}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Growth Edges */}
+                    <div>
+                      <h4 className="flex items-center gap-2 text-sm font-semibold text-amber-500 mb-3">
+                        <AlertTriangle className="w-4 h-4" />
+                        Growth Edges
+                      </h4>
+                      <div className="space-y-2">
+                        {data.analysis.growthEdges.map((edge, i) => (
+                          <div key={i} className="flex items-start gap-2 text-sm">
+                            <Zap className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+                            <span>{edge}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Patterns */}
+                    {data.analysis.patterns.length > 0 && (
+                      <div>
+                        <h4 className="flex items-center gap-2 text-sm font-semibold text-purple-400 mb-3">
+                          <Brain className="w-4 h-4" />
+                          Pattern Recognition
+                        </h4>
+                        <div className="flex flex-wrap gap-2">
+                          {data.analysis.patterns.map((pattern, i) => (
+                            <Badge key={i} variant="outline" className="border-purple-500/30 text-purple-400">
+                              {pattern}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Director's Note */}
+                    <div className="p-4 rounded-lg bg-gradient-to-br from-gold/10 to-purple-500/5 border border-gold/20">
+                      <h4 className="flex items-center gap-2 text-sm font-semibold text-gold mb-2">
+                        🎬 Director's Note
+                      </h4>
+                      <p className="text-sm italic">{data.analysis.directorsNote}</p>
+                    </div>
+
+                    {/* Next Scene */}
+                    <div className="p-4 rounded-lg bg-primary/5 border border-primary/20">
+                      <h4 className="flex items-center gap-2 text-sm font-semibold text-primary mb-2">
+                        <Target className="w-4 h-4" />
+                        Next Scene (Today's Action)
+                      </h4>
+                      <p className="text-sm font-medium">{data.analysis.nextScene}</p>
+                    </div>
+
+                    {/* Timestamp */}
+                    <p className="text-xs text-muted-foreground text-center">
+                      Analysis generated: {new Date(data.generatedAt).toLocaleString()}
+                    </p>
+                  </CardContent>
                 )}
-
-                {/* Director's Note */}
-                <div className="p-4 rounded-lg bg-gradient-to-br from-gold/10 to-purple-500/5 border border-gold/20">
-                  <h4 className="flex items-center gap-2 text-sm font-semibold text-gold mb-2">
-                    🎬 Director's Note
-                  </h4>
-                  <p className="text-sm italic">{data.analysis.directorsNote}</p>
-                </div>
-
-                {/* Next Scene */}
-                <div className="p-4 rounded-lg bg-primary/5 border border-primary/20">
-                  <h4 className="flex items-center gap-2 text-sm font-semibold text-primary mb-2">
-                    <Target className="w-4 h-4" />
-                    Next Scene (Today's Action)
-                  </h4>
-                  <p className="text-sm font-medium">{data.analysis.nextScene}</p>
-                </div>
-
-                {/* Timestamp */}
-                <p className="text-xs text-muted-foreground text-center">
-                  Analysis generated: {new Date(data.generatedAt).toLocaleString()}
-                </p>
-              </CardContent>
-            )}
-          </Card>
-        </div>
+              </Card>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

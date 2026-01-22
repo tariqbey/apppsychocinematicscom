@@ -1614,6 +1614,36 @@ export type Database = {
         }
         Relationships: []
       }
+      saved_character_analyses: {
+        Row: {
+          analysis: Json
+          chief_aim_snapshot: Json | null
+          created_at: string
+          id: string
+          metrics: Json
+          napoleon_hill_laws: Json | null
+          user_id: string
+        }
+        Insert: {
+          analysis: Json
+          chief_aim_snapshot?: Json | null
+          created_at?: string
+          id?: string
+          metrics: Json
+          napoleon_hill_laws?: Json | null
+          user_id: string
+        }
+        Update: {
+          analysis?: Json
+          chief_aim_snapshot?: Json | null
+          created_at?: string
+          id?: string
+          metrics?: Json
+          napoleon_hill_laws?: Json | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       saved_insights: {
         Row: {
           content: string
