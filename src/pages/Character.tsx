@@ -43,23 +43,23 @@ const Character = () => {
     <div className="min-h-screen bg-background spotlight film-grain">
       <Header />
 
-      <main className="container mx-auto px-4 pt-24 pb-32">
+      <main className="container mx-auto px-4 pt-28 sm:pt-32 pb-32">
         <div className="max-w-4xl mx-auto space-y-6">
-          {/* Back Button & Header */}
-          <div className="flex items-center gap-4 mb-8">
+          {/* Back Button & Header - positioned to avoid logo overlap */}
+          <div className="flex items-center gap-3 sm:gap-4 mb-6 sm:mb-8">
             <Button
               variant="ghost"
               size="icon"
               onClick={() => navigate("/")}
-              className="text-muted-foreground hover:text-foreground"
+              className="text-muted-foreground hover:text-foreground shrink-0"
             >
               <ArrowLeft className="w-5 h-5" />
             </Button>
-            <div>
-              <h1 className="text-3xl font-display tracking-wide">
+            <div className="min-w-0">
+              <h1 className="text-2xl sm:text-3xl font-display tracking-wide truncate">
                 <span className="text-gold-gradient">Character Builder</span>
               </h1>
-              <p className="text-muted-foreground">
+              <p className="text-sm sm:text-base text-muted-foreground">
                 Design your Director identity and track your transformation
               </p>
             </div>
