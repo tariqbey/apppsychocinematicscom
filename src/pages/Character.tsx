@@ -10,9 +10,11 @@ import { CycleProgress } from "@/components/character/CycleProgress";
 import { CycleReviewWizard } from "@/components/character/CycleReviewWizard";
 import { TransformationRoadmap } from "@/components/character/TransformationRoadmap";
 import { CharacterCreator } from "@/components/character/CharacterCreator";
+import { AICharacterAnalysis } from "@/components/character/AICharacterAnalysis";
+import { AnimatedCharacterCharts } from "@/components/character/AnimatedCharacterCharts";
 import { useAuth } from "@/hooks/useAuth";
 import { useCycleTracking } from "@/hooks/useCycleTracking";
-import { Loader2, ArrowLeft, User2, Target, TrendingUp, Brain, Calendar, GitBranch, RotateCcw, UserPlus } from "lucide-react";
+import { Loader2, ArrowLeft, User2, Target, TrendingUp, Brain, Calendar, GitBranch, RotateCcw, UserPlus, Sparkles, BarChart3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useNavigate } from "react-router-dom";
@@ -66,41 +68,53 @@ const Character = () => {
           </div>
 
           {/* Tabs Navigation */}
-          <Tabs defaultValue="create" className="w-full">
-            <TabsList className="grid w-full grid-cols-8 mb-6">
-              <TabsTrigger value="create" className="flex items-center gap-2">
+          <Tabs defaultValue="analytics" className="w-full">
+            <TabsList className="grid w-full grid-cols-4 sm:grid-cols-8 mb-6 h-auto">
+              <TabsTrigger value="analytics" className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 py-2">
+                <BarChart3 className="w-4 h-4" />
+                <span className="text-xs sm:text-sm">Analytics</span>
+              </TabsTrigger>
+              <TabsTrigger value="ai" className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 py-2">
+                <Sparkles className="w-4 h-4" />
+                <span className="text-xs sm:text-sm">AI</span>
+              </TabsTrigger>
+              <TabsTrigger value="create" className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 py-2">
                 <UserPlus className="w-4 h-4" />
-                <span className="hidden sm:inline">Create</span>
+                <span className="text-xs sm:text-sm">Create</span>
               </TabsTrigger>
-              <TabsTrigger value="cycles" className="flex items-center gap-2">
+              <TabsTrigger value="cycles" className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 py-2">
                 <RotateCcw className="w-4 h-4" />
-                <span className="hidden sm:inline">21 Days</span>
+                <span className="text-xs sm:text-sm">21 Days</span>
               </TabsTrigger>
-              <TabsTrigger value="archetype" className="flex items-center gap-2">
+              <TabsTrigger value="archetype" className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 py-2">
                 <User2 className="w-4 h-4" />
-                <span className="hidden sm:inline">Archetype</span>
+                <span className="text-xs sm:text-sm hidden sm:inline">Archetype</span>
+                <span className="text-xs sm:hidden">Type</span>
               </TabsTrigger>
-              <TabsTrigger value="evolution" className="flex items-center gap-2">
+              <TabsTrigger value="evolution" className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 py-2">
                 <GitBranch className="w-4 h-4" />
-                <span className="hidden sm:inline">Evolution</span>
+                <span className="text-xs sm:text-sm hidden sm:inline">Evolution</span>
+                <span className="text-xs sm:hidden">Evo</span>
               </TabsTrigger>
-              <TabsTrigger value="scorecard" className="flex items-center gap-2">
+              <TabsTrigger value="scorecard" className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 py-2">
                 <Target className="w-4 h-4" />
-                <span className="hidden sm:inline">Scorecard</span>
+                <span className="text-xs sm:text-sm">Score</span>
               </TabsTrigger>
-              <TabsTrigger value="weekly" className="flex items-center gap-2">
-                <TrendingUp className="w-4 h-4" />
-                <span className="hidden sm:inline">Weekly</span>
-              </TabsTrigger>
-              <TabsTrigger value="transformation" className="flex items-center gap-2">
+              <TabsTrigger value="transformation" className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 py-2">
                 <Brain className="w-4 h-4" />
-                <span className="hidden sm:inline">Transform</span>
-              </TabsTrigger>
-              <TabsTrigger value="annual" className="flex items-center gap-2">
-                <Calendar className="w-4 h-4" />
-                <span className="hidden sm:inline">Annual</span>
+                <span className="text-xs sm:text-sm hidden sm:inline">Transform</span>
+                <span className="text-xs sm:hidden">Coach</span>
               </TabsTrigger>
             </TabsList>
+
+            <TabsContent value="analytics" className="space-y-6">
+              <AnimatedCharacterCharts />
+              <CharacterWeeklySummary />
+            </TabsContent>
+
+            <TabsContent value="ai" className="space-y-6">
+              <AICharacterAnalysis />
+            </TabsContent>
 
             <TabsContent value="create" className="space-y-6">
               <CharacterCreator />
@@ -150,16 +164,8 @@ const Character = () => {
               <CharacterScorecard inline />
             </TabsContent>
 
-            <TabsContent value="weekly" className="space-y-6">
-              <CharacterWeeklySummary />
-            </TabsContent>
-
             <TabsContent value="transformation" className="space-y-6">
               <CharacterTransformationCoach inline />
-            </TabsContent>
-
-            <TabsContent value="annual" className="space-y-6">
-              <AnnualSelfAnalysis inline />
             </TabsContent>
           </Tabs>
         </div>
