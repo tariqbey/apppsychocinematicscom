@@ -1,27 +1,34 @@
 // Push notification service worker for Psycho-Cinematics™
-// Version: 2.0 - Enhanced push handling
+// Version: 3.0 - iOS Safari support + multi-device reliability
+
+const SW_VERSION = '3.0';
 
 self.addEventListener('install', (event) => {
-  console.log('[SW-Push] Installing service worker v2...');
-  // Force immediate activation
+  console.log(`[SW-Push v${SW_VERSION}] Installing...`);
+  // Skip waiting to activate immediately
   self.skipWaiting();
 });
 
 self.addEventListener('activate', (event) => {
-  console.log('[SW-Push] Activating service worker v2...');
+  console.log(`[SW-Push v${SW_VERSION}] Activating...`);
   event.waitUntil(
     Promise.all([
       clients.claim(),
-      // Clear any old caches if needed
+      // Clean up old caches
       caches.keys().then(names => 
-        Promise.all(names.map(name => caches.delete(name)))
+        Promise.all(names.map(name => {
+          console.log(`[SW-Push] Clearing cache: ${name}`);
+          return caches.delete(name);
+        }))
       )
-    ])
+    ]).then(() => {
+      console.log(`[SW-Push v${SW_VERSION}] Activated and claimed clients`);
+    })
   );
 });
 
 self.addEventListener('push', (event) => {
-  console.log('[SW-Push] Push event received');
+  console.log(`[SW-Push v${SW_VERSION}] Push event received`);
   
   // Default notification data
   let notificationData = {
@@ -37,7 +44,7 @@ self.addEventListener('push', (event) => {
   if (event.data) {
     try {
       const payload = event.data.json();
-      console.log('[SW-Push] Parsed payload:', payload);
+      console.log(`[SW-Push v${SW_VERSION}] Parsed payload:`, JSON.stringify(payload));
       notificationData = {
         title: payload.title || notificationData.title,
         body: payload.body || notificationData.body,
@@ -47,37 +54,52 @@ self.addEventListener('push', (event) => {
         tag: payload.tag || notificationData.tag,
       };
     } catch (e) {
-      console.log('[SW-Push] Error parsing JSON, trying text:', e);
+      console.log(`[SW-Push v${SW_VERSION}] Error parsing JSON, trying text:`, e.message);
       try {
-        notificationData.body = event.data.text() || notificationData.body;
+        const text = event.data.text();
+        if (text) {
+          notificationData.body = text;
+        }
       } catch (_) {
-        console.log('[SW-Push] Could not extract push data');
+        console.log(`[SW-Push v${SW_VERSION}] Could not extract push data`);
       }
     }
+  } else {
+    console.log(`[SW-Push v${SW_VERSION}] No data in push event`);
   }
 
+  // iOS Safari doesn't support actions, so check for support
+  const supportsActions = 'actions' in Notification.prototype;
+  
   const options = {
     body: notificationData.body,
     icon: notificationData.icon,
     badge: notificationData.badge,
     tag: notificationData.tag,
     renotify: true,
-    requireInteraction: true,
-    vibrate: [200, 100, 200],
+    requireInteraction: false, // iOS doesn't support this well
     data: { 
       url: notificationData.url,
       timestamp: Date.now()
     },
-    actions: [
+  };
+
+  // Only add vibrate and actions if supported (not on iOS Safari)
+  if ('vibrate' in navigator) {
+    options.vibrate = [200, 100, 200];
+  }
+  
+  if (supportsActions) {
+    options.actions = [
       { action: 'open', title: 'Open App' },
       { action: 'dismiss', title: 'Dismiss' }
-    ]
-  };
+    ];
+  }
 
   event.waitUntil(
     self.registration.showNotification(notificationData.title, options)
       .then(() => {
-        console.log('[SW-Push] Notification displayed successfully');
+        console.log(`[SW-Push v${SW_VERSION}] Notification displayed successfully`);
         // Broadcast to open windows
         return self.clients.matchAll({ type: 'window', includeUncontrolled: true });
       })
@@ -90,13 +112,13 @@ self.addEventListener('push', (event) => {
         });
       })
       .catch(err => {
-        console.error('[SW-Push] Failed to show notification:', err);
+        console.error(`[SW-Push v${SW_VERSION}] Failed to show notification:`, err.message);
       })
   );
 });
 
 self.addEventListener('notificationclick', (event) => {
-  console.log('[SW-Push] Notification clicked, action:', event.action);
+  console.log(`[SW-Push v${SW_VERSION}] Notification clicked, action:`, event.action);
   
   event.notification.close();
   
@@ -124,13 +146,12 @@ self.addEventListener('notificationclick', (event) => {
 });
 
 self.addEventListener('notificationclose', (event) => {
-  console.log('[SW-Push] Notification closed');
+  console.log(`[SW-Push v${SW_VERSION}] Notification closed`);
 });
 
-// Handle push subscription change
+// Handle push subscription change (token refresh)
 self.addEventListener('pushsubscriptionchange', (event) => {
-  console.log('[SW-Push] Subscription changed, re-subscribing...');
-  // This would require re-subscribing - notify the main app
+  console.log(`[SW-Push v${SW_VERSION}] Subscription changed, notifying app...`);
   event.waitUntil(
     self.clients.matchAll({ type: 'window' })
       .then(clients => {
@@ -140,3 +161,10 @@ self.addEventListener('pushsubscriptionchange', (event) => {
       })
   );
 });
+
+// Log any errors
+self.addEventListener('error', (event) => {
+  console.error(`[SW-Push v${SW_VERSION}] Error:`, event.message);
+});
+
+console.log(`[SW-Push v${SW_VERSION}] Service worker loaded`);
