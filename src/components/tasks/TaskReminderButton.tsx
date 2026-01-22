@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Bell, BellRing, Clock, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -7,9 +7,11 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
+import { useTaskReminders } from "@/hooks/useTaskReminders";
 import { toast } from "sonner";
 
 interface TaskReminderButtonProps {
+  taskId: string;
   taskText: string;
   onSchedule?: (minutes: number) => void;
   prominent?: boolean;
@@ -23,10 +25,30 @@ const REMINDER_OPTIONS = [
   { label: "This evening (6 PM)", minutes: -1, time: "18:00" },
 ];
 
-export function TaskReminderButton({ taskText, onSchedule, prominent = false }: TaskReminderButtonProps) {
+export function TaskReminderButton({ taskId, taskText, onSchedule, prominent = false }: TaskReminderButtonProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [scheduledReminder, setScheduledReminder] = useState<string | null>(null);
-  const { isSubscribed, isSupported, showNotification, requestPermission } = usePushNotifications();
+  const { isSubscribed, showNotification, requestPermission } = usePushNotifications();
+  const { getReminder, setReminder: saveReminder, clearReminder } = useTaskReminders();
+  
+  // Get persisted reminder for this task
+  const existingReminder = getReminder(taskId);
+  const scheduledReminder = existingReminder?.reminderLabel || null;
+
+  // Set up the actual notification timer based on persisted reminder
+  useEffect(() => {
+    if (existingReminder && existingReminder.scheduledAt > Date.now()) {
+      const delay = existingReminder.scheduledAt - Date.now();
+      const timeoutId = setTimeout(() => {
+        showNotification("🎬 Stick to the Script!", {
+          body: `Time to complete: ${taskText}`,
+          tag: `task-reminder-${taskId}`,
+        });
+        clearReminder(taskId);
+      }, delay);
+      
+      return () => clearTimeout(timeoutId);
+    }
+  }, [existingReminder, taskId, taskText, showNotification, clearReminder]);
 
   const handleScheduleReminder = async (option: typeof REMINDER_OPTIONS[0]) => {
     // If not subscribed, request permission first
@@ -56,15 +78,8 @@ export function TaskReminderButton({ taskText, onSchedule, prominent = false }: 
       delayMs = option.minutes * 60 * 1000;
     }
 
-    // Schedule local notification
-    setTimeout(() => {
-      showNotification("🎬 Stick to the Script!", {
-        body: `Time to complete: ${taskText}`,
-        tag: `task-reminder-${Date.now()}`,
-      });
-    }, delayMs);
-
-    setScheduledReminder(option.label);
+    // Save reminder to localStorage for persistence
+    saveReminder(taskId, option.label, delayMs);
     setIsOpen(false);
     
     toast.success(`Reminder set: ${option.label}`, {

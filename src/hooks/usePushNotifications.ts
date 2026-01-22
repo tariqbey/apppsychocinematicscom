@@ -113,6 +113,10 @@ export function usePushNotifications() {
       throw new Error('Push notifications are not supported');
     }
 
+    if (!user) {
+      throw new Error('User must be logged in to enable notifications');
+    }
+
     setState(prev => ({ ...prev, isLoading: true }));
 
     try {
@@ -147,7 +151,7 @@ export function usePushNotifications() {
         applicationServerKey: applicationServerKey.buffer as ArrayBuffer
       });
 
-      console.log('[Push] Push subscription:', subscription);
+      console.log('[Push] Push subscription created:', subscription.endpoint);
 
       // Extract keys
       const p256dhKey = subscription.getKey('p256dh');
@@ -160,36 +164,61 @@ export function usePushNotifications() {
       const p256dh = btoa(String.fromCharCode(...new Uint8Array(p256dhKey)));
       const auth = btoa(String.fromCharCode(...new Uint8Array(authKey)));
 
-      // Get current user
-      if (!user) {
-        throw new Error('User not authenticated');
-      }
+      console.log('[Push] Storing subscription for user:', user.id);
 
-      // Store subscription in database
-      const { error } = await supabase
+      // Store subscription in database - use insert with explicit conflict handling
+      const { data: existingSubscriptions } = await supabase
         .from('push_subscriptions')
-        .upsert({
-          user_id: user.id,
-          endpoint: subscription.endpoint,
-          p256dh,
-          auth
-        }, {
-          onConflict: 'user_id,endpoint'
-        });
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('endpoint', subscription.endpoint);
 
-      if (error) {
-        console.error('[Push] Error storing subscription:', error);
-        throw error;
+      if (existingSubscriptions && existingSubscriptions.length > 0) {
+        // Update existing subscription
+        const { error } = await supabase
+          .from('push_subscriptions')
+          .update({
+            p256dh,
+            auth,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', existingSubscriptions[0].id);
+
+        if (error) {
+          console.error('[Push] Error updating subscription:', error);
+          throw error;
+        }
+        console.log('[Push] Updated existing subscription');
+      } else {
+        // Insert new subscription
+        const { error } = await supabase
+          .from('push_subscriptions')
+          .insert({
+            user_id: user.id,
+            endpoint: subscription.endpoint,
+            p256dh,
+            auth
+          });
+
+        if (error) {
+          console.error('[Push] Error inserting subscription:', error);
+          throw error;
+        }
+        console.log('[Push] Inserted new subscription');
       }
 
       // Update user profile
-      await supabase
+      const { error: profileError } = await supabase
         .from('user_profiles')
         .update({ 
           push_notifications_enabled: true,
           updated_at: new Date().toISOString(),
         })
         .eq('user_id', user.id);
+
+      if (profileError) {
+        console.warn('[Push] Error updating profile:', profileError);
+      }
 
       setState(prev => ({ 
         ...prev, 

@@ -167,27 +167,51 @@ export function CharacterWeeklySummary() {
   }
 
   return (
-    <Card className="bg-card border-border">
-      <CardHeader>
-        <div className="flex items-center justify-between">
+    <div className="space-y-6">
+      {/* Summary Stats */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <Card className="bg-card border-border">
+          <CardContent className="p-4 text-center">
+            <p className="text-2xl sm:text-3xl font-bold text-gold">{weeklyAverage}%</p>
+            <p className="text-xs text-muted-foreground">7-Day Avg</p>
+          </CardContent>
+        </Card>
+        <Card className="bg-card border-border">
+          <CardContent className="p-4 text-center">
+            <p className="text-2xl sm:text-3xl font-bold text-foreground">
+              {dailyData.filter(d => d.maxScore > 0).length}
+            </p>
+            <p className="text-xs text-muted-foreground">Days Tracked</p>
+          </CardContent>
+        </Card>
+        <Card className="bg-card border-border">
+          <CardContent className="p-4 text-center">
+            <p className="text-2xl sm:text-3xl font-bold text-green-400">
+              {Math.max(...dailyData.map(d => d.percentage))}%
+            </p>
+            <p className="text-xs text-muted-foreground">Best Day</p>
+          </CardContent>
+        </Card>
+        <Card className="bg-card border-border">
+          <CardContent className="p-4 text-center">
+            <p className="text-2xl sm:text-3xl font-bold text-foreground">
+              {traitTrends.length}
+            </p>
+            <p className="text-xs text-muted-foreground">Traits Tracked</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Alignment Chart */}
+      <Card className="bg-card border-border">
+        <CardHeader className="pb-2">
           <CardTitle className="flex items-center gap-2 text-base">
-            <BarChart3 className="h-4 w-4 text-gold" />
-            Weekly Character Summary
+            <Calendar className="h-4 w-4 text-gold" />
+            Daily Alignment Trend
           </CardTitle>
-          <div className="text-right">
-            <p className="text-2xl font-bold text-gold">{weeklyAverage}%</p>
-            <p className="text-xs text-muted-foreground">7-day avg</p>
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        {/* Alignment Chart */}
-        <div>
-          <h4 className="text-sm font-medium mb-3 flex items-center gap-2">
-            <Calendar className="h-4 w-4" />
-            Daily Alignment
-          </h4>
-          <div className="h-40">
+        </CardHeader>
+        <CardContent>
+          <div className="h-48 sm:h-56">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={dailyData}>
                 <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
@@ -220,39 +244,42 @@ export function CharacterWeeklySummary() {
               </AreaChart>
             </ResponsiveContainer>
           </div>
-        </div>
+        </CardContent>
+      </Card>
 
-        {/* Trait Performance */}
-        {traitTrends.length > 0 && (
-          <div>
-            <h4 className="text-sm font-medium mb-3 flex items-center gap-2">
-              <TrendingUp className="h-4 w-4" />
-              Trait Performance (Avg Score)
-            </h4>
-            <div className="space-y-2">
-              {traitTrends.slice(0, 5).map((trait) => (
+      {/* Trait Performance */}
+      {traitTrends.length > 0 && (
+        <Card className="bg-card border-border">
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <TrendingUp className="h-4 w-4 text-gold" />
+              Top Trait Performance
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {traitTrends.slice(0, 5).map((trait, index) => (
                 <div
                   key={trait.trait}
-                  className="flex items-center justify-between p-2 rounded bg-secondary/30"
+                  className="flex items-center gap-3"
                 >
-                  <span className="text-sm truncate max-w-[200px]">{trait.trait}</span>
-                  <div className="flex items-center gap-2">
-                    <div className="w-24 h-2 bg-muted rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-gold rounded-full transition-all"
-                        style={{ width: `${(trait.avgScore / 3) * 100}%` }}
-                      />
-                    </div>
-                    <span className="text-sm font-medium w-8 text-right">
-                      {trait.avgScore.toFixed(1)}
-                    </span>
+                  <span className="text-xs font-bold text-gold w-5">#{index + 1}</span>
+                  <span className="text-sm truncate flex-1 min-w-0">{trait.trait}</span>
+                  <div className="w-20 sm:w-32 h-2 bg-muted rounded-full overflow-hidden shrink-0">
+                    <div
+                      className="h-full bg-gradient-to-r from-gold to-amber-500 rounded-full transition-all"
+                      style={{ width: `${(trait.avgScore / 3) * 100}%` }}
+                    />
                   </div>
+                  <span className="text-sm font-medium w-10 text-right shrink-0">
+                    {trait.avgScore.toFixed(1)}/3
+                  </span>
                 </div>
               ))}
             </div>
-          </div>
-        )}
-      </CardContent>
-    </Card>
+          </CardContent>
+        </Card>
+      )}
+    </div>
   );
 }

@@ -616,7 +616,7 @@ export function ThreeThings({ showAnalyticsDefault = false }: ThreeThingsProps) 
                   
                   {/* Reminder Button - Show for incomplete tasks */}
                   {!task.is_completed && !task.incomplete_reason && (
-                    <TaskReminderButton taskText={task.task_text} prominent />
+                    <TaskReminderButton taskId={task.id} taskText={task.task_text} prominent />
                   )}
                   
                   {/* Yes/No Buttons */}

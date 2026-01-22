@@ -93,7 +93,7 @@ export function DraggableTaskItem({
 
         {/* Reminder Button - only show for incomplete tasks - PROMINENT VERSION */}
         {!task.is_completed && !task.incomplete_reason && (
-          <TaskReminderButton taskText={task.task_text} prominent />
+          <TaskReminderButton taskId={task.id} taskText={task.task_text} prominent />
         )}
 
         {/* Yes/No Buttons */}
