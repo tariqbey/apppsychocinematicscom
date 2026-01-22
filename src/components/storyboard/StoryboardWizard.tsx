@@ -9,7 +9,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { useGlobalReferencePhoto } from "@/hooks/useGlobalReferencePhoto";
 import { useMindMovieScript, Scene } from "@/hooks/useMindMovieScript";
-import { useMediaGeneration, ImageModel } from "@/hooks/useMediaGeneration";
+import { useMediaGeneration } from "@/hooks/useMediaGeneration";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { 
@@ -42,7 +42,7 @@ import { StoryboardSceneCard } from "./StoryboardSceneCard";
 import { StoryboardQuestionFlow } from "./StoryboardQuestionFlow";
 import { StoryboardElements, StoryboardElement } from "./StoryboardElements";
 import { StoryboardScriptInput } from "./StoryboardScriptInput";
-import { StoryboardSettings, AspectRatio, ImageModel as SettingsImageModel } from "./StoryboardSettings";
+import { StoryboardSettings, AspectRatio } from "./StoryboardSettings";
 
 export interface StoryboardWizardProps {
   isOpen: boolean;
@@ -81,7 +81,7 @@ export function StoryboardWizard({ isOpen, onClose, onAddToTimeline, chiefAim }:
   const [visualStyle, setVisualStyle] = useState("cinematic-dramatic");
   const [targetDuration, setTargetDuration] = useState(120);
   const [aspectRatio, setAspectRatio] = useState<AspectRatio>("16:9");
-  const [imageModel, setImageModel] = useState<SettingsImageModel>("nano-banana-pro");
+  // Image model is always nano-banana-pro for character consistency
   const [visionAnswers, setVisionAnswers] = useState<Record<string, string>>({});
   const [scriptInput, setScriptInput] = useState("");
   const [elements, setElements] = useState<StoryboardElement[]>([]);
@@ -289,7 +289,7 @@ export function StoryboardWizard({ isOpen, onClose, onAddToTimeline, chiefAim }:
       ].join("\n");
 
       // Force Nano Banana Pro when a reference photo is present (best for likeness retention).
-      const modelForGeneration: ImageModel = "nano-banana-pro";
+      const modelForGeneration = "nano-banana-pro" as const;
 
       const imageUrl = await generateImage({
         prompt: promptWithCharacterLock,
@@ -570,8 +570,6 @@ export function StoryboardWizard({ isOpen, onClose, onAddToTimeline, chiefAim }:
                   <StoryboardSettings
                     aspectRatio={aspectRatio}
                     onAspectRatioChange={setAspectRatio}
-                    imageModel={imageModel}
-                    onImageModelChange={setImageModel}
                     duration={targetDuration}
                     onDurationChange={setTargetDuration}
                   />
