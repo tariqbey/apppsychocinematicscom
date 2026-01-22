@@ -3,13 +3,14 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { Loader2, Sparkles, Download, ImageIcon, Pencil, Film, User, Wand2, Plus, X, Images } from "lucide-react";
+import { Loader2, Sparkles, Download, ImageIcon, Pencil, Film, Wand2, X, Images } from "lucide-react";
 import { useMediaGeneration, VideoModel, MODEL_INFO } from "@/hooks/useMediaGeneration";
 import { ImageUpload } from "./ImageUpload";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useMindMovies } from "@/hooks/useMindMovies";
+import { useGlobalReferencePhoto } from "@/hooks/useGlobalReferencePhoto";
 
 interface ImageGeneratorProps {
   onImageGenerated?: (url: string) => void;
@@ -28,13 +29,20 @@ export function ImageGenerator({
 }: ImageGeneratorProps) {
   const { toast } = useToast();
   const { activeMovie } = useMindMovies();
+
+  // Global character reference photo (saved in Settings)
+  const {
+    referencePhotoUrl: globalReferencePhoto,
+    fetchReferencePhoto,
+    isLoading: loadingGlobalPhoto,
+  } = useGlobalReferencePhoto();
   
   const [mode, setMode] = useState<ImageMode>("create");
   const [prompt, setPrompt] = useState(initialPrompt || "");
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
   
-  // Multiple reference photos support
-  const [referencePhotos, setReferencePhotos] = useState<string[]>([]);
+  // Additional reference photos support (the global character reference is automatically included separately)
+  const [extraReferencePhotos, setExtraReferencePhotos] = useState<string[]>([]);
   const [aspectRatio, setAspectRatio] = useState<"1:1" | "16:9" | "9:16" | "4:3">("16:9");
   const [resolution, setResolution] = useState<"1k" | "2k" | "4k">("2k");
   
@@ -54,22 +62,27 @@ export function ImageGenerator({
     }
   }, [initialPrompt]);
 
-  // Add reference photo
-  const addReferencePhoto = (url: string) => {
-    if (referencePhotos.length < 5) {
-      setReferencePhotos(prev => [...prev, url]);
+  // Load global character reference photo on mount
+  useEffect(() => {
+    fetchReferencePhoto();
+  }, [fetchReferencePhoto]);
+
+  // Add extra reference photo
+  const addExtraReferencePhoto = (url: string) => {
+    if (extraReferencePhotos.length < 5) {
+      setExtraReferencePhotos(prev => [...prev, url]);
     } else {
       toast({
         title: "Maximum reached",
-        description: "You can add up to 5 reference images",
+        description: "You can add up to 5 additional reference images",
         variant: "destructive",
       });
     }
   };
 
-  // Remove reference photo
-  const removeReferencePhoto = (index: number) => {
-    setReferencePhotos(prev => prev.filter((_, i) => i !== index));
+  // Remove extra reference photo
+  const removeExtraReferencePhoto = (index: number) => {
+    setExtraReferencePhotos(prev => prev.filter((_, i) => i !== index));
   };
 
   // AI Prompt Enhancement
@@ -145,34 +158,42 @@ export function ImageGenerator({
     
     // Combine all images for generation
     const imagesToUse: string[] = [];
-    
-    // Include all reference photos (for likeness)
-    referencePhotos.forEach(photo => {
-      imagesToUse.push(photo);
-    });
-    
-    // Add uploaded image for editing if in edit mode
+
+    // In edit mode, the FIRST image should be the base image to edit
     if (mode === "edit" && uploadedImage) {
       imagesToUse.push(uploadedImage);
     }
 
-    // Enhance prompt with reference photo context for better likeness retention
-    let enhancedPrompt = prompt.trim();
-    if (referencePhotos.length > 0 && !uploadedImage) {
-      enhancedPrompt = `CRITICAL: The main subject MUST look exactly like the person in the reference photo(s) - preserve their exact facial features, likeness, and identity. Generate a new scene with this person: ${enhancedPrompt}`;
-    } else if (referencePhotos.length > 0 && uploadedImage) {
-      enhancedPrompt = `CRITICAL: Edit this image while maintaining the exact likeness of the person from the reference photo(s). ${enhancedPrompt}`;
+    // Always include the saved global character reference photo (identity) if available
+    if (globalReferencePhoto) {
+      imagesToUse.push(globalReferencePhoto);
     }
+    
+    // Include any additional reference photos (style/wardrobe/location)
+    extraReferencePhotos.forEach(photo => {
+      imagesToUse.push(photo);
+    });
 
-    // Always use Nano Banana Pro when reference images are provided for better likeness retention
-    const useNanoBanana = imagesToUse.length > 0;
+    // Enhance prompt with identity + extra references context (keep it short and safe)
+    let enhancedPrompt = prompt.trim();
+    if (globalReferencePhoto && mode === "create") {
+      enhancedPrompt = `Create a new cinematic image featuring the same person as in the character reference photo. ${enhancedPrompt}`;
+    }
+    if (globalReferencePhoto && mode === "edit") {
+      enhancedPrompt = `Edit the base image according to the request while keeping the person consistent with the character reference photo. ${enhancedPrompt}`;
+    }
+    if (extraReferencePhotos.length > 0) {
+      enhancedPrompt += " Use the other reference image(s) as style/wardrobe/setting inspiration.";
+    }
 
     const url = await generateImage({
       prompt: enhancedPrompt,
       aspect_ratio: aspectRatio,
       resolution,
       images: imagesToUse.length > 0 ? imagesToUse : undefined,
-      model: useNanoBanana ? "nano-banana-pro" : "gemini",
+      // Always use Nano Banana (Gemini image model) so multiple reference images can be used.
+      model: "gemini",
+      mode,
     });
 
     if (url && onImageGenerated) {
@@ -208,7 +229,7 @@ export function ImageGenerator({
     }
   };
 
-  const canGenerate = prompt.trim() && (mode === "create" || uploadedImage || referencePhotos.length > 0);
+  const canGenerate = !!prompt.trim() && (mode === "create" || !!uploadedImage);
   const canAnimate = generatedImageUrl && animationPrompt.trim() && !isGeneratingVideo;
 
   return (
@@ -361,20 +382,45 @@ export function ImageGenerator({
         </div>
       )}
 
-      {/* Multiple Reference Photos for Likeness */}
+      {/* Reference Images */}
       <div className="space-y-3">
         <Label className="flex items-center gap-2">
           <Images className="h-4 w-4" />
-          Reference Photos (Optional - up to 5)
+          Character Reference (Automatic)
         </Label>
-        <p className="text-xs text-muted-foreground">
-          Upload photos to include your likeness or style references in generated images.
-        </p>
+
+        {loadingGlobalPhoto ? (
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <Loader2 className="h-3 w-3 animate-spin" />
+            Loading your saved character reference…
+          </div>
+        ) : globalReferencePhoto ? (
+          <div className="flex items-center gap-3">
+            <img
+              src={globalReferencePhoto}
+              alt="Your character reference"
+              className="w-16 h-16 object-cover rounded-lg border border-border/50"
+            />
+            <div className="text-xs text-muted-foreground">
+              Your saved character reference will be used in every generation (so it stays you).
+            </div>
+          </div>
+        ) : (
+          <p className="text-xs text-muted-foreground">
+            No saved character reference found. Add one in Settings → Reference Photo to lock your likeness into all images.
+          </p>
+        )}
+
+        <div className="pt-2 space-y-2">
+          <Label className="text-sm">Additional Reference Images (Optional — up to 5)</Label>
+          <p className="text-xs text-muted-foreground">
+            Add extra images to influence wardrobe, style, props, or environment.
+          </p>
         
-        {/* Display existing reference photos */}
-        {referencePhotos.length > 0 && (
+        {/* Display existing extra reference photos */}
+        {extraReferencePhotos.length > 0 && (
           <div className="flex flex-wrap gap-2">
-            {referencePhotos.map((photo, index) => (
+            {extraReferencePhotos.map((photo, index) => (
               <div key={index} className="relative group">
                 <img 
                   src={photo} 
@@ -382,7 +428,7 @@ export function ImageGenerator({
                   className="w-16 h-16 object-cover rounded-lg border border-border/50"
                 />
                 <button
-                  onClick={() => removeReferencePhoto(index)}
+                  onClick={() => removeExtraReferencePhoto(index)}
                   className="absolute -top-2 -right-2 w-5 h-5 bg-destructive text-destructive-foreground rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
                 >
                   <X className="w-3 h-3" />
@@ -392,22 +438,21 @@ export function ImageGenerator({
           </div>
         )}
         
-        {/* Add more reference photos */}
-        {referencePhotos.length < 5 && (
+        {/* Add more extra reference photos */}
+        {extraReferencePhotos.length < 5 && (
           <ImageUpload
             value={null}
-            onChange={(url) => url && addReferencePhoto(url)}
-            placeholder={referencePhotos.length === 0 ? "Upload reference photo" : "Add another reference"}
+            onChange={(url) => url && addExtraReferencePhoto(url)}
+            placeholder={extraReferencePhotos.length === 0 ? "Upload reference" : "Add another reference"}
             className="max-w-xs"
           />
         )}
         
-        {referencePhotos.length > 0 && (
-          <p className="text-xs text-green-600 flex items-center gap-1">
-            <Sparkles className="w-3 h-3" />
-            {referencePhotos.length} reference{referencePhotos.length > 1 ? 's' : ''} will be used
-          </p>
-        )}
+        <p className="text-xs text-muted-foreground">
+          {globalReferencePhoto ? "Character reference: ON" : "Character reference: OFF"}{" • "}
+          Additional refs: {extraReferencePhotos.length}/5
+        </p>
+        </div>
       </div>
 
       {/* Edit Mode: Image Upload */}
