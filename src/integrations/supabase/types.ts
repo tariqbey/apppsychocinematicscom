@@ -1200,57 +1200,75 @@ export type Database = {
       }
       mind_movie_scripts: {
         Row: {
+          aspect_ratio: string | null
           chief_aim_snapshot: Json | null
           created_at: string | null
+          elements: Json | null
           id: string
+          input_mode: string | null
           is_active: boolean | null
           movie_url: string | null
           music_style: string | null
           reference_photo_url: string | null
           scenes: Json | null
+          script_input: string | null
           song_lyrics: string | null
           soundtrack_url: string | null
           status: string | null
           suno_task_id: string | null
+          target_duration: number | null
           title: string | null
           updated_at: string | null
           user_id: string
+          vision_answers: Json | null
           visual_style: string | null
         }
         Insert: {
+          aspect_ratio?: string | null
           chief_aim_snapshot?: Json | null
           created_at?: string | null
+          elements?: Json | null
           id?: string
+          input_mode?: string | null
           is_active?: boolean | null
           movie_url?: string | null
           music_style?: string | null
           reference_photo_url?: string | null
           scenes?: Json | null
+          script_input?: string | null
           song_lyrics?: string | null
           soundtrack_url?: string | null
           status?: string | null
           suno_task_id?: string | null
+          target_duration?: number | null
           title?: string | null
           updated_at?: string | null
           user_id: string
+          vision_answers?: Json | null
           visual_style?: string | null
         }
         Update: {
+          aspect_ratio?: string | null
           chief_aim_snapshot?: Json | null
           created_at?: string | null
+          elements?: Json | null
           id?: string
+          input_mode?: string | null
           is_active?: boolean | null
           movie_url?: string | null
           music_style?: string | null
           reference_photo_url?: string | null
           scenes?: Json | null
+          script_input?: string | null
           song_lyrics?: string | null
           soundtrack_url?: string | null
           status?: string | null
           suno_task_id?: string | null
+          target_duration?: number | null
           title?: string | null
           updated_at?: string | null
           user_id?: string
+          vision_answers?: Json | null
           visual_style?: string | null
         }
         Relationships: []

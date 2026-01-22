@@ -72,7 +72,7 @@ export function StoryboardWizard({ isOpen, onClose, onAddToTimeline, chiefAim }:
   const { user } = useAuth();
   const { profile } = useUserProfile();
   const { referencePhotoUrl, isLoading: loadingRef, fetchReferencePhoto } = useGlobalReferencePhoto();
-  const { generateStoryboard, saveScript, isGenerating, currentScript, setCurrentScript } = useMindMovieScript();
+  const { generateStoryboard, saveScript, isGenerating, currentScript, setCurrentScript, fetchLatestScript } = useMindMovieScript();
   const { generateImage, generateVideo, isGeneratingImage, isGeneratingVideo } = useMediaGeneration();
 
   // State
@@ -95,21 +95,48 @@ export function StoryboardWizard({ isOpen, onClose, onAddToTimeline, chiefAim }:
 
   const sceneCount = Math.ceil(targetDuration / 8);
 
-  // Reset state when dialog closes, fetch reference photo when opens
+  // Load existing script or reset when dialog opens/closes
   useEffect(() => {
     if (!isOpen) {
+      // Only reset transient states; currentScript is preserved
       setStep("setup");
-      setScenes([]);
-      setTitle("");
-      setVisionAnswers({});
-      setScriptInput("");
-      setElements([]);
-      setCurrentScript(null);
     } else {
       // Fetch reference photo when wizard opens
       fetchReferencePhoto();
+      
+      // Load existing script if available
+      const loadScript = async () => {
+        const script = await fetchLatestScript();
+        if (script && script.scenes && script.scenes.length > 0) {
+          // Restore saved state
+          setTitle(script.title || "");
+          setScenes(script.scenes);
+          setVisualStyle(script.visual_style || "cinematic-dramatic");
+          // Load new columns (with fallbacks)
+          const rawScript = script as any;
+          if (rawScript.vision_answers) setVisionAnswers(rawScript.vision_answers);
+          if (rawScript.script_input) setScriptInput(rawScript.script_input);
+          if (rawScript.elements) setElements(rawScript.elements);
+          if (rawScript.input_mode) setInputMode(rawScript.input_mode as InputMode);
+          if (rawScript.target_duration) setTargetDuration(rawScript.target_duration);
+          if (rawScript.aspect_ratio) setAspectRatio(rawScript.aspect_ratio as AspectRatio);
+          // Skip setup if we have scenes already
+          if (script.scenes.length > 0) {
+            setStep("generate");
+          }
+        } else {
+          // Reset for a fresh storyboard
+          setScenes([]);
+          setTitle("");
+          setVisionAnswers({});
+          setScriptInput("");
+          setElements([]);
+        }
+      };
+      loadScript();
     }
-  }, [isOpen, setCurrentScript, fetchReferencePhoto]);
+  }, [isOpen, fetchReferencePhoto]);
+
 
   // Auto-add main character from reference photo
   useEffect(() => {
@@ -279,14 +306,21 @@ export function StoryboardWizard({ isOpen, onClose, onAddToTimeline, chiefAim }:
 
       const characterContext = buildCharacterConsistencyContext();
 
+      // Build a CHARACTER-LOCKED prompt with explicit physical traits
       const promptWithCharacterLock = [
+        "EXACT LIKENESS REQUIRED: Generate an image of the EXACT SAME PERSON shown in the reference photo.",
+        "",
+        characterContext ? `CHARACTER PROFILE:\n${characterContext}` : "",
+        "",
+        "SCENE DESCRIPTION:",
         scene.prompt,
         "",
-        "CHARACTER CONSISTENCY (CRITICAL):",
-        characterContext || "Use the provided reference photo as the main character.",
-        "Use the provided reference photo for the MAIN CHARACTER. Preserve facial likeness, age, skin tone, and signature style.",
-        "Do NOT replace the main character with a different person.",
-      ].join("\n");
+        "CRITICAL INSTRUCTIONS:",
+        "1. The person's FACE must be IDENTICAL to the reference photo - same bone structure, eyes, nose, mouth, skin tone.",
+        "2. Preserve their exact age, ethnicity, and distinguishing features.",
+        "3. This is the SAME person in a new scene, NOT a different person.",
+        "4. Maintain the wardrobe/style described in the character profile.",
+      ].filter(Boolean).join("\n");
 
       // Force Nano Banana Pro when a reference photo is present (best for likeness retention).
       const modelForGeneration = "nano-banana-pro" as const;
@@ -301,6 +335,7 @@ export function StoryboardWizard({ isOpen, onClose, onAddToTimeline, chiefAim }:
       });
 
       if (imageUrl) {
+        // Update local state
         setScenes((prev) => {
           const next = [...prev];
           const current = next[sceneIndex];
@@ -308,6 +343,21 @@ export function StoryboardWizard({ isOpen, onClose, onAddToTimeline, chiefAim }:
           next[sceneIndex] = { ...current, generatedImageUrl: imageUrl };
           return next;
         });
+        
+        // Auto-save to backend so generated images persist
+        if (currentScript?.id) {
+          const updatedScenes = scenes.map((s, i) => 
+            i === sceneIndex ? { ...s, generatedImageUrl: imageUrl } : s
+          );
+          await supabase
+            .from("mind_movie_scripts")
+            .update({ 
+              scenes: updatedScenes as any,
+              updated_at: new Date().toISOString()
+            })
+            .eq("id", currentScript.id);
+        }
+        
         toast.success(`Image generated for Scene ${sceneIndex + 1}`);
       }
     } catch (error) {
@@ -388,13 +438,25 @@ export function StoryboardWizard({ isOpen, onClose, onAddToTimeline, chiefAim }:
     setScenes(updatedScenes);
   };
 
+  // Build extras object for full persistence
+  const buildExtras = () => ({
+    visionAnswers,
+    scriptInput,
+    elements,
+    inputMode,
+    targetDuration,
+    aspectRatio,
+  });
+
   const handleAddToTimelineClick = async () => {
     if (onAddToTimeline) {
       const savedScript = await saveScript(
         title,
         scenes,
         chiefAim || null,
-        visualStyle
+        visualStyle,
+        currentScript?.id,
+        buildExtras()
       );
 
       if (savedScript) {
@@ -410,7 +472,9 @@ export function StoryboardWizard({ isOpen, onClose, onAddToTimeline, chiefAim }:
       title,
       scenes,
       chiefAim || null,
-      visualStyle
+      visualStyle,
+      currentScript?.id,
+      buildExtras()
     );
 
     if (savedScript) {

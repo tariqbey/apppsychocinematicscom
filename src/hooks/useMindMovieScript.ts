@@ -186,7 +186,15 @@ export function useMindMovieScript() {
     scenes: Scene[],
     chiefAimSnapshot: MindMovieScript["chief_aim_snapshot"],
     visualStyle: string,
-    existingId?: string
+    existingId?: string,
+    extras?: {
+      visionAnswers?: Record<string, string>;
+      scriptInput?: string;
+      elements?: any[];
+      inputMode?: string;
+      targetDuration?: number;
+      aspectRatio?: string;
+    }
   ) => {
     if (!user) {
       toast.error("Please sign in to save");
@@ -195,15 +203,26 @@ export function useMindMovieScript() {
 
     setIsLoading(true);
     try {
+      // Build the payload with new persistence columns
+      const payload: Record<string, any> = {
+        title,
+        scenes: scenes as any,
+        visual_style: visualStyle,
+        updated_at: new Date().toISOString(),
+      };
+      
+      // Add extras if provided
+      if (extras?.visionAnswers) payload.vision_answers = extras.visionAnswers;
+      if (extras?.scriptInput) payload.script_input = extras.scriptInput;
+      if (extras?.elements) payload.elements = extras.elements;
+      if (extras?.inputMode) payload.input_mode = extras.inputMode;
+      if (extras?.targetDuration) payload.target_duration = extras.targetDuration;
+      if (extras?.aspectRatio) payload.aspect_ratio = extras.aspectRatio;
+
       if (existingId) {
         const { data, error } = await supabase
           .from("mind_movie_scripts")
-          .update({
-            title,
-            scenes: scenes as any,
-            visual_style: visualStyle,
-            updated_at: new Date().toISOString(),
-          })
+          .update(payload)
           .eq("id", existingId)
           .eq("user_id", user.id)
           .select()
@@ -224,11 +243,9 @@ export function useMindMovieScript() {
           .from("mind_movie_scripts")
           .insert({
             user_id: user.id,
-            title,
-            scenes: scenes as any,
             chief_aim_snapshot: chiefAimSnapshot as any,
-            visual_style: visualStyle,
             status: "draft",
+            ...payload,
           })
           .select()
           .single();
