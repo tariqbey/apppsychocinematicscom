@@ -79,34 +79,36 @@ export default function Settings() {
         </div>
 
         <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
-          <TabsList className="bg-card border border-border flex-wrap">
-            <TabsTrigger value="account" className="data-[state=active]:bg-gold/20">
-              <User className="h-4 w-4 mr-2" />
-              Account
-            </TabsTrigger>
-            <TabsTrigger value="subscription" className="data-[state=active]:bg-gold/20">
-              <CreditCard className="h-4 w-4 mr-2" />
-              Subscription
-            </TabsTrigger>
-            <TabsTrigger value="preferences" className="data-[state=active]:bg-gold/20">
-              <Bell className="h-4 w-4 mr-2" />
-              Preferences
-            </TabsTrigger>
-            <TabsTrigger value="director-ai" className="data-[state=active]:bg-gold/20">
-              <Mic className="h-4 w-4 mr-2" />
-              Director AI
-            </TabsTrigger>
-            <TabsTrigger value="integrations" className="data-[state=active]:bg-gold/20">
-              <Plug className="h-4 w-4 mr-2" />
-              Integrations
-            </TabsTrigger>
-            {isAdmin && (
-              <TabsTrigger value="admin" className="data-[state=active]:bg-red-500/20 text-red-400">
-                <Shield className="h-4 w-4 mr-2" />
-                Admin
+          <div className="overflow-x-auto -mx-4 px-4 scrollbar-hide">
+            <TabsList className="bg-card border border-border inline-flex w-max min-w-full sm:w-full gap-1">
+              <TabsTrigger value="account" className="data-[state=active]:bg-gold/20 whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3">
+                <User className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Account</span>
               </TabsTrigger>
-            )}
-          </TabsList>
+              <TabsTrigger value="subscription" className="data-[state=active]:bg-gold/20 whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3">
+                <CreditCard className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Subscription</span>
+              </TabsTrigger>
+              <TabsTrigger value="preferences" className="data-[state=active]:bg-gold/20 whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3">
+                <Bell className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Preferences</span>
+              </TabsTrigger>
+              <TabsTrigger value="director-ai" className="data-[state=active]:bg-gold/20 whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3">
+                <Mic className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Director AI</span>
+              </TabsTrigger>
+              <TabsTrigger value="integrations" className="data-[state=active]:bg-gold/20 whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3">
+                <Plug className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Integrations</span>
+              </TabsTrigger>
+              {isAdmin && (
+                <TabsTrigger value="admin" className="data-[state=active]:bg-red-500/20 text-red-400 whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3">
+                  <Shield className="h-4 w-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Admin</span>
+                </TabsTrigger>
+              )}
+            </TabsList>
+          </div>
 
           <TabsContent value="account">
             <div className="space-y-6">
