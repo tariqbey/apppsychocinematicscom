@@ -94,22 +94,22 @@ export function usePushNotifications() {
     try {
       if (!('serviceWorker' in navigator)) return;
 
-      // Try to get existing registration
-      let registration = await navigator.serviceWorker.getRegistration('/sw-push.js');
-      
-      // Also check for root-scoped registration (iOS sometimes registers differently)
-      if (!registration) {
-        registration = await navigator.serviceWorker.getRegistration('/');
-      }
+      // Wait for service worker to be ready first
+      await navigator.serviceWorker.ready;
+
+      // Get registration by SCOPE (not script path) - scope is '/'
+      const registration = await navigator.serviceWorker.getRegistration('/');
       
       if (!registration) {
-        console.log('[Push] No service worker registration found');
+        console.log('[Push] No service worker registration found at scope /');
         setState(prev => ({ ...prev, isSubscribed: false }));
         return;
       }
 
+      console.log('[Push] Found registration:', registration.scope, 'active:', !!registration.active);
+
       const subscription = await registration.pushManager.getSubscription();
-      console.log('[Push] Current subscription endpoint:', subscription?.endpoint?.substring(0, 50));
+      console.log('[Push] Current subscription endpoint:', subscription?.endpoint?.substring(0, 60) || 'none');
       setState(prev => ({ ...prev, isSubscribed: !!subscription }));
     } catch (error) {
       console.error('[Push] Error checking subscription:', error);
@@ -274,7 +274,8 @@ export function usePushNotifications() {
     setState(prev => ({ ...prev, isLoading: true }));
 
     try {
-      const registration = await navigator.serviceWorker.getRegistration('/sw-push.js');
+      // Get registration by SCOPE (not script path)
+      const registration = await navigator.serviceWorker.getRegistration('/');
       if (!registration) {
         setState(prev => ({ ...prev, isSubscribed: false, isLoading: false }));
         return;
