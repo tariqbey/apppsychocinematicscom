@@ -476,6 +476,7 @@ export function StoryboardWizard({ isOpen, onClose, onAddToTimeline, chiefAim }:
                       <StoryboardQuestionFlow
                         chiefAim={chiefAim}
                         onAnswersChange={setVisionAnswers}
+                        characterDescription={profile?.display_name ? `${profile.display_name} - the protagonist and ideal self` : undefined}
                       />
                     ) : (
                       <StoryboardScriptInput
