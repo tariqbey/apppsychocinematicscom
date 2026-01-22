@@ -40,7 +40,7 @@ interface AnalysisResult {
 export function MindMovieAnalysis() {
   const { user } = useAuth();
   const { toast } = useToast();
-  const { allMovies, activeMovie, fetchAllMovies } = useMindMovies();
+  const { movies, activeMovie } = useMindMovies();
   const [loading, setLoading] = useState(false);
   const [capturing, setCapturing] = useState(false);
   const [result, setResult] = useState<AnalysisResult | null>(null);
@@ -162,7 +162,7 @@ export function MindMovieAnalysis() {
     return "text-red-400 bg-red-500/20";
   };
 
-  if (!activeMovie && allMovies.length === 0) {
+  if (!activeMovie && movies.length === 0) {
     return null;
   }
 
