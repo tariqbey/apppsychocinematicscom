@@ -15,6 +15,8 @@ export function EnableNotificationsBanner({
 }: EnableNotificationsBannerProps) {
   const [isDismissed, setIsDismissed] = useState(false);
   const [isEnabling, setIsEnabling] = useState(false);
+  
+  // IMPORTANT: Call ALL hooks unconditionally BEFORE any early returns
   const { 
     isSubscribed, 
     isSupported, 
@@ -32,19 +34,33 @@ export function EnableNotificationsBanner({
     }
   }, []);
 
-  // Don't show if already subscribed, dismissed, or not supported
+  // Detect if user needs desktop browser instructions
+  const isDesktopBrowser = typeof window !== 'undefined' && 
+    !/Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+  const handleEnable = async () => {
+    setIsEnabling(true);
+    try {
+      await subscribe();
+    } finally {
+      setIsEnabling(false);
+    }
+  };
+
+  const handleDismiss = () => {
+    sessionStorage.setItem('notification_banner_dismissed', 'true');
+    setIsDismissed(true);
+  };
+
+  // ALL early returns AFTER all hooks have been called
   if (isSubscribed || isDismissed) {
     return null;
   }
 
   // Special case: iOS not in PWA mode
   if (isiOS && !isPWA) {
-    return null; // Handle this in NotificationSettings instead
+    return null;
   }
-
-  // Detect if user needs desktop browser instructions
-  const isDesktopBrowser = typeof window !== 'undefined' && 
-    !/Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
   // Permission denied - show different message with unblock instructions
   if (permission === 'denied') {
@@ -68,10 +84,7 @@ export function EnableNotificationsBanner({
               variant="ghost"
               size="icon"
               className="shrink-0 h-8 w-8"
-              onClick={() => {
-                sessionStorage.setItem('notification_banner_dismissed', 'true');
-                setIsDismissed(true);
-              }}
+              onClick={handleDismiss}
             >
               <X className="h-4 w-4" />
             </Button>
@@ -105,24 +118,6 @@ export function EnableNotificationsBanner({
       </div>
     );
   }
-
-  const handleEnable = async () => {
-    setIsEnabling(true);
-    try {
-      await subscribe();
-    } finally {
-      setIsEnabling(false);
-    }
-  };
-
-  const handleDismiss = () => {
-    sessionStorage.setItem('notification_banner_dismissed', 'true');
-    setIsDismissed(true);
-  };
-
-  // Detect if user needs desktop browser instructions
-  const isDesktop = typeof window !== 'undefined' && 
-    !/Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
   return (
     <div className={cn(
@@ -168,7 +163,7 @@ export function EnableNotificationsBanner({
       </div>
       
       {/* Desktop browser instructions */}
-      {isDesktop && permission !== 'granted' && (
+      {isDesktopBrowser && permission !== 'granted' && (
         <div className="bg-muted/50 rounded-lg p-3 text-xs text-muted-foreground space-y-2">
           <p className="font-medium text-foreground">If you don't see a notification prompt:</p>
           <div className="grid sm:grid-cols-2 gap-2">
