@@ -14,6 +14,7 @@ import { DailyScorecard } from "@/components/scorecard/DailyScorecard";
 import { ChiefAimWizard } from "@/components/chief-aim/ChiefAimWizard";
 import { MindMovieScriptWizard, TimelineExportData } from "@/components/mind-movie/MindMovieScriptWizard";
 import { MovieVault } from "@/components/mind-movie/MovieVault";
+import { StoryboardWizard } from "@/components/storyboard/StoryboardWizard";
 import { DirectorsJournal } from "@/components/journal/DirectorsJournal";
 import { AuthModal } from "@/components/auth/AuthModal";
 import { OnboardingModal, useOnboarding } from "@/components/onboarding/OnboardingModal";
@@ -26,7 +27,7 @@ import { useGamification } from "@/hooks/useGamification";
 import { useMindMovies, MindMovie } from "@/hooks/useMindMovies";
 import { useEpisodes } from "@/hooks/useEpisodes";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Sparkles, Bot, Clapperboard, Zap, MessageSquareHeart, FileText, Wand2, FolderOpen, BookOpen, Target, User2, Music, XCircle, Flame } from "lucide-react";
+import { Loader2, Sparkles, Bot, Clapperboard, Zap, MessageSquareHeart, FileText, Wand2, FolderOpen, BookOpen, Target, User2, Music, XCircle, Flame, Film, ListTodo } from "lucide-react";
 import { ModuleCard } from "@/components/dashboard/ModuleCard";
 import { Button } from "@/components/ui/button";
 import { InfoTooltip } from "@/components/ui/info-tooltip";
@@ -78,6 +79,7 @@ const Index = () => {
   const { activeEpisode, loading: episodesLoading, updateEpisode } = useEpisodes();
   const [showEpisodeWizard, setShowEpisodeWizard] = useState(false);
   const [showTestimonialDialog, setShowTestimonialDialog] = useState(false);
+  const [showStoryboardWizard, setShowStoryboardWizard] = useState(false);
   const [episodeForMovie, setEpisodeForMovie] = useState<{
     id: string;
     title: string;
@@ -296,10 +298,17 @@ const Index = () => {
           {/* Push Notifications Banner - Reminds users to enable */}
           <EnableNotificationsBanner className="animate-slide-up" />
 
-          {/* Production Status */}
-          <ProductionStatus currentAct={currentAct} dayNumber={dayNumber} />
+          {/* Production Status - Animated */}
+          <div className="animate-fade-in" style={{ animationDelay: "0.1s" }}>
+            <ProductionStatus currentAct={currentAct} dayNumber={dayNumber} />
+          </div>
 
-          {/* Definite Chief Aim Creator Card - THE FOUNDATION - Must be done first */}
+          {/* Streak Banner - Right after Production Status */}
+          <div className="animate-slide-up" style={{ animationDelay: "0.15s" }}>
+            <StreakBanner streak={streak} bestStreak={bestStreak} />
+          </div>
+
+          {/* Definite Chief Aim Creator Card - THE FOUNDATION */}
           <button
             onClick={() => setShowChiefAimWizard(true)}
             className={`w-full glass-card p-6 cinematic-border animate-slide-up group transition-all duration-300 text-left ${
@@ -307,6 +316,7 @@ const Index = () => {
                 ? "hover:border-emerald-500/50" 
                 : "border-gold/50 hover:border-gold ring-2 ring-gold/20"
             }`}
+            style={{ animationDelay: "0.2s" }}
           >
             <div className="flex items-center gap-4">
               <div className={`w-14 h-14 rounded-xl flex items-center justify-center transition-all duration-300 overflow-hidden ${
@@ -343,33 +353,130 @@ const Index = () => {
             </div>
           </button>
 
-          {/* Streak Banner */}
-          <StreakBanner streak={streak} bestStreak={bestStreak} />
+          {/* ========== CHARACTER BUILDER ========== */}
+          <ModuleCard
+            onClick={() => navigate("/character")}
+            iconImage={iconCharacter}
+            icon={null}
+            title="Character Builder"
+            description="Discover your archetype • Create your hero • Daily trait scorecard"
+            actionText="Build Character"
+            colorScheme="cyan"
+            tooltip="Discover your Director archetype, define required character traits, and track daily alignment. Build the identity needed to achieve your Chief Aim."
+            animationIndex={0}
+          />
 
-          {/* CUT! Button - Big red reset button */}
-          <button
-            onClick={() => setShowCutReset(true)}
-            className="w-full glass-card p-5 animate-slide-up group transition-all duration-300 text-left border-2 border-red-500/50 hover:border-red-500 hover:bg-red-500/10"
-          >
-            <div className="flex items-center gap-4">
-              <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-red-600 to-red-700 flex items-center justify-center shadow-lg shadow-red-500/30 group-hover:shadow-red-500/50 transition-all duration-300">
-                <XCircle className="w-8 h-8 text-white" />
-              </div>
-              <div className="flex-1">
-                <h3 className="text-2xl font-display tracking-wider text-red-500 group-hover:text-red-400 transition-colors font-bold">
-                  CUT!
-                </h3>
-                <p className="text-sm text-muted-foreground">
-                  Reset your mindset • Watch your Mind Movie • Get back in character
-                </p>
-              </div>
-              <div className="hidden sm:flex items-center gap-2 text-red-500 group-hover:text-red-400 transition-colors font-semibold">
-                <span>Reset Now</span>
-                <span className="text-lg">→</span>
-              </div>
-            </div>
-          </button>
+          {/* ========== NEW: STORYBOARD WIZARD ========== */}
+          <ModuleCard
+            onClick={() => setShowStoryboardWizard(true)}
+            icon={<Film className="w-7 h-7 text-amber-500" />}
+            title="Storyboard"
+            description="AI-powered scene generation • Create your movie script • Generate visuals & videos"
+            actionText="Create Storyboard"
+            colorScheme="amber"
+            tooltip="Use AI to create your Mind Movie storyboard. Answer questions about your vision, generate scenes, create images, and animate them into 8-second video clips."
+            featured={!chiefAimComplete ? false : true}
+            animationIndex={1}
+          />
 
+          {/* ========== SOUNDTRACK STUDIO ========== */}
+          <ModuleCard
+            onClick={() => navigate("/soundtrack")}
+            iconImage={iconSoundtrack}
+            icon={null}
+            title="Soundtrack Studio"
+            description="Create custom AI soundtracks • 50+ music genres • Save to library"
+            actionText="Create Music"
+            colorScheme="pink"
+            tooltip="Create AI-generated music and lyrics for your Mind Movies. Choose from 50+ genres and styles to match your vision."
+            animationIndex={2}
+          />
+
+          {/* ========== EDIT BAY (AI STUDIO) ========== */}
+          <ModuleCard
+            onClick={() => {
+              setEditBayInitialPrompt(undefined);
+              setEditBaySceneContext(undefined);
+              setShowEditBay(true);
+            }}
+            iconImage={iconEditBay}
+            icon={null}
+            title="The Edit Bay"
+            description="AI Media Generation Studio — Create images, animate them into videos, and build your Mind Movie."
+            actionText="Enter Studio"
+            colorScheme="gold"
+            tooltip="Generate AI images of your future self and goals, then animate them into videos. Use reference photos of yourself to see YOU living your Chief Aim. Great for creating Mind Movie visuals."
+            animationIndex={3}
+          />
+
+          {/* ========== ACTION EXECUTION ========== */}
+          <ModuleCard
+            onClick={() => navigate("/actions")}
+            iconImage={iconActions}
+            icon={null}
+            title="Action Execution"
+            description="Your 3 daily priorities • Excuse tracking • Accountability analytics"
+            actionText="Open Actions"
+            colorScheme="primary"
+            tooltip="Focus on just 3 priority tasks per day that move you toward your Chief Aim. Track your excuse patterns and build accountability."
+            animationIndex={4}
+          />
+
+          {/* ========== CHALLENGES & ADVERSITY ========== */}
+          <ModuleCard
+            onClick={() => navigate("/challenges")}
+            icon={<Target className="w-7 h-7 text-red-500" />}
+            title="Challenges & Adversity"
+            description="Character training • XP rewards • Transformation tracking"
+            actionText="Train Now"
+            colorScheme="red"
+            tooltip="Train your character through scenario-based emotional adversity. Earn XP by responding transformatively to challenges."
+            animationIndex={5}
+          />
+
+          {/* ========== DIRECTOR'S JOURNAL ========== */}
+          <ModuleCard
+            onClick={() => setShowJournal(true)}
+            iconImage={iconJournal}
+            icon={null}
+            title="Director's Journal"
+            description="Record your journey • AI insights & accountability tracking"
+            actionText="Open Journal"
+            colorScheme="purple"
+            tooltip="Record your experiences, breakthroughs, and challenges. Get AI-powered feedback on your progress and accountability reports to track your transformation journey."
+            animationIndex={6}
+          />
+
+          {/* ========== MIND MOVIE VAULT ========== */}
+          <div className="flex flex-col sm:flex-row gap-4">
+            <ModuleCard
+              onClick={() => setShowMovieVault(true)}
+              iconImage={iconMindMovie}
+              icon={null}
+              title="Mind Movie Vault"
+              description="Manage multiple Mind Movies — One for each goal or scenario."
+              actionText="Open Vault"
+              colorScheme="amber"
+              tooltip="Create and manage multiple Mind Movies for different goals and scenarios. Each movie has its own Chief Aim snapshot, storyboard, and soundtrack."
+              className="flex-1"
+              animationIndex={7}
+            />
+
+            {/* Quick Create New Movie Button */}
+            {chiefAimComplete && (
+              <Button
+                variant="gold"
+                onClick={handleCreateNewMovie}
+                className="sm:w-auto h-auto py-4 px-6 animate-fade-in"
+                style={{ animationDelay: "0.6s" }}
+              >
+                <Clapperboard className="w-5 h-5 mr-2" />
+                Start New Movie
+              </Button>
+            )}
+          </div>
+
+          {/* ========== CREATE EPISODE ========== */}
           {/* Active Episode Banner - Clickable to navigate to Episodes page */}
           {activeEpisode && (
             <ActiveEpisodeBanner 
@@ -412,131 +519,19 @@ const Index = () => {
 
           {/* New Episode Button (when no active episode) */}
           {!activeEpisode && !episodesLoading && chiefAimComplete && (
-            <button
+            <ModuleCard
               onClick={() => setShowEpisodeWizard(true)}
-              className="w-full glass-card p-4 cinematic-border animate-slide-up group hover:border-amber-500/50 transition-all duration-300 text-left flex items-center gap-4"
-            >
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-500/20 to-orange-600/20 flex items-center justify-center">
-                <Zap className="w-6 h-6 text-amber-500" />
-              </div>
-              <div className="flex-1">
-                <h3 className="font-medium group-hover:text-amber-500 transition-colors">Start a New Episode</h3>
-                <p className="text-sm text-muted-foreground">Short-term sprint aligned with your Chief Aim</p>
-              </div>
-              <span className="text-amber-500 hidden sm:block">+ Create</span>
-            </button>
+              icon={<Zap className="w-7 h-7 text-orange-500" />}
+              title="Create Episode"
+              description="Short-term sprints aligned with your Chief Aim • Mini Mind Movies"
+              actionText="+ New Episode"
+              colorScheme="amber"
+              tooltip="Create focused episodes (2-4 week sprints) that advance your Chief Aim. Each episode gets its own mini Mind Movie."
+              animationIndex={8}
+            />
           )}
 
-          {/* ========== STEP 2: CHARACTER BUILDER ========== */}
-          <ModuleCard
-            onClick={() => navigate("/character")}
-            iconImage={iconCharacter}
-            icon={null}
-            title="Character Builder"
-            description="Discover your archetype • Daily trait scorecard • Transformation tracking"
-            actionText="Build Character"
-            colorScheme="cyan"
-            tooltip="Discover your Director archetype, define required character traits, and track daily alignment. Build the identity needed to achieve your Chief Aim."
-            animationIndex={0}
-          />
-
-          {/* ========== STEP 3: MIND MOVIE VAULT ========== */}
-          <div className="flex flex-col sm:flex-row gap-4">
-            <ModuleCard
-              onClick={() => setShowMovieVault(true)}
-              iconImage={iconMindMovie}
-              icon={null}
-              title="Mind Movie Vault"
-              description="Manage multiple Mind Movies — One for each goal or scenario."
-              actionText="Open Vault"
-              colorScheme="amber"
-              tooltip="Create and manage multiple Mind Movies for different goals and scenarios. Each movie has its own Chief Aim snapshot, storyboard, and soundtrack."
-              className="flex-1"
-              animationIndex={1}
-            />
-
-            {/* Quick Create New Movie Button */}
-            {chiefAimComplete && (
-              <Button
-                variant="gold"
-                onClick={handleCreateNewMovie}
-                className="sm:w-auto h-auto py-4 px-6"
-              >
-                <Clapperboard className="w-5 h-5 mr-2" />
-                Start New Movie
-              </Button>
-            )}
-          </div>
-
-          {/* ========== STEP 4: EDIT BAY (AI STUDIO) ========== */}
-          <ModuleCard
-            onClick={() => {
-              setEditBayInitialPrompt(undefined);
-              setEditBaySceneContext(undefined);
-              setShowEditBay(true);
-            }}
-            iconImage={iconEditBay}
-            icon={null}
-            title="The Edit Bay"
-            description="AI Media Generation Studio — Create images, animate them into videos, and build your Mind Movie."
-            actionText="Enter Studio"
-            colorScheme="gold"
-            tooltip="Generate AI images of your future self and goals, then animate them into videos. Use reference photos of yourself to see YOU living your Chief Aim. Great for creating Mind Movie visuals."
-            animationIndex={2}
-          />
-
-          {/* ========== CHALLENGES & ADVERSITY ========== */}
-          <ModuleCard
-            onClick={() => navigate("/challenges")}
-            icon={<Target className="w-7 h-7 text-red-500" />}
-            title="Challenges & Adversity"
-            description="Character training • XP rewards • Transformation tracking"
-            actionText="Train Now"
-            colorScheme="red"
-            tooltip="Train your character through scenario-based emotional adversity. Earn XP by responding transformatively to challenges."
-            animationIndex={3}
-          />
-
-          {/* ========== STEP 5: ACTION EXECUTION ========== */}
-          <ModuleCard
-            onClick={() => navigate("/actions")}
-            iconImage={iconActions}
-            icon={null}
-            title="Action Execution"
-            description="Your 3 daily priorities • Excuse tracking • Accountability analytics"
-            actionText="Open Actions"
-            colorScheme="primary"
-            tooltip="Focus on just 3 priority tasks per day that move you toward your Chief Aim. Track your excuse patterns and build accountability."
-            animationIndex={4}
-          />
-
-          {/* ========== STEP 6: DIRECTOR'S JOURNAL ========== */}
-          <ModuleCard
-            onClick={() => setShowJournal(true)}
-            iconImage={iconJournal}
-            icon={null}
-            title="Director's Journal"
-            description="Record your journey • AI insights & accountability tracking"
-            actionText="Open Journal"
-            colorScheme="purple"
-            tooltip="Record your experiences, breakthroughs, and challenges. Get AI-powered feedback on your progress and accountability reports to track your transformation journey."
-            animationIndex={5}
-          />
-
-          {/* ========== STEP 7: SOUNDTRACK STUDIO ========== */}
-          <ModuleCard
-            onClick={() => navigate("/soundtrack")}
-            iconImage={iconSoundtrack}
-            icon={null}
-            title="Soundtrack Studio"
-            description="Create custom AI soundtracks • 50+ music genres • Save to library"
-            actionText="Create Music"
-            colorScheme="pink"
-            tooltip="Create AI-generated music and lyrics for your Mind Movies. Choose from 50+ genres and styles to match your vision."
-            animationIndex={6}
-          />
-
-          {/* ========== STEP 8: THE SCORE (Personal Music) ========== */}
+          {/* ========== THE SCORE (Personal Music) ========== */}
           <ModuleCard
             onClick={() => navigate("/score")}
             icon={<Music className="w-7 h-7 text-gold" />}
@@ -545,13 +540,13 @@ const Index = () => {
             actionText="Open Score"
             colorScheme="gold"
             tooltip="Your personal music player. Organize tracks into playlists, drag to reorder, and stream your transformation soundtrack."
-            animationIndex={7}
+            animationIndex={9}
           />
 
-          {/* ========== STEP 9: DIRECTOR RADIO ========== */}
+          {/* ========== DIRECTOR RADIO ========== */}
           <DirectorRadioCard />
 
-          {/* ========== BONUS: SHARE YOUR STORY ========== */}
+          {/* ========== SHARE YOUR STORY ========== */}
           <ModuleCard
             onClick={() => setShowTestimonialDialog(true)}
             icon={<MessageSquareHeart className="w-7 h-7 text-emerald-400" />}
@@ -559,11 +554,36 @@ const Index = () => {
             description="Record a testimonial • Inspire other directors • Get featured on the landing page"
             actionText="Share"
             colorScheme="emerald"
-            animationIndex={8}
+            animationIndex={10}
           />
 
-          {/* Two Column Layout */}
-          <div className="grid md:grid-cols-2 gap-6">
+          {/* CUT! Button - Big red reset button */}
+          <button
+            onClick={() => setShowCutReset(true)}
+            className="w-full glass-card p-5 animate-slide-up group transition-all duration-300 text-left border-2 border-red-500/50 hover:border-red-500 hover:bg-red-500/10"
+            style={{ animationDelay: "0.8s" }}
+          >
+            <div className="flex items-center gap-4">
+              <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-red-600 to-red-700 flex items-center justify-center shadow-lg shadow-red-500/30 group-hover:shadow-red-500/50 transition-all duration-300">
+                <XCircle className="w-8 h-8 text-white" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-2xl font-display tracking-wider text-red-500 group-hover:text-red-400 transition-colors font-bold">
+                  CUT!
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  Reset your mindset • Watch your Mind Movie • Get back in character
+                </p>
+              </div>
+              <div className="hidden sm:flex items-center gap-2 text-red-500 group-hover:text-red-400 transition-colors font-semibold">
+                <span>Reset Now</span>
+                <span className="text-lg">→</span>
+              </div>
+            </div>
+          </button>
+
+          {/* Two Column Layout - Daily Ritual & Chief Aim Summary with animations */}
+          <div className="grid md:grid-cols-2 gap-6 animate-fade-in" style={{ animationDelay: "0.9s" }}>
             {/* Daily Ritual */}
             <DailyRitualChecklist
               onTheaterClick={() => setShowTheater(true)}
@@ -714,6 +734,25 @@ const Index = () => {
           onSave={handleSaveChiefAim}
         />
       )}
+
+      {/* Storyboard Wizard */}
+      <StoryboardWizard
+        isOpen={showStoryboardWizard}
+        onClose={() => setShowStoryboardWizard(false)}
+        chiefAim={chiefAim}
+        onAddToTimeline={(scenes) => {
+          setTimelineExportData({
+            scenes: scenes.map(s => ({
+              ...s,
+              generatedImageUrl: s.generatedImageUrl || undefined,
+              generatedVideoUrl: s.generatedVideoUrl || undefined,
+            })),
+            title: "Storyboard Export",
+          });
+          setShowStoryboardWizard(false);
+          setShowEditBay(true);
+        }}
+      />
 
       {/* Director AI Agent */}
       <>
