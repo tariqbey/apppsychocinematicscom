@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { Loader2, Sparkles, Download, ImageIcon, Pencil, Film, Wand2, X, Images } from "lucide-react";
+import { Loader2, Sparkles, Download, ImageIcon, Pencil, Film, Wand2, X, Images, LayoutDashboard } from "lucide-react";
 import { useMediaGeneration, VideoModel, MODEL_INFO } from "@/hooks/useMediaGeneration";
 import { ImageUpload } from "./ImageUpload";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -11,6 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useMindMovies } from "@/hooks/useMindMovies";
 import { useGlobalReferencePhoto } from "@/hooks/useGlobalReferencePhoto";
+import { useAuth } from "@/hooks/useAuth";
 
 interface ImageGeneratorProps {
   onImageGenerated?: (url: string) => void;
@@ -28,6 +29,7 @@ export function ImageGenerator({
   imageType,
 }: ImageGeneratorProps) {
   const { toast } = useToast();
+  const { user } = useAuth();
   const { activeMovie } = useMindMovies();
 
   // Global character reference photo (saved in Settings)
@@ -273,6 +275,19 @@ export function ImageGenerator({
                   Use Image
                 </Button>
               )}
+              <Button 
+                size="sm" 
+                variant="secondary"
+                onClick={() => {
+                  if (user?.id && generatedImageUrl) {
+                    localStorage.setItem(`director-cover-${user.id}`, generatedImageUrl);
+                    toast({ title: "Cover photo updated!", description: "Go to your dashboard to see it." });
+                  }
+                }}
+              >
+                <LayoutDashboard className="mr-2 h-4 w-4" />
+                Use as Cover
+              </Button>
             </div>
           </div>
           <div className="relative rounded-lg overflow-hidden border border-border/50">
