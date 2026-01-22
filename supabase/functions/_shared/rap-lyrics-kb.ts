@@ -1,122 +1,120 @@
 // Rap Lyrics Knowledge Base
-// Based on Paul Edwards' "How to Rap" and "How to Rap 2" books
-// Used by AI to generate authentic, well-crafted rap lyrics for Mind Movies
+// Techniques for creating authentic, well-crafted rap lyrics
+// For Mind Movie soundtracks and challenge anthems
 
 export const RAP_LYRICS_KNOWLEDGE = `
 ## RAP SONGWRITING FUNDAMENTALS
 
-### CONTENT APPROACHES
+### CONTENT TYPES (Choose Based on Purpose)
 
-**First-Person Affirmative Language (For Manifestation)**
-- Use "I am", "I have", "I see myself" - present tense as if achieved
+**First-Person Affirmative (For Manifestation)**
+- Use "I am", "I have", "I see myself" - present tense as achieved
 - Transform desires into declarations: "I want success" → "I am successful"
-- Speak directly to the subconscious through confident assertion
+- The subconscious accepts present-tense statements as reality
 
-**Conscious/Motivational Content**
+**Motivational/Conscious Content**
 - Focus on substance and meaning over empty flexing
 - Blend personal journey with universal inspiration
-- Use metaphors of growth, transformation, and ascension
+- Use metaphors of growth, transformation, ascension
 - Reference overcoming obstacles and persistence
 
-**Real-Life vs Fictional Content**
-- Real-life content = authentic experiences and genuine emotions
-- Fictional content = aspirational scenarios and future states
+**Real-Life vs Aspirational**
+- Real-life = authentic experiences and genuine emotions
+- Aspirational = future states visualized as current reality
 - For Mind Movies: blend current truth with achieved-future visualization
 
 ### FLOW FUNDAMENTALS
 
 **Voice as Percussion**
-The voice is treated like a drum in hip-hop:
 - Each syllable is a drum hit
-- Some syllables hit harder (stressed) than others (unstressed)
-- Flow = the rhythmic pattern of stressed/unstressed syllables
+- Stressed syllables hit harder
+- Flow = the rhythmic pattern of these hits
+- Great MCs treat their voice like an instrument
 
 **Beat and Bar Structure**
-- Most hip-hop beats are 4/4 time
-- 4 beats per bar (measure)
-- Typical verse = 16 bars
-- Typical chorus/hook = 8 bars
-- Each beat can be subdivided into smaller notes
+- 4 beats per bar (most hip-hop)
+- Verse = typically 16 bars
+- Chorus/Hook = typically 8 bars
+- Each beat subdivides into smaller notes
 
 **Writing From Rhythm First**
 1. Feel the beat's groove and tempo
-2. Tap out a rhythmic pattern that fits
-3. Add syllables that match the rhythm
-4. Then shape words around those syllable placements
+2. Tap out a rhythmic pattern
+3. Add syllables matching the rhythm
+4. Shape words around those syllable placements
 
 **The Pocket**
 - "In the pocket" = perfectly locked to the beat
-- Syllables land exactly on subdivisions of the beat
+- Syllables land on subdivisions precisely
 - Creates satisfying, head-nodding groove
-- Essential for motivational anthems
 
 ### RHYME TECHNIQUES
 
 **Perfect Rhyme**
-- Matching final consonant AND vowel sounds
-- Example: "dream/stream", "goal/soul", "rise/eyes"
-- Creates strongest sense of resolution
+- Match final consonant AND vowel sounds
+- Examples: dream/stream, goal/soul, rise/eyes
+- Creates strongest resolution
 
-**Assonance (Vowel Rhymes)**
-- Matching vowel sounds without consonant match
-- Example: "time/life", "road/gold", "make/change"
+**Assonance (Vowel Rhyme)**
+- Match vowel sounds without consonant match
+- Examples: time/life, road/gold, make/change
 - More subtle, sophisticated sound
 
 **Compound/Multisyllable Rhymes**
-- Rhyming multiple syllables for impact
-- Example: "director/protector", "achieving/believing"
+- Rhyme multiple syllables for impact
+- Examples: director/protector, achieving/believing
 - Creates memorable, quotable lines
 
 **Rhyme Schemes**
-- AABB: Couplets (most common, punchy)
+- AABB: Couplets (punchy, most common)
 - ABAB: Alternating (builds anticipation)
 - ABBA: Enclosed (sophisticated)
-- Internal rhymes: Rhymes within a single line
+- Internal: Rhymes within a single line
 
-**Extra Rhymes**
-- Adding rhymes beyond the end of lines
-- Creates density and complexity
-- "I'm the DIRECTOR, SUCCESS COLLECTOR, no OBJECTOR to my SECTOR"
+**Extra Rhymes / Rhyme Density**
+- Add rhymes beyond line endings
+- Creates complexity and replay value
+- Example: "I'm the DIRECTOR, SUCCESS COLLECTOR, no OBJECTOR to my SECTOR"
 
 ### RHYTHM & SUBDIVISION
 
 **16th Notes**
-- 4 notes per beat (standard rap subdivision)
-- Allows for faster, more complex flows
-- "1-e-and-a, 2-e-and-a, 3-e-and-a, 4-e-and-a"
+- 4 notes per beat (standard subdivision)
+- Allows faster, more complex flows
+- Count: "1-e-and-a, 2-e-and-a, 3-e-and-a, 4-e-and-a"
 
 **Triplets**
-- 3 notes per beat (creates different feel)
+- 3 notes per beat
+- Creates different feel, urgency
 - Popular in modern trap flows
-- Creates urgency and momentum
 
 **Rests & Space**
 - Strategic silence creates impact
 - Let important words breathe
-- "I AM... [rest] ...THE DIRECTOR" hits harder than cramming words
+- "I AM... [rest] ...THE DIRECTOR" hits harder
 
-**Sliding Off the Beat (Lazy Tails)**
-- Slightly delaying syllables for swagger
-- Creates laid-back, confident feel
-- Used sparingly for emphasis
+**Riding the Beat vs. Lazy Tails**
+- Riding = exactly on beat
+- Lazy tail = slightly delayed, swagger feel
+- Use sparingly for emphasis
 
 ### SONG STRUCTURE FOR MIND MOVIES
 
 **Intro (4-8 bars)**
-- Set the tone and vision
-- Establish the transformation theme
-- Can be spoken word or sung
+- Set tone and vision
+- Establish transformation theme
+- Can be spoken word or melodic
 
 **Verse 1 (16 bars)**
 - Introduce the journey
 - Current state → transformation begins
-- Specific, vivid imagery of the Director Character
+- Vivid imagery of Director Character
 
 **Chorus/Hook (8 bars)**
-- The Chief Aim as anthem
-- Most memorable, repeated section
+- Chief Aim as anthem
+- Most memorable section
 - Simple, powerful affirmation
-- Should be singable/chantable
+- Singable and chantable
 
 **Verse 2 (16 bars)**
 - The exchange and plan in action
@@ -124,14 +122,14 @@ The voice is treated like a drum in hip-hop:
 - Obstacles overcome, progress made
 
 **Bridge (8 bars)**
-- Emotional peak / breakthrough moment
+- Emotional peak / breakthrough
 - Shift in perspective or intensity
-- Building to final resolution
+- Building to resolution
 
-**Outro/Final Chorus (8-12 bars)**
-- The Final Scene achieved
+**Outro (4-8 bars)**
+- Final Scene achieved
 - Victory, celebration, gratitude
-- Resolution of the transformation
+- Resolution of transformation
 
 ### DELIVERY & VOCAL TECHNIQUES
 
@@ -142,10 +140,10 @@ The voice is treated like a drum in hip-hop:
 - Authentic emotion, not performance
 
 **Emphasis Techniques**
-- Stretch key words for emotional impact
+- Stretch key words for impact
 - Rise in pitch on power words
 - Lower register for authority
-- Breath and pauses for weight
+- Strategic pauses for weight
 
 **Mixing Spoken and Sung**
 - Verses: more rhythmic speech
@@ -155,10 +153,10 @@ The voice is treated like a drum in hip-hop:
 ### MOTIVATIONAL RAP SPECIFICS
 
 **Power Words to Include**
-- Director, vision, scene, script, movie
-- Rise, climb, build, create, manifest
-- Dream, destiny, purpose, calling
-- Transform, breakthrough, elevate, ascend
+- Director, vision, scene, script, movie, camera
+- Rise, climb, build, create, manifest, elevate
+- Dream, destiny, purpose, calling, mission
+- Transform, breakthrough, ascend, overcome
 
 **Imagery Categories**
 - Cinematic: camera, spotlight, screen, cut, action
@@ -169,8 +167,29 @@ The voice is treated like a drum in hip-hop:
 **Avoid**
 - Victim mentality language
 - Past-tense achievement (stay present/future)
-- Vague generalizations
+- Vague generalizations without specifics
 - Borrowed phrases without personalization
+- Negativity without transformation
+
+### ADVANCED TECHNIQUES
+
+**Wordplay Types**
+- Punchlines: Setup → unexpected payoff
+- Double/Triple entendres: Multiple meanings
+- Metaphor chains: Extended comparisons
+- Callbacks: Reference earlier lines
+
+**Flow Switches**
+- Change rhythm mid-verse for emphasis
+- Slow down for important lines
+- Speed up to build energy
+- Match flow to emotional content
+
+**Writing Tips from Masters**
+- Study MCs you admire, analyze their patterns
+- Write MORE than you need, then edit down
+- Freestyle to find natural rhythms
+- Personalize every line to YOUR story
 `;
 
 export const generateLyricsSystemPrompt = (chiefAim: {
@@ -183,18 +202,15 @@ export const generateLyricsSystemPrompt = (chiefAim: {
     `Scene ${i + 1} "${s.title}": ${s.emotional_tone} - ${s.narrative}`
   ).join('\n');
 
-  return `You are a master songwriter specializing in motivational hip-hop/rap. Your task is to write personalized lyrics for a Mind Movie visualization soundtrack.
+  return `You are a master songwriter specializing in motivational hip-hop/rap. Create personalized lyrics for a Mind Movie visualization soundtrack.
 
 ${RAP_LYRICS_KNOWLEDGE}
 
-## THE USER'S CHIEF AIM (This is their transformation goal)
+## THE USER'S CHIEF AIM
 
 **THE DREAM (What):** ${chiefAim.what}
-
 **THE DEADLINE (By When):** ${chiefAim.byWhen}
-
 **THE EXCHANGE (What They Give):** ${chiefAim.exchange}
-
 **THE PLAN (How):** ${chiefAim.plan}
 
 ## THE STORYBOARD (Emotional Journey)
@@ -209,13 +225,11 @@ Write complete song lyrics that:
 1. Transform the Chief Aim into a powerful musical affirmation
 2. Follow the emotional arc of the storyboard scenes
 3. Use first-person, present-tense language ("I am", "I have")
-4. Apply proper flow techniques with strong rhyme schemes
-5. Create a memorable, singable chorus that embodies the Final Scene
-6. Balance personal specifics with universal inspiration
+4. Apply proper flow with strong rhyme schemes
+5. Create a memorable, singable chorus
+6. Be SPECIFIC to their Chief Aim, not generic motivation
 
 ## OUTPUT FORMAT
-
-Return lyrics in this exact structure:
 
 [INTRO]
 (4-8 bars setting the vision)
@@ -238,5 +252,5 @@ Return lyrics in this exact structure:
 [OUTRO]
 (4-8 bars - Final Scene achieved)
 
-Write the complete lyrics now. Be specific to their Chief Aim, not generic motivation.`;
+Write the complete lyrics now. Make it PERSONAL to their specific Chief Aim.`;
 };

@@ -13,17 +13,18 @@ import {
 import { cn } from "@/lib/utils";
 
 // ElevenLabs voice options
+// ElevenLabs voice options - American voices prioritized
 export const VOICE_OPTIONS = [
-  { id: "JBFqnCBsd6RMkjVDRZzb", name: "George", description: "Deep, commanding male voice", gender: "male" },
-  { id: "TX3LPaxmHKxFdv7VOQHJ", name: "Liam", description: "Warm, friendly male voice", gender: "male" },
-  { id: "onwK4e9ZLuTAKqWW03F9", name: "Daniel", description: "Professional British male", gender: "male" },
-  { id: "nPczCjzI2devNBz1zQrb", name: "Brian", description: "Calm, authoritative male", gender: "male" },
-  { id: "cjVigY5qzO86Huf0OWal", name: "Eric", description: "Energetic, motivational male", gender: "male" },
-  { id: "EXAVITQu4vr4xnSDxMaL", name: "Sarah", description: "Warm, professional female", gender: "female" },
-  { id: "FGY2WhTYpPnrIDTdsKH5", name: "Laura", description: "Soft, empathetic female", gender: "female" },
-  { id: "XrExE9yKIg1WjnnlVkGX", name: "Matilda", description: "Confident, clear female", gender: "female" },
-  { id: "pFZP5JQG7iQjIQuC4Bku", name: "Lily", description: "Young, enthusiastic female", gender: "female" },
-  { id: "cgSgspJ2msm6clMCkdW9", name: "Jessica", description: "Elegant, refined female", gender: "female" },
+  { id: "cjVigY5qzO86Huf0OWal", name: "Eric", description: "American, energetic motivational male", gender: "male" },
+  { id: "JBFqnCBsd6RMkjVDRZzb", name: "George", description: "American, deep commanding male", gender: "male" },
+  { id: "TX3LPaxmHKxFdv7VOQHJ", name: "Liam", description: "American, warm friendly male", gender: "male" },
+  { id: "N2lVS1w4EtoT3dr4eOWO", name: "Callum", description: "American, smooth confident male", gender: "male" },
+  { id: "iP95p4xoKVk53GoZ742B", name: "Chris", description: "American, casual conversational male", gender: "male" },
+  { id: "EXAVITQu4vr4xnSDxMaL", name: "Sarah", description: "American, warm professional female", gender: "female" },
+  { id: "FGY2WhTYpPnrIDTdsKH5", name: "Laura", description: "American, soft empathetic female", gender: "female" },
+  { id: "XrExE9yKIg1WjnnlVkGX", name: "Matilda", description: "American, confident clear female", gender: "female" },
+  { id: "Xb7hH8MSUJpSbSDYk0k2", name: "Alice", description: "American, natural friendly female", gender: "female" },
+  { id: "cgSgspJ2msm6clMCkdW9", name: "Jessica", description: "American, elegant refined female", gender: "female" },
 ] as const;
 
 // Personality presets
