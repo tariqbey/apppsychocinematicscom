@@ -188,13 +188,16 @@ export function ImageGenerator({
       enhancedPrompt += " Use the other reference image(s) as style/wardrobe/setting inspiration.";
     }
 
+    // Use nano-banana-pro for strict aspect ratio control (it has API-level enforcement)
+    // Use gemini only as fallback when no aspect ratio control is needed
+    const useNanoBanana = aspectRatio !== "1:1" || imagesToUse.length > 0;
+    
     const url = await generateImage({
       prompt: enhancedPrompt,
       aspect_ratio: aspectRatio,
       resolution,
       images: imagesToUse.length > 0 ? imagesToUse : undefined,
-      // Always use Nano Banana (Gemini image model) so multiple reference images can be used.
-      model: "gemini",
+      model: useNanoBanana ? "nano-banana-pro" : "gemini",
       mode,
     });
 
