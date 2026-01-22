@@ -3,15 +3,19 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { Loader2, Sparkles, Download, ImageIcon, Pencil, Film, User } from "lucide-react";
+import { Loader2, Sparkles, Download, ImageIcon, Pencil, Film, User, Wand2, Plus, X, Images } from "lucide-react";
 import { useMediaGeneration, VideoModel, MODEL_INFO } from "@/hooks/useMediaGeneration";
 import { ImageUpload } from "./ImageUpload";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import { useMindMovies } from "@/hooks/useMindMovies";
 
 interface ImageGeneratorProps {
   onImageGenerated?: (url: string) => void;
   onVideoGenerated?: (url: string) => void;
   initialPrompt?: string;
+  imageType?: "poster" | "cover" | "avatar" | "profile" | "scene" | "storyboard";
 }
 
 type ImageMode = "create" | "edit";
@@ -20,13 +24,22 @@ export function ImageGenerator({
   onImageGenerated, 
   onVideoGenerated,
   initialPrompt,
+  imageType,
 }: ImageGeneratorProps) {
+  const { toast } = useToast();
+  const { activeMovie } = useMindMovies();
+  
   const [mode, setMode] = useState<ImageMode>("create");
   const [prompt, setPrompt] = useState(initialPrompt || "");
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
-  const [referencePhoto, setReferencePhoto] = useState<string | null>(null);
+  
+  // Multiple reference photos support
+  const [referencePhotos, setReferencePhotos] = useState<string[]>([]);
   const [aspectRatio, setAspectRatio] = useState<"1:1" | "16:9" | "9:16" | "4:3">("16:9");
   const [resolution, setResolution] = useState<"1k" | "2k" | "4k">("2k");
+  
+  // AI prompt enhancement state
+  const [isEnhancing, setIsEnhancing] = useState(false);
   
   // Animation state
   const [showAnimationPanel, setShowAnimationPanel] = useState(false);
@@ -40,6 +53,75 @@ export function ImageGenerator({
       setPrompt(initialPrompt);
     }
   }, [initialPrompt]);
+
+  // Add reference photo
+  const addReferencePhoto = (url: string) => {
+    if (referencePhotos.length < 5) {
+      setReferencePhotos(prev => [...prev, url]);
+    } else {
+      toast({
+        title: "Maximum reached",
+        description: "You can add up to 5 reference images",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Remove reference photo
+  const removeReferencePhoto = (index: number) => {
+    setReferencePhotos(prev => prev.filter((_, i) => i !== index));
+  };
+
+  // AI Prompt Enhancement
+  const handleEnhancePrompt = async () => {
+    if (!prompt.trim()) {
+      toast({
+        title: "Enter a prompt first",
+        description: "Type something to enhance",
+      });
+      return;
+    }
+
+    setIsEnhancing(true);
+    try {
+      const context: Record<string, string> = {};
+      
+      // Add context from user's mind movie if available
+      if (activeMovie?.chief_aim_snapshot?.what) {
+        context.chiefAim = activeMovie.chief_aim_snapshot.what;
+      }
+      if (activeMovie?.title) {
+        context.movieTitle = activeMovie.title;
+      }
+
+      const { data, error } = await supabase.functions.invoke("enhance-prompt", {
+        body: { 
+          prompt: prompt.trim(),
+          context,
+          imageType: imageType || "scene",
+        },
+      });
+
+      if (error) throw error;
+
+      if (data?.enhancedPrompt) {
+        setPrompt(data.enhancedPrompt);
+        toast({
+          title: "Prompt Enhanced! ✨",
+          description: "Your prompt has been upgraded with cinematic details",
+        });
+      }
+    } catch (error) {
+      console.error("Enhancement error:", error);
+      toast({
+        title: "Enhancement failed",
+        description: "Could not enhance prompt. Try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsEnhancing(false);
+    }
+  };
 
   // Models that support image-to-video
   const imageToVideoModels: { model: VideoModel; name: string; price: string }[] = [
@@ -64,10 +146,10 @@ export function ImageGenerator({
     // Combine all images for generation
     const imagesToUse: string[] = [];
     
-    // Always include reference photo first if available (for likeness)
-    if (referencePhoto) {
-      imagesToUse.push(referencePhoto);
-    }
+    // Include all reference photos (for likeness)
+    referencePhotos.forEach(photo => {
+      imagesToUse.push(photo);
+    });
     
     // Add uploaded image for editing if in edit mode
     if (mode === "edit" && uploadedImage) {
@@ -76,10 +158,10 @@ export function ImageGenerator({
 
     // Enhance prompt with reference photo context
     let enhancedPrompt = prompt.trim();
-    if (referencePhoto && !uploadedImage) {
-      enhancedPrompt = `Generate an image featuring the person from the reference photo. ${enhancedPrompt}`;
-    } else if (referencePhoto && uploadedImage) {
-      enhancedPrompt = `Edit this image to feature the person from the reference photo. ${enhancedPrompt}`;
+    if (referencePhotos.length > 0 && !uploadedImage) {
+      enhancedPrompt = `Generate an image featuring the person from the reference photo(s). ${enhancedPrompt}`;
+    } else if (referencePhotos.length > 0 && uploadedImage) {
+      enhancedPrompt = `Edit this image to feature the person from the reference photo(s). ${enhancedPrompt}`;
     }
 
     const url = await generateImage({
@@ -122,7 +204,7 @@ export function ImageGenerator({
     }
   };
 
-  const canGenerate = prompt.trim() && (mode === "create" || uploadedImage || referencePhoto);
+  const canGenerate = prompt.trim() && (mode === "create" || uploadedImage || referencePhotos.length > 0);
   const canAnimate = generatedImageUrl && animationPrompt.trim() && !isGeneratingVideo;
 
   return (
@@ -275,25 +357,51 @@ export function ImageGenerator({
         </div>
       )}
 
-      {/* Reference Photo for Likeness */}
-      <div className="space-y-2">
+      {/* Multiple Reference Photos for Likeness */}
+      <div className="space-y-3">
         <Label className="flex items-center gap-2">
-          <User className="h-4 w-4" />
-          Reference Photo (Optional)
+          <Images className="h-4 w-4" />
+          Reference Photos (Optional - up to 5)
         </Label>
         <p className="text-xs text-muted-foreground">
-          Upload a photo of yourself to include your likeness in generated images.
+          Upload photos to include your likeness or style references in generated images.
         </p>
-        <ImageUpload
-          value={referencePhoto}
-          onChange={setReferencePhoto}
-          placeholder="Upload your reference photo"
-          className="max-w-xs"
-        />
-        {referencePhoto && (
+        
+        {/* Display existing reference photos */}
+        {referencePhotos.length > 0 && (
+          <div className="flex flex-wrap gap-2">
+            {referencePhotos.map((photo, index) => (
+              <div key={index} className="relative group">
+                <img 
+                  src={photo} 
+                  alt={`Reference ${index + 1}`} 
+                  className="w-16 h-16 object-cover rounded-lg border border-border/50"
+                />
+                <button
+                  onClick={() => removeReferencePhoto(index)}
+                  className="absolute -top-2 -right-2 w-5 h-5 bg-destructive text-destructive-foreground rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+        
+        {/* Add more reference photos */}
+        {referencePhotos.length < 5 && (
+          <ImageUpload
+            value={null}
+            onChange={(url) => url && addReferencePhoto(url)}
+            placeholder={referencePhotos.length === 0 ? "Upload reference photo" : "Add another reference"}
+            className="max-w-xs"
+          />
+        )}
+        
+        {referencePhotos.length > 0 && (
           <p className="text-xs text-green-600 flex items-center gap-1">
             <Sparkles className="w-3 h-3" />
-            Your likeness will be incorporated into generated images
+            {referencePhotos.length} reference{referencePhotos.length > 1 ? 's' : ''} will be used
           </p>
         )}
       </div>
@@ -310,10 +418,28 @@ export function ImageGenerator({
         </div>
       )}
 
+      {/* Prompt with AI Enhance Button */}
       <div className="space-y-2">
-        <Label htmlFor="image-prompt">
-          {mode === "create" ? "Describe your image" : "Describe the edits"}
-        </Label>
+        <div className="flex items-center justify-between">
+          <Label htmlFor="image-prompt">
+            {mode === "create" ? "Describe your image" : "Describe the edits"}
+          </Label>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={handleEnhancePrompt}
+            disabled={isEnhancing || !prompt.trim()}
+            className="text-xs gap-1 text-gold hover:text-gold hover:bg-gold/10"
+          >
+            {isEnhancing ? (
+              <Loader2 className="h-3 w-3 animate-spin" />
+            ) : (
+              <Wand2 className="h-3 w-3" />
+            )}
+            AI Enhance
+          </Button>
+        </div>
         <Textarea
           id="image-prompt"
           placeholder={
@@ -325,6 +451,9 @@ export function ImageGenerator({
           onChange={(e) => setPrompt(e.target.value)}
           className="min-h-[100px] bg-background/50 border-border/50"
         />
+        <p className="text-xs text-muted-foreground">
+          💡 Click "AI Enhance" to add cinematic camera, lighting, and quality details
+        </p>
       </div>
 
       <div className="grid grid-cols-2 gap-4">
