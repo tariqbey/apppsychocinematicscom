@@ -133,25 +133,25 @@ REQUIREMENTS:
       messageContent = [{ type: "text", text: enhancedPrompt }];
     }
 
-    console.log("Calling Lovable AI Gateway for image generation...");
+    // Helper to make the API call
+    const callImageAPI = async (content: any[]) => {
+      const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${LOVABLE_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "google/gemini-2.5-flash-image-preview",
+          messages: [{ role: "user", content }],
+          modalities: ["image", "text"]
+        }),
+      });
+      return res;
+    };
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash-image-preview",
-        messages: [
-          {
-            role: "user",
-            content: messageContent
-          }
-        ],
-        modalities: ["image", "text"]
-      }),
-    });
+    console.log("Calling Lovable AI Gateway for image generation...");
+    let response = await callImageAPI(messageContent);
 
     if (!response.ok) {
       const errorText = await response.text();
@@ -175,15 +175,32 @@ REQUIREMENTS:
       });
     }
 
-    const data = await response.json();
-    console.log("Lovable AI response received");
+    let data = await response.json();
+    console.log("Lovable AI response received, checking for image...");
 
     // Extract the generated image from the response
-    const generatedImage = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+    let generatedImage = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+    
+    // If no image, retry once with a simplified prompt
+    if (!generatedImage) {
+      console.log("No image in first attempt, retrying with simplified prompt...");
+      const retryContent = [{ type: "text", text: `Generate an image: ${prompt}. High quality, photorealistic.` }];
+      response = await callImageAPI(retryContent);
+      
+      if (response.ok) {
+        data = await response.json();
+        generatedImage = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+      }
+    }
     
     if (!generatedImage) {
-      console.error("No image in response:", JSON.stringify(data).substring(0, 200));
-      return new Response(JSON.stringify({ success: false, error: "No image was generated. Please try a different prompt.", code: "E1007" }), {
+      const textResponse = data.choices?.[0]?.message?.content || "No content";
+      console.error("No image after retry. Text response:", textResponse.substring(0, 300));
+      return new Response(JSON.stringify({ 
+        success: false, 
+        error: "The AI couldn't generate this image. Try a simpler description.", 
+        code: "E1007" 
+      }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
