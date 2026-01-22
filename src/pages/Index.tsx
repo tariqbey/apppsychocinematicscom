@@ -34,6 +34,7 @@ import { toast } from "sonner";
 import { DirectorRadioCard } from "@/components/radio/DirectorRadioCard";
 import { TestimonialSubmissionDialog } from "@/components/testimonials/TestimonialSubmissionDialog";
 import { EnableNotificationsBanner } from "@/components/notifications/EnableNotificationsBanner";
+import { DirectorBanner } from "@/components/dashboard/DirectorBanner";
 
 // Custom module icons
 import iconChiefAim from "@/assets/icons/icon-chief-aim.png";
@@ -282,15 +283,15 @@ const Index = () => {
       {/* Main Content */}
       <main className="container mx-auto px-3 sm:px-4 pt-20 sm:pt-24 pb-28 sm:pb-32 overflow-x-hidden w-full">
         <div className="max-w-4xl mx-auto space-y-4 sm:space-y-6">
-          {/* Welcome Message */}
-          <div className="text-center mb-6 sm:mb-8 animate-fade-in">
-            <h2 className="text-2xl sm:text-4xl font-display tracking-wide mb-2">
-              Welcome Back, <span className="text-gold-gradient">Director</span>
-            </h2>
-            <p className="text-sm sm:text-base text-muted-foreground px-2">
-              The set is ready. Let's make today's scene count.
-            </p>
-          </div>
+          {/* Director Banner - Futuristic cover art + profile picture */}
+          <DirectorBanner 
+            onOpenAIStudio={() => {
+              setEditBayInitialPrompt(undefined);
+              setEditBaySceneContext(undefined);
+              setShowEditBay(true);
+            }}
+            className="animate-fade-in"
+          />
 
           {/* Push Notifications Banner - Reminds users to enable */}
           <EnableNotificationsBanner className="animate-slide-up" />

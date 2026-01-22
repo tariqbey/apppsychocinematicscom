@@ -419,7 +419,7 @@ export function DirectorAIAgent({ isOpen, onClose, chiefAim }: DirectorAIAgentPr
   };
 
   const stopSpeaking = useCallback(() => {
-    console.log("[DirectorAI] stopSpeaking called - killing all audio immediately");
+    console.log("[DirectorAI] stopSpeaking called - FORCE KILLING ALL AUDIO");
     
     // Mark as stopped FIRST to prevent any pending callbacks from resuming
     stopRequestedRef.current = true;
@@ -433,7 +433,20 @@ export function DirectorAIAgent({ isOpen, onClose, chiefAim }: DirectorAIAgentPr
       ttsAbortControllerRef.current = null;
     }
     
-    // Stop audio playback - be aggressive
+    // AGGRESSIVE: Find and kill ALL audio elements in the document
+    // This catches any orphaned Audio instances that lost their reference
+    try {
+      document.querySelectorAll("audio").forEach((audio) => {
+        audio.pause();
+        audio.currentTime = 0;
+        audio.src = "";
+        audio.load();
+      });
+    } catch (e) {
+      console.warn("[DirectorAI] Error stopping document audio elements:", e);
+    }
+    
+    // Stop our tracked audio ref
     if (audioRef.current) {
       const audio = audioRef.current;
       // Remove callbacks first to prevent any firing
@@ -441,12 +454,22 @@ export function DirectorAIAgent({ isOpen, onClose, chiefAim }: DirectorAIAgentPr
       audio.onerror = null;
       audio.onplay = null;
       audio.onpause = null;
-      // Stop playback
+      audio.onloadeddata = null;
+      audio.oncanplay = null;
+      // Stop playback aggressively
       audio.pause();
       audio.currentTime = 0;
       audio.src = "";
       audio.load(); // Force browser to release the audio
       audioRef.current = null;
+    }
+    
+    // Also stop the hidden audio element if it exists
+    const hiddenAudio = document.querySelector("audio.hidden") as HTMLAudioElement;
+    if (hiddenAudio) {
+      hiddenAudio.pause();
+      hiddenAudio.currentTime = 0;
+      hiddenAudio.src = "";
     }
     
     // Revoke audio URL to free memory
@@ -463,6 +486,8 @@ export function DirectorAIAgent({ isOpen, onClose, chiefAim }: DirectorAIAgentPr
     
     setOrbState("idle");
     setAudioLevel(0);
+    
+    console.log("[DirectorAI] All audio forcefully stopped");
   }, []);
 
   const stopConversation = useCallback(() => {
@@ -867,7 +892,21 @@ export function DirectorAIAgent({ isOpen, onClose, chiefAim }: DirectorAIAgentPr
             <Button
               variant="outline"
               onClick={() => {
+                // AGGRESSIVE STOP: Kill everything synchronously
                 stopConversation();
+                
+                // Also force-kill any audio contexts that might be playing
+                try {
+                  const allAudio = document.getElementsByTagName('audio');
+                  for (let i = 0; i < allAudio.length; i++) {
+                    allAudio[i].pause();
+                    allAudio[i].src = '';
+                  }
+                } catch (e) {
+                  console.warn('[DirectorAI] Error in force stop:', e);
+                }
+                
+                // Close immediately
                 onClose();
               }}
               className="border-2 border-red-500/70 bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 font-bold px-6"
