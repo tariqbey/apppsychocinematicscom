@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Bell, BellOff, BellRing, Loader2, Smartphone, AlertCircle, CheckCircle2 } from "lucide-react";
+import { Bell, BellOff, BellRing, Loader2, Smartphone, AlertCircle, CheckCircle2, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
@@ -55,7 +55,7 @@ export function NotificationSettings({ compact = false }: NotificationSettingsPr
     
     setIsSendingTest(true);
     try {
-      const { error } = await supabase.functions.invoke('send-push-notification', {
+      const { data, error } = await supabase.functions.invoke('send-push-notification', {
         body: {
           user_id: user.id,
           payload: {
@@ -67,7 +67,20 @@ export function NotificationSettings({ compact = false }: NotificationSettingsPr
       });
 
       if (error) throw error;
-      toast({ title: "Test notification sent!" });
+      
+      // Show detailed feedback
+      if (data?.sent > 0) {
+        toast({ 
+          title: "Test notification sent!",
+          description: `Sent to ${data.sent} device(s). Check your notification tray.`
+        });
+      } else {
+        toast({ 
+          title: "No devices to send to", 
+          description: "Try re-enabling notifications on this device.",
+          variant: "destructive" 
+        });
+      }
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Failed to send test';
       toast({ 
@@ -77,6 +90,28 @@ export function NotificationSettings({ compact = false }: NotificationSettingsPr
       });
     } finally {
       setIsSendingTest(false);
+    }
+  };
+
+  const handleResubscribe = async () => {
+    try {
+      // First unsubscribe to clear old state
+      await unsubscribe();
+      // Wait a moment
+      await new Promise(r => setTimeout(r, 500));
+      // Then subscribe fresh
+      await subscribe();
+      toast({ 
+        title: "Device registered!", 
+        description: "Push notifications are now enabled for this device." 
+      });
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Failed to register';
+      toast({
+        title: "Error",
+        description: message,
+        variant: "destructive",
+      });
     }
   };
 
@@ -237,6 +272,14 @@ export function NotificationSettings({ compact = false }: NotificationSettingsPr
               ) : null}
               Test Notification
             </Button>
+            <Button 
+              variant="outline" 
+              onClick={handleResubscribe}
+              title="Re-register this device"
+            >
+              <RefreshCw className="w-4 h-4 mr-2" />
+              Re-register Device
+            </Button>
             <Button variant="ghost" onClick={() => unsubscribe()}>
               Disable
             </Button>
@@ -266,6 +309,14 @@ export function NotificationSettings({ compact = false }: NotificationSettingsPr
               <span>Evening scorecard check-ins</span>
             </div>
           </div>
+          
+          {isiOS && (
+            <div className="mt-3 p-3 bg-muted/50 rounded-lg">
+              <p className="text-xs text-muted-foreground">
+                <span className="font-medium">iOS Device:</span> Notifications only work when the app is installed to your Home Screen.
+              </p>
+            </div>
+          )}
         </div>
       )}
     </Card>

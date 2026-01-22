@@ -94,13 +94,22 @@ export function usePushNotifications() {
     try {
       if (!('serviceWorker' in navigator)) return;
 
-      const registration = await navigator.serviceWorker.getRegistration('/sw-push.js');
+      // Try to get existing registration
+      let registration = await navigator.serviceWorker.getRegistration('/sw-push.js');
+      
+      // Also check for root-scoped registration (iOS sometimes registers differently)
       if (!registration) {
+        registration = await navigator.serviceWorker.getRegistration('/');
+      }
+      
+      if (!registration) {
+        console.log('[Push] No service worker registration found');
         setState(prev => ({ ...prev, isSubscribed: false }));
         return;
       }
 
       const subscription = await registration.pushManager.getSubscription();
+      console.log('[Push] Current subscription endpoint:', subscription?.endpoint?.substring(0, 50));
       setState(prev => ({ ...prev, isSubscribed: !!subscription }));
     } catch (error) {
       console.error('[Push] Error checking subscription:', error);
@@ -134,19 +143,29 @@ export function usePushNotifications() {
         throw new Error('Notification permission denied');
       }
 
-      // Unregister old service workers first to ensure clean state
-      const existingRegistrations = await navigator.serviceWorker.getRegistrations();
-      for (const reg of existingRegistrations) {
-        if (reg.scope.includes('/') && reg.active?.scriptURL.includes('sw-push')) {
-          console.log('[Push] Unregistering old service worker');
-          await reg.unregister();
+      // Check for existing registration first - don't unregister on iOS as it can cause issues
+      let registration = await navigator.serviceWorker.getRegistration('/');
+      
+      const isIOSDevice = /iPad|iPhone|iPod/.test(navigator.userAgent);
+      
+      if (!registration) {
+        // Only unregister old sw-push workers if no valid registration exists
+        const existingRegistrations = await navigator.serviceWorker.getRegistrations();
+        for (const reg of existingRegistrations) {
+          if (reg.active?.scriptURL.includes('sw-push')) {
+            console.log('[Push] Unregistering old service worker');
+            await reg.unregister();
+          }
         }
-      }
 
-      // Register push service worker with cache-busting
-      const registration = await navigator.serviceWorker.register('/sw-push.js?v=' + Date.now(), {
-        scope: '/'
-      });
+        // Register push service worker with cache-busting
+        registration = await navigator.serviceWorker.register('/sw-push.js?v=' + Date.now(), {
+          scope: '/'
+        });
+        console.log('[Push] New service worker registered');
+      } else {
+        console.log('[Push] Using existing service worker registration');
+      }
 
       console.log('[Push] Service worker registered:', registration);
 
@@ -177,16 +196,19 @@ export function usePushNotifications() {
       const auth = btoa(String.fromCharCode(...new Uint8Array(authKey)));
 
       console.log('[Push] Storing subscription for user:', user.id);
+      console.log('[Push] Endpoint type:', subscription.endpoint.includes('apple') ? 'APNS (iOS)' : 
+                  subscription.endpoint.includes('fcm') ? 'FCM (Android/Chrome)' : 'Other');
 
-      // Store subscription in database - use insert with explicit conflict handling
+      // Store subscription in database - each device gets its own subscription
+      // Check if THIS EXACT endpoint already exists for this user
       const { data: existingSubscriptions } = await supabase
         .from('push_subscriptions')
-        .select('id')
+        .select('id, endpoint')
         .eq('user_id', user.id)
         .eq('endpoint', subscription.endpoint);
 
       if (existingSubscriptions && existingSubscriptions.length > 0) {
-        // Update existing subscription
+        // Update existing subscription for this endpoint
         const { error } = await supabase
           .from('push_subscriptions')
           .update({
@@ -200,9 +222,9 @@ export function usePushNotifications() {
           console.error('[Push] Error updating subscription:', error);
           throw error;
         }
-        console.log('[Push] Updated existing subscription');
+        console.log('[Push] Updated existing subscription for this device');
       } else {
-        // Insert new subscription
+        // Insert new subscription - this allows multiple devices per user
         const { error } = await supabase
           .from('push_subscriptions')
           .insert({
@@ -216,7 +238,7 @@ export function usePushNotifications() {
           console.error('[Push] Error inserting subscription:', error);
           throw error;
         }
-        console.log('[Push] Inserted new subscription');
+        console.log('[Push] Inserted new subscription for this device');
       }
 
       // Update user profile
