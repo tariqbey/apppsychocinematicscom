@@ -25,6 +25,7 @@ export interface ImageGenerationParams {
   resolution?: "1k" | "2k" | "4k";
   images?: string[];
   model?: ImageModel;
+  mode?: "create" | "edit";
 }
 
 export interface VideoGenerationParams {
@@ -129,11 +130,18 @@ export function useMediaGeneration() {
         resolution: params.resolution,
         user_id: user.id,
       };
+
+      if (params.mode) {
+        requestBody.mode = params.mode;
+      }
       
       // Only add images if array has items (for reference photo / edit mode)
       if (params.images && params.images.length > 0) {
         requestBody.images = params.images;
-        console.log(`Sending image generation (${functionName}) with reference photo:`, params.images[0].substring(0, 50));
+        console.log(
+          `Sending image generation (${functionName}) with ${params.images.length} image(s):`,
+          params.images[0].substring(0, 50)
+        );
       }
 
       console.log(`Using ${functionName} for image generation, model: ${params.model || 'gemini'}`);
