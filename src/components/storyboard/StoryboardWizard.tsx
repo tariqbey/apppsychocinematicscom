@@ -126,6 +126,19 @@ export function StoryboardWizard({ isOpen, onClose, onAddToTimeline, chiefAim }:
     }
   }, [referencePhotoUrl, profile, elements.length]);
 
+  const buildCharacterConsistencyContext = useCallback(() => {
+    const name = profile?.director_character_name || profile?.display_name || "Main Character";
+    const parts = [
+      `Name: ${name}`,
+      profile?.character_height ? `Height: ${profile.character_height}` : null,
+      profile?.character_weight ? `Weight: ${profile.character_weight}` : null,
+      profile?.character_build ? `Build: ${profile.character_build}` : null,
+      profile?.character_features ? `Features / wardrobe: ${profile.character_features}` : null,
+    ].filter(Boolean);
+
+    return parts.join("\n");
+  }, [profile]);
+
   // Build elements context for generation
   const buildElementsContext = () => {
     if (elements.length === 0) return "";
@@ -246,31 +259,55 @@ export function StoryboardWizard({ isOpen, onClose, onAddToTimeline, chiefAim }:
     const scene = scenes[sceneIndex];
     if (!scene) return;
 
+    // Prevent wasting credits: require a loaded reference photo for character-lock generations.
+    if (!referencePhotoUrl) {
+      toast.error("No character reference photo loaded. Set your default character photo in Settings first.");
+      return;
+    }
+
     setGeneratingSceneIndex(sceneIndex);
     try {
       // Collect all reference images from elements
       const referenceImages: string[] = [];
-      elements.forEach(el => {
-        if (el.referenceImage) referenceImages.push(el.referenceImage);
-      });
-      
-      // Also add global reference photo if not already included
-      if (referencePhotoUrl && !referenceImages.includes(referencePhotoUrl)) {
-        referenceImages.unshift(referencePhotoUrl);
+      for (const el of elements) {
+        if (el.referenceImage && !referenceImages.includes(el.referenceImage)) referenceImages.push(el.referenceImage);
       }
 
+      // Ensure user's global reference photo is first
+      const finalReferenceImages = referenceImages.filter((u) => u !== referencePhotoUrl);
+      finalReferenceImages.unshift(referencePhotoUrl);
+
+      const characterContext = buildCharacterConsistencyContext();
+
+      const promptWithCharacterLock = [
+        scene.prompt,
+        "",
+        "CHARACTER CONSISTENCY (CRITICAL):",
+        characterContext || "Use the provided reference photo as the main character.",
+        "Use the provided reference photo for the MAIN CHARACTER. Preserve facial likeness, age, skin tone, and signature style.",
+        "Do NOT replace the main character with a different person.",
+      ].join("\n");
+
+      // Force Nano Banana Pro when a reference photo is present (best for likeness retention).
+      const modelForGeneration: ImageModel = "nano-banana-pro";
+
       const imageUrl = await generateImage({
-        prompt: scene.prompt,
+        prompt: promptWithCharacterLock,
         aspect_ratio: aspectRatio === "4:3" ? "16:9" : aspectRatio,
         resolution: "2k",
-        model: imageModel,
-        images: referenceImages.length > 0 ? referenceImages.slice(0, 5) : undefined,
+        model: modelForGeneration,
+        images: finalReferenceImages.slice(0, 5),
+        mode: "edit",
       });
 
       if (imageUrl) {
-        const updatedScenes = [...scenes];
-        updatedScenes[sceneIndex] = { ...scene, generatedImageUrl: imageUrl };
-        setScenes(updatedScenes);
+        setScenes((prev) => {
+          const next = [...prev];
+          const current = next[sceneIndex];
+          if (!current) return prev;
+          next[sceneIndex] = { ...current, generatedImageUrl: imageUrl };
+          return next;
+        });
         toast.success(`Image generated for Scene ${sceneIndex + 1}`);
       }
     } catch (error) {
@@ -299,9 +336,13 @@ export function StoryboardWizard({ isOpen, onClose, onAddToTimeline, chiefAim }:
       });
 
       if (videoUrl) {
-        const updatedScenes = [...scenes];
-        updatedScenes[sceneIndex] = { ...scene, generatedVideoUrl: videoUrl };
-        setScenes(updatedScenes);
+        setScenes((prev) => {
+          const next = [...prev];
+          const current = next[sceneIndex];
+          if (!current) return prev;
+          next[sceneIndex] = { ...current, generatedVideoUrl: videoUrl };
+          return next;
+        });
         toast.success(`Video created for Scene ${sceneIndex + 1}`);
       }
     } catch (error) {
@@ -479,7 +520,7 @@ export function StoryboardWizard({ isOpen, onClose, onAddToTimeline, chiefAim }:
                       <StoryboardQuestionFlow
                         chiefAim={chiefAim}
                         onAnswersChange={setVisionAnswers}
-                        characterDescription={profile?.director_character_name || profile?.display_name ? `${profile?.director_character_name || profile?.display_name || 'Main Character'} - the protagonist and ideal self` : undefined}
+                        characterDescription={buildCharacterConsistencyContext()}
                         referencePhotoUrl={referencePhotoUrl}
                       />
                     ) : (
@@ -668,7 +709,7 @@ export function StoryboardWizard({ isOpen, onClose, onAddToTimeline, chiefAim }:
                           size="sm"
                           variant={scene.generatedImageUrl ? "outline" : "default"}
                           onClick={() => handleGenerateImage(index)}
-                          disabled={generatingSceneIndex === index}
+                          disabled={generatingSceneIndex !== null}
                           className="flex-1"
                         >
                           {generatingSceneIndex === index ? (
