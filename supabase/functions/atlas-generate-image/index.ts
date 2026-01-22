@@ -103,18 +103,11 @@ serve(async (req) => {
     // Build Atlas request
     const generateUrl = "https://api.atlascloud.ai/api/v1/model/generateImage";
     
-    // Enhanced prompt for reference photo likeness retention
-    let enhancedPrompt = prompt;
+    // Clean prompt for Atlas - avoid trigger words that cause content filter issues
+    let cleanPrompt = prompt;
     if (isEdit) {
-      enhancedPrompt = `CRITICAL INSTRUCTION: The generated image MUST feature the EXACT same person from the reference image(s). Preserve their facial structure, skin tone, hair, and all distinguishing features with photorealistic accuracy.
-
-${prompt}
-
-TECHNICAL REQUIREMENTS:
-- Maintain 100% facial likeness to reference photo(s)
-- Professional cinematic lighting (ARRI Alexa style)
-- Ultra high resolution photorealistic quality
-- Natural skin tones and textures`;
+      // Simple, clean prompt that focuses on the scene while preserving likeness
+      cleanPrompt = `Portrait of the same person from the reference photo in a new scene: ${prompt}. Photorealistic, professional lighting, high quality.`;
     }
     
     const generateBody: any = {
@@ -122,7 +115,7 @@ TECHNICAL REQUIREMENTS:
       enable_base64_output: false,
       enable_sync_mode: false,
       output_format: "png",
-      prompt: enhancedPrompt,
+      prompt: cleanPrompt,
       aspect_ratio,
       resolution,
     };
