@@ -786,13 +786,37 @@ export default function ScorePage() {
               {/* My Tracks - with drag reordering */}
               <TabsContent value="my-tracks" className="flex-1 mt-0">
                 <Card className="h-full">
-                  <div className="p-4 border-b border-border/50 flex items-center justify-between">
-                    <h3 className="font-medium">
-                      {currentPlaylist?.name || 'All Tracks'}
-                    </h3>
-                    <span className="text-sm text-muted-foreground">
-                      {tracks.length} tracks
-                    </span>
+                  <div className="p-4 border-b border-border/50 flex items-center justify-between gap-2">
+                    <div>
+                      <h3 className="font-medium">
+                        {currentPlaylist?.name || 'All Tracks'}
+                      </h3>
+                      <span className="text-xs text-muted-foreground">
+                        {tracks.length} tracks
+                      </span>
+                    </div>
+                    {isServiceWorkerReady && tracks.length > 0 && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="gap-1.5"
+                        onClick={async () => {
+                          const uncachedTracks = tracks.filter(t => !isTrackCached(t.id));
+                          if (uncachedTracks.length === 0) {
+                            toast.info("All tracks are already saved offline");
+                            return;
+                          }
+                          toast.info(`Downloading ${uncachedTracks.length} tracks for offline...`);
+                          for (const track of uncachedTracks) {
+                            await downloadTrack(track.id, track.audio_url, track.title, track.artist || undefined);
+                          }
+                          toast.success(`${uncachedTracks.length} tracks saved for offline!`);
+                        }}
+                      >
+                        <HardDrive className="w-4 h-4" />
+                        <span className="hidden sm:inline">Save All Offline</span>
+                      </Button>
+                    )}
                   </div>
                   <ScrollArea className="h-[calc(100vh-420px)] min-h-[300px]">
                     <div className="p-4 space-y-1">
