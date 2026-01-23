@@ -1,8 +1,7 @@
-import { useState, useRef, useEffect } from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Play, Pause, Volume2, VolumeX, X, Maximize2 } from "lucide-react";
-import { Slider } from "@/components/ui/slider";
+import { X } from "lucide-react";
+import { MindMoviePlayer } from "@/components/theater/MindMoviePlayer";
 import { useToast } from "@/hooks/use-toast";
 
 interface MoviePreviewModalProps {
@@ -18,152 +17,15 @@ export function MoviePreviewModal({
   movieUrl,
   movieTitle,
 }: MoviePreviewModalProps) {
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [isMuted, setIsMuted] = useState(false);
-  const [currentTime, setCurrentTime] = useState(0);
-  const [duration, setDuration] = useState(0);
-  const [volume, setVolume] = useState(1);
   const { toast } = useToast();
 
-  // Reset state when modal opens or URL changes
-  useEffect(() => {
-    if (open) {
-      setCurrentTime(0);
-      setIsPlaying(false);
-      setDuration(0);
-      
-      // Force video reload with a slight delay to ensure element is mounted
-      const timer = setTimeout(() => {
-        if (videoRef.current) {
-          videoRef.current.load();
-        }
-      }, 100);
-      
-      return () => clearTimeout(timer);
-    }
-  }, [open, movieUrl]);
-
-  // Video event listeners with robust duration detection
-  useEffect(() => {
-    const video = videoRef.current;
-    if (!video || !open) return;
-
-    const handleTimeUpdate = () => setCurrentTime(video.currentTime);
-    
-    // Robust duration detection for WebM and other formats
-    const handleDurationUpdate = () => {
-      let dur = video.duration;
-      
-      // If duration is not finite, try seekable ranges as fallback
-      if (!Number.isFinite(dur) || dur <= 0) {
-        if (video.seekable.length > 0) {
-          dur = video.seekable.end(video.seekable.length - 1);
-        }
-      }
-      
-      if (dur && Number.isFinite(dur) && dur > 0) {
-        setDuration(dur);
-      }
-    };
-    
-    const handleEnded = () => setIsPlaying(false);
-    const handleError = () => {
-      console.error("Video playback error:", video.error);
-      toast({
-        title: "Playback Error",
-        description: "Could not play video. The format may not be supported.",
-        variant: "destructive",
-      });
-    };
-
-    // Check if duration is already available
-    if (video.readyState >= 1 && video.duration && Number.isFinite(video.duration) && video.duration > 0) {
-      setDuration(video.duration);
-    }
-
-    video.addEventListener("timeupdate", handleTimeUpdate);
-    video.addEventListener("loadedmetadata", handleDurationUpdate);
-    video.addEventListener("durationchange", handleDurationUpdate);
-    video.addEventListener("canplay", handleDurationUpdate);
-    video.addEventListener("loadeddata", handleDurationUpdate);
-    video.addEventListener("ended", handleEnded);
-    video.addEventListener("error", handleError);
-    
-    // Fallback: Force seek to get duration for some video formats
-    const fallbackTimer = setTimeout(() => {
-      if (video && (!duration || duration <= 0) && video.readyState >= 1) {
-        const originalTime = video.currentTime;
-        video.currentTime = Number.MAX_SAFE_INTEGER;
-        setTimeout(() => {
-          if (video.duration && Number.isFinite(video.duration)) {
-            setDuration(video.duration);
-          }
-          video.currentTime = originalTime;
-        }, 100);
-      }
-    }, 1000);
-
-    return () => {
-      clearTimeout(fallbackTimer);
-      video.removeEventListener("timeupdate", handleTimeUpdate);
-      video.removeEventListener("loadedmetadata", handleDurationUpdate);
-      video.removeEventListener("durationchange", handleDurationUpdate);
-      video.removeEventListener("canplay", handleDurationUpdate);
-      video.removeEventListener("loadeddata", handleDurationUpdate);
-      video.removeEventListener("ended", handleEnded);
-      video.removeEventListener("error", handleError);
-    };
-  }, [toast, movieUrl, open, duration]);
-
-  const togglePlay = () => {
-    if (!videoRef.current) return;
-    if (isPlaying) {
-      videoRef.current.pause();
-    } else {
-      videoRef.current.play();
-    }
-    setIsPlaying(!isPlaying);
+  const handleError = (message: string) => {
+    toast({
+      title: "Playback Error",
+      description: message,
+      variant: "destructive",
+    });
   };
-
-  const toggleMute = () => {
-    if (!videoRef.current) return;
-    videoRef.current.muted = !isMuted;
-    setIsMuted(!isMuted);
-  };
-
-  const handleVolumeChange = (value: number[]) => {
-    if (!videoRef.current) return;
-    const newVolume = value[0] / 100;
-    videoRef.current.volume = newVolume;
-    setVolume(newVolume);
-    setIsMuted(newVolume === 0);
-  };
-
-  const handleProgressClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!videoRef.current || !duration) return;
-    const rect = e.currentTarget.getBoundingClientRect();
-    const percent = (e.clientX - rect.left) / rect.width;
-    const newTime = Math.max(0, Math.min(duration, percent * duration));
-    videoRef.current.currentTime = newTime;
-    setCurrentTime(newTime);
-  };
-
-  const handleFullscreen = () => {
-    if (!videoRef.current) return;
-    if (videoRef.current.requestFullscreen) {
-      videoRef.current.requestFullscreen();
-    }
-  };
-
-  const formatTime = (seconds: number) => {
-    if (!Number.isFinite(seconds) || seconds < 0) return "--:--";
-    const mins = Math.floor(seconds / 60);
-    const secs = Math.floor(seconds % 60);
-    return `${mins}:${secs.toString().padStart(2, "0")}`;
-  };
-
-  const progressPercent = duration > 0 ? (currentTime / duration) * 100 : 0;
 
   if (!movieUrl) return null;
 
@@ -180,101 +42,16 @@ export function MoviePreviewModal({
           <X className="h-4 w-4" />
         </Button>
 
-        {/* Video container */}
+        {/* Video container using new player */}
         <div className="relative aspect-video bg-black">
-          <video
+          <MindMoviePlayer
             key={movieUrl}
-            ref={videoRef}
             src={movieUrl}
-            className="w-full h-full object-contain cursor-pointer"
-            playsInline
-            preload="auto"
-            onClick={togglePlay}
+            disableSeeking={false}
+            restartOnInterrupt={false}
+            onError={handleError}
+            className="w-full h-full"
           />
-
-          {/* Play overlay (when paused) */}
-          {!isPlaying && (
-            <div 
-              className="absolute inset-0 flex items-center justify-center bg-black/30 cursor-pointer"
-              onClick={togglePlay}
-            >
-              <div className="w-16 h-16 rounded-full bg-primary/90 flex items-center justify-center">
-                <Play className="w-8 h-8 text-primary-foreground ml-1" />
-              </div>
-            </div>
-          )}
-
-          {/* ALWAYS VISIBLE Controls - no auto-hide */}
-          <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/90 via-black/60 to-transparent">
-            {/* Progress bar - custom click-to-seek */}
-            <div 
-              className="w-full h-2 bg-white/20 rounded-full cursor-pointer mb-3 group"
-              onClick={handleProgressClick}
-            >
-              <div 
-                className="h-full bg-gradient-to-r from-gold to-amber-soft rounded-full relative transition-all"
-                style={{ width: `${progressPercent}%` }}
-              >
-                <div className="absolute right-0 top-1/2 -translate-y-1/2 w-3 h-3 bg-gold rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-lg" />
-              </div>
-            </div>
-
-            {/* Controls row */}
-            <div className="flex items-center gap-3">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 text-white hover:text-gold hover:bg-white/20"
-                onClick={togglePlay}
-              >
-                {isPlaying ? (
-                  <Pause className="h-5 w-5" />
-                ) : (
-                  <Play className="h-5 w-5" />
-                )}
-              </Button>
-
-              {/* Time display - always visible */}
-              <span className="text-sm text-white/90 font-mono tabular-nums">
-                {formatTime(currentTime)} / {formatTime(duration)}
-              </span>
-
-              <div className="flex-1" />
-
-              {/* Volume */}
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 text-white hover:text-gold hover:bg-white/20"
-                  onClick={toggleMute}
-                >
-                  {isMuted ? (
-                    <VolumeX className="h-4 w-4" />
-                  ) : (
-                    <Volume2 className="h-4 w-4" />
-                  )}
-                </Button>
-                <Slider
-                  value={[isMuted ? 0 : volume * 100]}
-                  onValueChange={handleVolumeChange}
-                  max={100}
-                  step={1}
-                  className="w-20"
-                />
-              </div>
-
-              {/* Fullscreen */}
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 text-white hover:text-gold hover:bg-white/20"
-                onClick={handleFullscreen}
-              >
-                <Maximize2 className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
         </div>
 
         {/* Title */}
