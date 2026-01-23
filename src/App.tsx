@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { SplashScreenWrapper } from "@/components/pwa/SplashScreenWrapper";
 import { PWAInstallPrompt } from "@/components/pwa/PWAInstallPrompt";
 import { PWAUpdatePrompt } from "@/components/pwa/PWAUpdatePrompt";
+import { PointsProvider } from "@/contexts/PointsContext";
 import Index from "./pages/Index";
 import Signup from "./pages/Signup";
 import DirectorCorner from "./pages/DirectorCorner";
@@ -36,44 +37,46 @@ const queryClient = new QueryClient();
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <SplashScreenWrapper>
-        <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/signup" element={<Signup />} />
-            <Route path="/community" element={<DirectorCorner />} />
-            <Route path="/subscribe" element={<Subscribe />} />
-            <Route path="/subscription-success" element={<SubscriptionSuccess />} />
-            <Route path="/credits-success" element={<CreditsSuccess />} />
-            <Route path="/credits" element={<Credits />} />
-            <Route path="/guide" element={<DirectorsGuide />} />
-            <Route path="/user-manual" element={<DirectorsGuide />} />
-            <Route path="/manual" element={<DirectorsGuide />} />
-            <Route path="/tutorial" element={<DirectorsGuide />} />
-            <Route path="/tutorials" element={<DirectorsGuide />} />
-            <Route path="/admin" element={<RequireAdmin><AdminDashboard /></RequireAdmin>} />
-            <Route path="/awards" element={<AwardsCeremony />} />
-            <Route path="/settings" element={<Settings />} />
-            <Route path="/actions" element={<Actions />} />
-            <Route path="/character" element={<Character />} />
-            <Route path="/episodes" element={<Episodes />} />
-            <Route path="/soundtrack" element={<Soundtrack />} />
-            <Route path="/music" element={<Music />} />
-            <Route path="/radio" element={<Radio />} />
-            <Route path="/score" element={<Score />} />
-            <Route path="/done-for-you" element={<DoneForYou />} />
-            <Route path="/dfy-success" element={<DFYSuccess />} />
-            <Route path="/challenges" element={<Challenges />} />
-            <Route path="/reset-password" element={<ResetPassword />} />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-          <PWAInstallPrompt />
-          <PWAUpdatePrompt />
-        </BrowserRouter>
-      </SplashScreenWrapper>
+      <PointsProvider>
+        <Toaster />
+        <Sonner />
+        <SplashScreenWrapper>
+          <BrowserRouter>
+            <Routes>
+              <Route path="/" element={<Index />} />
+              <Route path="/signup" element={<Signup />} />
+              <Route path="/community" element={<DirectorCorner />} />
+              <Route path="/subscribe" element={<Subscribe />} />
+              <Route path="/subscription-success" element={<SubscriptionSuccess />} />
+              <Route path="/credits-success" element={<CreditsSuccess />} />
+              <Route path="/credits" element={<Credits />} />
+              <Route path="/guide" element={<DirectorsGuide />} />
+              <Route path="/user-manual" element={<DirectorsGuide />} />
+              <Route path="/manual" element={<DirectorsGuide />} />
+              <Route path="/tutorial" element={<DirectorsGuide />} />
+              <Route path="/tutorials" element={<DirectorsGuide />} />
+              <Route path="/admin" element={<RequireAdmin><AdminDashboard /></RequireAdmin>} />
+              <Route path="/awards" element={<AwardsCeremony />} />
+              <Route path="/settings" element={<Settings />} />
+              <Route path="/actions" element={<Actions />} />
+              <Route path="/character" element={<Character />} />
+              <Route path="/episodes" element={<Episodes />} />
+              <Route path="/soundtrack" element={<Soundtrack />} />
+              <Route path="/music" element={<Music />} />
+              <Route path="/radio" element={<Radio />} />
+              <Route path="/score" element={<Score />} />
+              <Route path="/done-for-you" element={<DoneForYou />} />
+              <Route path="/dfy-success" element={<DFYSuccess />} />
+              <Route path="/challenges" element={<Challenges />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
+              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+            <PWAInstallPrompt />
+            <PWAUpdatePrompt />
+          </BrowserRouter>
+        </SplashScreenWrapper>
+      </PointsProvider>
     </TooltipProvider>
   </QueryClientProvider>
 );

@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { usePointsContext } from "@/contexts/PointsContext";
 import { toast } from "sonner";
 import {
   Tooltip,
@@ -80,6 +81,7 @@ const SCORECARD_CATEGORIES: Omit<ScorecardCategory, 'score'>[] = [
 
 export const DailyScorecard = ({ onClose, onSubmitSuccess }: DailyScorecardProps) => {
   const { user, session } = useAuth();
+  const { triggerRecalculation } = usePointsContext();
   const [categories, setCategories] = useState<ScorecardCategory[]>(
     SCORECARD_CATEGORIES.map(cat => ({ ...cat, score: 0 }))
   );
@@ -171,6 +173,10 @@ export const DailyScorecard = ({ onClose, onSubmitSuccess }: DailyScorecardProps
 
       setSubmitted(true);
       toast.success(`Scorecard submitted! +${earned} credits earned`);
+      
+      // Trigger points recalculation
+      triggerRecalculation();
+      
       onSubmitSuccess?.();
 
       // Auto-sync to Notion if enabled

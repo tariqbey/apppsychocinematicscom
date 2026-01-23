@@ -7,6 +7,7 @@ import { TutorialTipCard } from "@/components/community/TutorialTipCard";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { usePointsContext } from "@/contexts/PointsContext";
 import { format, startOfWeek, addDays, isToday, isSameDay } from "date-fns";
 
 interface RitualItem {
@@ -47,6 +48,7 @@ export const DailyRitualChecklist = ({ onTheaterClick, onScorecardClick, onEveni
   const { user } = useAuth();
   const navigate = useNavigate();
   const isMobile = useIsMobile();
+  const { triggerRecalculation } = usePointsContext();
   const [rituals, setRituals] = useState<RitualItem[]>([
     {
       id: "morning",
@@ -192,6 +194,9 @@ export const DailyRitualChecklist = ({ onTheaterClick, onScorecardClick, onEveni
           r.id === id ? { ...r, completed: !newCompleted } : r
         )
       );
+    } else {
+      // Trigger points recalculation on success
+      triggerRecalculation();
     }
   };
 
