@@ -43,6 +43,7 @@ export const DefiniteChiefAimCard = ({ aim, onEdit, chiefAimSongUrl, onSongListe
   const [isTouched, setIsTouched] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [hasListenedToday, setHasListenedToday] = useState(false);
+  const [wasInterrupted, setWasInterrupted] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const isMobile = useIsMobile();
   const navigate = useNavigate();
@@ -58,16 +59,11 @@ export const DefiniteChiefAimCard = ({ aim, onEdit, chiefAimSongUrl, onSongListe
   useEffect(() => {
     if (chiefAimSongUrl) {
       audioRef.current = new Audio(chiefAimSongUrl);
+      
+      // Only mark as complete when song plays all the way through without interruption
       audioRef.current.addEventListener('ended', () => {
         setIsPlaying(false);
-        if (!hasListenedToday) {
-          setHasListenedToday(true);
-          onSongListened?.();
-        }
-      });
-      // Mark as listened after 30 seconds of playing
-      audioRef.current.addEventListener('timeupdate', () => {
-        if (audioRef.current && audioRef.current.currentTime >= 30 && !hasListenedToday) {
+        if (!hasListenedToday && !wasInterrupted) {
           setHasListenedToday(true);
           onSongListened?.();
         }
@@ -79,14 +75,21 @@ export const DefiniteChiefAimCard = ({ aim, onEdit, chiefAimSongUrl, onSongListe
         audioRef.current = null;
       }
     };
-  }, [chiefAimSongUrl, hasListenedToday, onSongListened]);
+  }, [chiefAimSongUrl, hasListenedToday, wasInterrupted, onSongListened]);
 
   const togglePlayback = () => {
     if (!audioRef.current) return;
     if (isPlaying) {
+      // Pausing counts as interruption - must listen all the way through
       audioRef.current.pause();
       setIsPlaying(false);
+      setWasInterrupted(true);
     } else {
+      // Reset interruption flag when starting fresh playback from the beginning
+      if (audioRef.current.currentTime === 0 || wasInterrupted) {
+        audioRef.current.currentTime = 0;
+        setWasInterrupted(false);
+      }
       audioRef.current.play();
       setIsPlaying(true);
     }
@@ -420,7 +423,11 @@ export const DefiniteChiefAimCard = ({ aim, onEdit, chiefAimSongUrl, onSongListe
                     <p className="text-xs sm:text-sm text-purple-300 uppercase tracking-wider font-medium">Chief Aim Anthem</p>
                     <p className="text-xs text-muted-foreground">
                       {chiefAimSongUrl 
-                        ? (hasListenedToday ? "✓ Listened today" : "Listen to complete ritual") 
+                        ? (hasListenedToday 
+                            ? "✓ Listened today" 
+                            : wasInterrupted 
+                              ? "Restart — must play uninterrupted" 
+                              : "Listen all the way through") 
                         : "Turn your aim into a motivational song"}
                     </p>
                   </div>
