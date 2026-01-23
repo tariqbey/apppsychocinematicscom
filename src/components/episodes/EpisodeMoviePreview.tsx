@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
-import { Film, Play, X, Eye, ExternalLink } from "lucide-react";
+import { Film, Play, X, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { MindMoviePlayer } from "@/components/theater/MindMoviePlayer";
 import { supabase } from "@/integrations/supabase/client";
 
 interface EpisodeMoviePreviewProps {
@@ -156,14 +157,15 @@ function MoviePreviewDialog({ open, onClose, movie }: MoviePreviewDialogProps) {
             </Button>
           </div>
         </DialogHeader>
-        
-        <video
-          src={movie.movie_url}
-          controls
-          autoPlay
-          className="w-full aspect-video"
-          playsInline
-        />
+
+        <div className="pt-14 aspect-video">
+          <MindMoviePlayer
+            src={movie.movie_url}
+            disableSeeking={false}
+            restartOnInterrupt={false}
+            className="w-full h-full"
+          />
+        </div>
       </DialogContent>
     </Dialog>
   );
