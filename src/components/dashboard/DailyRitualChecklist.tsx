@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Check, Sparkles, LightbulbIcon, Film, ScrollText, Rocket, Moon, Zap, BookOpen } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -7,7 +7,7 @@ import { TutorialTipCard } from "@/components/community/TutorialTipCard";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { format } from "date-fns";
+import { format, startOfWeek, addDays, isToday, isSameDay } from "date-fns";
 
 interface RitualItem {
   id: string;
@@ -272,6 +272,9 @@ export const DailyRitualChecklist = ({ onTheaterClick, onScorecardClick, onEveni
       <Sparkles className="absolute top-3 right-12 w-3 h-3 text-gold/40 animate-pulse pointer-events-none" />
       <Sparkles className="absolute bottom-4 right-24 w-2 h-2 text-amber-soft/30 animate-pulse pointer-events-none" style={{ animationDelay: '0.7s' }} />
       <Sparkles className="absolute top-8 right-6 w-2 h-2 text-gold/30 animate-pulse pointer-events-none" style={{ animationDelay: '1.3s' }} />
+
+      {/* Weekly Calendar Header */}
+      <WeeklyCalendarHeader />
 
       <div className="flex items-center justify-between mb-2 relative z-10">
         <div className="flex items-center gap-2 sm:gap-3">
@@ -583,3 +586,70 @@ export const DailyRitualChecklist = ({ onTheaterClick, onScorecardClick, onEveni
     </div>
   );
 };
+
+// Weekly calendar header component
+function WeeklyCalendarHeader() {
+  const today = new Date();
+  const weekStart = startOfWeek(today, { weekStartsOn: 0 }); // Sunday start
+
+  const weekDays = useMemo(() => {
+    return Array.from({ length: 7 }).map((_, i) => {
+      const date = addDays(weekStart, i);
+      return {
+        date,
+        dayNum: format(date, "d"),
+        dayName: format(date, "EEE"),
+        isToday: isToday(date),
+      };
+    });
+  }, [weekStart]);
+
+  return (
+    <div className="mb-4 relative z-10">
+      {/* Current date display */}
+      <div className="text-center mb-3">
+        <p className="text-lg sm:text-xl font-display text-gold">
+          {format(today, "EEEE")}
+        </p>
+        <p className="text-xs sm:text-sm text-muted-foreground">
+          {format(today, "MMMM d, yyyy")}
+        </p>
+      </div>
+
+      {/* Week days row */}
+      <div className="flex items-center justify-between gap-1 px-1">
+        {weekDays.map((day) => (
+          <div
+            key={day.dayNum}
+            className={cn(
+              "flex flex-col items-center justify-center py-2 px-1 sm:px-3 rounded-lg transition-all duration-300 flex-1",
+              day.isToday
+                ? "bg-gradient-to-br from-gold/30 to-amber-soft/20 border-2 border-gold/50 shadow-lg"
+                : "bg-secondary/30 border border-border/30"
+            )}
+            style={{
+              boxShadow: day.isToday ? "0 0 15px rgba(212, 175, 55, 0.3)" : undefined,
+            }}
+          >
+            <span
+              className={cn(
+                "text-[10px] sm:text-xs uppercase tracking-wider font-medium",
+                day.isToday ? "text-gold" : "text-muted-foreground"
+              )}
+            >
+              {day.dayName}
+            </span>
+            <span
+              className={cn(
+                "text-sm sm:text-lg font-display",
+                day.isToday ? "text-gold" : "text-foreground/70"
+              )}
+            >
+              {day.dayNum}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}

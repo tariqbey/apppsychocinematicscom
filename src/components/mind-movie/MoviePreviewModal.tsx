@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { X } from "lucide-react";
@@ -19,6 +20,27 @@ export function MoviePreviewModal({
 }: MoviePreviewModalProps) {
   const { toast } = useToast();
 
+  // iOS detection for proxy routing
+  const isIOS = useMemo(() => {
+    if (typeof navigator === "undefined") return false;
+    return (
+      /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+      (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)
+    );
+  }, []);
+
+  // Route iOS storage URLs through the proxy for stable Range/206 responses
+  const proxiedUrl = useMemo(() => {
+    if (!movieUrl) return null;
+    if (!isIOS) return movieUrl;
+    if (movieUrl.includes("/functions/v1/video-proxy")) return movieUrl;
+    if (!movieUrl.includes("/storage/v1/object/")) return movieUrl;
+
+    const baseUrl = import.meta.env.VITE_SUPABASE_URL;
+    if (!baseUrl) return movieUrl;
+    return `${baseUrl}/functions/v1/video-proxy?url=${encodeURIComponent(movieUrl)}`;
+  }, [movieUrl, isIOS]);
+
   const handleError = (message: string) => {
     toast({
       title: "Playback Error",
@@ -27,7 +49,7 @@ export function MoviePreviewModal({
     });
   };
 
-  if (!movieUrl) return null;
+  if (!proxiedUrl) return null;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -45,8 +67,8 @@ export function MoviePreviewModal({
         {/* Video container using new player */}
         <div className="relative aspect-video bg-black">
           <MindMoviePlayer
-            key={movieUrl}
-            src={movieUrl}
+            key={proxiedUrl}
+            src={proxiedUrl}
             disableSeeking={false}
             restartOnInterrupt={false}
             onError={handleError}
