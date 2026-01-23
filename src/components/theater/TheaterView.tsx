@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import {
   Flame,
   Film,
@@ -51,6 +51,23 @@ export const TheaterView = ({ onClose }: TheaterViewProps) => {
 
   const streak = profile?.current_streak || 0;
   const videoUrl = profile?.mind_movie_url;
+
+  const isIOS = useMemo(() => {
+    if (typeof navigator === "undefined") return false;
+    return (
+      /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+      (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)
+    );
+  }, []);
+
+  // iOS Safari is extremely sensitive to Range/206 correctness. Route through
+  // our Range-safe proxy on iOS to prevent stalls/crashes.
+  const playbackSrc = useMemo(() => {
+    if (!videoUrl) return null;
+    if (!isIOS) return videoUrl;
+    const baseUrl = import.meta.env.VITE_SUPABASE_URL;
+    return `${baseUrl}/functions/v1/video-proxy?url=${encodeURIComponent(videoUrl)}`;
+  }, [videoUrl, isIOS]);
 
   // Load today's tasks
   const loadTodaysTasks = useCallback(async () => {
@@ -219,11 +236,11 @@ export const TheaterView = ({ onClose }: TheaterViewProps) => {
         {/* Video Player Area */}
         <div className="flex-1 flex items-center justify-center p-2 sm:p-4 md:p-8 relative overflow-hidden">
           <div className="theater-player w-full h-full sm:h-auto sm:max-w-5xl sm:aspect-video rounded-lg sm:rounded-xl bg-card border border-border overflow-hidden relative">
-            {videoUrl ? (
+            {playbackSrc ? (
               <>
                 <MindMoviePlayer
                   ref={playerRef}
-                  src={videoUrl}
+                  src={playbackSrc}
                   disableSeeking
                   restartOnInterrupt
                   onComplete={handleVideoComplete}

@@ -65,6 +65,11 @@ export const VideoDiagnostics = ({ videoRef, videoSrc }: VideoDiagnosticsProps) 
   }, [videoRef]);
 
   useEffect(() => {
+    // IMPORTANT: diagnostics must be inert unless explicitly opened.
+    // Running listeners + timers in the background can cause render churn
+    // and contributes to iOS Safari video instability.
+    if (!isOpen) return;
+
     const video = videoRef.current;
     if (!video) return;
 
@@ -119,7 +124,7 @@ export const VideoDiagnostics = ({ videoRef, videoSrc }: VideoDiagnosticsProps) 
       });
       clearInterval(interval);
     };
-  }, [videoRef, addEvent, updatePlaybackState]);
+  }, [isOpen, videoRef, addEvent, updatePlaybackState]);
 
   // Auto-scroll logs
   useEffect(() => {
