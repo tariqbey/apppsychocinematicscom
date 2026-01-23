@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Check, Sparkles, LightbulbIcon, Film, ScrollText, Rocket, Moon, Zap } from "lucide-react";
+import { Check, Sparkles, LightbulbIcon, Film, ScrollText, Rocket, Moon, Zap, BookOpen } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { InfoTooltip } from "@/components/ui/info-tooltip";
 import { TutorialTipCard } from "@/components/community/TutorialTipCard";
@@ -11,7 +11,7 @@ import { format } from "date-fns";
 
 interface RitualItem {
   id: string;
-  dbField: 'morning_screening' | 'script_review' | 'action_execution' | 'evening_review';
+  dbField: 'morning_screening' | 'script_review' | 'action_execution' | 'evening_review' | 'journal_entry';
   title: string;
   subtitle: string;
   icon: React.ReactNode;
@@ -24,6 +24,7 @@ interface DailyRitualChecklistProps {
   onTheaterClick: () => void;
   onScorecardClick: () => void;
   onEveningMindMovieClick?: () => void;
+  onJournalClick?: () => void;
 }
 
 // Floating particle component with enhanced animation
@@ -42,7 +43,7 @@ const FloatingParticle = ({ delay, size = 2, color = "#D4AF37" }: { delay: numbe
   />
 );
 
-export const DailyRitualChecklist = ({ onTheaterClick, onScorecardClick, onEveningMindMovieClick }: DailyRitualChecklistProps) => {
+export const DailyRitualChecklist = ({ onTheaterClick, onScorecardClick, onEveningMindMovieClick, onJournalClick }: DailyRitualChecklistProps) => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const isMobile = useIsMobile();
@@ -86,6 +87,16 @@ export const DailyRitualChecklist = ({ onTheaterClick, onScorecardClick, onEveni
       completed: false,
       color: "#A855F7",
       glowColor: "rgba(168, 85, 247, 0.4)",
+    },
+    {
+      id: "journal",
+      dbField: "journal_entry",
+      title: "Journal Entry",
+      subtitle: "Reflect on your day",
+      icon: <BookOpen className="w-6 h-6 sm:w-7 sm:h-7" />,
+      completed: false,
+      color: "#10B981",
+      glowColor: "rgba(16, 185, 129, 0.4)",
     },
   ]);
   const [isLoading, setIsLoading] = useState(true);
@@ -165,6 +176,7 @@ export const DailyRitualChecklist = ({ onTheaterClick, onScorecardClick, onEveni
         script_review: ritual.dbField === 'script_review' ? newCompleted : false,
         action_execution: ritual.dbField === 'action_execution' ? newCompleted : false,
         evening_review: ritual.dbField === 'evening_review' ? newCompleted : false,
+        journal_entry: ritual.dbField === 'journal_entry' ? newCompleted : false,
       };
       const result = await supabase
         .from("daily_rituals")
@@ -198,6 +210,10 @@ export const DailyRitualChecklist = ({ onTheaterClick, onScorecardClick, onEveni
       }
     } else if (id === "actions") {
       navigate("/actions");
+    } else if (id === "journal") {
+      if (onJournalClick) {
+        onJournalClick();
+      }
     }
     toggleRitual(id);
   };

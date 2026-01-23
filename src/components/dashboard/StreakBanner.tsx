@@ -8,10 +8,11 @@ interface StreakBannerProps {
   streak: number;
   bestStreak: number;
   lastActiveDate?: string | null;
+  daysInactive?: number;
   onKutReset?: () => void;
 }
 
-export const StreakBanner = ({ streak, bestStreak, lastActiveDate, onKutReset }: StreakBannerProps) => {
+export const StreakBanner = ({ streak, bestStreak, lastActiveDate, daysInactive = 0, onKutReset }: StreakBannerProps) => {
   const isMobile = useIsMobile();
   const [isVisible, setIsVisible] = useState(false);
 
@@ -123,11 +124,18 @@ export const StreakBanner = ({ streak, bestStreak, lastActiveDate, onKutReset }:
                 ? 'text-sky-400'
                 : 'text-muted-foreground'
           }`}>
-            {streak} Days {isCold && <span className="text-sm text-sky-400/70">(inactive)</span>}
+            {isCold ? (
+              <>
+                <span className="text-2xl sm:text-3xl font-bold">{daysInactive}</span>
+                <span className="text-sm ml-1">days frozen</span>
+              </>
+            ) : (
+              <>{streak} Days</>
+            )}
           </p>
           {isCold && (
             <p className="text-xs text-sky-400/70 mt-0.5">
-              {status === 'frozen' ? "You're frozen! KUT reset and get back on script!" : "Take action today to heat things up!"}
+              {status === 'frozen' ? "You've gone cold! KUT reset and get back on script!" : "Take action today to heat things up!"}
             </p>
           )}
         </div>
