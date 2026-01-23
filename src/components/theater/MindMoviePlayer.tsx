@@ -1,4 +1,4 @@
-import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
+import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
 import { Play, Pause, VolumeX, Volume2, Maximize } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -54,6 +54,14 @@ export const MindMoviePlayer = forwardRef<MindMoviePlayerHandle, MindMoviePlayer
   ) => {
     const videoRef = useRef<HTMLVideoElement>(null);
     const wrapperRef = useRef<HTMLDivElement>(null);
+
+    const isIOS = useMemo(() => {
+      if (typeof navigator === "undefined") return false;
+      return (
+        /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+        (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)
+      );
+    }, []);
 
     // Playback state
     const [isPlaying, setIsPlaying] = useState(false);
@@ -150,13 +158,6 @@ export const MindMoviePlayer = forwardRef<MindMoviePlayerHandle, MindMoviePlayer
         onError?.(msg);
       };
 
-      const handleSeeking = () => {
-        if (disableSeeking && !video.ended) {
-          // Revert seek
-          video.currentTime = currentTime;
-        }
-      };
-
       // Attach listeners ------------------------------------------
       video.addEventListener("loadedmetadata", handleLoadedMetadata);
       video.addEventListener("durationchange", handleLoadedMetadata);
@@ -165,7 +166,6 @@ export const MindMoviePlayer = forwardRef<MindMoviePlayerHandle, MindMoviePlayer
       video.addEventListener("pause", handlePause);
       video.addEventListener("ended", handleEnded);
       video.addEventListener("error", handleError);
-      video.addEventListener("seeking", handleSeeking);
 
       return () => {
         video.removeEventListener("loadedmetadata", handleLoadedMetadata);
@@ -175,7 +175,6 @@ export const MindMoviePlayer = forwardRef<MindMoviePlayerHandle, MindMoviePlayer
         video.removeEventListener("pause", handlePause);
         video.removeEventListener("ended", handleEnded);
         video.removeEventListener("error", handleError);
-        video.removeEventListener("seeking", handleSeeking);
       };
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [src]); // only re-bind when src changes
@@ -209,34 +208,22 @@ export const MindMoviePlayer = forwardRef<MindMoviePlayerHandle, MindMoviePlayer
     };
 
     const toggleFullscreen = async () => {
+      // iOS Safari fullscreen is a common crash trigger; we disable it entirely.
+      if (isIOS) return;
+
       const el = wrapperRef.current;
       const video = videoRef.current;
 
-      // iOS Safari video fullscreen
-      const isIOS =
-        /iPad|iPhone|iPod/.test(navigator.userAgent) ||
-        (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
-
-      if (isIOS && video) {
-        const anyVideo = video as unknown as {
-          webkitEnterFullscreen?: () => void;
-          webkitExitFullscreen?: () => void;
-          webkitDisplayingFullscreen?: boolean;
-        };
-        if (anyVideo.webkitDisplayingFullscreen) {
-          anyVideo.webkitExitFullscreen?.();
-        } else {
-          anyVideo.webkitEnterFullscreen?.();
+      try {
+        if (document.fullscreenElement) {
+          await document.exitFullscreen();
+        } else if (el?.requestFullscreen) {
+          await el.requestFullscreen();
+        } else if (video?.requestFullscreen) {
+          await video.requestFullscreen();
         }
-        return;
-      }
-
-      if (document.fullscreenElement) {
-        await document.exitFullscreen().catch(() => {});
-      } else if (el?.requestFullscreen) {
-        await el.requestFullscreen().catch(() => {});
-      } else if (video?.requestFullscreen) {
-        await video.requestFullscreen().catch(() => {});
+      } catch (err) {
+        console.warn("Fullscreen failed", err);
       }
     };
 
@@ -264,8 +251,10 @@ export const MindMoviePlayer = forwardRef<MindMoviePlayerHandle, MindMoviePlayer
           className="w-full h-full object-contain"
           playsInline
           webkit-playsinline="true"
-          preload="metadata"
+          preload={isIOS ? "none" : "metadata"}
+          disablePictureInPicture
           controls={nativeControls}
+          controlsList="nodownload noremoteplayback nofullscreen"
           onClick={togglePlay}
         />
 
@@ -319,14 +308,16 @@ export const MindMoviePlayer = forwardRef<MindMoviePlayerHandle, MindMoviePlayer
                   </span>
                 </div>
 
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={toggleFullscreen}
-                  className="h-8 w-8 sm:h-10 sm:w-10 text-white"
-                >
-                  <Maximize className="w-4 h-4 sm:w-5 sm:h-5" />
-                </Button>
+                {!isIOS && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={toggleFullscreen}
+                    className="h-8 w-8 sm:h-10 sm:w-10 text-white"
+                  >
+                    <Maximize className="w-4 h-4 sm:w-5 sm:h-5" />
+                  </Button>
+                )}
               </div>
             </div>
           </div>
