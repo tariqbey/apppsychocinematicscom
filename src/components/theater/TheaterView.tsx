@@ -334,25 +334,73 @@ export const TheaterView = ({ onClose }: TheaterViewProps) => {
                   controls={false}
                   onClick={togglePlay}
                   preload="auto"
+                  onCanPlayThrough={() => {
+                    console.log("Video can play through - fully buffered");
+                  }}
+                  onProgress={() => {
+                    // Log buffering progress for debugging
+                    if (videoRef.current) {
+                      const buffered = videoRef.current.buffered;
+                      if (buffered.length > 0) {
+                        const bufferedEnd = buffered.end(buffered.length - 1);
+                        const duration = videoRef.current.duration;
+                        if (duration > 0) {
+                          console.log(`Buffered: ${Math.round((bufferedEnd / duration) * 100)}%`);
+                        }
+                      }
+                    }
+                  }}
                   onError={(e) => {
-                    console.error("Video error:", e);
-                    // Attempt to reload the video on error
                     const video = e.currentTarget;
+                    const mediaError = video.error;
+                    console.error("Video error:", {
+                      code: mediaError?.code,
+                      message: mediaError?.message,
+                      networkState: video.networkState,
+                      readyState: video.readyState,
+                      src: video.src?.substring(0, 100)
+                    });
+                    
+                    toast({
+                      title: "Video playback issue",
+                      description: "There was a problem loading the video. Retrying...",
+                      variant: "destructive",
+                    });
+                    
+                    // Attempt to reload the video on error
                     const currentSrc = video.src;
+                    const currentTime = video.currentTime;
                     video.src = '';
                     setTimeout(() => {
                       video.src = currentSrc;
                       video.load();
-                    }, 100);
+                      video.currentTime = currentTime;
+                    }, 500);
                   }}
                   onStalled={() => {
+                    console.log("Video stalled - attempting to resume");
                     // Handle stalled playback
                     if (videoRef.current && isPlaying) {
-                      videoRef.current.play().catch(() => {});
+                      setTimeout(() => {
+                        videoRef.current?.play().catch((err) => {
+                          console.error("Failed to resume after stall:", err);
+                        });
+                      }, 100);
                     }
                   }}
+                  onSuspend={() => {
+                    console.log("Video suspended - browser stopped fetching");
+                  }}
                   onWaiting={() => {
-                    // Video is buffering - this is expected behavior
+                    console.log("Video waiting - buffering...");
+                  }}
+                  onPlay={() => {
+                    console.log("Video play event fired");
+                    setIsPlaying(true);
+                  }}
+                  onPause={() => {
+                    console.log("Video pause event fired");
+                    setIsPlaying(false);
                   }}
                 />
 
