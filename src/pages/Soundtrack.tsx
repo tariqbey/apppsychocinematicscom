@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { 
-  ArrowLeft, Music, Sparkles, Loader2, Library, Brain
+  ArrowLeft, Music, Sparkles, Loader2, Library, Brain, Target, Check
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -15,19 +15,22 @@ import { useAuth } from "@/hooks/useAuth";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { useMindMovieMusic, MUSIC_STYLES, type MusicStyle } from "@/hooks/useMindMovieMusic";
 import { SoundtrackPlayer } from "@/components/mind-movie/SoundtrackPlayer";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 export default function Soundtrack() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { user, loading: authLoading } = useAuth();
-  const { profile } = useUserProfile();
+  const { profile, updateProfile, refetch: refetchProfile } = useUserProfile();
   
   const [songTitle, setSongTitle] = useState("My Soundtrack");
   const [customPrompt, setCustomPrompt] = useState("");
   const [customStyleText, setCustomStyleText] = useState("");
   const [songCount, setSongCount] = useState<1 | 2>(1);
   const [fromAnalysis, setFromAnalysis] = useState(false);
+  const [fromChiefAim, setFromChiefAim] = useState(false);
+  const [isSettingAsChiefAimSong, setIsSettingAsChiefAimSong] = useState(false);
   
   const {
     isGeneratingLyrics,
@@ -78,6 +81,96 @@ export default function Soundtrack() {
       }
     }
   }, [searchParams]);
+
+  // Check if coming from Chief Aim card
+  useEffect(() => {
+    const isFromChiefAim = searchParams.get("fromChiefAim") === "true";
+    if (isFromChiefAim) {
+      const chiefAimContext = sessionStorage.getItem("chief-aim-lyrics-context");
+      if (chiefAimContext) {
+        // Also fetch character traits to enrich the context
+        fetchCharacterContext(chiefAimContext);
+      }
+    }
+  }, [searchParams, user]);
+
+  const fetchCharacterContext = async (baseContext: string) => {
+    if (!user) return;
+    
+    try {
+      // Fetch character profile for archetype and traits
+      const { data: characterProfile } = await supabase
+        .from("character_profiles")
+        .select("archetype, archetype_score, transformation_analysis")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      
+      let enrichedContext = baseContext;
+      
+      if (characterProfile) {
+        enrichedContext += "\n\n## MY CHARACTER PROFILE";
+        
+        if (characterProfile.archetype) {
+          enrichedContext += `\n\n**My Archetype:** ${characterProfile.archetype}`;
+        }
+        
+        // Extract key traits from archetype_score if available
+        if (characterProfile.archetype_score && typeof characterProfile.archetype_score === 'object') {
+          const scores = characterProfile.archetype_score as Record<string, number>;
+          const topTraits = Object.entries(scores)
+            .sort(([, a], [, b]) => (b as number) - (a as number))
+            .slice(0, 5)
+            .map(([trait]) => trait);
+          
+          if (topTraits.length > 0) {
+            enrichedContext += `\n\n**My Strongest Traits:** ${topTraits.join(", ")}`;
+          }
+        }
+        
+        // Add transformation insights if available
+        if (characterProfile.transformation_analysis && typeof characterProfile.transformation_analysis === 'object') {
+          const analysis = characterProfile.transformation_analysis as Record<string, unknown>;
+          if (analysis.strengths && Array.isArray(analysis.strengths)) {
+            enrichedContext += `\n\n**My Strengths:** ${(analysis.strengths as string[]).join(", ")}`;
+          }
+          if (analysis.growthEdges && Array.isArray(analysis.growthEdges)) {
+            enrichedContext += `\n\n**Areas I'm Growing:** ${(analysis.growthEdges as string[]).join(", ")}`;
+          }
+        }
+      }
+      
+      setCustomPrompt(enrichedContext);
+      setSongTitle("My Chief Aim Anthem");
+      setFromChiefAim(true);
+      sessionStorage.removeItem("chief-aim-lyrics-context");
+      toast.success("Chief Aim loaded with your character traits! Choose a style and create your anthem.");
+    } catch (error) {
+      console.error("Error fetching character context:", error);
+      // Fall back to base context
+      setCustomPrompt(baseContext);
+      setSongTitle("My Chief Aim Anthem");
+      setFromChiefAim(true);
+      sessionStorage.removeItem("chief-aim-lyrics-context");
+    }
+  };
+
+  const handleSetAsChiefAimSong = async (audioUrl: string) => {
+    if (!user) return;
+    
+    setIsSettingAsChiefAimSong(true);
+    try {
+      await updateProfile({ chief_aim_song_url: audioUrl } as any);
+      refetchProfile();
+      toast.success("Set as your Chief Aim Anthem! You can now listen to it in your daily ritual.");
+    } catch (error) {
+      console.error("Error setting chief aim song:", error);
+      toast.error("Failed to set as Chief Aim song");
+    } finally {
+      setIsSettingAsChiefAimSong(false);
+    }
+  };
 
   const handleGenerateLyrics = async () => {
     if (!chiefAim.what && !customPrompt) {
@@ -217,15 +310,32 @@ export default function Soundtrack() {
             </Card>
           )}
 
+          {/* From Chief Aim Banner */}
+          {fromChiefAim && (
+            <Card className="border-gold/50 bg-gradient-to-r from-gold/10 to-amber-500/10">
+              <CardContent className="p-4 flex items-center gap-3">
+                <Target className="w-6 h-6 text-gold" />
+                <div>
+                  <p className="font-semibold text-gold">Creating from Your Definite Chief Aim</p>
+                  <p className="text-xs text-muted-foreground">
+                    Your Chief Aim and character traits have been loaded. Choose a music style and create your personal anthem!
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Intro Card */}
           <Card className="border-gold/20 bg-gradient-to-r from-gold/5 to-amber-500/5">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Sparkles className="w-5 h-5 text-gold" />
-                {fromAnalysis ? "Create Your Character Anthem" : "Create Your Soundtrack"}
+                {fromChiefAim ? "Create Your Chief Aim Anthem" : fromAnalysis ? "Create Your Character Anthem" : "Create Your Soundtrack"}
               </CardTitle>
               <CardDescription>
-                Generate AI-powered music and lyrics for your visualizations, movies, or personal motivation.
+                {fromChiefAim 
+                  ? "Transform your Definite Chief Aim into a powerful musical affirmation you can listen to daily."
+                  : "Generate AI-powered music and lyrics for your visualizations, movies, or personal motivation."}
               </CardDescription>
             </CardHeader>
           </Card>
@@ -422,19 +532,48 @@ export default function Soundtrack() {
 
                 {/* Show generated songs */}
                 {songs.length > 0 && songs.map((song, index) => (
-                  <div key={index} className="space-y-2">
+                  <div key={index} className="space-y-3">
                     <h4 className="font-medium text-sm text-muted-foreground">
                       Version {index + 1}
                     </h4>
                     {song.soundtrackUrl && (
-                      <SoundtrackPlayer
-                        audioUrl={song.soundtrackUrl}
-                        title={`${songTitle} (v${index + 1})`}
-                        isGenerating={isGeneratingMusic && !song.soundtrackUrl}
-                        generationStatus={song.generationStatus}
-                        onSaveToLibrary={() => handleSaveToLibrary(index)}
-                        isSavedToLibrary={song.isSavedToLibrary}
-                      />
+                      <>
+                        <SoundtrackPlayer
+                          audioUrl={song.soundtrackUrl}
+                          title={`${songTitle} (v${index + 1})`}
+                          isGenerating={isGeneratingMusic && !song.soundtrackUrl}
+                          generationStatus={song.generationStatus}
+                          onSaveToLibrary={() => handleSaveToLibrary(index)}
+                          isSavedToLibrary={song.isSavedToLibrary}
+                        />
+                        {/* Use as Chief Aim Song button */}
+                        {(fromChiefAim || fromAnalysis) && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleSetAsChiefAimSong(song.soundtrackUrl!)}
+                            disabled={isSettingAsChiefAimSong || profile?.chief_aim_song_url === song.soundtrackUrl}
+                            className="w-full gap-2 border-gold/30 text-gold hover:bg-gold/10"
+                          >
+                            {profile?.chief_aim_song_url === song.soundtrackUrl ? (
+                              <>
+                                <Check className="w-4 h-4" />
+                                Set as Chief Aim Anthem
+                              </>
+                            ) : isSettingAsChiefAimSong ? (
+                              <>
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                                Setting...
+                              </>
+                            ) : (
+                              <>
+                                <Target className="w-4 h-4" />
+                                Use as Chief Aim Anthem
+                              </>
+                            )}
+                          </Button>
+                        )}
+                      </>
                     )}
                     {/* Error state - Content Policy Violation or Failed */}
                     {!song.soundtrackUrl && (song.generationStatus === 'Content Policy Error' || song.generationStatus === 'Failed' || song.generationStatus === 'Error') && (

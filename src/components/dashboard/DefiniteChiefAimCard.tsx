@@ -1,9 +1,10 @@
-import { Scroll, Calendar, ArrowRight, Sparkles, Pencil, Zap } from "lucide-react";
+import { Scroll, Calendar, ArrowRight, Sparkles, Pencil, Zap, Music, Play, Pause, Volume2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { InfoTooltip } from "@/components/ui/info-tooltip";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useNavigate } from "react-router-dom";
 
 interface ChiefAimData {
   what: string;
@@ -15,6 +16,8 @@ interface ChiefAimData {
 interface DefiniteChiefAimCardProps {
   aim: ChiefAimData;
   onEdit?: () => void;
+  chiefAimSongUrl?: string | null;
+  onSongListened?: () => void;
 }
 
 // Floating particle component with enhanced animation
@@ -33,12 +36,16 @@ const FloatingParticle = ({ delay, size = 2, color = "#D4AF37" }: { delay: numbe
   />
 );
 
-export const DefiniteChiefAimCard = ({ aim, onEdit }: DefiniteChiefAimCardProps) => {
+export const DefiniteChiefAimCard = ({ aim, onEdit, chiefAimSongUrl, onSongListened }: DefiniteChiefAimCardProps) => {
   const hasAim = aim.what && aim.byWhen && aim.exchange && aim.plan;
   const [isVisible, setIsVisible] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const [isTouched, setIsTouched] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [hasListenedToday, setHasListenedToday] = useState(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
   const isMobile = useIsMobile();
+  const navigate = useNavigate();
 
   const isActive = isHovered || isTouched || (isMobile && isVisible);
 
@@ -46,6 +53,62 @@ export const DefiniteChiefAimCard = ({ aim, onEdit }: DefiniteChiefAimCardProps)
     const timer = setTimeout(() => setIsVisible(true), 300);
     return () => clearTimeout(timer);
   }, []);
+
+  // Initialize audio element
+  useEffect(() => {
+    if (chiefAimSongUrl) {
+      audioRef.current = new Audio(chiefAimSongUrl);
+      audioRef.current.addEventListener('ended', () => {
+        setIsPlaying(false);
+        if (!hasListenedToday) {
+          setHasListenedToday(true);
+          onSongListened?.();
+        }
+      });
+      // Mark as listened after 30 seconds of playing
+      audioRef.current.addEventListener('timeupdate', () => {
+        if (audioRef.current && audioRef.current.currentTime >= 30 && !hasListenedToday) {
+          setHasListenedToday(true);
+          onSongListened?.();
+        }
+      });
+    }
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+      }
+    };
+  }, [chiefAimSongUrl, hasListenedToday, onSongListened]);
+
+  const togglePlayback = () => {
+    if (!audioRef.current) return;
+    if (isPlaying) {
+      audioRef.current.pause();
+      setIsPlaying(false);
+    } else {
+      audioRef.current.play();
+      setIsPlaying(true);
+    }
+  };
+
+  const handleCreateSong = () => {
+    // Build context for the Soundtrack page
+    const chiefAimContext = [
+      `## MY DEFINITE CHIEF AIM`,
+      "",
+      `**THE DREAM:** ${aim.what}`,
+      "",
+      `**THE DEADLINE:** ${aim.byWhen}`,
+      "",
+      `**THE EXCHANGE (What I Give):** ${aim.exchange}`,
+      "",
+      `**THE PLAN:** ${aim.plan}`,
+    ].join("\n");
+    
+    sessionStorage.setItem("chief-aim-lyrics-context", chiefAimContext);
+    navigate("/soundtrack?fromChiefAim=true");
+  };
 
   const glowColor = "rgba(212, 175, 55, 0.4)";
   const particleColor = "#D4AF37";
@@ -346,6 +409,71 @@ export const DefiniteChiefAimCard = ({ aim, onEdit }: DefiniteChiefAimCardProps)
                 <p className="text-xs sm:text-sm text-gold uppercase tracking-wider font-medium">The Plan</p>
               </div>
               <p className="text-sm sm:text-base text-foreground/90 leading-relaxed">{aim.plan}</p>
+            </div>
+
+            {/* Chief Aim Song Section */}
+            <div className="p-4 sm:p-5 rounded-xl bg-gradient-to-br from-purple-500/10 to-gold/5 border border-purple-500/20 transition-all duration-300 hover:border-purple-500/40">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <Music className="w-4 h-4 sm:w-5 sm:h-5 text-purple-400" />
+                  <div>
+                    <p className="text-xs sm:text-sm text-purple-300 uppercase tracking-wider font-medium">Chief Aim Anthem</p>
+                    <p className="text-xs text-muted-foreground">
+                      {chiefAimSongUrl 
+                        ? (hasListenedToday ? "✓ Listened today" : "Listen to complete ritual") 
+                        : "Turn your aim into a motivational song"}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  {chiefAimSongUrl ? (
+                    <>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={togglePlayback}
+                        className={cn(
+                          "gap-2 transition-all",
+                          isPlaying 
+                            ? "text-purple-400 bg-purple-500/20" 
+                            : "text-muted-foreground hover:text-purple-400 hover:bg-purple-500/10"
+                        )}
+                      >
+                        {isPlaying ? (
+                          <>
+                            <Pause className="w-4 h-4" />
+                            <span className="hidden sm:inline">Pause</span>
+                          </>
+                        ) : (
+                          <>
+                            <Play className="w-4 h-4" />
+                            <span className="hidden sm:inline">Play</span>
+                          </>
+                        )}
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={handleCreateSong}
+                        className="gap-2 text-muted-foreground hover:text-gold hover:bg-gold/10"
+                      >
+                        <Sparkles className="w-4 h-4" />
+                        <span className="hidden sm:inline">New</span>
+                      </Button>
+                    </>
+                  ) : (
+                    <Button
+                      variant="default"
+                      size="sm"
+                      onClick={handleCreateSong}
+                      className="gap-2 bg-gradient-to-r from-purple-500 to-gold hover:from-purple-600 hover:to-amber-500"
+                    >
+                      <Music className="w-4 h-4" />
+                      <span>Create Song</span>
+                    </Button>
+                  )}
+                </div>
+              </div>
             </div>
           </>
         ) : (

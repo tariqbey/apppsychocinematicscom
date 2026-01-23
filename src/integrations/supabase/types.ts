@@ -665,6 +665,7 @@ export type Database = {
       daily_rituals: {
         Row: {
           action_execution: boolean
+          chief_aim_listened: boolean | null
           created_at: string
           evening_review: boolean
           id: string
@@ -677,6 +678,7 @@ export type Database = {
         }
         Insert: {
           action_execution?: boolean
+          chief_aim_listened?: boolean | null
           created_at?: string
           evening_review?: boolean
           id?: string
@@ -689,6 +691,7 @@ export type Database = {
         }
         Update: {
           action_execution?: boolean
+          chief_aim_listened?: boolean | null
           created_at?: string
           evening_review?: boolean
           id?: string
@@ -1975,6 +1978,7 @@ export type Database = {
           chief_aim_by_when: string | null
           chief_aim_exchange: string | null
           chief_aim_plan: string | null
+          chief_aim_song_url: string | null
           chief_aim_what: string | null
           coaching_call_enabled: boolean | null
           coaching_call_time: string | null
@@ -2018,6 +2022,7 @@ export type Database = {
           chief_aim_by_when?: string | null
           chief_aim_exchange?: string | null
           chief_aim_plan?: string | null
+          chief_aim_song_url?: string | null
           chief_aim_what?: string | null
           coaching_call_enabled?: boolean | null
           coaching_call_time?: string | null
@@ -2061,6 +2066,7 @@ export type Database = {
           chief_aim_by_when?: string | null
           chief_aim_exchange?: string | null
           chief_aim_plan?: string | null
+          chief_aim_song_url?: string | null
           chief_aim_what?: string | null
           coaching_call_enabled?: boolean | null
           coaching_call_time?: string | null
