@@ -22,7 +22,11 @@ import {
   BookOpen,
   Archive,
   Trash2,
-  Calendar
+  Calendar,
+  Star,
+  GitCompare,
+  X,
+  Music
 } from "lucide-react";
 import { format } from "date-fns";
 
@@ -84,6 +88,8 @@ export function AICharacterAnalysis() {
   const [showArchive, setShowArchive] = useState(false);
   const [savedAnalyses, setSavedAnalyses] = useState<SavedAnalysis[]>([]);
   const [loadingArchive, setLoadingArchive] = useState(false);
+  const [compareMode, setCompareMode] = useState(false);
+  const [compareSelection, setCompareSelection] = useState<SavedAnalysis[]>([]);
 
   // Fetch saved analyses on mount
   useEffect(() => {
@@ -216,6 +222,25 @@ export function AICharacterAnalysis() {
     setShowArchive(false);
   };
 
+  const toggleCompareSelection = (saved: SavedAnalysis) => {
+    if (compareSelection.find(s => s.id === saved.id)) {
+      setCompareSelection(prev => prev.filter(s => s.id !== saved.id));
+    } else if (compareSelection.length < 2) {
+      setCompareSelection(prev => [...prev, saved]);
+    } else {
+      toast({
+        title: "Maximum 2 analyses",
+        description: "You can compare up to 2 analyses at a time.",
+      });
+    }
+  };
+
+  const getMostRelevantLaw = (laws: AnalysisData['napoleonHillLaws']) => {
+    if (!laws || laws.length === 0) return null;
+    // The first law is the most relevant based on the AI's prioritization
+    return laws[0];
+  };
+
   const getScoreColor = (score: number) => {
     if (score >= 80) return "text-green-400";
     if (score >= 60) return "text-gold";
@@ -233,11 +258,11 @@ export function AICharacterAnalysis() {
   return (
     <div className="space-y-4">
       {/* Archive Toggle */}
-      <div className="flex gap-2">
+      <div className="flex gap-2 flex-wrap">
         <Button
           variant={showArchive ? "outline" : "default"}
           size="sm"
-          onClick={() => setShowArchive(false)}
+          onClick={() => { setShowArchive(false); setCompareMode(false); setCompareSelection([]); }}
           className={!showArchive ? "bg-gold hover:bg-gold/90 text-black" : ""}
         >
           <Brain className="w-4 h-4 mr-2" />
@@ -252,15 +277,101 @@ export function AICharacterAnalysis() {
           <Archive className="w-4 h-4 mr-2" />
           Saved ({savedAnalyses.length})
         </Button>
+        {showArchive && savedAnalyses.length >= 2 && (
+          <Button
+            variant={compareMode ? "default" : "outline"}
+            size="sm"
+            onClick={() => {
+              setCompareMode(!compareMode);
+              setCompareSelection([]);
+            }}
+            className={compareMode ? "bg-purple-600 hover:bg-purple-700" : "border-purple-500/50 text-purple-400"}
+          >
+            <GitCompare className="w-4 h-4 mr-2" />
+            Compare
+          </Button>
+        )}
       </div>
 
+      {/* Side-by-Side Comparison View */}
+      {showArchive && compareMode && compareSelection.length === 2 && (
+        <Card className="bg-gradient-to-br from-purple-500/10 to-gold/5 border-purple-500/30">
+          <CardHeader className="pb-2">
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <GitCompare className="w-5 h-5 text-purple-400" />
+                Transformation Comparison
+              </CardTitle>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setCompareSelection([])}
+                className="text-muted-foreground hover:text-foreground"
+              >
+                <X className="w-4 h-4" />
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 gap-4">
+              {compareSelection.map((analysis, idx) => (
+                <div key={analysis.id} className="space-y-3">
+                  <div className="text-center p-3 rounded-lg bg-background/50 border border-border">
+                    <p className="text-xs text-muted-foreground mb-1">
+                      {format(new Date(analysis.created_at), 'MMM d, yyyy')}
+                    </p>
+                    <div className="flex items-center justify-center gap-2">
+                      <span className={`text-2xl font-bold ${getScoreColor(analysis.analysis.overallScore)}`}>
+                        {analysis.analysis.overallScore}
+                      </span>
+                      <Badge className={`${getScoreColor(analysis.analysis.overallScore)} bg-current/10 border-current/30 text-xs`}>
+                        {getScoreLabel(analysis.analysis.overallScore)}
+                      </Badge>
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-2 text-center text-xs">
+                    <div className="p-2 rounded bg-card/50 border border-border">
+                      <p className="font-bold text-gold">{analysis.metrics.taskCompletionRate}%</p>
+                      <p className="text-muted-foreground">Tasks</p>
+                    </div>
+                    <div className="p-2 rounded bg-card/50 border border-border">
+                      <p className="font-bold">{analysis.metrics.avgScorecardScore}/12</p>
+                      <p className="text-muted-foreground">Score</p>
+                    </div>
+                  </div>
+
+                  {analysis.napoleon_hill_laws && analysis.napoleon_hill_laws.length > 0 && (
+                    <div className="p-2 rounded bg-purple-500/10 border border-purple-500/20">
+                      <p className="text-xs font-semibold text-purple-400 mb-1">Top Law</p>
+                      <Badge variant="outline" className="border-purple-500/50 text-purple-400 text-xs">
+                        #{analysis.napoleon_hill_laws[0].lawNumber} {analysis.napoleon_hill_laws[0].name}
+                      </Badge>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {/* Score Difference */}
+            <div className="mt-4 p-3 rounded-lg bg-gold/10 border border-gold/30 text-center">
+              <p className="text-sm font-semibold text-gold">
+                {compareSelection[1].analysis.overallScore - compareSelection[0].analysis.overallScore > 0 ? '+' : ''}
+                {compareSelection[1].analysis.overallScore - compareSelection[0].analysis.overallScore} points
+              </p>
+              <p className="text-xs text-muted-foreground">Score change between analyses</p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Archive View */}
-      {showArchive && (
+      {showArchive && !(compareMode && compareSelection.length === 2) && (
         <Card className="bg-card/50 border-border">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
               <Archive className="w-5 h-5 text-gold" />
-              Saved Analyses
+              {compareMode ? `Select 2 Analyses to Compare (${compareSelection.length}/2)` : "Saved Analyses"}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -277,57 +388,76 @@ export function AICharacterAnalysis() {
             ) : (
               <ScrollArea className="h-[400px]">
                 <div className="space-y-3">
-                  {savedAnalyses.map((saved) => (
-                    <div
-                      key={saved.id}
-                      className="p-4 rounded-lg border border-border hover:border-gold/50 transition-colors bg-background/50"
-                    >
-                      <div className="flex items-start justify-between mb-2">
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <Badge className={`${getScoreColor(saved.analysis.overallScore)} bg-current/10 border-current/30`}>
-                              {saved.analysis.overallScore}/100
-                            </Badge>
-                            <span className="text-xs text-muted-foreground">
-                              {getScoreLabel(saved.analysis.overallScore)}
-                            </span>
+                  {savedAnalyses.map((saved) => {
+                    const isSelected = compareSelection.find(s => s.id === saved.id);
+                    return (
+                      <div
+                        key={saved.id}
+                        className={`p-4 rounded-lg border transition-colors bg-background/50 cursor-pointer ${
+                          compareMode 
+                            ? isSelected 
+                              ? 'border-purple-500 bg-purple-500/10' 
+                              : 'border-border hover:border-purple-500/50'
+                            : 'border-border hover:border-gold/50'
+                        }`}
+                        onClick={() => compareMode && toggleCompareSelection(saved)}
+                      >
+                        <div className="flex items-start justify-between mb-2">
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <Badge className={`${getScoreColor(saved.analysis.overallScore)} bg-current/10 border-current/30`}>
+                                {saved.analysis.overallScore}/100
+                              </Badge>
+                              <span className="text-xs text-muted-foreground">
+                                {getScoreLabel(saved.analysis.overallScore)}
+                              </span>
+                            </div>
+                            <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
+                              <Calendar className="w-3 h-3" />
+                              {format(new Date(saved.created_at), 'MMM d, yyyy h:mm a')}
+                            </p>
                           </div>
-                          <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
-                            <Calendar className="w-3 h-3" />
-                            {format(new Date(saved.created_at), 'MMM d, yyyy h:mm a')}
-                          </p>
+                          {!compareMode && (
+                            <div className="flex gap-1">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={(e) => { e.stopPropagation(); loadSavedAnalysis(saved); }}
+                                className="text-gold hover:text-gold/80"
+                              >
+                                <Eye className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={(e) => { e.stopPropagation(); deleteAnalysis(saved.id); }}
+                                className="text-red-400 hover:text-red-300"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          )}
+                          {compareMode && (
+                            <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                              isSelected ? 'border-purple-500 bg-purple-500' : 'border-muted-foreground'
+                            }`}>
+                              {isSelected && <div className="w-2 h-2 rounded-full bg-white" />}
+                            </div>
+                          )}
                         </div>
-                        <div className="flex gap-1">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => loadSavedAnalysis(saved)}
-                            className="text-gold hover:text-gold/80"
-                          >
-                            <Eye className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => deleteAnalysis(saved.id)}
-                            className="text-red-400 hover:text-red-300"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
+                        <p className="text-sm line-clamp-2">{saved.analysis.assessment}</p>
+                        {saved.napoleon_hill_laws && saved.napoleon_hill_laws.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-2">
+                            {saved.napoleon_hill_laws.slice(0, 3).map((law, i) => (
+                              <Badge key={i} variant="outline" className="text-xs border-purple-500/30 text-purple-400">
+                                Law #{law.lawNumber}
+                              </Badge>
+                            ))}
+                          </div>
+                        )}
                       </div>
-                      <p className="text-sm line-clamp-2">{saved.analysis.assessment}</p>
-                      {saved.napoleon_hill_laws && saved.napoleon_hill_laws.length > 0 && (
-                        <div className="flex flex-wrap gap-1 mt-2">
-                          {saved.napoleon_hill_laws.slice(0, 3).map((law, i) => (
-                            <Badge key={i} variant="outline" className="text-xs border-purple-500/30 text-purple-400">
-                              Law #{law.lawNumber}
-                            </Badge>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </ScrollArea>
             )}
@@ -382,31 +512,15 @@ export function AICharacterAnalysis() {
                       <Activity className="w-5 h-5 text-gold" />
                       Character Score
                     </CardTitle>
-                    <div className="flex gap-1">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={saveAnalysis}
-                        disabled={saving}
-                        className="text-muted-foreground hover:text-gold"
-                        title="Save to Archive"
-                      >
-                        {saving ? (
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                        ) : (
-                          <Save className="w-4 h-4" />
-                        )}
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={generateAnalysis}
-                        disabled={loading}
-                        className="text-muted-foreground hover:text-gold"
-                      >
-                        <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-                      </Button>
-                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={generateAnalysis}
+                      disabled={loading}
+                      className="text-muted-foreground hover:text-gold"
+                    >
+                      <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+                    </Button>
                   </div>
                 </CardHeader>
                 <CardContent>
@@ -484,8 +598,86 @@ export function AICharacterAnalysis() {
                 </Card>
               </div>
 
-              {/* Napoleon Hill Prescription */}
-              {data.analysis.napoleonHillPrescription && data.analysis.napoleonHillPrescription.length > 0 && (
+              {/* Save & Convert to Song CTA */}
+              <Card className="bg-gradient-to-r from-gold/20 via-purple-500/10 to-gold/20 border-gold/50">
+                <CardContent className="p-4">
+                  <div className="flex flex-col sm:flex-row items-center gap-4">
+                    <div className="flex-1 text-center sm:text-left">
+                      <h4 className="font-semibold text-gold mb-1">Save This Analysis</h4>
+                      <p className="text-xs text-muted-foreground">
+                        Archive your progress to track transformation over time or convert it into an affirmation song.
+                      </p>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        onClick={saveAnalysis}
+                        disabled={saving}
+                        className="bg-gold hover:bg-gold/90 text-black"
+                      >
+                        {saving ? (
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        ) : (
+                          <Save className="w-4 h-4 mr-2" />
+                        )}
+                        Save to Archive
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Napoleon Hill Prescription - Most Relevant First */}
+              {data.napoleonHillLaws && data.napoleonHillLaws.length > 0 && (
+                <Card className="bg-gradient-to-br from-purple-500/10 to-transparent border-purple-500/30">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="flex items-center gap-2 text-base">
+                      <BookOpen className="w-5 h-5 text-purple-400" />
+                      Napoleon Hill Prescription
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    {/* Most Relevant Law - Highlighted */}
+                    {data.napoleonHillLaws.length > 0 && (
+                      <div className="p-4 rounded-lg bg-gradient-to-r from-gold/20 to-purple-500/20 border-2 border-gold/50 relative overflow-hidden">
+                        <div className="absolute top-2 right-2">
+                          <Badge className="bg-gold text-black text-xs">
+                            <Star className="w-3 h-3 mr-1" />
+                            Most Relevant
+                          </Badge>
+                        </div>
+                        <div className="flex items-center gap-2 mb-2 mt-4 sm:mt-0">
+                          <Badge variant="outline" className="border-gold/50 text-gold">
+                            Law #{data.napoleonHillLaws[0].lawNumber}
+                          </Badge>
+                          <span className="font-bold text-gold">{data.napoleonHillLaws[0].name}</span>
+                        </div>
+                        <p className="text-sm">{data.napoleonHillLaws[0].application}</p>
+                        {data.napoleonHillLaws[0].quote && (
+                          <p className="text-xs text-muted-foreground italic mt-2 border-l-2 border-gold/30 pl-2">
+                            "{data.napoleonHillLaws[0].quote}"
+                          </p>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Other Laws */}
+                    {data.napoleonHillLaws.slice(1).map((law, i) => (
+                      <div key={i} className="p-3 rounded-lg bg-purple-500/10 border border-purple-500/20">
+                        <div className="flex items-center gap-2 mb-1">
+                          <Badge variant="outline" className="border-purple-500/50 text-purple-400">
+                            Law #{law.lawNumber}
+                          </Badge>
+                          <span className="font-semibold text-sm">{law.name}</span>
+                        </div>
+                        <p className="text-sm text-muted-foreground">{law.application}</p>
+                      </div>
+                    ))}
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Fallback to old format if napoleonHillLaws not present */}
+              {!data.napoleonHillLaws && data.analysis.napoleonHillPrescription && data.analysis.napoleonHillPrescription.length > 0 && (
                 <Card className="bg-gradient-to-br from-purple-500/10 to-transparent border-purple-500/30">
                   <CardHeader className="pb-2">
                     <CardTitle className="flex items-center gap-2 text-base">
@@ -495,12 +687,18 @@ export function AICharacterAnalysis() {
                   </CardHeader>
                   <CardContent className="space-y-3">
                     {data.analysis.napoleonHillPrescription.map((law, i) => (
-                      <div key={i} className="p-3 rounded-lg bg-purple-500/10 border border-purple-500/20">
+                      <div key={i} className={`p-3 rounded-lg ${i === 0 ? 'bg-gradient-to-r from-gold/20 to-purple-500/20 border-2 border-gold/50' : 'bg-purple-500/10 border border-purple-500/20'}`}>
                         <div className="flex items-center gap-2 mb-1">
-                          <Badge variant="outline" className="border-purple-500/50 text-purple-400">
+                          {i === 0 && (
+                            <Badge className="bg-gold text-black text-xs">
+                              <Star className="w-3 h-3 mr-1" />
+                              Most Relevant
+                            </Badge>
+                          )}
+                          <Badge variant="outline" className={i === 0 ? "border-gold/50 text-gold" : "border-purple-500/50 text-purple-400"}>
                             Law #{law.lawNumber}
                           </Badge>
-                          <span className="font-semibold text-sm">{law.lawName}</span>
+                          <span className={`font-semibold text-sm ${i === 0 ? 'text-gold' : ''}`}>{law.lawName}</span>
                         </div>
                         <p className="text-sm text-muted-foreground">{law.application}</p>
                       </div>
