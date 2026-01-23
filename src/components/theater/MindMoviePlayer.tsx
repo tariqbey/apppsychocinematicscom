@@ -1,4 +1,4 @@
-import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
 import { Play, Pause, VolumeX, Volume2, Maximize, Minimize2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -71,7 +71,9 @@ export const MindMoviePlayer = forwardRef<MindMoviePlayerHandle, MindMoviePlayer
       return window.matchMedia("(hover: none)").matches;
     }, []);
 
-    const shouldShowControlsAlways = isIOS || prefersNoHover;
+    // On mobile/touch devices, we still auto-hide controls while playing to keep the
+    // video unobstructed. User interaction will reveal controls temporarily.
+    const isTouchUI = isIOS || prefersNoHover;
 
     // iOS Safari is extremely sensitive to imperfect Range/206 responses.
     // Route storage URLs through our Range-safe proxy automatically.
@@ -93,6 +95,15 @@ export const MindMoviePlayer = forwardRef<MindMoviePlayerHandle, MindMoviePlayer
     const [duration, setDuration] = useState(0);
     const [wasInterrupted, setWasInterrupted] = useState(false);
     const [isWidescreen, setIsWidescreen] = useState(false);
+
+    // Controls auto-hide state
+    const [controlsVisible, setControlsVisible] = useState(true);
+    const hideControlsTimeoutRef = useRef<number | null>(null);
+
+    // Distinguish user-requested pauses from system/network pauses (iOS can fire
+    // pause events during buffering). Only user pauses count as "interruption".
+    const pauseRequestedRef = useRef(false);
+    const autoResumeTimeoutRef = useRef<number | null>(null);
 
     // Refs for stable callbacks
     const hasCompleted = useRef(false);
@@ -132,6 +143,12 @@ export const MindMoviePlayer = forwardRef<MindMoviePlayerHandle, MindMoviePlayer
       setCurrentTime(0);
       setDuration(0);
       setIsPlaying(false);
+      setControlsVisible(true);
+
+      // Ensure audio is enabled by default
+      video.muted = false;
+      video.defaultMuted = false;
+      video.volume = 1;
 
       // Handlers -------------------------------------------------
       const handleLoadedMetadata = () => {
@@ -159,9 +176,28 @@ export const MindMoviePlayer = forwardRef<MindMoviePlayerHandle, MindMoviePlayer
 
       const handlePause = () => {
         setIsPlaying(false);
-        // Mark interrupted only if NOT at end
-        if (!video.ended && video.currentTime > 0.5) {
+
+        const userPaused = pauseRequestedRef.current;
+        pauseRequestedRef.current = false;
+
+        // Mark interrupted only if user requested pause and NOT at end
+        if (userPaused && !video.ended && video.currentTime > 0.5) {
           setWasInterrupted(true);
+          return;
+        }
+
+        // If the pause was not user-requested, attempt a gentle resume.
+        // This helps with iOS/network-induced pauses that otherwise look like "stops".
+        if (!userPaused && !video.ended && video.currentTime > 0.5) {
+          if (autoResumeTimeoutRef.current) window.clearTimeout(autoResumeTimeoutRef.current);
+          autoResumeTimeoutRef.current = window.setTimeout(() => {
+            // Only resume if we are still paused and the user didn't mute/stop intentionally.
+            if (!videoRef.current) return;
+            if (!videoRef.current.paused) return;
+            void videoRef.current.play().catch(() => {
+              // Let the user retry manually.
+            });
+          }, 400);
         }
       };
 
@@ -193,6 +229,8 @@ export const MindMoviePlayer = forwardRef<MindMoviePlayerHandle, MindMoviePlayer
       video.addEventListener("error", handleError);
 
       return () => {
+        if (hideControlsTimeoutRef.current) window.clearTimeout(hideControlsTimeoutRef.current);
+        if (autoResumeTimeoutRef.current) window.clearTimeout(autoResumeTimeoutRef.current);
         video.removeEventListener("loadedmetadata", handleLoadedMetadata);
         video.removeEventListener("durationchange", handleLoadedMetadata);
         video.removeEventListener("timeupdate", handleTimeUpdate);
@@ -203,6 +241,37 @@ export const MindMoviePlayer = forwardRef<MindMoviePlayerHandle, MindMoviePlayer
       };
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [effectiveSrc]); // only re-bind when src changes
+
+    const scheduleHideControls = useCallback(
+      (delayMs = 1600) => {
+        if (hideControlsTimeoutRef.current) window.clearTimeout(hideControlsTimeoutRef.current);
+        if (!isPlaying) {
+          setControlsVisible(true);
+          return;
+        }
+        hideControlsTimeoutRef.current = window.setTimeout(() => {
+          setControlsVisible(false);
+        }, delayMs);
+      },
+      [isPlaying]
+    );
+
+    const revealControls = useCallback(() => {
+      setControlsVisible(true);
+      scheduleHideControls();
+    }, [scheduleHideControls]);
+
+    // Auto-hide controls while playing
+    useEffect(() => {
+      if (!isPlaying) {
+        setControlsVisible(true);
+        return;
+      }
+      scheduleHideControls();
+      return () => {
+        if (hideControlsTimeoutRef.current) window.clearTimeout(hideControlsTimeoutRef.current);
+      };
+    }, [isPlaying, scheduleHideControls]);
 
     // Escape to exit widescreen overlay
     useEffect(() => {
@@ -220,6 +289,7 @@ export const MindMoviePlayer = forwardRef<MindMoviePlayerHandle, MindMoviePlayer
       if (!video) return;
 
       if (isPlaying) {
+        pauseRequestedRef.current = true;
         video.pause();
       } else {
         try {
@@ -229,6 +299,7 @@ export const MindMoviePlayer = forwardRef<MindMoviePlayerHandle, MindMoviePlayer
             setWasInterrupted(false);
           }
           await video.play();
+          scheduleHideControls();
         } catch (err) {
           console.warn("Play failed", err);
         }
@@ -240,6 +311,7 @@ export const MindMoviePlayer = forwardRef<MindMoviePlayerHandle, MindMoviePlayer
       if (!video) return;
       video.muted = !video.muted;
       setIsMuted(video.muted);
+      revealControls();
     };
 
     const toggleFullscreen = async () => {
@@ -266,6 +338,7 @@ export const MindMoviePlayer = forwardRef<MindMoviePlayerHandle, MindMoviePlayer
       // "Widescreen" is an in-app overlay (more stable than true fullscreen on mobile).
       // Users can rotate their device to landscape while in this mode.
       setIsWidescreen((v) => !v);
+      revealControls();
     };
 
     const formatTime = (s: number) => {
@@ -286,6 +359,8 @@ export const MindMoviePlayer = forwardRef<MindMoviePlayerHandle, MindMoviePlayer
           isWidescreen && "fixed inset-0 z-[80] rounded-none",
           className
         )}
+        onMouseMove={revealControls}
+        onTouchStart={revealControls}
       >
         {/* Diagnostics overlay for debugging */}
         {showDiagnostics && (
@@ -298,7 +373,7 @@ export const MindMoviePlayer = forwardRef<MindMoviePlayerHandle, MindMoviePlayer
           className="theater-video w-full h-full object-contain"
           playsInline
           webkit-playsinline="true"
-          preload={isIOS ? "none" : "metadata"}
+          preload="metadata"
           disablePictureInPicture
           controls={nativeControls}
           controlsList="nodownload noremoteplayback nofullscreen"
@@ -310,7 +385,7 @@ export const MindMoviePlayer = forwardRef<MindMoviePlayerHandle, MindMoviePlayer
           <div
             className={cn(
               "absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent transition-opacity duration-300 pointer-events-none",
-              shouldShowControlsAlways ? "opacity-100" : "opacity-0 group-hover:opacity-100 sm:opacity-100"
+              controlsVisible ? "opacity-100" : "opacity-0"
             )}
           >
             <div className="absolute bottom-0 left-0 right-0 p-3 sm:p-6 pointer-events-auto">
