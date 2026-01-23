@@ -2050,6 +2050,7 @@ export type Database = {
           character_build: string | null
           character_features: string | null
           character_height: string | null
+          character_style_sheet_url: string | null
           character_weight: string | null
           chat_summary: string | null
           chat_summary_updated_at: string | null
@@ -2083,6 +2084,7 @@ export type Database = {
           push_notifications_enabled: boolean | null
           reference_photo_url: string | null
           show_on_leaderboard: boolean
+          style_sheet_approved: boolean | null
           transformation_start_date: string | null
           updated_at: string
           user_id: string
@@ -2094,6 +2096,7 @@ export type Database = {
           character_build?: string | null
           character_features?: string | null
           character_height?: string | null
+          character_style_sheet_url?: string | null
           character_weight?: string | null
           chat_summary?: string | null
           chat_summary_updated_at?: string | null
@@ -2127,6 +2130,7 @@ export type Database = {
           push_notifications_enabled?: boolean | null
           reference_photo_url?: string | null
           show_on_leaderboard?: boolean
+          style_sheet_approved?: boolean | null
           transformation_start_date?: string | null
           updated_at?: string
           user_id: string
@@ -2138,6 +2142,7 @@ export type Database = {
           character_build?: string | null
           character_features?: string | null
           character_height?: string | null
+          character_style_sheet_url?: string | null
           character_weight?: string | null
           chat_summary?: string | null
           chat_summary_updated_at?: string | null
@@ -2171,6 +2176,7 @@ export type Database = {
           push_notifications_enabled?: boolean | null
           reference_photo_url?: string | null
           show_on_leaderboard?: boolean
+          style_sheet_approved?: boolean | null
           transformation_start_date?: string | null
           updated_at?: string
           user_id?: string

@@ -79,6 +79,36 @@ serve(async (req) => {
 
     const hasReferencePhoto = images && images.length > 0;
     
+    // Check if user has an approved style sheet to include as additional reference
+    let styleSheetUrl: string | null = null;
+    let characterDesc = "";
+    
+    if (SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY) {
+      try {
+        const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+        const { data: profile } = await supabaseAdmin
+          .from("user_profiles")
+          .select("character_style_sheet_url, style_sheet_approved, character_height, character_weight, character_build, character_features")
+          .eq("user_id", userId)
+          .maybeSingle();
+        
+        if (profile?.style_sheet_approved && profile?.character_style_sheet_url) {
+          styleSheetUrl = profile.character_style_sheet_url as string;
+          console.log("Using approved style sheet for consistency");
+        }
+        
+        // Build character description from profile
+        const descParts: string[] = [];
+        if (profile?.character_height) descParts.push(`${profile.character_height} tall`);
+        if (profile?.character_build) descParts.push(`${profile.character_build} build`);
+        if (profile?.character_weight) descParts.push(`${profile.character_weight}`);
+        if (profile?.character_features) descParts.push(profile.character_features as string);
+        characterDesc = descParts.join(", ");
+      } catch (err) {
+        console.error("Failed to fetch style sheet:", err);
+      }
+    }
+    
     // Build the message content
     let messageContent: any[];
     
@@ -105,8 +135,9 @@ serve(async (req) => {
 The output image MUST be ${aspect_ratio === "16:9" || aspect_ratio === "4:3" ? "WIDER than it is tall (landscape orientation)" : aspect_ratio === "9:16" ? "TALLER than it is wide (portrait orientation)" : "a perfect square"}.
 
 CRITICAL REQUIREMENTS:
-1. The main character MUST look exactly like the person in the reference photo - same face, same features, same identity
+1. The main character MUST look exactly like the person in the reference photo(s) - same face, same features, same identity
 2. The image dimensions MUST match the specified aspect ratio
+${characterDesc ? `3. Character physical traits: ${characterDesc}` : ""}
 
 SCENE TO GENERATE:
 ${prompt}
@@ -116,6 +147,7 @@ PRODUCTION QUALITY:
 - Shallow depth of field with creamy bokeh
 - Natural film grain, professional color grading`;
       
+      // Build message content with reference photo and optionally style sheet
       messageContent = [
         { 
           type: "text", 
@@ -126,6 +158,15 @@ PRODUCTION QUALITY:
           image_url: { url: imageUrl } 
         }
       ];
+      
+      // Add style sheet as second reference if available and approved
+      if (styleSheetUrl) {
+        messageContent.push({
+          type: "image_url",
+          image_url: { url: styleSheetUrl }
+        });
+        console.log("Added approved style sheet as additional reference");
+      }
     } else {
       // Build explicit dimension requirements for create mode
       const dimensionMapCreate: Record<string, string> = {

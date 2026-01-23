@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useGlobalReferencePhoto } from "@/hooks/useGlobalReferencePhoto";
+import { useCharacterStyleSheet } from "@/hooks/useCharacterStyleSheet";
 import { CharacterDescriptionForm } from "./CharacterDescriptionForm";
 import { 
   Camera, 
@@ -11,8 +12,13 @@ import {
   X, 
   Sparkles,
   User,
-  Check
+  Check,
+  FileImage,
+  RefreshCw,
+  ThumbsUp,
+  AlertCircle
 } from "lucide-react";
+import { toast } from "sonner";
 
 export function ReferencePhotoSettings() {
   const {
@@ -24,19 +30,52 @@ export function ReferencePhotoSettings() {
     clearReferencePhoto,
   } = useGlobalReferencePhoto();
 
+  const {
+    styleSheetUrl,
+    isApproved,
+    isGenerating,
+    fetchStyleSheet,
+    generateStyleSheet,
+    approveStyleSheet,
+    clearStyleSheet,
+  } = useCharacterStyleSheet();
+
+  const [pendingCharacterDesc, setPendingCharacterDesc] = useState<{
+    height?: string;
+    weight?: string;
+    build?: string;
+    features?: string;
+  } | null>(null);
+
   useEffect(() => {
     fetchReferencePhoto();
-  }, [fetchReferencePhoto]);
+    fetchStyleSheet();
+  }, [fetchReferencePhoto, fetchStyleSheet]);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      await uploadReferencePhoto(file);
+      const newUrl = await uploadReferencePhoto(file);
+      
+      // Auto-generate style sheet after uploading reference photo
+      if (newUrl) {
+        toast.info("Now generating your character style sheet...");
+        await generateStyleSheet(newUrl, pendingCharacterDesc || undefined);
+      }
     }
+  };
+
+  const handleRegenerateStyleSheet = async () => {
+    if (!referencePhotoUrl) {
+      toast.error("Please upload a reference photo first");
+      return;
+    }
+    await generateStyleSheet(referencePhotoUrl, pendingCharacterDesc || undefined);
   };
 
   return (
     <div className="space-y-6">
+      {/* Reference Photo Card */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -44,7 +83,7 @@ export function ReferencePhotoSettings() {
             Your Reference Photo
           </CardTitle>
           <CardDescription>
-            Upload a photo of yourself to use as the base for AI-generated hero images
+            Upload a photo of yourself. The system will automatically generate a professional style sheet for AI consistency.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -68,7 +107,7 @@ export function ReferencePhotoSettings() {
               
               <div className="flex items-center justify-center gap-3">
                 <label className="cursor-pointer">
-                  <Button variant="outline" size="sm" asChild>
+                  <Button variant="outline" size="sm" asChild disabled={isUploading || isGenerating}>
                     <span>
                       {isUploading ? (
                         <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -83,13 +122,17 @@ export function ReferencePhotoSettings() {
                     accept="image/*"
                     className="hidden"
                     onChange={handleFileChange}
-                    disabled={isUploading}
+                    disabled={isUploading || isGenerating}
                   />
                 </label>
                 <Button 
                   variant="outline" 
                   size="sm"
-                  onClick={clearReferencePhoto}
+                  onClick={() => {
+                    clearReferencePhoto();
+                    clearStyleSheet();
+                  }}
+                  disabled={isUploading || isGenerating}
                 >
                   <X className="w-4 h-4 mr-2" />
                   Remove
@@ -102,7 +145,7 @@ export function ReferencePhotoSettings() {
                   <div>
                     <p className="text-sm font-medium">Reference photo active</p>
                     <p className="text-xs text-muted-foreground mt-1">
-                      Now fill out your character description below to generate hero images.
+                      Fill out your character description below, then review your auto-generated style sheet.
                     </p>
                   </div>
                 </div>
@@ -141,7 +184,7 @@ export function ReferencePhotoSettings() {
                   <div>
                     <p className="text-sm font-medium">Why upload a reference photo?</p>
                     <p className="text-xs text-muted-foreground mt-1">
-                      The AI will use your likeness to generate a full-body hero character sheet with front, side, and back views.
+                      When you upload a photo, the system will automatically generate a professional character style sheet with multiple views. This ensures consistent likeness across all AI-generated images.
                     </p>
                   </div>
                 </div>
@@ -151,9 +194,133 @@ export function ReferencePhotoSettings() {
         </CardContent>
       </Card>
 
+      {/* Style Sheet Card - only show if reference photo exists */}
+      {referencePhotoUrl && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <FileImage className="w-5 h-5 text-gold" />
+              Character Style Sheet
+              {isApproved && (
+                <Badge className="ml-2 bg-green-500">
+                  <Check className="w-3 h-3 mr-1" />
+                  Approved
+                </Badge>
+              )}
+            </CardTitle>
+            <CardDescription>
+              This multi-view style sheet ensures your character looks consistent across all AI generations.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {isGenerating ? (
+              <div className="flex flex-col items-center justify-center h-64 gap-4">
+                <Loader2 className="w-12 h-12 animate-spin text-gold" />
+                <p className="text-sm text-muted-foreground">Generating your character style sheet...</p>
+                <p className="text-xs text-muted-foreground">This may take 30-60 seconds</p>
+              </div>
+            ) : styleSheetUrl ? (
+              <div className="space-y-4">
+                <div className={`relative rounded-xl overflow-hidden border-2 ${isApproved ? 'border-green-500 ring-2 ring-green-500/30' : 'border-gold/30'}`}>
+                  <img 
+                    src={styleSheetUrl} 
+                    alt="Character Style Sheet" 
+                    className="w-full h-auto"
+                  />
+                  {isApproved && (
+                    <Badge className="absolute top-3 right-3 bg-green-500 text-white">
+                      <Check className="w-3 h-3 mr-1" />
+                      Approved
+                    </Badge>
+                  )}
+                </div>
+
+                <div className="flex items-center justify-center gap-3 flex-wrap">
+                  {!isApproved ? (
+                    <Button 
+                      variant="gold" 
+                      size="sm"
+                      onClick={approveStyleSheet}
+                    >
+                      <ThumbsUp className="w-4 h-4 mr-2" />
+                      Approve Style Sheet
+                    </Button>
+                  ) : (
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={handleRegenerateStyleSheet}
+                      disabled={isGenerating}
+                    >
+                      <RefreshCw className="w-4 h-4 mr-2" />
+                      Regenerate
+                    </Button>
+                  )}
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={clearStyleSheet}
+                  >
+                    <X className="w-4 h-4 mr-2" />
+                    Clear
+                  </Button>
+                </div>
+
+                {!isApproved && (
+                  <Card className="p-3 bg-amber-500/10 border-amber-500/30">
+                    <div className="flex items-start gap-3">
+                      <AlertCircle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
+                      <div>
+                        <p className="text-sm font-medium text-amber-600">Review Required</p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Please review the style sheet above. Once approved, both your reference photo and this style sheet will be used for all AI image generations to maintain consistency.
+                        </p>
+                      </div>
+                    </div>
+                  </Card>
+                )}
+
+                {isApproved && (
+                  <Card className="p-3 bg-green-500/10 border-green-500/30">
+                    <div className="flex items-start gap-3">
+                      <Check className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
+                      <div>
+                        <p className="text-sm font-medium text-green-600">Style Sheet Active</p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Your approved style sheet and reference photo are now being used for all AI image generations to ensure consistent character appearance.
+                        </p>
+                      </div>
+                    </div>
+                  </Card>
+                )}
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center h-40 gap-4">
+                <FileImage className="w-12 h-12 text-muted-foreground/50" />
+                <p className="text-sm text-muted-foreground text-center">
+                  No style sheet yet. Fill in your character description below and click "Generate Style Sheet".
+                </p>
+                <Button 
+                  variant="gold" 
+                  size="sm"
+                  onClick={handleRegenerateStyleSheet}
+                  disabled={isGenerating || !referencePhotoUrl}
+                >
+                  <Sparkles className="w-4 h-4 mr-2" />
+                  Generate Style Sheet
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       {/* Character Description Form */}
       <CharacterDescriptionForm 
         referencePhotoUrl={referencePhotoUrl}
+        onDescriptionChange={setPendingCharacterDesc}
+        onGenerateStyleSheet={handleRegenerateStyleSheet}
+        isGeneratingStyleSheet={isGenerating}
       />
     </div>
   );
