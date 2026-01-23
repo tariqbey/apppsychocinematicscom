@@ -31,6 +31,7 @@ export const TheaterView = ({ onClose }: TheaterViewProps) => {
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [hasRecordedViewing, setHasRecordedViewing] = useState(false);
+  const [wasInterrupted, setWasInterrupted] = useState(false);
   const hasRecordedViewingRef = useRef(false);
   const isPlayingRef = useRef(false); // Track playing state for iOS visibility handling
   const [showThreeThings, setShowThreeThings] = useState(false);
@@ -50,6 +51,7 @@ export const TheaterView = ({ onClose }: TheaterViewProps) => {
     // Reset the per-session “recorded” flag when switching videos.
     setHasRecordedViewing(false);
     hasRecordedViewingRef.current = false;
+    setWasInterrupted(false);
 
     if (videoRef.current) {
       videoRef.current.addEventListener("timeupdate", handleTimeUpdate);
@@ -89,22 +91,6 @@ export const TheaterView = ({ onClose }: TheaterViewProps) => {
     if (!videoRef.current) return;
 
     setCurrentTime(videoRef.current.currentTime);
-
-    // Record viewing when 50% watched (guarded by a ref to avoid stale-closure spam).
-    if (
-      !hasRecordedViewingRef.current &&
-      videoRef.current.duration > 0 &&
-      videoRef.current.currentTime > videoRef.current.duration * 0.5
-    ) {
-      hasRecordedViewingRef.current = true;
-      setHasRecordedViewing(true);
-      void recordViewing(Math.floor(videoRef.current.currentTime));
-
-      toast({
-        title: "Viewing Recorded! 🎬",
-        description: "Your streak has been updated.",
-      });
-    }
   };
 
   const handleLoadedMetadata = () => {
@@ -124,11 +110,20 @@ export const TheaterView = ({ onClose }: TheaterViewProps) => {
 
   const handleVideoEnd = () => {
     setIsPlaying(false);
+    isPlayingRef.current = false;
 
     if (!hasRecordedViewingRef.current) {
       hasRecordedViewingRef.current = true;
       setHasRecordedViewing(true);
+
+      // Only count completion when the video truly ends.
+      // (Manual pauses force a restart via togglePlay, so an uninterrupted end is required.)
       void recordViewing(Math.floor(videoRef.current?.duration ?? duration));
+
+      toast({
+        title: "Mind Movie completed",
+        description: "Completion recorded.",
+      });
     }
 
     // Show Three Things prompt after video ends
@@ -217,8 +212,18 @@ export const TheaterView = ({ onClose }: TheaterViewProps) => {
         videoRef.current.pause();
         setIsPlaying(false);
         isPlayingRef.current = false;
+
+        // Manual pause counts as an interruption: must restart from the beginning.
+        setWasInterrupted(true);
       } else {
         try {
+          // If previously interrupted, force a full restart (must watch all the way through).
+          if (wasInterrupted && videoRef.current.currentTime > 0) {
+            videoRef.current.currentTime = 0;
+            setCurrentTime(0);
+            setWasInterrupted(false);
+          }
+
           // iOS requires load() to be called after suspend events
           if (videoRef.current.readyState < 3) {
             videoRef.current.load();
@@ -236,6 +241,9 @@ export const TheaterView = ({ onClose }: TheaterViewProps) => {
             isPlayingRef.current = true;
           } catch (retryErr) {
             console.error("Retry play failed:", retryErr);
+            // Ensure the UI doesn't stay stuck in "playing" state if iOS blocks autoplay resume.
+            setIsPlaying(false);
+            isPlayingRef.current = false;
           }
         }
       }
@@ -451,10 +459,13 @@ export const TheaterView = ({ onClose }: TheaterViewProps) => {
                   }}
                   onPause={() => {
                     console.log("Video pause event fired");
-                    // Only update state if we intentionally paused (not iOS suspend)
-                    // Check if video actually ended or we manually paused
-                    if (videoRef.current?.ended || !isPlayingRef.current) {
-                      setIsPlaying(false);
+
+                    // Always reflect the paused UI state.
+                    // Keep isPlayingRef as-is so iOS resume handlers can still attempt to recover.
+                    setIsPlaying(false);
+
+                    // If we've actually ended, clear the playing ref.
+                    if (videoRef.current?.ended) {
                       isPlayingRef.current = false;
                     }
                   }}
@@ -465,21 +476,7 @@ export const TheaterView = ({ onClose }: TheaterViewProps) => {
                   <div className="absolute bottom-0 left-0 right-0 p-3 sm:p-6 pointer-events-auto">
                     {/* Progress bar */}
                     <div 
-                      className="h-2 sm:h-1 bg-muted rounded-full mb-3 sm:mb-4 overflow-hidden cursor-pointer touch-none"
-                      onClick={(e) => {
-                        if (videoRef.current) {
-                          const rect = e.currentTarget.getBoundingClientRect();
-                          const percent = (e.clientX - rect.left) / rect.width;
-                          videoRef.current.currentTime = percent * duration;
-                        }
-                      }}
-                      onTouchStart={(e) => {
-                        if (videoRef.current && e.touches[0]) {
-                          const rect = e.currentTarget.getBoundingClientRect();
-                          const percent = (e.touches[0].clientX - rect.left) / rect.width;
-                          videoRef.current.currentTime = Math.max(0, Math.min(1, percent)) * duration;
-                        }
-                      }}
+                      className="h-2 sm:h-1 bg-muted rounded-full mb-3 sm:mb-4 overflow-hidden cursor-default touch-none"
                     >
                       <div
                         className="h-full bg-gradient-to-r from-gold to-amber-soft transition-all"
