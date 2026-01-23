@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { toast } from "@/hooks/use-toast";
 
 interface PointsContextType {
   triggerRecalculation: () => Promise<void>;
@@ -50,6 +51,7 @@ const POINTS_CONFIG = {
 export const PointsProvider: React.FC<PointsProviderProps> = ({ children }) => {
   const { user } = useAuth();
   const debounceRef = useRef<NodeJS.Timeout | null>(null);
+  const previousTotalRef = useRef<number | null>(null);
 
   const calculateAndSavePoints = useCallback(async () => {
     if (!user) return;
@@ -58,12 +60,16 @@ export const PointsProvider: React.FC<PointsProviderProps> = ({ children }) => {
 
     try {
       // Fetch all data in parallel
-      const [ritualsResult, tasksResult, journalResult, scorecardResult] = await Promise.all([
+      const [ritualsResult, tasksResult, journalResult, scorecardResult, existingPointsResult] = await Promise.all([
         supabase.from("daily_rituals").select("*").eq("user_id", user.id).eq("ritual_date", today).maybeSingle(),
         supabase.from("daily_tasks").select("*").eq("user_id", user.id).eq("task_date", today),
         supabase.from("journal_entries").select("*").eq("user_id", user.id).gte("created_at", `${today}T00:00:00`).lt("created_at", `${today}T23:59:59`),
         supabase.from("daily_scorecards").select("total_score").eq("user_id", user.id).eq("scorecard_date", today).maybeSingle(),
+        supabase.from("daily_points").select("total_points").eq("user_id", user.id).eq("points_date", today).maybeSingle(),
       ]);
+
+      // Store previous total for comparison
+      const prevTotal = existingPointsResult.data?.total_points ?? previousTotalRef.current ?? 0;
 
       // Calculate ritual points
       let ritualPoints = 0;
@@ -171,6 +177,18 @@ export const PointsProvider: React.FC<PointsProviderProps> = ({ children }) => {
         total_points: totalPoints,
       }, { onConflict: "user_id,points_date" });
 
+      // Show points earned notification if increased
+      const pointsDelta = totalPoints - prevTotal;
+      if (pointsDelta > 0) {
+        toast({
+          title: `+${pointsDelta} Points! 🎬`,
+          description: getPointsMessage(pointsDelta),
+          duration: 3000,
+        });
+      }
+
+      previousTotalRef.current = totalPoints;
+
     } catch (err) {
       console.error("Error recalculating points:", err);
     }
@@ -192,3 +210,12 @@ export const PointsProvider: React.FC<PointsProviderProps> = ({ children }) => {
     </PointsContext.Provider>
   );
 };
+
+// Helper to get encouraging message based on points earned
+function getPointsMessage(points: number): string {
+  if (points >= 100) return "Outstanding performance, Director!";
+  if (points >= 50) return "You're on fire! Keep it up!";
+  if (points >= 25) return "Great progress today!";
+  if (points >= 10) return "Every point counts!";
+  return "Nice work!";
+}
