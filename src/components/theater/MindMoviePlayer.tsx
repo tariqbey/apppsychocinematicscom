@@ -2,7 +2,7 @@ import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState }
 import { Play, Pause, VolumeX, Volume2, Maximize } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-
+import { VideoDiagnostics } from "./VideoDiagnostics";
 /**
  * MindMoviePlayer – A rock-solid, iOS Safari-first video player.
  *
@@ -30,6 +30,8 @@ export interface MindMoviePlayerProps {
   className?: string;
   /** Show native controls instead of custom (default false) */
   nativeControls?: boolean;
+  /** Show diagnostics overlay for debugging (default false) */
+  showDiagnostics?: boolean;
 }
 
 export interface MindMoviePlayerHandle {
@@ -49,6 +51,7 @@ export const MindMoviePlayer = forwardRef<MindMoviePlayerHandle, MindMoviePlayer
       onError,
       className,
       nativeControls = false,
+      showDiagnostics = false,
     },
     ref
   ) => {
@@ -245,6 +248,11 @@ export const MindMoviePlayer = forwardRef<MindMoviePlayerHandle, MindMoviePlayer
           className
         )}
       >
+        {/* Diagnostics overlay for debugging */}
+        {showDiagnostics && (
+          <VideoDiagnostics videoRef={videoRef} videoSrc={src} />
+        )}
+
         <video
           ref={videoRef}
           src={src}
