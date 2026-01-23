@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -81,6 +82,7 @@ interface SavedAnalysis {
 export function AICharacterAnalysis() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [data, setData] = useState<AnalysisData | null>(null);
@@ -601,18 +603,18 @@ export function AICharacterAnalysis() {
               {/* Save & Convert to Song CTA */}
               <Card className="bg-gradient-to-r from-gold/20 via-purple-500/10 to-gold/20 border-gold/50">
                 <CardContent className="p-4">
-                  <div className="flex flex-col sm:flex-row items-center gap-4">
-                    <div className="flex-1 text-center sm:text-left">
+                  <div className="flex flex-col gap-4">
+                    <div className="text-center sm:text-left">
                       <h4 className="font-semibold text-gold mb-1">Save This Analysis</h4>
                       <p className="text-xs text-muted-foreground">
-                        Archive your progress to track transformation over time or convert it into an affirmation song.
+                        Archive your progress to track transformation over time, or convert it into an affirmation song.
                       </p>
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex flex-col sm:flex-row gap-2">
                       <Button
                         onClick={saveAnalysis}
                         disabled={saving}
-                        className="bg-gold hover:bg-gold/90 text-black"
+                        className="bg-gold hover:bg-gold/90 text-black flex-1"
                       >
                         {saving ? (
                           <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -620,6 +622,35 @@ export function AICharacterAnalysis() {
                           <Save className="w-4 h-4 mr-2" />
                         )}
                         Save to Archive
+                      </Button>
+                      <Button
+                        onClick={() => {
+                          // Build lyrics context from analysis
+                          const lyricsContext = [
+                            `My Character Analysis Score: ${data.analysis.overallScore}/100 - ${getScoreLabel(data.analysis.overallScore)}`,
+                            "",
+                            `Assessment: ${data.analysis.assessment}`,
+                            "",
+                            `My Strengths: ${data.analysis.strengths?.join(", ") || "N/A"}`,
+                            "",
+                            `Growth Edges to overcome: ${data.analysis.growthEdges?.join(", ") || "N/A"}`,
+                            "",
+                            data.napoleonHillLaws?.[0] ? `Most Relevant Napoleon Hill Law: #${data.napoleonHillLaws[0].lawNumber} ${data.napoleonHillLaws[0].name}\nApplication: ${data.napoleonHillLaws[0].application}` : "",
+                            "",
+                            `Director's Note: ${data.analysis.directorsNote}`,
+                            "",
+                            `My Next Action: ${data.analysis.nextScene}`,
+                          ].filter(Boolean).join("\n");
+                          
+                          // Store in session for the Soundtrack page
+                          sessionStorage.setItem("analysis-lyrics-context", lyricsContext);
+                          navigate("/soundtrack?fromAnalysis=true");
+                        }}
+                        variant="outline"
+                        className="border-purple-500/50 text-purple-400 hover:bg-purple-500/10 flex-1"
+                      >
+                        <Music className="w-4 h-4 mr-2" />
+                        Create Song from Analysis
                       </Button>
                     </div>
                   </div>

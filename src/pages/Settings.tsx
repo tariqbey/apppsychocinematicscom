@@ -16,6 +16,7 @@ import { PushDiagnosticsPanel } from "@/components/notifications/PushDiagnostics
 import { AccessCodeRedemption } from "@/components/settings/AccessCodeRedemption";
 import { ReminderScheduler } from "@/components/notifications/ReminderScheduler";
 import { DirectorAIPreferences } from "@/components/settings/DirectorAIPreferences";
+import { ProfileSettingsForm } from "@/components/settings/ProfileSettingsForm";
 
 export default function Settings() {
   const { user, loading: authLoading } = useAuth();
@@ -113,10 +114,13 @@ export default function Settings() {
 
           <TabsContent value="account">
             <div className="space-y-6">
+              {/* Profile Form - Name & Details */}
+              <ProfileSettingsForm />
+
               <Card className="bg-card border-border">
                 <CardHeader>
                   <CardTitle>Account Settings</CardTitle>
-                  <CardDescription>Manage your account information</CardDescription>
+                  <CardDescription>Your account information</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="space-y-2">

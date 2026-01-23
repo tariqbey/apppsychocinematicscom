@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { 
-  ArrowLeft, Music, Sparkles, Loader2, Library
+  ArrowLeft, Music, Sparkles, Loader2, Library, Brain
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { useMindMovieMusic, MUSIC_STYLES, type MusicStyle } from "@/hooks/useMindMovieMusic";
@@ -18,6 +19,7 @@ import { toast } from "sonner";
 
 export default function Soundtrack() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { user, loading: authLoading } = useAuth();
   const { profile } = useUserProfile();
   
@@ -25,6 +27,7 @@ export default function Soundtrack() {
   const [customPrompt, setCustomPrompt] = useState("");
   const [customStyleText, setCustomStyleText] = useState("");
   const [songCount, setSongCount] = useState<1 | 2>(1);
+  const [fromAnalysis, setFromAnalysis] = useState(false);
   
   const {
     isGeneratingLyrics,
@@ -59,6 +62,22 @@ export default function Soundtrack() {
       navigate("/");
     }
   }, [user, authLoading, navigate]);
+
+  // Check if coming from Character Analysis
+  useEffect(() => {
+    const isFromAnalysis = searchParams.get("fromAnalysis") === "true";
+    if (isFromAnalysis) {
+      const analysisContext = sessionStorage.getItem("analysis-lyrics-context");
+      if (analysisContext) {
+        setCustomPrompt(analysisContext);
+        setSongTitle("My Character Anthem");
+        setFromAnalysis(true);
+        // Clear the session storage
+        sessionStorage.removeItem("analysis-lyrics-context");
+        toast.success("Analysis loaded! Choose a style and generate your anthem.");
+      }
+    }
+  }, [searchParams]);
 
   const handleGenerateLyrics = async () => {
     if (!chiefAim.what && !customPrompt) {
@@ -172,12 +191,27 @@ export default function Soundtrack() {
 
       <main className="container mx-auto px-4 py-8 max-w-4xl">
         <div className="space-y-6">
+          {/* From Analysis Banner */}
+          {fromAnalysis && (
+            <Card className="border-purple-500/50 bg-gradient-to-r from-purple-500/10 to-gold/10">
+              <CardContent className="p-4 flex items-center gap-3">
+                <Brain className="w-6 h-6 text-purple-400" />
+                <div>
+                  <p className="font-semibold text-purple-400">Creating from Character Analysis</p>
+                  <p className="text-xs text-muted-foreground">
+                    Your analysis has been loaded. Choose a music style below and generate your personalized anthem!
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Intro Card */}
           <Card className="border-gold/20 bg-gradient-to-r from-gold/5 to-amber-500/5">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Sparkles className="w-5 h-5 text-gold" />
-                Create Your Soundtrack
+                {fromAnalysis ? "Create Your Character Anthem" : "Create Your Soundtrack"}
               </CardTitle>
               <CardDescription>
                 Generate AI-powered music and lyrics for your visualizations, movies, or personal motivation.
