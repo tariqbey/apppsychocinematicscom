@@ -32,6 +32,7 @@ export const TheaterView = ({ onClose }: TheaterViewProps) => {
   const [duration, setDuration] = useState(0);
   const [hasRecordedViewing, setHasRecordedViewing] = useState(false);
   const hasRecordedViewingRef = useRef(false);
+  const isPlayingRef = useRef(false); // Track playing state for iOS visibility handling
   const [showThreeThings, setShowThreeThings] = useState(false);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [newTaskText, setNewTaskText] = useState("");
@@ -58,6 +59,20 @@ export const TheaterView = ({ onClose }: TheaterViewProps) => {
       videoRef.current.addEventListener("ended", handleVideoEnd);
     }
 
+    // iOS Safari pauses videos when page visibility changes - handle resume
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && videoRef.current) {
+        if (videoRef.current.paused && !videoRef.current.ended && isPlayingRef.current) {
+          console.log("Page visible again, resuming video...");
+          videoRef.current.play().catch((err) => {
+            console.log("Resume on visibility change failed:", err);
+          });
+        }
+      }
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
     return () => {
       if (videoRef.current) {
         videoRef.current.removeEventListener("timeupdate", handleTimeUpdate);
@@ -66,6 +81,7 @@ export const TheaterView = ({ onClose }: TheaterViewProps) => {
         videoRef.current.removeEventListener("canplay", handleLoadedMetadata);
         videoRef.current.removeEventListener("ended", handleVideoEnd);
       }
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, [videoUrl]);
 
@@ -195,14 +211,34 @@ export const TheaterView = ({ onClose }: TheaterViewProps) => {
     }
   };
 
-  const togglePlay = () => {
+  const togglePlay = async () => {
     if (videoRef.current) {
       if (isPlaying) {
         videoRef.current.pause();
+        setIsPlaying(false);
+        isPlayingRef.current = false;
       } else {
-        videoRef.current.play();
+        try {
+          // iOS requires load() to be called after suspend events
+          if (videoRef.current.readyState < 3) {
+            videoRef.current.load();
+          }
+          await videoRef.current.play();
+          setIsPlaying(true);
+          isPlayingRef.current = true;
+        } catch (err) {
+          console.error("Play failed:", err);
+          // Try loading and playing again
+          videoRef.current.load();
+          try {
+            await videoRef.current.play();
+            setIsPlaying(true);
+            isPlayingRef.current = true;
+          } catch (retryErr) {
+            console.error("Retry play failed:", retryErr);
+          }
+        }
       }
-      setIsPlaying(!isPlaying);
     }
   };
 
@@ -390,6 +426,20 @@ export const TheaterView = ({ onClose }: TheaterViewProps) => {
                   }}
                   onSuspend={() => {
                     console.log("Video suspended - browser stopped fetching");
+                    // iOS Safari aggressively suspends video downloads
+                    // Use ref to check if we should be playing (avoids stale closure)
+                    if (videoRef.current && isPlayingRef.current) {
+                      const video = videoRef.current;
+                      // If video is supposed to be playing but paused, resume it
+                      if (video.paused && !video.ended) {
+                        console.log("Resuming suspended video...");
+                        video.play().catch((err) => {
+                          console.log("Resume after suspend failed, reloading...", err);
+                          video.load();
+                          video.play().catch(() => {});
+                        });
+                      }
+                    }
                   }}
                   onWaiting={() => {
                     console.log("Video waiting - buffering...");
@@ -397,10 +447,16 @@ export const TheaterView = ({ onClose }: TheaterViewProps) => {
                   onPlay={() => {
                     console.log("Video play event fired");
                     setIsPlaying(true);
+                    isPlayingRef.current = true;
                   }}
                   onPause={() => {
                     console.log("Video pause event fired");
-                    setIsPlaying(false);
+                    // Only update state if we intentionally paused (not iOS suspend)
+                    // Check if video actually ended or we manually paused
+                    if (videoRef.current?.ended || !isPlayingRef.current) {
+                      setIsPlaying(false);
+                      isPlayingRef.current = false;
+                    }
                   }}
                 />
 
