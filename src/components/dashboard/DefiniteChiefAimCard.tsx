@@ -1,7 +1,9 @@
-import { Scroll, Calendar, ArrowRight, Sparkles, Pencil } from "lucide-react";
+import { Scroll, Calendar, ArrowRight, Sparkles, Pencil, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { InfoTooltip } from "@/components/ui/info-tooltip";
 import { useState, useEffect } from "react";
+import { cn } from "@/lib/utils";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface ChiefAimData {
   what: string;
@@ -15,16 +17,18 @@ interface DefiniteChiefAimCardProps {
   onEdit?: () => void;
 }
 
-// Floating particle component
-const FloatingParticle = ({ delay, size = 2, color = "gold" }: { delay: number; size?: number; color?: string }) => (
+// Floating particle component with enhanced animation
+const FloatingParticle = ({ delay, size = 2, color = "#D4AF37" }: { delay: number; size?: number; color?: string }) => (
   <div
-    className={`absolute rounded-full bg-${color}/30 pointer-events-none`}
+    className="absolute rounded-full pointer-events-none"
     style={{
       width: size,
       height: size,
       left: `${Math.random() * 100}%`,
-      top: `${Math.random() * 100}%`,
-      animation: `float-particle 4s ease-in-out infinite ${delay}s`,
+      bottom: '0%',
+      background: color,
+      boxShadow: `0 0 6px ${color}`,
+      animation: `float-particle 3s ease-in-out infinite ${delay}s`,
     }}
   />
 );
@@ -33,24 +37,88 @@ export const DefiniteChiefAimCard = ({ aim, onEdit }: DefiniteChiefAimCardProps)
   const hasAim = aim.what && aim.byWhen && aim.exchange && aim.plan;
   const [isVisible, setIsVisible] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
+  const [isTouched, setIsTouched] = useState(false);
+  const isMobile = useIsMobile();
+
+  const isActive = isHovered || isTouched || (isMobile && isVisible);
 
   useEffect(() => {
     const timer = setTimeout(() => setIsVisible(true), 300);
     return () => clearTimeout(timer);
   }, []);
 
+  const glowColor = "rgba(212, 175, 55, 0.4)";
+  const particleColor = "#D4AF37";
+
   return (
     <div 
       className={`glass-card p-4 sm:p-6 cinematic-border relative overflow-hidden group transition-all duration-500 hover:border-gold/50 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}
       style={{ 
-        boxShadow: isHovered 
-          ? '0 0 40px rgba(212, 175, 55, 0.2), inset 0 0 60px rgba(212, 175, 55, 0.05)'
+        boxShadow: isActive 
+          ? `0 0 50px ${glowColor}, inset 0 0 60px rgba(212, 175, 55, 0.05)`
           : '0 0 25px rgba(212, 175, 55, 0.1), inset 0 0 40px rgba(212, 175, 55, 0.03)',
         transition: 'all 0.5s ease',
       }}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
+      onTouchStart={() => setIsTouched(true)}
+      onTouchEnd={() => setTimeout(() => setIsTouched(false), 200)}
     >
+      {/* Animated corner accents */}
+      <div className="absolute top-0 left-0 w-8 h-8 pointer-events-none">
+        <div className={cn(
+          "absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-gold/0 via-gold/50 to-gold/0 transition-opacity duration-500",
+          isActive ? "opacity-100" : "opacity-0"
+        )} />
+        <div className={cn(
+          "absolute top-0 left-0 h-full w-[2px] bg-gradient-to-b from-gold/0 via-gold/50 to-gold/0 transition-opacity duration-500",
+          isActive ? "opacity-100" : "opacity-0"
+        )} />
+      </div>
+      <div className="absolute top-0 right-0 w-8 h-8 pointer-events-none">
+        <div className={cn(
+          "absolute top-0 right-0 w-full h-[2px] bg-gradient-to-l from-gold/0 via-gold/50 to-gold/0 transition-opacity duration-500",
+          isActive ? "opacity-100" : "opacity-0"
+        )} />
+        <div className={cn(
+          "absolute top-0 right-0 h-full w-[2px] bg-gradient-to-b from-gold/0 via-gold/50 to-gold/0 transition-opacity duration-500",
+          isActive ? "opacity-100" : "opacity-0"
+        )} />
+      </div>
+      <div className="absolute bottom-0 left-0 w-8 h-8 pointer-events-none">
+        <div className={cn(
+          "absolute bottom-0 left-0 w-full h-[2px] bg-gradient-to-r from-gold/0 via-gold/50 to-gold/0 transition-opacity duration-500",
+          isActive ? "opacity-100" : "opacity-0"
+        )} />
+        <div className={cn(
+          "absolute bottom-0 left-0 h-full w-[2px] bg-gradient-to-t from-gold/0 via-gold/50 to-gold/0 transition-opacity duration-500",
+          isActive ? "opacity-100" : "opacity-0"
+        )} />
+      </div>
+      <div className="absolute bottom-0 right-0 w-8 h-8 pointer-events-none">
+        <div className={cn(
+          "absolute bottom-0 right-0 w-full h-[2px] bg-gradient-to-l from-gold/0 via-gold/50 to-gold/0 transition-opacity duration-500",
+          isActive ? "opacity-100" : "opacity-0"
+        )} />
+        <div className={cn(
+          "absolute bottom-0 right-0 h-full w-[2px] bg-gradient-to-t from-gold/0 via-gold/50 to-gold/0 transition-opacity duration-500",
+          isActive ? "opacity-100" : "opacity-0"
+        )} />
+      </div>
+
+      {/* Scanning line animation */}
+      <div className={cn(
+        "absolute inset-0 transition-opacity duration-300 pointer-events-none overflow-hidden",
+        isActive ? "opacity-100" : "opacity-0"
+      )}>
+        <div 
+          className="absolute h-[1px] w-full bg-gradient-to-r from-gold/0 via-gold/50 to-gold/0"
+          style={{
+            animation: isActive ? 'scan-line 2.5s ease-in-out infinite' : 'none',
+          }}
+        />
+      </div>
+
       {/* Holographic scan lines */}
       <div className="absolute inset-0 opacity-20 pointer-events-none">
         <div 
@@ -63,21 +131,47 @@ export const DefiniteChiefAimCard = ({ aim, onEdit }: DefiniteChiefAimCardProps)
 
       {/* Animated border glow */}
       <div 
-        className="absolute inset-0 rounded-lg pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-500"
+        className={cn(
+          "absolute inset-0 rounded-lg pointer-events-none transition-opacity duration-500",
+          isActive ? "opacity-100" : "opacity-0"
+        )}
         style={{
           background: 'linear-gradient(90deg, transparent, rgba(212,175,55,0.15), transparent)',
-          animation: 'holographic-shimmer 3s ease-in-out infinite',
+          animation: isActive ? 'holographic-shimmer 3s ease-in-out infinite' : 'none',
         }}
       />
 
-      {/* Floating particles */}
-      <div className="absolute inset-0 pointer-events-none overflow-hidden">
+      {/* Floating particles - always visible on mobile after entrance */}
+      <div className={cn(
+        "absolute inset-0 pointer-events-none overflow-hidden transition-opacity duration-500",
+        isActive ? "opacity-100" : "opacity-40"
+      )}>
         <FloatingParticle delay={0} size={3} />
-        <FloatingParticle delay={1} size={2} />
-        <FloatingParticle delay={2} size={4} />
         <FloatingParticle delay={0.5} size={2} />
-        <FloatingParticle delay={1.5} size={3} />
+        <FloatingParticle delay={1} size={4} />
+        <FloatingParticle delay={1.5} size={2} />
+        <FloatingParticle delay={2} size={3} />
       </div>
+
+      {/* Holographic shimmer overlay */}
+      <div 
+        className={cn(
+          "absolute inset-0 transition-opacity duration-700 pointer-events-none",
+          isActive ? "opacity-100" : "opacity-0"
+        )}
+        style={{
+          background: `linear-gradient(
+            105deg,
+            transparent 40%,
+            rgba(255,255,255,0.03) 45%,
+            rgba(255,255,255,0.05) 50%,
+            rgba(255,255,255,0.03) 55%,
+            transparent 60%
+          )`,
+          backgroundSize: '200% 100%',
+          animation: isActive ? 'holographic-shimmer 2s ease-in-out infinite' : 'none',
+        }}
+      />
 
       {/* Animated decorative corner gradient */}
       <div 
@@ -89,34 +183,106 @@ export const DefiniteChiefAimCard = ({ aim, onEdit }: DefiniteChiefAimCardProps)
       
       {/* Sparkle particles */}
       <Sparkles 
-        className="absolute top-4 right-16 w-3 h-3 text-gold/40 animate-pulse pointer-events-none" 
-        style={{ animationDelay: '0s' }}
+        className={cn(
+          "absolute top-4 right-16 w-4 h-4 text-gold/50 pointer-events-none transition-all duration-500",
+          isActive && "rotate-12 scale-125"
+        )}
+        style={{ 
+          animationDelay: '0s',
+          filter: isActive ? `drop-shadow(0 0 4px ${particleColor})` : 'none',
+          animation: 'pulse 2s ease-in-out infinite',
+        }}
       />
       <Sparkles 
-        className="absolute top-8 right-8 w-2 h-2 text-amber-soft/30 animate-pulse pointer-events-none" 
+        className="absolute top-8 right-8 w-3 h-3 text-amber-soft/40 animate-pulse pointer-events-none" 
         style={{ animationDelay: '0.5s' }}
       />
       <Sparkles 
         className="absolute bottom-6 right-20 w-2 h-2 text-gold/30 animate-pulse pointer-events-none" 
         style={{ animationDelay: '1s' }}
       />
+      <Zap 
+        className={cn(
+          "absolute top-6 right-24 w-3 h-3 text-gold animate-pulse pointer-events-none transition-opacity duration-300",
+          isActive ? "opacity-100" : "opacity-0"
+        )} 
+      />
       
       <div className="flex items-center justify-between mb-4 sm:mb-6 relative z-10">
         <div className="flex items-center gap-3">
           <div 
-            className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-gradient-to-br from-gold/30 to-gold/10 flex items-center justify-center transition-all duration-300 group-hover:scale-110"
+            className={cn(
+              "w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition-all duration-500 relative overflow-hidden",
+              "bg-gradient-to-br from-gold/30 to-gold/10"
+            )}
             style={{
-              boxShadow: isHovered ? '0 0 20px rgba(212, 175, 55, 0.4)' : '0 0 10px rgba(212, 175, 55, 0.2)',
+              boxShadow: isActive 
+                ? `0 0 30px ${glowColor}, inset 0 0 20px ${glowColor}` 
+                : '0 0 15px rgba(212, 175, 55, 0.2)',
+              transform: isActive ? 'scale(1.1)' : 'scale(1)',
             }}
           >
-            <Scroll className="w-4 h-4 sm:w-5 sm:h-5 text-gold" />
+            {/* Pulsing ring */}
+            <div 
+              className={cn(
+                "absolute inset-0 rounded-xl transition-opacity",
+                isActive ? "opacity-100" : "opacity-0"
+              )}
+              style={{
+                border: `1px solid ${particleColor}`,
+                animation: isActive ? 'pulse-ring 1.5s ease-out infinite' : 'none',
+              }}
+            />
+            
+            {/* Inner glow */}
+            <div 
+              className="absolute inset-0 rounded-xl"
+              style={{
+                background: `radial-gradient(circle at center, ${glowColor} 0%, transparent 70%)`,
+                opacity: isActive ? 0.6 : 0.3,
+                transition: 'opacity 0.5s',
+              }}
+            />
+
+            {/* Rotating border */}
+            <div 
+              className={cn(
+                "absolute inset-[-2px] rounded-xl transition-opacity pointer-events-none",
+                isActive ? "opacity-100" : "opacity-0"
+              )}
+              style={{
+                background: `conic-gradient(from 0deg, transparent, ${particleColor}, transparent)`,
+                animation: isActive ? 'rotate-border 3s linear infinite' : 'none',
+                mask: 'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)',
+                maskComposite: 'xor',
+                WebkitMaskComposite: 'xor',
+                padding: '2px',
+              }}
+            />
+
+            <Scroll className="w-5 h-5 sm:w-6 sm:h-6 text-gold relative z-10" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h3 className="text-lg sm:text-xl font-display tracking-wide">The Script</h3>
+              <h3 className="text-xl sm:text-2xl font-display tracking-wide">The Script</h3>
+              <Sparkles 
+                className={cn(
+                  "w-4 h-4 text-gold transition-all duration-500",
+                  isActive && "rotate-12 scale-125"
+                )}
+                style={{
+                  filter: isActive ? `drop-shadow(0 0 4px ${particleColor})` : 'none',
+                }}
+              />
+              <Zap 
+                className={cn(
+                  "w-3 h-3 text-gold animate-pulse transition-opacity duration-300",
+                  isActive ? "opacity-100" : "opacity-0"
+                )} 
+              />
               <InfoTooltip content="Your Definite Chief Aim is the blueprint for your transformation. Read it aloud every morning and night. It has 4 parts: What you want, By when, What you'll give in exchange, and Your plan." />
             </div>
-            <p className="text-xs sm:text-sm text-muted-foreground">Your Definite Chief Aim</p>
+            <p className="text-sm sm:text-base text-muted-foreground">Your Definite Chief Aim</p>
           </div>
         </div>
         {onEdit && (
@@ -135,44 +301,77 @@ export const DefiniteChiefAimCard = ({ aim, onEdit }: DefiniteChiefAimCardProps)
       <div className="space-y-3 sm:space-y-4 relative z-10">
         {hasAim ? (
           <>
-            <div className="p-3 sm:p-4 rounded-lg bg-secondary/50 border-l-2 border-gold transition-all duration-300 hover:bg-secondary/70 hover:border-l-4">
-              <p className="text-xs sm:text-sm text-muted-foreground uppercase tracking-wider mb-1">What I Want</p>
-              <p className="text-sm sm:text-base text-foreground font-medium">{aim.what}</p>
+            <div className="p-4 sm:p-5 rounded-xl bg-secondary/50 border-l-4 border-gold transition-all duration-300 hover:bg-secondary/70 hover:border-l-[6px]"
+              style={{
+                boxShadow: isActive ? '0 0 15px rgba(212, 175, 55, 0.15)' : 'none',
+              }}
+            >
+              <p className="text-xs sm:text-sm text-muted-foreground uppercase tracking-wider mb-1.5 font-medium">What I Want</p>
+              <p className="text-base sm:text-lg text-foreground font-medium leading-relaxed">{aim.what}</p>
             </div>
 
             <div className="flex items-center gap-4">
-              <div className="flex-1 p-3 sm:p-4 rounded-lg bg-secondary/30 transition-all duration-300 hover:bg-secondary/50">
-                <div className="flex items-center gap-2 mb-1">
-                  <Calendar className="w-3 h-3 sm:w-4 sm:h-4 text-gold" />
-                  <p className="text-xs sm:text-sm text-muted-foreground uppercase tracking-wider">By When</p>
+              <div className="flex-1 p-4 sm:p-5 rounded-xl bg-secondary/30 transition-all duration-300 hover:bg-secondary/50"
+                style={{
+                  boxShadow: isActive ? '0 0 15px rgba(34, 211, 238, 0.1)' : 'none',
+                }}
+              >
+                <div className="flex items-center gap-2 mb-1.5">
+                  <Calendar className="w-4 h-4 sm:w-5 sm:h-5 text-gold" />
+                  <p className="text-xs sm:text-sm text-muted-foreground uppercase tracking-wider font-medium">By When</p>
                 </div>
-                <p className="text-sm sm:text-base text-foreground font-medium">{aim.byWhen}</p>
+                <p className="text-base sm:text-lg text-foreground font-medium">{aim.byWhen}</p>
               </div>
             </div>
 
-            <div className="p-3 sm:p-4 rounded-lg bg-secondary/30 transition-all duration-300 hover:bg-secondary/50">
-              <div className="flex items-center gap-2 mb-1">
-                <ArrowRight className="w-3 h-3 sm:w-4 sm:h-4 text-amber-soft" />
-                <p className="text-xs sm:text-sm text-muted-foreground uppercase tracking-wider">The Exchange</p>
+            <div className="p-4 sm:p-5 rounded-xl bg-secondary/30 transition-all duration-300 hover:bg-secondary/50"
+              style={{
+                boxShadow: isActive ? '0 0 15px rgba(245, 158, 11, 0.1)' : 'none',
+              }}
+            >
+              <div className="flex items-center gap-2 mb-1.5">
+                <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 text-amber-soft" />
+                <p className="text-xs sm:text-sm text-muted-foreground uppercase tracking-wider font-medium">The Exchange</p>
               </div>
-              <p className="text-xs sm:text-sm text-foreground/80">{aim.exchange}</p>
+              <p className="text-sm sm:text-base text-foreground/80 leading-relaxed">{aim.exchange}</p>
             </div>
 
-            <div className="p-3 sm:p-4 rounded-lg bg-gradient-to-br from-gold/10 to-transparent border border-gold/20 transition-all duration-300 hover:border-gold/40 hover:from-gold/15">
-              <div className="flex items-center gap-2 mb-1">
-                <Sparkles className="w-3 h-3 sm:w-4 sm:h-4 text-gold" />
-                <p className="text-xs sm:text-sm text-gold uppercase tracking-wider">The Plan</p>
+            <div className="p-4 sm:p-5 rounded-xl bg-gradient-to-br from-gold/10 to-transparent border-2 border-gold/20 transition-all duration-300 hover:border-gold/40 hover:from-gold/15"
+              style={{
+                boxShadow: isActive ? '0 0 20px rgba(212, 175, 55, 0.2)' : 'none',
+              }}
+            >
+              <div className="flex items-center gap-2 mb-1.5">
+                <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-gold" />
+                <p className="text-xs sm:text-sm text-gold uppercase tracking-wider font-medium">The Plan</p>
               </div>
-              <p className="text-xs sm:text-sm text-foreground/90">{aim.plan}</p>
+              <p className="text-sm sm:text-base text-foreground/90 leading-relaxed">{aim.plan}</p>
             </div>
           </>
         ) : (
-          <div className="p-4 sm:p-6 rounded-lg bg-secondary/30 border border-dashed border-gold/30 text-center transition-all duration-300 hover:border-gold/50 hover:bg-secondary/40">
-            <Sparkles className="w-6 h-6 sm:w-8 sm:h-8 text-gold/50 mx-auto mb-3 animate-pulse" />
-            <p className="text-sm text-muted-foreground mb-2">Your Definite Chief Aim is not set yet.</p>
-            <p className="text-xs text-muted-foreground/70">Click "Create with AI" to define your vision and goals.</p>
+          <div className="p-5 sm:p-8 rounded-xl bg-secondary/30 border-2 border-dashed border-gold/30 text-center transition-all duration-300 hover:border-gold/50 hover:bg-secondary/40"
+            style={{
+              boxShadow: isActive ? '0 0 20px rgba(212, 175, 55, 0.15)' : 'none',
+            }}
+          >
+            <Sparkles className="w-8 h-8 sm:w-10 sm:h-10 text-gold/50 mx-auto mb-4 animate-pulse" />
+            <p className="text-base sm:text-lg text-muted-foreground mb-2">Your Definite Chief Aim is not set yet.</p>
+            <p className="text-sm text-muted-foreground/70">Click "Create with AI" to define your vision and goals.</p>
           </div>
         )}
+      </div>
+
+      {/* Bottom energy bar */}
+      <div className="absolute bottom-0 left-0 right-0 h-[2px] overflow-hidden">
+        <div 
+          className={cn(
+            "h-full w-0 transition-all duration-700 ease-out bg-gradient-to-r from-gold/0 via-gold to-gold/0",
+            isActive && "w-full"
+          )}
+          style={{
+            boxShadow: `0 0 10px ${particleColor}`,
+          }}
+        />
       </div>
     </div>
   );

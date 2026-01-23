@@ -333,6 +333,27 @@ export const TheaterView = ({ onClose }: TheaterViewProps) => {
                   webkit-playsinline="true"
                   controls={false}
                   onClick={togglePlay}
+                  preload="auto"
+                  onError={(e) => {
+                    console.error("Video error:", e);
+                    // Attempt to reload the video on error
+                    const video = e.currentTarget;
+                    const currentSrc = video.src;
+                    video.src = '';
+                    setTimeout(() => {
+                      video.src = currentSrc;
+                      video.load();
+                    }, 100);
+                  }}
+                  onStalled={() => {
+                    // Handle stalled playback
+                    if (videoRef.current && isPlaying) {
+                      videoRef.current.play().catch(() => {});
+                    }
+                  }}
+                  onWaiting={() => {
+                    // Video is buffering - this is expected behavior
+                  }}
                 />
 
                 {/* Video Controls Overlay - Always visible on mobile, hover on desktop */}
