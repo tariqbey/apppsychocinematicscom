@@ -1,4 +1,5 @@
 import { Scroll, Calendar, ArrowRight, Sparkles, Pencil, Zap, Music, Play, Pause, Volume2 } from "lucide-react";
+import { SimpleWaveformBars } from "@/components/music/AudioVisualizer";
 import { Button } from "@/components/ui/button";
 import { InfoTooltip } from "@/components/ui/info-tooltip";
 import { useState, useEffect, useRef } from "react";
@@ -416,70 +417,83 @@ export const DefiniteChiefAimCard = ({ aim, onEdit, chiefAimSongUrl, onSongListe
 
             {/* Chief Aim Song Section */}
             <div className="p-4 sm:p-5 rounded-xl bg-gradient-to-br from-purple-500/10 to-gold/5 border border-purple-500/20 transition-all duration-300 hover:border-purple-500/40">
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-2">
-                  <Music className="w-4 h-4 sm:w-5 sm:h-5 text-purple-400" />
-                  <div>
-                    <p className="text-xs sm:text-sm text-purple-300 uppercase tracking-wider font-medium">Chief Aim Anthem</p>
-                    <p className="text-xs text-muted-foreground">
-                      {chiefAimSongUrl 
-                        ? (hasListenedToday 
-                            ? "✓ Listened today" 
-                            : wasInterrupted 
-                              ? "Restart — must play uninterrupted" 
-                              : "Listen all the way through") 
-                        : "Turn your aim into a motivational song"}
-                    </p>
+              <div className="flex flex-col gap-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    <Music className="w-4 h-4 sm:w-5 sm:h-5 text-purple-400" />
+                    <div>
+                      <p className="text-xs sm:text-sm text-purple-300 uppercase tracking-wider font-medium">Chief Aim Anthem</p>
+                      <p className="text-xs text-muted-foreground">
+                        {chiefAimSongUrl 
+                          ? (hasListenedToday 
+                              ? "✓ Listened today" 
+                              : wasInterrupted 
+                                ? "Restart — must play uninterrupted" 
+                                : "Listen all the way through") 
+                          : "Turn your aim into a motivational song"}
+                      </p>
+                    </div>
                   </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  {chiefAimSongUrl ? (
-                    <>
+                  <div className="flex items-center gap-2">
+                    {chiefAimSongUrl ? (
+                      <>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={togglePlayback}
+                          className={cn(
+                            "gap-2 transition-all",
+                            isPlaying 
+                              ? "text-purple-400 bg-purple-500/20" 
+                              : "text-muted-foreground hover:text-purple-400 hover:bg-purple-500/10"
+                          )}
+                        >
+                          {isPlaying ? (
+                            <>
+                              <Pause className="w-4 h-4" />
+                              <span className="hidden sm:inline">Pause</span>
+                            </>
+                          ) : (
+                            <>
+                              <Play className="w-4 h-4" />
+                              <span className="hidden sm:inline">Play</span>
+                            </>
+                          )}
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={handleCreateSong}
+                          className="gap-2 text-muted-foreground hover:text-gold hover:bg-gold/10"
+                        >
+                          <Sparkles className="w-4 h-4" />
+                          <span className="hidden sm:inline">New</span>
+                        </Button>
+                      </>
+                    ) : (
                       <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={togglePlayback}
-                        className={cn(
-                          "gap-2 transition-all",
-                          isPlaying 
-                            ? "text-purple-400 bg-purple-500/20" 
-                            : "text-muted-foreground hover:text-purple-400 hover:bg-purple-500/10"
-                        )}
-                      >
-                        {isPlaying ? (
-                          <>
-                            <Pause className="w-4 h-4" />
-                            <span className="hidden sm:inline">Pause</span>
-                          </>
-                        ) : (
-                          <>
-                            <Play className="w-4 h-4" />
-                            <span className="hidden sm:inline">Play</span>
-                          </>
-                        )}
-                      </Button>
-                      <Button
-                        variant="ghost"
+                        variant="default"
                         size="sm"
                         onClick={handleCreateSong}
-                        className="gap-2 text-muted-foreground hover:text-gold hover:bg-gold/10"
+                        className="gap-2 bg-gradient-to-r from-purple-500 to-gold hover:from-purple-600 hover:to-amber-500"
                       >
-                        <Sparkles className="w-4 h-4" />
-                        <span className="hidden sm:inline">New</span>
+                        <Music className="w-4 h-4" />
+                        <span>Create Song</span>
                       </Button>
-                    </>
-                  ) : (
-                    <Button
-                      variant="default"
-                      size="sm"
-                      onClick={handleCreateSong}
-                      className="gap-2 bg-gradient-to-r from-purple-500 to-gold hover:from-purple-600 hover:to-amber-500"
-                    >
-                      <Music className="w-4 h-4" />
-                      <span>Create Song</span>
-                    </Button>
-                  )}
+                    )}
+                  </div>
                 </div>
+                
+                {/* Waveform Visualizer - only show when song exists */}
+                {chiefAimSongUrl && (
+                  <div className="h-8 w-full rounded-lg bg-black/20 overflow-hidden flex items-center justify-center px-2">
+                    <SimpleWaveformBars 
+                      isPlaying={isPlaying} 
+                      barCount={24}
+                      className="h-6"
+                    />
+                  </div>
+                )}
               </div>
             </div>
           </>

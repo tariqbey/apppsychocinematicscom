@@ -382,17 +382,7 @@ export const TheaterView = ({ onClose }: TheaterViewProps) => {
                     console.log("Video can play through - fully buffered");
                   }}
                   onProgress={() => {
-                    // Log buffering progress for debugging
-                    if (videoRef.current) {
-                      const buffered = videoRef.current.buffered;
-                      if (buffered.length > 0) {
-                        const bufferedEnd = buffered.end(buffered.length - 1);
-                        const duration = videoRef.current.duration;
-                        if (duration > 0) {
-                          console.log(`Buffered: ${Math.round((bufferedEnd / duration) * 100)}%`);
-                        }
-                      }
-                    }
+                    // Silent buffering progress tracking
                   }}
                   onError={(e) => {
                     const video = e.currentTarget;
@@ -405,63 +395,47 @@ export const TheaterView = ({ onClose }: TheaterViewProps) => {
                       src: video.src?.substring(0, 100)
                     });
                     
-                    toast({
-                      title: "Video playback issue",
-                      description: "There was a problem loading the video. Retrying...",
-                      variant: "destructive",
-                    });
-                    
-                    // Attempt to reload the video on error
-                    const currentSrc = video.src;
-                    const currentTime = video.currentTime;
-                    video.src = '';
-                    setTimeout(() => {
-                      video.src = currentSrc;
-                      video.load();
-                      video.currentTime = currentTime;
-                    }, 500);
-                  }}
-                  onStalled={() => {
-                    console.log("Video stalled - attempting to resume");
-                    // Handle stalled playback
-                    if (videoRef.current && isPlaying) {
-                      setTimeout(() => {
-                        videoRef.current?.play().catch((err) => {
-                          console.error("Failed to resume after stall:", err);
-                        });
-                      }, 100);
+                    // Only show error toast for critical errors, not transient issues
+                    if (mediaError?.code === MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED || 
+                        mediaError?.code === MediaError.MEDIA_ERR_DECODE) {
+                      toast({
+                        title: "Video playback issue",
+                        description: "There was a problem loading the video.",
+                        variant: "destructive",
+                      });
                     }
                   }}
+                  onStalled={() => {
+                    // Do NOT aggressively retry on stall - let browser handle buffering
+                    console.log("Video stalled - waiting for buffer");
+                  }}
                   onSuspend={() => {
-                    console.log("Video suspended - browser stopped fetching");
                     // iOS Safari aggressively suspends video downloads
-                    // Use ref to check if we should be playing (avoids stale closure)
+                    // Only attempt resume if we're supposed to be playing AND video is truly paused
                     if (videoRef.current && isPlayingRef.current) {
                       const video = videoRef.current;
-                      // If video is supposed to be playing but paused, resume it
-                      if (video.paused && !video.ended) {
-                        console.log("Resuming suspended video...");
-                        video.play().catch((err) => {
-                          console.log("Resume after suspend failed, reloading...", err);
-                          video.load();
-                          video.play().catch(() => {});
-                        });
+                      // Add a small delay to let iOS settle before attempting resume
+                      if (video.paused && !video.ended && video.readyState >= 2) {
+                        setTimeout(() => {
+                          if (videoRef.current && isPlayingRef.current && videoRef.current.paused) {
+                            console.log("Resuming suspended video after delay...");
+                            videoRef.current.play().catch(() => {
+                              // Silent catch - don't reload on failed resume
+                            });
+                          }
+                        }, 300);
                       }
                     }
                   }}
                   onWaiting={() => {
-                    console.log("Video waiting - buffering...");
+                    // Silent - buffering in progress
                   }}
                   onPlay={() => {
-                    console.log("Video play event fired");
                     setIsPlaying(true);
                     isPlayingRef.current = true;
                   }}
                   onPause={() => {
-                    console.log("Video pause event fired");
-
                     // Always reflect the paused UI state.
-                    // Keep isPlayingRef as-is so iOS resume handlers can still attempt to recover.
                     setIsPlaying(false);
 
                     // If we've actually ended, clear the playing ref.
