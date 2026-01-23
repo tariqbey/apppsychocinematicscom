@@ -718,6 +718,40 @@ export const useMindMovieMusic = (): UseMindMovieMusicReturn => {
           return;
         }
 
+        // Handle sensitive word error - stop polling and show user-friendly message
+        if (data?.status === 'SENSITIVE_WORD_ERROR') {
+          setSongs(prev => {
+            const updated = [...prev];
+            if (updated[songIndex]) {
+              updated[songIndex] = {
+                ...updated[songIndex],
+                generationStatus: 'Content Policy Error',
+              };
+            }
+            // Check if all songs have errored
+            const allDone = updated.every(s => s.soundtrackUrl !== null || s.generationStatus === 'Content Policy Error' || s.generationStatus === 'Failed');
+            if (allDone) {
+              setIsGeneratingMusic(false);
+              setGenerationStatus(null);
+            }
+            return updated;
+          });
+          
+          // Clear this song's polling
+          const timeoutId = pollingRefs.current.get(songIndex);
+          if (timeoutId) {
+            clearTimeout(timeoutId);
+            pollingRefs.current.delete(songIndex);
+          }
+          
+          toast({
+            variant: 'destructive',
+            title: 'Content Policy Violation',
+            description: 'Your lyrics contain words that violate the music service policy. Please edit your lyrics and try again.',
+          });
+          return;
+        }
+
         if (data?.status === 'FAILED') {
           setSongs(prev => {
             const updated = [...prev];
@@ -726,6 +760,12 @@ export const useMindMovieMusic = (): UseMindMovieMusicReturn => {
                 ...updated[songIndex],
                 generationStatus: 'Failed',
               };
+            }
+            // Check if all songs have errored
+            const allDone = updated.every(s => s.soundtrackUrl !== null || s.generationStatus === 'Failed');
+            if (allDone) {
+              setIsGeneratingMusic(false);
+              setGenerationStatus(null);
             }
             return updated;
           });
