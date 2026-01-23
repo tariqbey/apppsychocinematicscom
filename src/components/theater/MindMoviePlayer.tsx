@@ -105,6 +105,17 @@ export const MindMoviePlayer = forwardRef<MindMoviePlayerHandle, MindMoviePlayer
     const pauseRequestedRef = useRef(false);
     const autoResumeTimeoutRef = useRef<number | null>(null);
 
+    // Track user intent for mute so we can recover from iOS/system-induced mute flips.
+    const desiredMutedRef = useRef(false);
+
+    // iOS audio watchdog: some devices can resume video after buffering with silent audio.
+    const sawBufferingRef = useRef(false);
+    const lastAudioBytesRef = useRef<number | null>(null);
+    const hasSeenNonZeroAudioBytesRef = useRef(false);
+    const lastAudioNudgeAtRef = useRef(0);
+    const lastMediaTimeRef = useRef(0);
+    const docHiddenRef = useRef(false);
+
     // Refs for stable callbacks
     const hasCompleted = useRef(false);
     const lastTimeUpdate = useRef(0);
@@ -149,6 +160,54 @@ export const MindMoviePlayer = forwardRef<MindMoviePlayerHandle, MindMoviePlayer
       video.muted = false;
       video.defaultMuted = false;
       video.volume = 1;
+      desiredMutedRef.current = false;
+      setIsMuted(false);
+
+      sawBufferingRef.current = false;
+      lastAudioBytesRef.current = null;
+      hasSeenNonZeroAudioBytesRef.current = false;
+      lastAudioNudgeAtRef.current = 0;
+      lastMediaTimeRef.current = 0;
+      docHiddenRef.current = typeof document !== "undefined" ? document.hidden : false;
+
+      const getAudioDecodedBytes = () => {
+        const anyVideo = video as unknown as { webkitAudioDecodedByteCount?: unknown };
+        const v = anyVideo.webkitAudioDecodedByteCount;
+        return typeof v === "number" && Number.isFinite(v) ? v : null;
+      };
+
+      const ensureUnmuted = () => {
+        if (desiredMutedRef.current) return;
+        if (video.muted) {
+          video.muted = false;
+          video.defaultMuted = false;
+        }
+        if (video.volume === 0) video.volume = 1;
+        setIsMuted(video.muted);
+      };
+
+      const nudgeAudioPipeline = (reason: string) => {
+        // Throttle nudges to avoid Safari instability.
+        const now = Date.now();
+        if (now - lastAudioNudgeAtRef.current < 8000) return;
+        lastAudioNudgeAtRef.current = now;
+
+        if (desiredMutedRef.current) return;
+
+        try {
+          // iOS Safari: flipping mute + volume is a low-risk way to reinitialize audio output.
+          const prevVol = video.volume;
+          video.muted = true;
+          video.muted = false;
+          video.defaultMuted = false;
+          video.volume = 0;
+          video.volume = prevVol > 0 ? prevVol : 1;
+          setIsMuted(video.muted);
+        } catch (e) {
+          // Never throw from here.
+          console.warn("Audio nudge failed", { reason, e });
+        }
+      };
 
       // Handlers -------------------------------------------------
       const handleLoadedMetadata = () => {
@@ -174,6 +233,37 @@ export const MindMoviePlayer = forwardRef<MindMoviePlayerHandle, MindMoviePlayer
 
       const handlePlay = () => setIsPlaying(true);
 
+      const handlePlaying = () => {
+        setIsPlaying(true);
+        ensureUnmuted();
+
+        // If we just recovered from buffering, nudge the audio pipeline once.
+        if (isIOS && sawBufferingRef.current) {
+          nudgeAudioPipeline("buffer-recover");
+          sawBufferingRef.current = false;
+        }
+      };
+
+      const handleWaiting = () => {
+        sawBufferingRef.current = true;
+      };
+
+      const handleStalled = () => {
+        sawBufferingRef.current = true;
+      };
+
+      const handleVolumeChange = () => {
+        // Keep React state in sync with the element.
+        setIsMuted(video.muted);
+
+        // iOS can sometimes flip muted during route changes / interruptions.
+        if (!desiredMutedRef.current && video.muted) {
+          video.muted = false;
+          video.defaultMuted = false;
+          setIsMuted(false);
+        }
+      };
+
       const handlePause = () => {
         setIsPlaying(false);
 
@@ -194,6 +284,15 @@ export const MindMoviePlayer = forwardRef<MindMoviePlayerHandle, MindMoviePlayer
             // Only resume if we are still paused and the user didn't mute/stop intentionally.
             if (!videoRef.current) return;
             if (!videoRef.current.paused) return;
+            if (docHiddenRef.current) return;
+            // Avoid calling play() while the media isn't ready; it can lead to weird iOS states.
+            if (videoRef.current.readyState < 2) return;
+            // If we want audio, enforce it before resuming.
+            if (!desiredMutedRef.current) {
+              videoRef.current.muted = false;
+              videoRef.current.defaultMuted = false;
+              if (videoRef.current.volume === 0) videoRef.current.volume = 1;
+            }
             void videoRef.current.play().catch(() => {
               // Let the user retry manually.
             });
@@ -219,25 +318,84 @@ export const MindMoviePlayer = forwardRef<MindMoviePlayerHandle, MindMoviePlayer
         onError?.(msg);
       };
 
+      const handleVisibilityChange = () => {
+        docHiddenRef.current = document.hidden;
+
+        // If the doc becomes visible again and video is paused unexpectedly,
+        // give it a chance to resume with audio intact.
+        if (!docHiddenRef.current) {
+          ensureUnmuted();
+          if (!video.ended && video.paused && video.currentTime > 0.5 && video.readyState >= 2) {
+            // A small delay helps iOS rehydrate its media pipeline.
+            window.setTimeout(() => {
+              if (!videoRef.current) return;
+              if (document.hidden) return;
+              if (!videoRef.current.paused) return;
+              ensureUnmuted();
+              void videoRef.current.play().catch(() => {
+                // User can tap play.
+              });
+            }, 250);
+          }
+        }
+      };
+
+      // iOS audio watchdog interval (only if Safari exposes decoded audio byte count)
+      const audioWatchdogInterval = window.setInterval(() => {
+        if (!isIOS) return;
+        if (docHiddenRef.current) return;
+        if (video.paused || video.ended) return;
+        if (desiredMutedRef.current || video.muted || video.volume === 0) return;
+
+        const bytes = getAudioDecodedBytes();
+        if (bytes == null) return;
+        if (bytes > 0) hasSeenNonZeroAudioBytesRef.current = true;
+
+        // Only attempt recovery if we've *ever* seen non-zero bytes (avoids false positives).
+        if (hasSeenNonZeroAudioBytesRef.current && lastAudioBytesRef.current != null) {
+          const timeAdvanced = video.currentTime - (lastMediaTimeRef.current || 0);
+          const bytesStalled = bytes === lastAudioBytesRef.current;
+
+          // If video is advancing but audio decoding bytes are not, audio may be silent.
+          if (timeAdvanced > 1 && bytesStalled) {
+            nudgeAudioPipeline("watchdog");
+          }
+        }
+
+        lastMediaTimeRef.current = video.currentTime;
+        lastAudioBytesRef.current = bytes;
+      }, 2000);
+
       // Attach listeners ------------------------------------------
       video.addEventListener("loadedmetadata", handleLoadedMetadata);
       video.addEventListener("durationchange", handleLoadedMetadata);
       video.addEventListener("timeupdate", handleTimeUpdate);
       video.addEventListener("play", handlePlay);
+      video.addEventListener("playing", handlePlaying);
+      video.addEventListener("waiting", handleWaiting);
+      video.addEventListener("stalled", handleStalled);
       video.addEventListener("pause", handlePause);
       video.addEventListener("ended", handleEnded);
       video.addEventListener("error", handleError);
+      video.addEventListener("volumechange", handleVolumeChange);
+      document.addEventListener("visibilitychange", handleVisibilityChange);
 
       return () => {
         if (hideControlsTimeoutRef.current) window.clearTimeout(hideControlsTimeoutRef.current);
         if (autoResumeTimeoutRef.current) window.clearTimeout(autoResumeTimeoutRef.current);
+        window.clearInterval(audioWatchdogInterval);
         video.removeEventListener("loadedmetadata", handleLoadedMetadata);
         video.removeEventListener("durationchange", handleLoadedMetadata);
         video.removeEventListener("timeupdate", handleTimeUpdate);
         video.removeEventListener("play", handlePlay);
+        video.removeEventListener("playing", handlePlaying);
+        video.removeEventListener("waiting", handleWaiting);
+        video.removeEventListener("stalled", handleStalled);
         video.removeEventListener("pause", handlePause);
         video.removeEventListener("ended", handleEnded);
         video.removeEventListener("error", handleError);
+        video.removeEventListener("volumechange", handleVolumeChange);
+        document.removeEventListener("visibilitychange", handleVisibilityChange);
       };
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [effectiveSrc]); // only re-bind when src changes
@@ -310,6 +468,7 @@ export const MindMoviePlayer = forwardRef<MindMoviePlayerHandle, MindMoviePlayer
       const video = videoRef.current;
       if (!video) return;
       video.muted = !video.muted;
+      desiredMutedRef.current = video.muted;
       setIsMuted(video.muted);
       revealControls();
     };
@@ -373,7 +532,7 @@ export const MindMoviePlayer = forwardRef<MindMoviePlayerHandle, MindMoviePlayer
           className="theater-video w-full h-full object-contain"
           playsInline
           webkit-playsinline="true"
-          preload="metadata"
+          preload={isIOS ? "auto" : "metadata"}
           disablePictureInPicture
           controls={nativeControls}
           controlsList="nodownload noremoteplayback nofullscreen"
