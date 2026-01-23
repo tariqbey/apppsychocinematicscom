@@ -25,6 +25,7 @@ import { WeeklyComparison } from "./WeeklyComparison";
 import { StreakMilestone, useStreakMilestone } from "./StreakMilestone";
 import { ReplaceSuggestionDialog } from "./ReplaceSuggestionDialog";
 import { DraggableTaskItem } from "./DraggableTaskItem";
+import { usePointsContext } from "@/contexts/PointsContext";
 
 interface Task {
   id: string;
@@ -84,6 +85,7 @@ export function ThreeThings({ showAnalyticsDefault = false }: ThreeThingsProps) 
   const { user } = useAuth();
   const { profile } = useUserProfile();
   const { toast } = useToast();
+  const { triggerRecalculation } = usePointsContext();
 
   // Load streak on mount
   useEffect(() => {
@@ -204,6 +206,7 @@ export function ThreeThings({ showAnalyticsDefault = false }: ThreeThingsProps) 
     } else if (data) {
       setTasks([...tasks, data]);
       setNewTaskText("");
+      void triggerRecalculation();
     }
   };
 
@@ -215,6 +218,7 @@ export function ThreeThings({ showAnalyticsDefault = false }: ThreeThingsProps) 
 
     if (!error) {
       setTasks(tasks.map(t => t.id === task.id ? { ...t, is_completed: true, incomplete_reason: null } : t));
+      void triggerRecalculation();
     }
   };
 
@@ -233,6 +237,7 @@ export function ThreeThings({ showAnalyticsDefault = false }: ThreeThingsProps) 
 
     if (!error) {
       setTasks(tasks.map(t => t.id === taskToUncheck.id ? { ...t, is_completed: false, incomplete_reason: reason } : t));
+      void triggerRecalculation();
     }
 
     setExcuseDialogOpen(false);
@@ -252,6 +257,7 @@ export function ThreeThings({ showAnalyticsDefault = false }: ThreeThingsProps) 
 
     if (!error) {
       setTasks(tasks.filter(t => t.id !== taskId));
+      void triggerRecalculation();
     }
   };
 
@@ -287,6 +293,7 @@ export function ThreeThings({ showAnalyticsDefault = false }: ThreeThingsProps) 
       setTasks([...tasks, data]);
       setSuggestions(suggestions.filter((s) => s.task !== suggestion.task));
       toast({ title: "Task added", description: suggestion.task });
+      void triggerRecalculation();
     }
   };
 
@@ -330,6 +337,7 @@ export function ThreeThings({ showAnalyticsDefault = false }: ThreeThingsProps) 
       setTasks(tasks.map(t => t.id === taskIdToReplace ? data : t));
       setSuggestions(suggestions.filter((s) => s.task !== suggestionToReplace.task));
       toast({ title: "Task replaced", description: suggestionToReplace.task });
+      void triggerRecalculation();
     }
 
     setReplaceDialogOpen(false);
