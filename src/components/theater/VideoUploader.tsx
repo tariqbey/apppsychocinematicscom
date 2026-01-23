@@ -23,8 +23,11 @@ export const VideoUploader = ({
   const [uploadComplete, setUploadComplete] = useState(false);
   const [currentFile, setCurrentFile] = useState<File | null>(null);
   const [optimizeForIphone, setOptimizeForIphone] = useState(false);
+  const [transcodeForIphone, setTranscodeForIphone] = useState(false);
   const [isOptimizing, setIsOptimizing] = useState(false);
+  const [isTranscoding, setIsTranscoding] = useState(false);
   const [optimizeProgress, setOptimizeProgress] = useState(0);
+  const [transcodeProgress, setTranscodeProgress] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { user } = useAuth();
   const { toast } = useToast();
@@ -344,7 +347,7 @@ export const VideoUploader = ({
               isDragging
                 ? "border-gold bg-gold/10"
                 : "border-border hover:border-gold/50 hover:bg-secondary/50",
-              (isUploading || isOptimizing) && "pointer-events-none"
+              (isUploading || isOptimizing || isTranscoding) && "pointer-events-none"
             )}
           >
             <input

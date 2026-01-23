@@ -1,10 +1,11 @@
 import { useState, useRef, useEffect } from "react";
-import { X, Sparkles, Target, Calendar, ArrowRightLeft, Map, Send, Loader2, Check, Mic, MicOff } from "lucide-react";
+import { X, Sparkles, Target, Calendar, ArrowRightLeft, Map, Send, Loader2, Check, Mic, MicOff, Wand2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { useVoiceInput } from "@/hooks/useVoiceInput";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 interface ChiefAimData {
   what: string;
@@ -47,6 +48,7 @@ export const ChiefAimWizard = ({ isOpen, onClose, initialAim, onSave }: ChiefAim
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isEnhancing, setIsEnhancing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -168,6 +170,32 @@ export const ChiefAimWizard = ({ isOpen, onClose, initialAim, onSave }: ChiefAim
   const updateAimField = (value: string) => {
     setAim((prev) => ({ ...prev, [currentStep]: value }));
     toast.success(`${STEPS.find((s) => s.id === currentStep)?.label} saved!`);
+  };
+
+  const enhanceWithAI = async () => {
+    const currentValue = aim[currentStep];
+    if (!currentValue?.trim()) {
+      toast.error("Please enter something first before enhancing.");
+      return;
+    }
+
+    setIsEnhancing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("enhance-chief-aim", {
+        body: { field: currentStep, userInput: currentValue, fullAim: aim },
+      });
+
+      if (error) throw error;
+      if (data?.enhanced) {
+        setAim((prev) => ({ ...prev, [currentStep]: data.enhanced }));
+        toast.success("Enhanced with AI!");
+      }
+    } catch (err: any) {
+      console.error("Enhance error:", err);
+      toast.error(err?.message || "Failed to enhance. Please try again.");
+    } finally {
+      setIsEnhancing(false);
+    }
   };
 
   const goToNextStep = () => {
@@ -347,6 +375,22 @@ export const ChiefAimWizard = ({ isOpen, onClose, initialAim, onSave }: ChiefAim
               placeholder={`Enter your ${STEPS[currentStepIndex].label.toLowerCase()}...`}
               className="flex-1 min-h-[120px] mb-4"
             />
+
+            <div className="flex gap-2 mb-4">
+              <Button
+                onClick={enhanceWithAI}
+                disabled={!aim[currentStep]?.trim() || isEnhancing}
+                className="flex-1"
+                variant="outline"
+              >
+                {isEnhancing ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <Wand2 className="w-4 h-4 mr-2" />
+                )}
+                AI Enhance
+              </Button>
+            </div>
 
             <div className="space-y-2">
               <Button

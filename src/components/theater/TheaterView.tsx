@@ -229,6 +229,7 @@ export const TheaterView = ({ onClose }: TheaterViewProps) => {
                   onComplete={handleVideoComplete}
                   onError={handleVideoError}
                   className="w-full h-full"
+                  showDiagnostics
                 />
 
                 {hasRecordedViewing && (
