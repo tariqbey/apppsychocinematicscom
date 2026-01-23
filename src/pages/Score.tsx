@@ -4,7 +4,7 @@ import {
   ArrowLeft, Play, Pause, SkipBack, SkipForward, Volume2, VolumeX,
   Shuffle, Repeat, Plus, Music, Heart, Upload, Trash2, GripVertical,
   ListMusic, Mic2, User, Crown, Sparkles, MoreHorizontal, Edit2,
-  FolderPlus, Download, Check, X, CloudOff, Cloud, HardDrive, Loader2, Wifi, WifiOff
+  FolderPlus, Download, Check, X, CloudOff, Cloud, HardDrive, Loader2, Wifi, WifiOff, Target
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -40,7 +40,7 @@ import { Badge } from "@/components/ui/badge";
 export default function ScorePage() {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
-  const { profile } = useUserProfile();
+  const { profile, updateProfile } = useUserProfile();
   // Use a standalone HTMLAudioElement (like Director Radio) for maximum mobile compatibility.
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [isAudioReady, setIsAudioReady] = useState(false);
@@ -872,12 +872,18 @@ export default function ScorePage() {
                             
                             {/* Track info - full width on mobile */}
                             <div className="flex-1 min-w-0 overflow-hidden">
-                              <p className={cn(
-                                "text-sm sm:text-base font-medium",
-                                currentTrack?.id === track.id && "text-gold"
-                              )}>
-                                {track.title}
-                              </p>
+                              <div className="flex items-center gap-1.5">
+                                <p className={cn(
+                                  "text-sm sm:text-base font-medium",
+                                  currentTrack?.id === track.id && "text-gold"
+                                )}>
+                                  {track.title}
+                                </p>
+                                {/* Chief Aim Anthem indicator */}
+                                {profile?.chief_aim_song_url === track.audio_url && (
+                                  <Target className="w-3 h-3 sm:w-4 sm:h-4 text-gold flex-shrink-0" />
+                                )}
+                              </div>
                               <p className="text-xs sm:text-sm text-muted-foreground truncate">
                                 {track.artist || displayName}
                               </p>
@@ -962,6 +968,19 @@ export default function ScorePage() {
                                     )}
                                   </>
                                 )}
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem 
+                                  onClick={async () => {
+                                    await updateProfile({ chief_aim_song_url: track.audio_url });
+                                    toast.success("Set as your Definite Chief Aim Anthem! 🎯");
+                                  }}
+                                  className={profile?.chief_aim_song_url === track.audio_url ? "text-gold" : ""}
+                                >
+                                  <Target className="w-4 h-4 mr-2" />
+                                  {profile?.chief_aim_song_url === track.audio_url 
+                                    ? "✓ Current Chief Aim Anthem" 
+                                    : "Use as Chief Aim Anthem"}
+                                </DropdownMenuItem>
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem 
                                   onClick={() => handleDeleteTrack(track.id)}
