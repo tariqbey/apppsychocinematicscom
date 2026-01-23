@@ -13,6 +13,7 @@ import { Users, CreditCard, TrendingUp, DollarSign, Image, Video, Activity, Sear
 import { FeaturedContentManager } from "@/components/admin/FeaturedContentManager";
 import { RadioManager } from "@/components/admin/RadioManager";
 import { TestimonialManager } from "@/components/admin/TestimonialManager";
+import { PsychoCinematicsWhitePaper } from "@/components/admin/PsychoCinematicsWhitePaper";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from "recharts";
 import { format, subDays } from "date-fns";
 
@@ -447,6 +448,9 @@ const AdminDashboard = () => {
             </CardContent>
           </Card>
         </div>
+
+        {/* White Paper Download */}
+        <PsychoCinematicsWhitePaper />
 
         {/* Testimonial Manager */}
         <TestimonialManager />

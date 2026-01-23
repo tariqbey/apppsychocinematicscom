@@ -59,16 +59,29 @@ export const DefiniteChiefAimCard = ({ aim, onEdit, chiefAimSongUrl, onSongListe
   // Initialize audio element
   useEffect(() => {
     if (chiefAimSongUrl) {
-      audioRef.current = new Audio(chiefAimSongUrl);
+      const audio = new Audio(chiefAimSongUrl);
+      audioRef.current = audio;
       
-      // Only mark as complete when song plays all the way through without interruption
-      audioRef.current.addEventListener('ended', () => {
+      const handleEnded = () => {
         setIsPlaying(false);
+        // Reset currentTime so user can replay immediately
+        audio.currentTime = 0;
+        // Only mark ritual complete if played uninterrupted and not already done today
         if (!hasListenedToday && !wasInterrupted) {
           setHasListenedToday(true);
           onSongListened?.();
         }
-      });
+        // Reset interruption flag so replay is allowed
+        setWasInterrupted(false);
+      };
+
+      audio.addEventListener('ended', handleEnded);
+      
+      return () => {
+        audio.removeEventListener('ended', handleEnded);
+        audio.pause();
+        audioRef.current = null;
+      };
     }
     return () => {
       if (audioRef.current) {
@@ -76,22 +89,26 @@ export const DefiniteChiefAimCard = ({ aim, onEdit, chiefAimSongUrl, onSongListe
         audioRef.current = null;
       }
     };
-  }, [chiefAimSongUrl, hasListenedToday, wasInterrupted, onSongListened]);
+  }, [chiefAimSongUrl]); // Remove reactive deps that caused stale closure issues
 
   const togglePlayback = () => {
     if (!audioRef.current) return;
+    
     if (isPlaying) {
-      // Pausing counts as interruption - must listen all the way through
+      // Pausing counts as interruption for ritual completion - must listen all the way through
       audioRef.current.pause();
       setIsPlaying(false);
-      setWasInterrupted(true);
+      // Only set interrupted if ritual not already complete
+      if (!hasListenedToday) {
+        setWasInterrupted(true);
+      }
     } else {
-      // Reset interruption flag when starting fresh playback from the beginning
-      if (audioRef.current.currentTime === 0 || wasInterrupted) {
+      // If interrupted previously and ritual not complete, restart from beginning
+      if (wasInterrupted && !hasListenedToday) {
         audioRef.current.currentTime = 0;
         setWasInterrupted(false);
       }
-      audioRef.current.play();
+      audioRef.current.play().catch(console.error);
       setIsPlaying(true);
     }
   };
