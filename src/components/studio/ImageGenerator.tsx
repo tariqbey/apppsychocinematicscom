@@ -187,6 +187,12 @@ export function ImageGenerator({
       imagesToUse.push(uploadedImage);
     }
 
+    // Character Mode (create): force the approved style sheet as the PRIMARY reference image.
+    // This ensures Nano Banana Pro uses the correct identity anchor.
+    if (mode === "create" && characterModeEnabled && styleSheetApproved && styleSheetUrl) {
+      imagesToUse.push(styleSheetUrl);
+    }
+
     // Character mode: The backend will automatically use the style sheet when available
     // We don't need to pass reference images here - the edge function handles it
     // Only pass extra reference photos for style/wardrobe inspiration
@@ -222,6 +228,7 @@ export function ImageGenerator({
       images: imagesToUse.length > 0 ? imagesToUse : undefined,
       model: "nano-banana-pro",
       mode,
+      character_mode: characterModeEnabled,
     });
 
     if (url && onImageGenerated) {

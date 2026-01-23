@@ -26,6 +26,8 @@ export interface ImageGenerationParams {
   images?: string[];
   model?: ImageModel;
   mode?: "create" | "edit";
+  /** When true, backend should enforce approved character style sheet + stored physical description */
+  character_mode?: boolean;
 }
 
 export interface VideoGenerationParams {
@@ -133,6 +135,10 @@ export function useMediaGeneration() {
 
       if (params.mode) {
         requestBody.mode = params.mode;
+      }
+
+      if (typeof params.character_mode === "boolean") {
+        requestBody.character_mode = params.character_mode;
       }
       
       // Only add images if array has items (for reference photo / edit mode)
