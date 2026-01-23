@@ -199,9 +199,9 @@ export function CharacterCheckInModal({ open, onOpenChange }: CharacterCheckInMo
               <div className="w-16 h-16 rounded-full bg-gradient-to-br from-red-500/20 to-red-600/20 flex items-center justify-center mx-auto mb-4">
                 <Scissors className="w-8 h-8 text-red-500" />
               </div>
-              <h3 className="text-xl font-display text-red-400 mb-2">Did You "CUT!"?</h3>
+              <h3 className="text-xl font-display text-red-400 mb-2">Did You "KUT!"?</h3>
               <p className="text-sm text-muted-foreground">
-                When emotional, your IQ drops. Cutting means pausing to access higher thinking.
+                When emotional, your IQ drops. KUTting means pausing to access higher thinking.
               </p>
             </div>
 

@@ -306,7 +306,7 @@ const Index = () => {
 
           {/* Streak Banner - Right after Production Status */}
           <div className="animate-slide-up" style={{ animationDelay: "0.15s" }}>
-            <StreakBanner streak={streak} bestStreak={bestStreak} lastActiveDate={lastActiveDate} />
+            <StreakBanner streak={streak} bestStreak={bestStreak} lastActiveDate={lastActiveDate} onKutReset={() => setShowCutReset(true)} />
           </div>
 
           {/* ========== DAILY RITUAL - FRONT AND CENTER ========== */}
@@ -575,15 +575,15 @@ const Index = () => {
             animationIndex={9}
           />
 
-          {/* ========== 11. CUT / RESET ========== */}
+          {/* ========== 11. KUT / RESET ========== */}
           <ModuleCard
             onClick={() => setShowCutReset(true)}
             icon={<XCircle className="w-7 h-7 text-red-500" />}
-            title="Cut! Reset"
+            title="KUT! Reset"
             description="Pattern interrupt • Break old reactions • Return to character"
-            actionText="Cut Now"
+            actionText="KUT Now"
             colorScheme="red"
-            tooltip="When old patterns show up, use the CUT technique to reset your nervous system and return to your Director's Chair."
+            tooltip="When old patterns show up, use the KUT technique to reset your nervous system and return to your Director's Chair."
             animationIndex={10}
           />
 

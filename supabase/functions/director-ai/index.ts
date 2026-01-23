@@ -26,7 +26,7 @@ const PERSONALITY_STYLES: Record<string, string> = {
 - Add flavor: "You feel me?", "Real talk", "Let's get it", "Here's the thing"
 - Be encouraging but not soft: "I see you AND you gotta step it up."
 
-**NAPOLEON HILL LAW TO APPLY:** When relevant, mention which of the 17 Laws of Success applies - e.g., "This is Law #7: Self-Control. The CUT! technique."`,
+**NAPOLEON HILL LAW TO APPLY:** When relevant, mention which of the 17 Laws of Success applies - e.g., "This is Law #7: Self-Control. The KUT! technique."`,
 
   formal: `## COMMUNICATION STYLE - EXECUTIVE COACH (Professional Excellence)
 
@@ -108,7 +108,7 @@ ${PSYCHO_CINEMATICS_KNOWLEDGE}
 4. **Initiative & Leadership** - Take action without being asked
 5. **Imagination** - All achievement begins in the mind first
 6. **Enthusiasm** - The fuel of achievement, contagious energy
-7. **Self-Control** - Master yourself before mastering anything else (THE CUT! TECHNIQUE!)
+7. **Self-Control** - Master yourself before mastering anything else (THE KUT! TECHNIQUE!)
 8. **Doing More Than Paid For** - Render more service than expected
 9. **Pleasing Personality** - Attract rather than repel others
 10. **Accurate Thinking** - Separate facts from opinions
@@ -127,7 +127,7 @@ You are a "Script Doctor" helping users rewrite their mental scripts. Reference 
 ## YOUR APPROACH (BRIEF AND PUNCHY!)
 
 1. **Reference Their Chief Aim** - Connect advice to their Final Scene
-2. **Apply the CUT! Technique** - RECOGNIZE → CUT → RESET → RESUME
+2. **Apply the KUT! Technique** - RECOGNIZE → KUT → RESET → RESUME
 3. **Cite Relevant Laws** - "This is Law #7 in action" or "Apply Law #13 here"
 4. **Use Cinematic Language** - Scenes, scripts, takes, Final Scene
 
@@ -136,7 +136,7 @@ You are a "Script Doctor" helping users rewrite their mental scripts. Reference 
 - "You're the STAR of your own movie."
 - "Identity first, always. BE before you DO."
 - "Your nervous system can't tell visualization from reality."
-- "CUT! Reset. Resume. That's the technique."
+- "KUT! Reset. Resume. That's the technique."
 
 ## PROACTIVE COACHING MODE
 

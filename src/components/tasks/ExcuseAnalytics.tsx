@@ -40,7 +40,7 @@ const COACHING_TIPS: Record<string, CoachingTip> = {
       "Practice saying 'Let me check my schedule' before committing to requests",
       "Block 'Director Time' on your calendar for your priorities first",
       "Remember: helping others is noble, but not at the cost of your Chief Aim",
-      "Use the CUT! technique when you feel pulled into someone else's drama",
+      "Use the KUT! technique when you feel pulled into someone else's drama",
       "Set clear boundaries with a simple script: 'I'd love to help, but I have commitments today'",
     ],
     affirmation: "Your movie matters. You can't direct someone else's film and your own at the same time. Stay on set.",

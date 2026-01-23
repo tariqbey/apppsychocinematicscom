@@ -57,11 +57,11 @@ const SCORECARD_CATEGORIES: Omit<ScorecardCategory, 'score'>[] = [
   {
     id: "emotional",
     title: "Emotional Regulation",
-    description: "Did I use the 'CUT!' technique when needed?",
+    description: "Did I use the 'KUT!' technique when needed?",
     rubric: [
       { score: 0, label: "Spiraled", description: "Got triggered and stayed off-script - no reset attempted" },
-      { score: 1, label: "Late CUT", description: "Eventually reset but spent too long in negative state" },
-      { score: 2, label: "Quick CUT", description: "Caught myself and used CUT! technique effectively" },
+      { score: 1, label: "Late KUT", description: "Eventually reset but spent too long in negative state" },
+      { score: 2, label: "Quick KUT", description: "Caught myself and used KUT! technique effectively" },
       { score: 3, label: "Director Mode", description: "Stayed centered or immediately reset - full emotional mastery" },
     ],
   },
@@ -113,7 +113,7 @@ export const DailyScorecard = ({ onClose, onSubmitSuccess }: DailyScorecardProps
       };
     } else {
       return {
-        title: "CUT! Reset Needed",
+        title: "KUT! Reset Needed",
         icon: <AlertTriangle className="w-12 h-12 text-cinematic-red" />,
         message: "Time to rewatch your Mind Movie and reconnect with your vision.",
         color: "red",

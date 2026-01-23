@@ -70,7 +70,7 @@ export function ChallengeCard({ challenge, onComplete }: ChallengeCardProps) {
 
   const calculateXP = () => {
     let xp = 10; // Base XP for completing
-    if (didCut) xp += 15; // Bonus for using CUT technique
+    if (didCut) xp += 15; // Bonus for using KUT technique
     if (insightGained.length > 50) xp += 10; // Bonus for meaningful insight
     if (atPeace) xp += 10; // Bonus for reaching peace
     return xp;
@@ -176,9 +176,9 @@ export function ChallengeCard({ challenge, onComplete }: ChallengeCardProps) {
               <div className="w-14 h-14 rounded-full bg-red-500/20 flex items-center justify-center mx-auto mb-3">
                 <Scissors className="w-7 h-7 text-red-500" />
               </div>
-              <h3 className="font-display text-lg text-red-400">Did You "CUT!"?</h3>
+              <h3 className="font-display text-lg text-red-400">Did You "KUT!"?</h3>
               <p className="text-sm text-muted-foreground mt-1">
-                When emotional, your IQ drops. Cutting means pausing to access higher thinking.
+                When emotional, your IQ drops. KUTting means pausing to access higher thinking.
               </p>
             </div>
 

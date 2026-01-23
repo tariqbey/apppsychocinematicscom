@@ -175,7 +175,7 @@ export default function Challenges() {
               <p className="text-2xl font-bold">
                 {challenges.filter(c => c.did_cut).length}
               </p>
-              <p className="text-xs text-muted-foreground">Times "CUT!"</p>
+              <p className="text-xs text-muted-foreground">Times "KUT!"</p>
             </Card>
           </div>
 

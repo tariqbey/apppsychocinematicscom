@@ -614,8 +614,8 @@ const faqs = [
     answer: "Connect your social accounts in Settings → Integrations → Social Media. Once connected, use the Share menu on any content to post directly. Posts automatically include 'Posted from Psycho-Cinematics' branding and relevant hashtags."
   },
   {
-    question: "What is the CUT! technique?",
-    answer: "CUT! is a 4-step mental reset technique for when you catch yourself in negative thought patterns: 1) Recognize - notice the off-script thought, 2) Cut - mentally yell 'CUT!' to stop the scene, 3) Reset - take 3 deep breaths and reconnect with your Director self, 4) Resume - take an aligned action that matches your Chief Aim identity."
+    question: "What is the KUT! technique?",
+    answer: "KUT! is a 4-step mental reset technique for when you catch yourself in negative thought patterns: 1) Recognize - notice the off-script thought, 2) Kut - mentally yell 'KUT!' to stop the scene, 3) Reset - take 3 deep breaths and reconnect with your Director self, 4) Resume - take an aligned action that matches your Chief Aim identity."
   },
   {
     question: "How do I get the best results from AI generation?",
@@ -1512,16 +1512,16 @@ const DirectorsGuide = () => {
                         </li>
                         <li className="flex items-start gap-2">
                           <Zap className="w-4 h-4 text-gold mt-0.5" />
-                          <span><strong>CUT! Technique:</strong> When you're spiraling, the AI guides you through the 4-step mental reset.</span>
+                          <span><strong>KUT! Technique:</strong> When you're spiraling, the AI guides you through the 4-step mental reset.</span>
                         </li>
                       </ul>
                     </div>
 
                     <div className="p-4 rounded-lg bg-muted/30 border border-border/50">
-                      <h5 className="font-semibold mb-2">The CUT! Technique</h5>
+                      <h5 className="font-semibold mb-2">The KUT! Technique</h5>
                       <ol className="text-sm text-muted-foreground space-y-2">
                         <li><strong>1. Recognize</strong> — Notice the off-script thought or negative pattern</li>
-                        <li><strong>2. Cut</strong> — Mentally yell "CUT!" to stop the scene</li>
+                        <li><strong>2. Kut</strong> — Mentally yell "KUT!" to stop the scene</li>
                         <li><strong>3. Reset</strong> — Take 3 deep breaths, reconnect with your Director self</li>
                         <li><strong>4. Resume</strong> — Take an aligned action that matches your Chief Aim identity</li>
                       </ol>

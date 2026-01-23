@@ -455,9 +455,9 @@ export const DirectorAIChat = ({ isOpen, onToggle, chiefAim, userId }: DirectorA
     }
   };
 
-  const handleCut = async () => {
-    const cutPrompt = `I need to use the CUT! technique right now. I'm feeling overwhelmed or off-script. Please guide me through the 4-step reset: RECOGNIZE, CUT, RESET, RESUME. Make it personal to my Chief Aim.`;
-    await streamChat(cutPrompt);
+  const handleKut = async () => {
+    const kutPrompt = `I need to use the KUT! technique right now. I'm feeling overwhelmed or off-script. Please guide me through the 4-step reset: RECOGNIZE, KUT, RESET, RESUME. Make it personal to my Chief Aim.`;
+    await streamChat(kutPrompt);
   };
 
   const handleVoiceToggle = () => {
@@ -647,16 +647,16 @@ export const DirectorAIChat = ({ isOpen, onToggle, chiefAim, userId }: DirectorA
         <div ref={messagesEndRef} />
       </div>
 
-      {/* CUT! Button */}
+      {/* KUT! Button */}
       <div className="px-4 py-2 border-t border-border/50">
         <Button
           variant="cut"
           className="w-full"
-          onClick={handleCut}
+          onClick={handleKut}
           disabled={isLoading}
         >
           <Scissors className="w-4 h-4 mr-2" />
-          CUT! — I Need a Reset
+          KUT! — I Need a Reset
         </Button>
       </div>
 

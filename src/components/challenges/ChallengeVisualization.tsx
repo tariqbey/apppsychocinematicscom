@@ -353,7 +353,7 @@ ${generatedContent.affirmation || "Not yet generated"}`,
                     {scriptSteps.map((step, index) => {
                       const icons = [Target, Scissors, Flame, CheckCircle2];
                       const colorKeys: Array<keyof typeof STEP_STYLES> = ["red", "amber", "purple", "green"];
-                      const labels = ["The Challenge", "The CUT! Moment", "Transformed Response", "Victory"];
+                      const labels = ["The Challenge", "The KUT! Moment", "Transformed Response", "Victory"];
                       const Icon = icons[index] || Target;
                       const colorKey = colorKeys[index] || "gold";
                       const label = labels[index] || "Scene";
@@ -469,7 +469,7 @@ ${generatedContent.affirmation || "Not yet generated"}`,
                   <li>1. Read it aloud morning and evening</li>
                   <li>2. Visualize yourself embodying it</li>
                   <li>3. When the trigger occurs, recall this affirmation</li>
-                  <li>4. Use it as your "CUT!" replacement thought</li>
+                  <li>4. Use it as your "KUT!" replacement thought</li>
                 </ol>
               </Card>
             </TabsContent>
@@ -513,7 +513,7 @@ ${generatedContent.affirmation || "Not yet generated"}`,
                 <h4 className="font-medium mb-2">Reflection Prompts</h4>
                 <ul className="text-sm text-muted-foreground space-y-1">
                   <li>• How did you feel when facing this challenge?</li>
-                  <li>• Did you use the CUT! technique? What happened?</li>
+                  <li>• Did you use the KUT! technique? What happened?</li>
                   <li>• What did you learn about yourself?</li>
                   <li>• How will you respond differently next time?</li>
                 </ul>

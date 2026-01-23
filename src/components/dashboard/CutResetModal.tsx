@@ -80,7 +80,7 @@ export const CutResetModal = ({ isOpen, onClose, onWatchMindMovie, chiefAim }: C
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-white/20 mb-4">
             <XCircle className="w-10 h-10 text-white" />
           </div>
-          <h2 className="text-3xl font-display tracking-wider text-white mb-2">CUT!</h2>
+          <h2 className="text-3xl font-display tracking-wider text-white mb-2">KUT!</h2>
           <p className="text-red-100/80 text-sm">
             Time to reset. The old character just showed up. Let's get you back in the Director's chair.
           </p>

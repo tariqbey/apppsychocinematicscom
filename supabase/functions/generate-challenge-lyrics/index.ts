@@ -56,7 +56,7 @@ The song should follow this emotional arc:
 - Name the emotional trigger (without dwelling)
 - Hint at the old pattern
 
-[PRE-CHORUS: THE CUT!]
+[PRE-CHORUS: THE KUT!]
 - The moment of conscious choice
 - "I take a breath", "I pause", "I see through the illusion"
 - The interrupt that breaks the pattern
@@ -180,7 +180,7 @@ Create lyrics that match the authentic sound and conventions of ${musicStyle} mu
 Write complete song lyrics that:
 1. Transform the challenge into a victory anthem for the "${challenge.targetTrait}" trait
 2. Use NLP techniques throughout (embedded commands, presuppositions, identity statements)
-3. Follow the emotional arc from trigger → CUT! → transformed response → victory
+3. Follow the emotional arc from trigger → KUT! → transformed response → victory
 4. Are specific to THIS challenge, not generic motivation
 5. Would sound AUTHENTIC to ${musicStyle} - not corny or preachy
 6. Use sophisticated metaphors and wordplay befitting the genre
@@ -194,7 +194,7 @@ Return lyrics in this structure:
 (8-12 lines - the challenge scenario)
 
 [PRE-CHORUS]
-(4 lines - the CUT! moment)
+(4 lines - the KUT! moment)
 
 [CHORUS]
 (6-8 lines - transformed identity anthem)
