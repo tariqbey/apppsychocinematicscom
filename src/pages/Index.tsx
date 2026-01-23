@@ -165,6 +165,7 @@ const Index = () => {
   const dayNumber = profile?.day_number || 1;
   const streak = profile?.current_streak || 0;
   const bestStreak = profile?.best_streak || 0;
+  const lastActiveDate = profile?.last_viewing_date || null;
 
   // Phase progress checks
   const chiefAimComplete = Boolean(
@@ -305,7 +306,7 @@ const Index = () => {
 
           {/* Streak Banner - Right after Production Status */}
           <div className="animate-slide-up" style={{ animationDelay: "0.15s" }}>
-            <StreakBanner streak={streak} bestStreak={bestStreak} />
+            <StreakBanner streak={streak} bestStreak={bestStreak} lastActiveDate={lastActiveDate} />
           </div>
 
           {/* ========== DAILY RITUAL - FRONT AND CENTER ========== */}
