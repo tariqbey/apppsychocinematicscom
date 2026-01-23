@@ -13,15 +13,18 @@ import {
   Calendar,
   TrendingUp,
   Award,
+  ChartLine,
+  Info,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { usePointsLeaderboard, TimePeriod } from "@/hooks/usePointsLeaderboard";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { useAuth } from "@/hooks/useAuth";
 import { usePoints, POINTS_CONFIG } from "@/hooks/usePoints";
+import { PointsHistoryChart } from "./PointsHistoryChart";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -167,49 +170,76 @@ export const PointsLeaderboard = ({ onClose }: PointsLeaderboardProps) => {
           </TabsList>
         </Tabs>
 
-        {/* Your Stats Card */}
-        {user && todayPoints && (
-          <div className="glass-card p-4 cinematic-border mb-4 space-y-3">
-            <div className="flex items-center justify-between">
-              <h3 className="font-display text-gold text-sm">Your Points Today</h3>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleRecalculate}
-                className="text-xs h-7"
-              >
-                Refresh
-              </Button>
-            </div>
-            <div className="grid grid-cols-4 gap-2 text-center">
-              <div className="bg-secondary/30 rounded-lg p-2">
-                <p className="text-lg font-display text-gold">{todayPoints.total_points}</p>
-                <p className="text-[10px] text-muted-foreground">Total</p>
+        {/* Your Stats + History */}
+        {user && (
+          <Tabs defaultValue="today" className="mb-4">
+            <TabsList className="grid grid-cols-2 bg-secondary/30 p-1 mb-3">
+              <TabsTrigger value="today" className="text-xs data-[state=active]:bg-gold/20">
+                <Info className="w-3 h-3 mr-1" />
+                Today
+              </TabsTrigger>
+              <TabsTrigger value="history" className="text-xs data-[state=active]:bg-gold/20">
+                <ChartLine className="w-3 h-3 mr-1" />
+                History
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="today" className="mt-0">
+              {todayPoints ? (
+                <div className="glass-card p-4 cinematic-border space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-display text-gold text-sm">Your Points Today</h3>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleRecalculate}
+                      className="text-xs h-7"
+                    >
+                      Refresh
+                    </Button>
+                  </div>
+                  <div className="grid grid-cols-4 gap-2 text-center">
+                    <div className="bg-secondary/30 rounded-lg p-2">
+                      <p className="text-lg font-display text-gold">{todayPoints.total_points}</p>
+                      <p className="text-[10px] text-muted-foreground">Total</p>
+                    </div>
+                    <div className="bg-secondary/30 rounded-lg p-2">
+                      <p className="text-lg font-display text-green-400">+{todayPoints.ritual_points + todayPoints.task_points}</p>
+                      <p className="text-[10px] text-muted-foreground">Actions</p>
+                    </div>
+                    <div className="bg-secondary/30 rounded-lg p-2">
+                      <p className="text-lg font-display text-blue-400">+{todayPoints.bonus_points}</p>
+                      <p className="text-[10px] text-muted-foreground">Bonus</p>
+                    </div>
+                    <div className="bg-secondary/30 rounded-lg p-2">
+                      <p className="text-lg font-display text-red-400">-{todayPoints.penalty_points}</p>
+                      <p className="text-[10px] text-muted-foreground">Penalty</p>
+                    </div>
+                  </div>
+                  {summary && (
+                    <div className="pt-2 border-t border-border/50">
+                      <p className="text-xs text-muted-foreground text-center">
+                        {getPeriodLabel(period)} Total:{" "}
+                        <span className="text-gold font-display">{summary.total_points.toLocaleString()}</span>
+                        {" · "}
+                        {summary.days_active} day{summary.days_active !== 1 ? "s" : ""} active
+                      </p>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="glass-card p-4 cinematic-border text-center">
+                  <p className="text-muted-foreground text-sm">No points yet today. Complete rituals and tasks to earn points!</p>
+                </div>
+              )}
+            </TabsContent>
+
+            <TabsContent value="history" className="mt-0">
+              <div className="glass-card p-4 cinematic-border">
+                <PointsHistoryChart />
               </div>
-              <div className="bg-secondary/30 rounded-lg p-2">
-                <p className="text-lg font-display text-green-400">+{todayPoints.ritual_points + todayPoints.task_points}</p>
-                <p className="text-[10px] text-muted-foreground">Actions</p>
-              </div>
-              <div className="bg-secondary/30 rounded-lg p-2">
-                <p className="text-lg font-display text-blue-400">+{todayPoints.bonus_points}</p>
-                <p className="text-[10px] text-muted-foreground">Bonus</p>
-              </div>
-              <div className="bg-secondary/30 rounded-lg p-2">
-                <p className="text-lg font-display text-red-400">-{todayPoints.penalty_points}</p>
-                <p className="text-[10px] text-muted-foreground">Penalty</p>
-              </div>
-            </div>
-            {summary && (
-              <div className="pt-2 border-t border-border/50">
-                <p className="text-xs text-muted-foreground text-center">
-                  {getPeriodLabel(period)} Total:{" "}
-                  <span className="text-gold font-display">{summary.total_points.toLocaleString()}</span>
-                  {" · "}
-                  {summary.days_active} day{summary.days_active !== 1 ? "s" : ""} active
-                </p>
-              </div>
-            )}
-          </div>
+            </TabsContent>
+          </Tabs>
         )}
 
         {/* Opt-in Toggle */}

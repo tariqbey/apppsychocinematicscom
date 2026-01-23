@@ -9,7 +9,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { 
   Trophy, Crown, Star, TrendingUp, Sparkles, Heart, Award, 
-  ArrowLeft, Film, Calendar, Medal, Flame
+  ArrowLeft, Film, Calendar, Medal, Flame, Zap
 } from "lucide-react";
 import { format } from "date-fns";
 
@@ -28,19 +28,22 @@ interface YearlyStats {
   totalMovies: number;
   totalVotes: number;
   totalUsers: number;
+  totalPoints: number;
+  topPointEarners: Array<{ user_id: string; display_name: string; avatar_url: string | null; total_points: number }>;
   topScorers: Array<{ user_id: string; display_name: string; avatar_url: string | null; total_score: number }>;
   longestStreaks: Array<{ user_id: string; display_name: string; avatar_url: string | null; best_streak: number }>;
+  mostImproved: Array<{ user_id: string; display_name: string; avatar_url: string | null; improvement: number }>;
   mostVotedMovies: Array<{ movie_id: string; title: string; votes_count: number; user_id: string; display_name: string }>;
 }
 
 const awardCategories = [
-  { key: "best_mind_movie", label: "Best Mind Movie", icon: Trophy, gradient: "from-gold via-amber-500 to-yellow-400", description: "The most inspiring Mind Movie of the year" },
-  { key: "most_transformative_director", label: "Most Transformative Director", icon: Crown, gradient: "from-purple-500 via-pink-500 to-rose-400", description: "Greatest personal transformation journey" },
+  { key: "top_point_earner", label: "Top Point Earner", icon: Trophy, gradient: "from-gold via-amber-500 to-yellow-400", description: "Highest total points earned for the year" },
+  { key: "best_mind_movie", label: "Best Mind Movie", icon: Film, gradient: "from-purple-500 via-pink-500 to-rose-400", description: "The most inspiring Mind Movie of the year" },
   { key: "highest_scorer", label: "Highest Scorer", icon: Star, gradient: "from-blue-500 via-cyan-500 to-teal-400", description: "Highest cumulative scorecard totals" },
   { key: "longest_streak", label: "Longest Streak", icon: TrendingUp, gradient: "from-green-500 via-emerald-500 to-teal-400", description: "Most consecutive days of ritual completion" },
-  { key: "most_improved", label: "Most Improved", icon: Sparkles, gradient: "from-orange-500 via-red-500 to-pink-400", description: "Greatest improvement in scores over the year" },
+  { key: "most_improved", label: "Most Improved", icon: Sparkles, gradient: "from-orange-500 via-red-500 to-pink-400", description: "Greatest point improvement Q4 vs Q1" },
   { key: "community_favorite", label: "Community Favorite", icon: Heart, gradient: "from-rose-500 via-red-500 to-orange-400", description: "Most loved member by community votes" },
-  { key: "rising_star", label: "Rising Star", icon: Award, gradient: "from-indigo-500 via-purple-500 to-pink-400", description: "Breakout performer of the year" },
+  { key: "rising_star", label: "Rising Star", icon: Award, gradient: "from-indigo-500 via-purple-500 to-pink-400", description: "Best newcomer (joined this year)" },
 ];
 
 export default function AwardsCeremony() {
@@ -199,8 +202,11 @@ export default function AwardsCeremony() {
         totalMovies: totalMovies || 0,
         totalVotes: votesData?.length || 0,
         totalUsers: totalUsers || 0,
+        totalPoints: 0,
+        topPointEarners: topScorers.map(s => ({ ...s, total_points: s.total_score })),
         topScorers,
         longestStreaks,
+        mostImproved: [],
         mostVotedMovies,
       });
     } catch (error) {
