@@ -299,9 +299,12 @@ export const DailyRitualChecklist = ({ onTheaterClick, onScorecardClick, onEveni
           variant="gold"
           icon={<LightbulbIcon className="w-6 h-6" />}
           tips={[
-            "Morning: Watch your Mind Movie first thing to prime your subconscious",
-            "Midday: Execute your 3 key tasks that move you toward your Chief Aim",
-            "Evening: Watch your Mind Movie AGAIN before bed, then complete your scorecard",
+            "☀️ Morning Screening: Watch your Mind Movie first thing to prime your subconscious for success",
+            "📜 Script Review: Read your Definite Chief Aim aloud with emotion and conviction",
+            "🚀 Action Execution: Complete your 3 key tasks that move you toward your Chief Aim",
+            "🌙 Evening Session: Watch your Mind Movie AGAIN before bed + complete your Director Scorecard",
+            "📓 Journal Entry: Reflect on wins, lessons learned, and tomorrow's intentions",
+            "🔥 Complete ALL 5 rituals daily to build an unstoppable streak and transform your identity!",
           ]}
         />
       </div>
