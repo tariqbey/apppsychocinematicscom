@@ -1,5 +1,5 @@
 import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
-import { Play, Pause, VolumeX, Volume2, Maximize } from "lucide-react";
+import { Play, Pause, VolumeX, Volume2, Maximize, Minimize2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { VideoDiagnostics } from "./VideoDiagnostics";
@@ -72,6 +72,7 @@ export const MindMoviePlayer = forwardRef<MindMoviePlayerHandle, MindMoviePlayer
     const [currentTime, setCurrentTime] = useState(0);
     const [duration, setDuration] = useState(0);
     const [wasInterrupted, setWasInterrupted] = useState(false);
+    const [isWidescreen, setIsWidescreen] = useState(false);
 
     // Refs for stable callbacks
     const hasCompleted = useRef(false);
@@ -126,9 +127,10 @@ export const MindMoviePlayer = forwardRef<MindMoviePlayerHandle, MindMoviePlayer
       };
 
       const handleTimeUpdate = () => {
-        // Throttle to ~4 updates/sec to avoid render churn
+        // Throttle to avoid render churn (iOS is extremely sensitive)
+        const throttleMs = isIOS ? 1000 : 250;
         const now = performance.now();
-        if (now - lastTimeUpdate.current < 250) return;
+        if (now - lastTimeUpdate.current < throttleMs) return;
         lastTimeUpdate.current = now;
         setCurrentTime(video.currentTime);
       };
@@ -182,6 +184,16 @@ export const MindMoviePlayer = forwardRef<MindMoviePlayerHandle, MindMoviePlayer
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [src]); // only re-bind when src changes
 
+    // Escape to exit widescreen overlay
+    useEffect(() => {
+      if (!isWidescreen) return;
+      const handleKeyDown = (e: KeyboardEvent) => {
+        if (e.key === "Escape") setIsWidescreen(false);
+      };
+      window.addEventListener("keydown", handleKeyDown);
+      return () => window.removeEventListener("keydown", handleKeyDown);
+    }, [isWidescreen]);
+
     // User actions -----------------------------------------------
     const togglePlay = async () => {
       const video = videoRef.current;
@@ -230,6 +242,12 @@ export const MindMoviePlayer = forwardRef<MindMoviePlayerHandle, MindMoviePlayer
       }
     };
 
+    const toggleWidescreen = () => {
+      // "Widescreen" is an in-app overlay (more stable than true fullscreen on mobile).
+      // Users can rotate their device to landscape while in this mode.
+      setIsWidescreen((v) => !v);
+    };
+
     const formatTime = (s: number) => {
       if (!Number.isFinite(s) || s < 0) return "--:--";
       const mins = Math.floor(s / 60);
@@ -245,6 +263,7 @@ export const MindMoviePlayer = forwardRef<MindMoviePlayerHandle, MindMoviePlayer
         ref={wrapperRef}
         className={cn(
           "relative w-full h-full bg-black overflow-hidden group",
+          isWidescreen && "fixed inset-0 z-[80] rounded-none",
           className
         )}
       >
@@ -256,14 +275,14 @@ export const MindMoviePlayer = forwardRef<MindMoviePlayerHandle, MindMoviePlayer
         <video
           ref={videoRef}
           src={src}
-          className="w-full h-full object-contain"
+          className="theater-video w-full h-full object-contain"
           playsInline
           webkit-playsinline="true"
           preload={isIOS ? "none" : "metadata"}
           disablePictureInPicture
           controls={nativeControls}
           controlsList="nodownload noremoteplayback nofullscreen"
-          onClick={togglePlay}
+          onClick={isIOS ? undefined : togglePlay}
         />
 
         {/* Custom controls overlay */}
@@ -316,16 +335,18 @@ export const MindMoviePlayer = forwardRef<MindMoviePlayerHandle, MindMoviePlayer
                   </span>
                 </div>
 
-                {!isIOS && (
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={toggleFullscreen}
-                    className="h-8 w-8 sm:h-10 sm:w-10 text-white"
-                  >
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={isIOS ? toggleWidescreen : toggleFullscreen}
+                  className="h-8 w-8 sm:h-10 sm:w-10 text-white"
+                >
+                  {isWidescreen ? (
+                    <Minimize2 className="w-4 h-4 sm:w-5 sm:h-5" />
+                  ) : (
                     <Maximize className="w-4 h-4 sm:w-5 sm:h-5" />
-                  </Button>
-                )}
+                  )}
+                </Button>
               </div>
             </div>
           </div>
