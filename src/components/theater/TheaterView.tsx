@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { Play, Pause, Flame, Film, VolumeX, Volume2, Maximize, X, Upload, CheckCircle, Sparkles, Target, Plus, Trash2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -33,106 +33,22 @@ export const TheaterView = ({ onClose }: TheaterViewProps) => {
   const [hasRecordedViewing, setHasRecordedViewing] = useState(false);
   const [wasInterrupted, setWasInterrupted] = useState(false);
   const hasRecordedViewingRef = useRef(false);
-  const isPlayingRef = useRef(false); // Track playing state for iOS visibility handling
+  const isPlayingRef = useRef(false);
   const [showThreeThings, setShowThreeThings] = useState(false);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [newTaskText, setNewTaskText] = useState("");
   const [isLoadingTasks, setIsLoadingTasks] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const playerRef = useRef<HTMLDivElement>(null);
-  const { profile, updateProfile, recordViewing } = useUserProfile();
+  const { profile, recordViewing } = useUserProfile();
   const { user } = useAuth();
   const { toast } = useToast();
 
   const streak = profile?.current_streak || 0;
   const videoUrl = profile?.mind_movie_url;
 
-  useEffect(() => {
-    // Reset the per-session “recorded” flag when switching videos.
-    setHasRecordedViewing(false);
-    hasRecordedViewingRef.current = false;
-    setWasInterrupted(false);
-
-    if (videoRef.current) {
-      videoRef.current.addEventListener("timeupdate", handleTimeUpdate);
-      videoRef.current.addEventListener("loadedmetadata", handleLoadedMetadata);
-      videoRef.current.addEventListener("durationchange", handleLoadedMetadata);
-      videoRef.current.addEventListener("canplay", handleLoadedMetadata);
-      videoRef.current.addEventListener("ended", handleVideoEnd);
-    }
-
-    // iOS Safari pauses videos when page visibility changes - handle resume
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible' && videoRef.current) {
-        if (videoRef.current.paused && !videoRef.current.ended && isPlayingRef.current) {
-          console.log("Page visible again, resuming video...");
-          videoRef.current.play().catch((err) => {
-            console.log("Resume on visibility change failed:", err);
-          });
-        }
-      }
-    };
-    
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-
-    return () => {
-      if (videoRef.current) {
-        videoRef.current.removeEventListener("timeupdate", handleTimeUpdate);
-        videoRef.current.removeEventListener("loadedmetadata", handleLoadedMetadata);
-        videoRef.current.removeEventListener("durationchange", handleLoadedMetadata);
-        videoRef.current.removeEventListener("canplay", handleLoadedMetadata);
-        videoRef.current.removeEventListener("ended", handleVideoEnd);
-      }
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-    };
-  }, [videoUrl]);
-
-  const handleTimeUpdate = () => {
-    if (!videoRef.current) return;
-
-    setCurrentTime(videoRef.current.currentTime);
-  };
-
-  const handleLoadedMetadata = () => {
-    if (videoRef.current) {
-      let dur = videoRef.current.duration;
-      // Fallback to seekable range if duration is not finite
-      if (!Number.isFinite(dur) || dur <= 0) {
-        if (videoRef.current.seekable.length > 0) {
-          dur = videoRef.current.seekable.end(videoRef.current.seekable.length - 1);
-        }
-      }
-      if (dur && Number.isFinite(dur) && dur > 0) {
-        setDuration(dur);
-      }
-    }
-  };
-
-  const handleVideoEnd = () => {
-    setIsPlaying(false);
-    isPlayingRef.current = false;
-
-    if (!hasRecordedViewingRef.current) {
-      hasRecordedViewingRef.current = true;
-      setHasRecordedViewing(true);
-
-      // Only count completion when the video truly ends.
-      // (Manual pauses force a restart via togglePlay, so an uninterrupted end is required.)
-      void recordViewing(Math.floor(videoRef.current?.duration ?? duration));
-
-      toast({
-        title: "Mind Movie completed",
-        description: "Completion recorded.",
-      });
-    }
-
-    // Show Three Things prompt after video ends
-    setShowThreeThings(true);
-    loadTodaysTasks();
-  };
-
   // Load today's tasks
-  const loadTodaysTasks = async () => {
+  const loadTodaysTasks = useCallback(async () => {
     if (!user) return;
     setIsLoadingTasks(true);
 
@@ -148,7 +64,92 @@ export const TheaterView = ({ onClose }: TheaterViewProps) => {
       setTasks(data);
     }
     setIsLoadingTasks(false);
-  };
+  }, [user]);
+
+  // Video event handling - all listeners are defined and cleaned up in one effect
+  useEffect(() => {
+    setHasRecordedViewing(false);
+    hasRecordedViewingRef.current = false;
+    setWasInterrupted(false);
+    setCurrentTime(0);
+    setDuration(0);
+
+    const video = videoRef.current;
+    if (!video) return;
+
+    const onTimeUpdate = () => {
+      setCurrentTime(video.currentTime);
+    };
+
+    const onLoadedMetadata = () => {
+      let dur = video.duration;
+      if (!Number.isFinite(dur) || dur <= 0) {
+        if (video.seekable.length > 0) {
+          dur = video.seekable.end(video.seekable.length - 1);
+        }
+      }
+      if (dur && Number.isFinite(dur) && dur > 0) {
+        setDuration(dur);
+      }
+    };
+
+    const onEnded = () => {
+      setIsPlaying(false);
+      isPlayingRef.current = false;
+
+      if (!hasRecordedViewingRef.current) {
+        hasRecordedViewingRef.current = true;
+        setHasRecordedViewing(true);
+        void recordViewing(Math.floor(video.duration || 0));
+        toast({
+          title: "Mind Movie completed",
+          description: "Completion recorded.",
+        });
+      }
+      setShowThreeThings(true);
+      loadTodaysTasks();
+    };
+
+    const onPlay = () => {
+      setIsPlaying(true);
+      isPlayingRef.current = true;
+    };
+
+    const onPause = () => {
+      setIsPlaying(false);
+      if (video.ended) {
+        isPlayingRef.current = false;
+      }
+    };
+
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && isPlayingRef.current) {
+        if (video.paused && !video.ended) {
+          video.play().catch(() => { /* silent */ });
+        }
+      }
+    };
+
+    video.addEventListener("timeupdate", onTimeUpdate);
+    video.addEventListener("loadedmetadata", onLoadedMetadata);
+    video.addEventListener("durationchange", onLoadedMetadata);
+    video.addEventListener("canplay", onLoadedMetadata);
+    video.addEventListener("ended", onEnded);
+    video.addEventListener("play", onPlay);
+    video.addEventListener("pause", onPause);
+    document.addEventListener("visibilitychange", onVisibilityChange);
+
+    return () => {
+      video.removeEventListener("timeupdate", onTimeUpdate);
+      video.removeEventListener("loadedmetadata", onLoadedMetadata);
+      video.removeEventListener("durationchange", onLoadedMetadata);
+      video.removeEventListener("canplay", onLoadedMetadata);
+      video.removeEventListener("ended", onEnded);
+      video.removeEventListener("play", onPlay);
+      video.removeEventListener("pause", onPause);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+    };
+  }, [videoUrl, recordViewing, toast, loadTodaysTasks]);
 
   // Add a task
   const addTask = async () => {
@@ -207,45 +208,29 @@ export const TheaterView = ({ onClose }: TheaterViewProps) => {
   };
 
   const togglePlay = async () => {
-    if (videoRef.current) {
-      if (isPlaying) {
-        videoRef.current.pause();
+    const video = videoRef.current;
+    if (!video) return;
+
+    if (isPlaying) {
+      video.pause();
+      setIsPlaying(false);
+      isPlayingRef.current = false;
+      setWasInterrupted(true);
+    } else {
+      try {
+        if (wasInterrupted && video.currentTime > 0) {
+          video.currentTime = 0;
+          setCurrentTime(0);
+          setWasInterrupted(false);
+        }
+
+        await video.play();
+        setIsPlaying(true);
+        isPlayingRef.current = true;
+      } catch (err) {
+        console.log("Play failed:", err);
         setIsPlaying(false);
         isPlayingRef.current = false;
-
-        // Manual pause counts as an interruption: must restart from the beginning.
-        setWasInterrupted(true);
-      } else {
-        try {
-          // If previously interrupted, force a full restart (must watch all the way through).
-          if (wasInterrupted && videoRef.current.currentTime > 0) {
-            videoRef.current.currentTime = 0;
-            setCurrentTime(0);
-            setWasInterrupted(false);
-          }
-
-          // iOS requires load() to be called after suspend events
-          if (videoRef.current.readyState < 3) {
-            videoRef.current.load();
-          }
-          await videoRef.current.play();
-          setIsPlaying(true);
-          isPlayingRef.current = true;
-        } catch (err) {
-          console.error("Play failed:", err);
-          // Try loading and playing again
-          videoRef.current.load();
-          try {
-            await videoRef.current.play();
-            setIsPlaying(true);
-            isPlayingRef.current = true;
-          } catch (retryErr) {
-            console.error("Retry play failed:", retryErr);
-            // Ensure the UI doesn't stay stuck in "playing" state if iOS blocks autoplay resume.
-            setIsPlaying(false);
-            isPlayingRef.current = false;
-          }
-        }
       }
     }
   };
@@ -261,11 +246,9 @@ export const TheaterView = ({ onClose }: TheaterViewProps) => {
     const playerEl = playerRef.current;
     const videoEl = videoRef.current;
 
-    // Detect iOS (iPhone, iPad, iPod, or iPad with desktop mode)
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
                   (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
-    // iOS Safari specific path - only webkitEnterFullscreen works on video elements
     if (isIOS && videoEl) {
       const anyVideo = videoEl as unknown as { 
         webkitEnterFullscreen?: () => void;
@@ -289,8 +272,6 @@ export const TheaterView = ({ onClose }: TheaterViewProps) => {
       return;
     }
 
-    // Standard path for Android/Desktop
-    // If we're already in fullscreen, exit.
     if (document.fullscreenElement) {
       try {
         await document.exitFullscreen();
@@ -300,7 +281,6 @@ export const TheaterView = ({ onClose }: TheaterViewProps) => {
       return;
     }
 
-    // Prefer fullscreen on the container so controls/layout fill the screen.
     if (playerEl?.requestFullscreen) {
       try {
         await playerEl.requestFullscreen();
@@ -310,7 +290,6 @@ export const TheaterView = ({ onClose }: TheaterViewProps) => {
       }
     }
 
-    // Fallback to video fullscreen when supported.
     if (videoEl?.requestFullscreen) {
       try {
         await videoEl.requestFullscreen();
@@ -328,10 +307,9 @@ export const TheaterView = ({ onClose }: TheaterViewProps) => {
     return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
 
-  const handleUploadComplete = (url: string) => {
+  const handleUploadComplete = () => {
     setShowUploader(false);
   };
-
 
   const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
 
@@ -351,7 +329,6 @@ export const TheaterView = ({ onClose }: TheaterViewProps) => {
           </div>
 
           <div className="flex items-center gap-2 sm:gap-4">
-            {/* Streak Counter */}
             <div className="flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-1.5 sm:py-2 rounded-lg bg-gradient-to-r from-amber-soft/20 to-cinematic-red/20 border border-amber-soft/30">
               <Flame className={cn("w-4 h-4 sm:w-5 sm:h-5 text-amber-soft", streak > 0 && "streak-fire")} />
               <span className="font-display text-lg sm:text-xl text-foreground">{streak}</span>
@@ -364,9 +341,9 @@ export const TheaterView = ({ onClose }: TheaterViewProps) => {
           </div>
         </div>
 
-        {/* Video Player Area - Responsive with full-width on mobile */}
-          <div className="flex-1 flex items-center justify-center p-2 sm:p-4 md:p-8 relative overflow-hidden">
-            <div ref={playerRef} className="theater-player w-full h-full sm:h-auto sm:max-w-5xl sm:aspect-video rounded-lg sm:rounded-xl bg-card border border-border overflow-hidden relative group">
+        {/* Video Player Area */}
+        <div className="flex-1 flex items-center justify-center p-2 sm:p-4 md:p-8 relative overflow-hidden">
+          <div ref={playerRef} className="theater-player w-full h-full sm:h-auto sm:max-w-5xl sm:aspect-video rounded-lg sm:rounded-xl bg-card border border-border overflow-hidden relative group">
             {videoUrl ? (
               <>
                 <video
@@ -377,25 +354,10 @@ export const TheaterView = ({ onClose }: TheaterViewProps) => {
                   webkit-playsinline="true"
                   controls={false}
                   onClick={togglePlay}
-                  preload="auto"
-                  onCanPlayThrough={() => {
-                    console.log("Video can play through - fully buffered");
-                  }}
-                  onProgress={() => {
-                    // Silent buffering progress tracking
-                  }}
+                  preload="metadata"
                   onError={(e) => {
                     const video = e.currentTarget;
                     const mediaError = video.error;
-                    console.error("Video error:", {
-                      code: mediaError?.code,
-                      message: mediaError?.message,
-                      networkState: video.networkState,
-                      readyState: video.readyState,
-                      src: video.src?.substring(0, 100)
-                    });
-                    
-                    // Only show error toast for critical errors, not transient issues
                     if (mediaError?.code === MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED || 
                         mediaError?.code === MediaError.MEDIA_ERR_DECODE) {
                       toast({
@@ -405,50 +367,11 @@ export const TheaterView = ({ onClose }: TheaterViewProps) => {
                       });
                     }
                   }}
-                  onStalled={() => {
-                    // Do NOT aggressively retry on stall - let browser handle buffering
-                    console.log("Video stalled - waiting for buffer");
-                  }}
-                  onSuspend={() => {
-                    // iOS Safari aggressively suspends video downloads
-                    // Only attempt resume if we're supposed to be playing AND video is truly paused
-                    if (videoRef.current && isPlayingRef.current) {
-                      const video = videoRef.current;
-                      // Add a small delay to let iOS settle before attempting resume
-                      if (video.paused && !video.ended && video.readyState >= 2) {
-                        setTimeout(() => {
-                          if (videoRef.current && isPlayingRef.current && videoRef.current.paused) {
-                            console.log("Resuming suspended video after delay...");
-                            videoRef.current.play().catch(() => {
-                              // Silent catch - don't reload on failed resume
-                            });
-                          }
-                        }, 300);
-                      }
-                    }
-                  }}
-                  onWaiting={() => {
-                    // Silent - buffering in progress
-                  }}
-                  onPlay={() => {
-                    setIsPlaying(true);
-                    isPlayingRef.current = true;
-                  }}
-                  onPause={() => {
-                    // Always reflect the paused UI state.
-                    setIsPlaying(false);
-
-                    // If we've actually ended, clear the playing ref.
-                    if (videoRef.current?.ended) {
-                      isPlayingRef.current = false;
-                    }
-                  }}
                 />
 
-                {/* Video Controls Overlay - Always visible on mobile, hover on desktop */}
+                {/* Video Controls Overlay */}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
                   <div className="absolute bottom-0 left-0 right-0 p-3 sm:p-6 pointer-events-auto">
-                    {/* Progress bar */}
                     <div 
                       className="h-2 sm:h-1 bg-muted rounded-full mb-3 sm:mb-4 overflow-hidden cursor-default touch-none"
                     >
@@ -491,7 +414,6 @@ export const TheaterView = ({ onClose }: TheaterViewProps) => {
                   </div>
                 </div>
 
-                {/* Viewing recorded badge */}
                 {hasRecordedViewing && (
                   <div className="absolute top-2 right-2 sm:top-4 sm:right-4 flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1 sm:py-2 rounded-lg bg-green-500/20 border border-green-500/30">
                     <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4 text-green-500" />
@@ -500,7 +422,6 @@ export const TheaterView = ({ onClose }: TheaterViewProps) => {
                 )}
               </>
             ) : (
-              /* Placeholder for no video */
               <div className="absolute inset-0 bg-gradient-to-br from-cinematic-charcoal to-cinematic-midnight flex items-center justify-center p-4">
                 <div className="text-center">
                   <Film className="w-12 h-12 sm:w-16 sm:h-16 text-muted-foreground mx-auto mb-3 sm:mb-4 opacity-50" />
@@ -524,7 +445,7 @@ export const TheaterView = ({ onClose }: TheaterViewProps) => {
           </div>
         </div>
 
-        {/* Three Things Panel - appears after video ends */}
+        {/* Three Things Panel */}
         {showThreeThings && (
           <div className="absolute inset-0 z-10 bg-cinematic-midnight/95 backdrop-blur-sm flex items-center justify-center animate-fade-in p-4">
             <div className="w-full max-w-xl p-4 sm:p-8 rounded-2xl bg-card border border-gold/30 shadow-2xl max-h-[90vh] overflow-y-auto">
@@ -540,7 +461,6 @@ export const TheaterView = ({ onClose }: TheaterViewProps) => {
                 </p>
               </div>
 
-              {/* Tasks List */}
               <div className="space-y-2 sm:space-y-3 mb-4">
                 {isLoadingTasks ? (
                   <div className="flex items-center justify-center py-6">
@@ -581,7 +501,6 @@ export const TheaterView = ({ onClose }: TheaterViewProps) => {
                 )}
               </div>
 
-              {/* Add Task Input */}
               {tasks.length < 3 && (
                 <div className="flex gap-2 mb-4 sm:mb-6">
                   <Input
@@ -597,7 +516,6 @@ export const TheaterView = ({ onClose }: TheaterViewProps) => {
                 </div>
               )}
 
-              {/* Progress indicator */}
               <div className="flex items-center justify-center gap-2 mb-4 sm:mb-6">
                 {[1, 2, 3].map((num) => (
                   <div
@@ -610,7 +528,6 @@ export const TheaterView = ({ onClose }: TheaterViewProps) => {
                 <span className="text-xs sm:text-sm text-muted-foreground ml-2">{tasks.length}/3 set</span>
               </div>
 
-              {/* Action Buttons */}
               <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 justify-center">
                 <Button
                   variant="outline"
@@ -633,7 +550,7 @@ export const TheaterView = ({ onClose }: TheaterViewProps) => {
           </div>
         )}
 
-        {/* Bottom Actions - Responsive */}
+        {/* Bottom Actions */}
         <div className="p-3 sm:p-6 border-t border-border/50">
           <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
             <p className="text-muted-foreground text-xs sm:text-sm text-center sm:text-left hidden sm:block">
@@ -662,7 +579,6 @@ export const TheaterView = ({ onClose }: TheaterViewProps) => {
         </div>
       </div>
 
-      {/* Video Uploader Modal */}
       {showUploader && (
         <VideoUploader
           currentVideoUrl={videoUrl || null}
@@ -671,7 +587,6 @@ export const TheaterView = ({ onClose }: TheaterViewProps) => {
         />
       )}
 
-      {/* AI Media Studio Modal */}
       <MediaStudio
         open={showMediaStudio}
         onOpenChange={setShowMediaStudio}
