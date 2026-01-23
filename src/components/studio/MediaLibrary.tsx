@@ -1,13 +1,15 @@
 import { useEffect, useState, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Progress } from "@/components/ui/progress";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Image, Video, Clock, AlertCircle, Loader2, Download, Trash2, HardDrive, X, ChevronLeft, ChevronRight, RefreshCw, Mic2, Clapperboard, Music, Plus, ArrowUpDown, Share2, Radio } from "lucide-react";
+import { Image, Video, Clock, AlertCircle, Loader2, Download, Trash2, HardDrive, X, ChevronLeft, ChevronRight, RefreshCw, Mic2, Clapperboard, Music, Plus, ArrowUpDown, Share2, Radio, ListMusic } from "lucide-react";
 import { useMediaGeneration, GeneratedMedia } from "@/hooks/useMediaGeneration";
 import { useStorageUsage } from "@/hooks/useStorageUsage";
+import { useUserPlaylists } from "@/hooks/useUserPlaylists";
 import { formatDistanceToNow } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -18,7 +20,7 @@ import { ShareToCommunityDialog } from "@/components/sharing/ShareToCommunityDia
 import { SubmitToRadioDialog } from "./SubmitToRadioDialog";
 
 interface MediaLibraryProps {
-  filter?: "image" | "video" | "all";
+  filter?: "image" | "video" | "all" | "audio";
   onSelect?: (media: GeneratedMedia) => void;
   onAddToTimeline?: (media: GeneratedMedia) => void;
   onAddMultipleToTimeline?: (media: GeneratedMedia[]) => void;
@@ -35,6 +37,7 @@ function formatBytes(bytes: number): string {
 }
 
 export function MediaLibrary({ filter = "all", onSelect, onAddToTimeline, onAddMultipleToTimeline }: MediaLibraryProps) {
+  const navigate = useNavigate();
   const [history, setHistory] = useState<GeneratedMedia[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
@@ -46,12 +49,62 @@ export function MediaLibrary({ filter = "all", onSelect, onAddToTimeline, onAddM
   const [filterType, setFilterType] = useState<"all" | "video" | "image" | "audio">("all");
   const [shareDialogMedia, setShareDialogMedia] = useState<GeneratedMedia | null>(null);
   const [radioSubmitMedia, setRadioSubmitMedia] = useState<GeneratedMedia | null>(null);
+  const [isAddingToScore, setIsAddingToScore] = useState(false);
   const { fetchGenerationHistory } = useMediaGeneration();
   const { toast } = useToast();
   const { user, loading: authLoading } = useAuth();
+  const { getDefaultPlaylist, addTrackToPlaylist } = useUserPlaylists();
 
   // Use real storage calculation
   const { usage, calculateUsage, isLoading: storageLoading } = useStorageUsage();
+
+  // Add audio track to The Score (user's personal playlist)
+  const handleAddToScore = async (media: GeneratedMedia) => {
+    if (!media.media_url || media.media_type !== 'audio') return;
+    
+    setIsAddingToScore(true);
+    try {
+      const playlist = await getDefaultPlaylist();
+      if (!playlist) {
+        toast({
+          title: "Error",
+          description: "Could not find or create a playlist",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Extract title from metadata or prompt
+      const metadata = media.metadata as Record<string, any> | null;
+      const title = metadata?.title || media.prompt?.slice(0, 50) || "Untitled Track";
+      
+      await addTrackToPlaylist(playlist.id, {
+        title,
+        audio_url: media.media_url,
+        source_type: 'generated',
+        source_id: media.id,
+        metadata: {
+          ...metadata,
+          generated_media_id: media.id,
+          model_used: media.model_used,
+        },
+      });
+
+      toast({
+        title: "Added to The Score!",
+        description: `"${title}" has been added to your playlist.`,
+      });
+    } catch (error) {
+      console.error('Error adding to score:', error);
+      toast({
+        title: "Failed to add",
+        description: "Could not add track to your playlist",
+        variant: "destructive",
+      });
+    } finally {
+      setIsAddingToScore(false);
+    }
+  };
 
   // Load history when user becomes available
   useEffect(() => {
@@ -345,6 +398,21 @@ export function MediaLibrary({ filter = "all", onSelect, onAddToTimeline, onAddM
                     alt="" 
                     className="max-w-full max-h-[40vh] object-contain"
                   />
+                ) : lightboxMedia.media_type === "audio" ? (
+                  <div className="flex flex-col items-center justify-center gap-4 p-8">
+                    <div className="w-24 h-24 rounded-xl bg-gradient-to-br from-gold/30 to-amber-600/30 flex items-center justify-center">
+                      <Music className="w-12 h-12 text-gold" />
+                    </div>
+                    <p className="text-lg font-medium text-center">
+                      {(lightboxMedia.metadata as Record<string, any>)?.title || "Audio Track"}
+                    </p>
+                    <audio 
+                      src={lightboxMedia.media_url!} 
+                      controls 
+                      autoPlay
+                      className="w-full max-w-md"
+                    />
+                  </div>
                 ) : (
                   <video 
                     src={lightboxMedia.media_url!} 
@@ -407,6 +475,23 @@ export function MediaLibrary({ filter = "all", onSelect, onAddToTimeline, onAddM
                       >
                         <Radio className="h-4 w-4 mr-2" />
                         Submit to Radio
+                      </Button>
+                    )}
+                    {/* Add to Score Button - Audio only */}
+                    {lightboxMedia.media_type === "audio" && lightboxMedia.media_url && (
+                      <Button
+                        size="sm"
+                        variant="default"
+                        className="bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700"
+                        onClick={() => handleAddToScore(lightboxMedia)}
+                        disabled={isAddingToScore}
+                      >
+                        {isAddingToScore ? (
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        ) : (
+                          <ListMusic className="h-4 w-4 mr-2" />
+                        )}
+                        Add to The Score
                       </Button>
                     )}
                     <Button
@@ -598,6 +683,13 @@ export function MediaLibrary({ filter = "all", onSelect, onAddToTimeline, onAddM
                   {item.status === "completed" && item.media_url ? (
                     item.media_type === "image" ? (
                       <img src={item.media_url} alt="" className="w-full h-full object-cover" />
+                    ) : item.media_type === "audio" ? (
+                      <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-gold/20 to-amber-600/20">
+                        <Music className="h-10 w-10 text-gold/80" />
+                        <span className="text-xs text-gold/80 mt-2 px-2 text-center truncate max-w-full">
+                          {(item.metadata as Record<string, any>)?.title?.slice(0, 20) || "Track"}
+                        </span>
+                      </div>
                     ) : (
                       <video src={item.media_url} className="w-full h-full object-cover" />
                     )

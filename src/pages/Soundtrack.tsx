@@ -178,14 +178,25 @@ export default function Soundtrack() {
               <h1 className="text-xl font-display tracking-wide">Soundtrack Studio</h1>
             </div>
           </div>
-          <Button 
-            variant="outline" 
-            size="sm"
-            onClick={() => navigate("/actions")}
-          >
-            <Library className="w-4 h-4 mr-2" />
-            My Library
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => navigate("/score")}
+              className="border-gold/30 text-gold hover:bg-gold/10"
+            >
+              <Music className="w-4 h-4 mr-2" />
+              The Score
+            </Button>
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => navigate("/actions")}
+            >
+              <Library className="w-4 h-4 mr-2" />
+              Media Library
+            </Button>
+          </div>
         </div>
       </header>
 
@@ -425,7 +436,26 @@ export default function Soundtrack() {
                         isSavedToLibrary={song.isSavedToLibrary}
                       />
                     )}
-                    {!song.soundtrackUrl && isGeneratingMusic && (
+                    {/* Error state - Content Policy Violation or Failed */}
+                    {!song.soundtrackUrl && (song.generationStatus === 'Content Policy Error' || song.generationStatus === 'Failed' || song.generationStatus === 'Error') && (
+                      <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-6">
+                        <div className="flex items-center gap-4">
+                          <div className="w-16 h-16 rounded-lg bg-destructive/20 flex items-center justify-center">
+                            <Music className="h-8 w-8 text-destructive" />
+                          </div>
+                          <div className="flex-1">
+                            <h4 className="font-medium text-destructive">Generation Failed</h4>
+                            <p className="text-sm text-muted-foreground mt-1">
+                              {song.generationStatus === 'Content Policy Error' 
+                                ? 'Your lyrics contain words that violate the music service policy. Please edit your lyrics and try again with different wording.'
+                                : 'There was an error generating your song. Please try again.'}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    {/* Loading state */}
+                    {!song.soundtrackUrl && !['Content Policy Error', 'Failed', 'Error'].includes(song.generationStatus || '') && isGeneratingMusic && (
                       <div className="bg-card border border-border rounded-lg p-6">
                         <div className="flex items-center gap-4">
                           <div className="w-16 h-16 rounded-lg bg-primary/10 flex items-center justify-center">
