@@ -1,15 +1,17 @@
-import { Flame, TrendingUp, Sparkles, Snowflake, ThermometerSnowflake } from "lucide-react";
+import { Flame, TrendingUp, Sparkles, Snowflake, ThermometerSnowflake, RotateCcw } from "lucide-react";
 import { InfoTooltip } from "@/components/ui/info-tooltip";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
 
 interface StreakBannerProps {
   streak: number;
   bestStreak: number;
   lastActiveDate?: string | null;
+  onKutReset?: () => void;
 }
 
-export const StreakBanner = ({ streak, bestStreak, lastActiveDate }: StreakBannerProps) => {
+export const StreakBanner = ({ streak, bestStreak, lastActiveDate, onKutReset }: StreakBannerProps) => {
   const isMobile = useIsMobile();
   const [isVisible, setIsVisible] = useState(false);
 
@@ -39,41 +41,47 @@ export const StreakBanner = ({ streak, bestStreak, lastActiveDate }: StreakBanne
 
   return (
     <div 
-      className={`glass-card p-4 cinematic-border flex items-center justify-between relative overflow-hidden group transition-all duration-500 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}
-      style={{ 
-        boxShadow: isHot && streak > 0 
-          ? '0 0 20px rgba(245, 158, 11, 0.15), inset 0 0 30px rgba(245, 158, 11, 0.05)' 
-          : isCold 
-            ? '0 0 20px rgba(56, 189, 248, 0.15), inset 0 0 30px rgba(56, 189, 248, 0.05)'
-            : undefined,
-      }}
+      className={`glass-card p-4 cinematic-border flex items-center justify-between relative overflow-hidden group transition-all duration-500 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'} ${isCold ? 'animate-frost-pulse' : isHot && streak > 0 ? 'animate-fire-glow' : ''}`}
     >
-      {/* Animated background - hot or cold */}
-      {isHot && streak > 0 && (
-        <div className="absolute inset-0 bg-gradient-to-r from-amber-soft/5 via-transparent to-amber-soft/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-      )}
+      {/* Frost overlay for cold state */}
       {isCold && (
-        <div className="absolute inset-0 bg-gradient-to-r from-sky-400/5 via-transparent to-cyan-400/5 opacity-60 animate-pulse" />
+        <div className="absolute inset-0 bg-gradient-to-b from-sky-400/10 via-cyan-400/5 to-blue-500/10 animate-frost-creep pointer-events-none" />
       )}
       
-      {/* Floating sparkles for hot streak */}
+      {/* Ice shimmer effect */}
+      {status === 'frozen' && (
+        <div className="absolute inset-0 animate-ice-shimmer pointer-events-none" />
+      )}
+
+      {/* Fire gradient for hot state */}
+      {isHot && streak > 0 && (
+        <div className="absolute inset-0 bg-gradient-to-t from-amber-500/10 via-orange-400/5 to-red-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
+      )}
+      
+      {/* Floating embers for hot streak */}
       {isHot && streak > 0 && (
         <>
-          <Sparkles className="absolute top-2 right-20 w-3 h-3 text-amber-soft/40 animate-pulse" />
-          <Sparkles className="absolute bottom-3 right-32 w-2 h-2 text-gold/30 animate-pulse" style={{ animationDelay: '0.5s' }} />
+          <div className="absolute bottom-0 left-[20%] w-1.5 h-1.5 rounded-full bg-amber-500/60 animate-ember-float" style={{ animationDelay: '0s' }} />
+          <div className="absolute bottom-0 left-[40%] w-1 h-1 rounded-full bg-orange-400/50 animate-ember-float" style={{ animationDelay: '0.5s' }} />
+          <div className="absolute bottom-0 left-[60%] w-1 h-1 rounded-full bg-red-400/40 animate-ember-float" style={{ animationDelay: '1s' }} />
+          <div className="absolute bottom-0 left-[75%] w-1.5 h-1.5 rounded-full bg-amber-400/50 animate-ember-float" style={{ animationDelay: '1.5s' }} />
+          <Sparkles className="absolute top-2 right-20 w-3 h-3 text-amber-500/50 animate-pulse" />
+          <Sparkles className="absolute bottom-3 right-32 w-2 h-2 text-gold/40 animate-pulse" style={{ animationDelay: '0.5s' }} />
         </>
       )}
 
-      {/* Floating snowflakes for cold streak */}
+      {/* Falling snowflakes for cold streak */}
       {isCold && (
         <>
-          <Snowflake className="absolute top-2 right-16 w-3 h-3 text-sky-400/50 animate-bounce" style={{ animationDuration: '2s' }} />
-          <Snowflake className="absolute bottom-2 right-28 w-2 h-2 text-cyan-300/40 animate-bounce" style={{ animationDelay: '0.7s', animationDuration: '2.5s' }} />
-          <Snowflake className="absolute top-3 right-36 w-2 h-2 text-blue-300/30 animate-bounce" style={{ animationDelay: '1.2s', animationDuration: '3s' }} />
+          <Snowflake className="absolute top-0 left-[15%] w-3 h-3 text-sky-400/60 animate-snowfall-drift" style={{ animationDelay: '0s' }} />
+          <Snowflake className="absolute top-0 left-[35%] w-2 h-2 text-cyan-300/50 animate-snowfall-drift" style={{ animationDelay: '0.8s' }} />
+          <Snowflake className="absolute top-0 left-[55%] w-2.5 h-2.5 text-blue-300/40 animate-snowfall-drift" style={{ animationDelay: '1.6s' }} />
+          <Snowflake className="absolute top-0 left-[75%] w-2 h-2 text-sky-300/50 animate-snowfall-drift" style={{ animationDelay: '2.4s' }} />
           {status === 'frozen' && (
             <>
-              <Snowflake className="absolute top-4 left-20 w-2 h-2 text-sky-300/40 animate-bounce" style={{ animationDelay: '0.3s', animationDuration: '2.2s' }} />
-              <Snowflake className="absolute bottom-3 left-32 w-3 h-3 text-cyan-400/30 animate-bounce" style={{ animationDelay: '1s', animationDuration: '2.8s' }} />
+              <Snowflake className="absolute top-0 left-[25%] w-2 h-2 text-cyan-400/40 animate-snowfall-drift" style={{ animationDelay: '0.4s' }} />
+              <Snowflake className="absolute top-0 left-[65%] w-3 h-3 text-blue-400/50 animate-snowfall-drift" style={{ animationDelay: '1.2s' }} />
+              <Snowflake className="absolute top-0 left-[85%] w-2 h-2 text-sky-300/40 animate-snowfall-drift" style={{ animationDelay: '2s' }} />
             </>
           )}
         </>
@@ -82,13 +90,13 @@ export const StreakBanner = ({ streak, bestStreak, lastActiveDate }: StreakBanne
       <div className="flex items-center gap-3 sm:gap-4 relative z-10">
         <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center transition-transform duration-300 group-hover:scale-110 ${
           isHot && streak > 0 
-            ? 'bg-gradient-to-br from-amber-soft/20 to-cinematic-red/20 animate-pulse' 
+            ? 'bg-gradient-to-br from-amber-500/30 to-red-500/20' 
             : isCold 
-              ? 'bg-gradient-to-br from-sky-400/20 to-cyan-500/20'
+              ? 'bg-gradient-to-br from-sky-400/30 to-cyan-500/20'
               : 'bg-gradient-to-br from-muted/30 to-muted/10'
         }`}>
           {isHot && streak > 0 ? (
-            <Flame className="w-5 h-5 sm:w-6 sm:h-6 text-amber-soft streak-fire" />
+            <Flame className="w-5 h-5 sm:w-6 sm:h-6 text-amber-500 animate-flame-flicker" />
           ) : isCold ? (
             <ThermometerSnowflake className={`w-5 h-5 sm:w-6 sm:h-6 text-sky-400 ${status === 'frozen' ? 'animate-pulse' : ''}`} />
           ) : (
@@ -97,10 +105,10 @@ export const StreakBanner = ({ streak, bestStreak, lastActiveDate }: StreakBanne
         </div>
         <div>
           <div className="flex items-center gap-2">
-            <p className={`text-xs sm:text-sm uppercase tracking-wider ${
-              isCold ? 'text-sky-400' : 'text-muted-foreground'
+            <p className={`text-xs sm:text-sm uppercase tracking-wider font-medium ${
+              isCold ? 'text-sky-400' : isHot && streak > 0 ? 'text-amber-500' : 'text-muted-foreground'
             }`}>
-              {status === 'frozen' ? '❄️ Streak Frozen' : status === 'cold' ? '🥶 Streak Cooling' : 'Current Streak'}
+              {status === 'frozen' ? '❄️ Streak Frozen' : status === 'cold' ? '🥶 Streak Cooling' : status === 'hot' ? '🔥 On Fire!' : 'Current Streak'}
             </p>
             <InfoTooltip content={
               isCold 
@@ -110,22 +118,34 @@ export const StreakBanner = ({ streak, bestStreak, lastActiveDate }: StreakBanne
           </div>
           <p className={`text-xl sm:text-2xl font-display transition-colors duration-300 ${
             isHot && streak > 0 
-              ? 'text-foreground group-hover:text-amber-soft' 
+              ? 'text-amber-500 group-hover:text-amber-400' 
               : isCold 
                 ? 'text-sky-400'
                 : 'text-muted-foreground'
           }`}>
-            {streak} Days {isCold && <span className="text-sm text-muted-foreground">(inactive)</span>}
+            {streak} Days {isCold && <span className="text-sm text-sky-400/70">(inactive)</span>}
           </p>
           {isCold && (
             <p className="text-xs text-sky-400/70 mt-0.5">
-              {status === 'frozen' ? "Complete tasks today to thaw your streak!" : "Take action today to heat things up!"}
+              {status === 'frozen' ? "You're frozen! KUT reset and get back on script!" : "Take action today to heat things up!"}
             </p>
           )}
         </div>
       </div>
       
-      <div className="flex items-center gap-4 relative z-10">
+      <div className="flex items-center gap-3 relative z-10">
+        {/* KUT Reset Button - Only shows when cold */}
+        {isCold && onKutReset && (
+          <Button
+            onClick={onKutReset}
+            size="sm"
+            className="bg-gradient-to-r from-sky-500 to-cyan-500 hover:from-sky-400 hover:to-cyan-400 text-white font-bold text-xs px-3 py-1 h-auto shadow-lg shadow-sky-500/20 animate-pulse"
+          >
+            <RotateCcw className="w-3 h-3 mr-1" />
+            KUT
+          </Button>
+        )}
+        
         <div className="text-right">
           <div className="flex items-center gap-1 justify-end text-muted-foreground">
             <TrendingUp className="w-4 h-4" />

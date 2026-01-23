@@ -307,7 +307,7 @@ export function ChallengeStoryboardWizard({
   const parseVisualizationScript = useCallback(() => {
     if (!visualizationScript) return [];
     
-    const labels = ["The Challenge", "The CUT! Moment", "Transformed Response", "Victory"];
+    const labels = ["The Challenge", "The KUT! Moment", "Transformed Response", "Victory"];
     
     if (Array.isArray(visualizationScript)) {
       return visualizationScript.map((item, i) => ({
@@ -520,8 +520,8 @@ PRODUCTION QUALITY:
     
     if (label.includes("challenge")) {
       return `Slow push in on the character's face as tension builds. Their expression shifts from uncertainty to determination. Subtle camera movement creates dramatic atmosphere. Character breathes deeply, preparing to embody ${trait}.`;
-    } else if (label.includes("cut")) {
-      return `Quick dolly out creating visual separation. Character pauses, takes a conscious breath. Lighting shifts subtly as they mentally detach from reactive patterns. Hand gesture or body language shows conscious choice to "CUT!" the old script.`;
+    } else if (label.includes("kut")) {
+      return `Quick dolly out creating visual separation. Character pauses, takes a conscious breath. Lighting shifts subtly as they mentally detach from reactive patterns. Hand gesture or body language shows conscious choice to "KUT!" the old script.`;
     } else if (label.includes("transformed") || label.includes("response")) {
       return `Smooth tracking shot following character's confident movement. Body language transforms to embody ${trait}. Camera circles subtly, capturing the moment of authentic response. Expression shows calm strength and clarity.`;
     } else if (label.includes("victory")) {

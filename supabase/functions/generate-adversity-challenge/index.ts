@@ -88,7 +88,7 @@ Return JSON with these fields:
     },
     {
       "scene": 2,
-      "title": "The CUT! Moment",
+      "title": "The KUT! Moment",
       "description": "The protagonist pauses, takes a breath. EXTREME CLOSE-UP on eyes showing clarity emerging. DUTCH ANGLE to signify pattern break.",
       "cameraWork": "Extreme close-up, dutch angle, rim lighting from behind",
       "nlpOverlay": "You naturally pause, accessing your higher self..."

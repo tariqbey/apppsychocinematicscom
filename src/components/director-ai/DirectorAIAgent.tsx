@@ -730,11 +730,11 @@ export function DirectorAIAgent({ isOpen, onClose, chiefAim }: DirectorAIAgentPr
     }
   };
 
-  const handleCut = () => {
+  const handleKut = () => {
     stopSpeaking();
     stopListening();
     setVoiceEnabled(false);
-    streamChat("CUT! I need to reset. Walk me through the CUT technique right now - help me Recognize what's happening, Cut the scene, Reset my state, and Resume as my Director Character.");
+    streamChat("KUT! I need to reset. Walk me through the KUT technique right now - help me Recognize what's happening, Kut the scene, Reset my state, and Resume as my Director Character.");
   };
 
   if (!isOpen) return null;
@@ -915,15 +915,15 @@ export function DirectorAIAgent({ isOpen, onClose, chiefAim }: DirectorAIAgentPr
               STOP & EXIT
             </Button>
 
-            {/* CUT! Button */}
+            {/* KUT! Button */}
             <Button
               variant="destructive"
-              onClick={handleCut}
+              onClick={handleKut}
               disabled={isLoading}
               className="bg-cinematic-red hover:bg-cinematic-red/90 text-white font-bold px-6"
             >
               <Zap className="w-4 h-4 mr-2" />
-              CUT!
+              KUT!
             </Button>
 
             {/* TTS Toggle */}

@@ -48,8 +48,8 @@ export const NAPOLEON_HILL_17_LAWS = {
   7: {
     name: "Self-Control",
     law: "The person who cannot control themselves cannot lead others or achieve lasting success. Master your reactions.",
-    application: "CUT! before reacting. Self-mastery is the foundation of all other mastery. This IS the CUT! technique.",
-    coachingPrompt: "CUT! Pause. Breathe. You're the Director, not the character being swept by emotion.",
+    application: "KUT! before reacting. Self-mastery is the foundation of all other mastery. This IS the KUT! technique.",
+    coachingPrompt: "KUT! Pause. Breathe. You're the Director, not the character being swept by emotion.",
     quote: "Self-control is solely a matter of thought control."
   },
   8: {
@@ -214,7 +214,7 @@ export const SUCCESS_PRINCIPLES_KB = {
     temptation: {
       scenario: "Old habits call you back",
       oldPattern: "Rationalize, give in 'just this once', lose momentum",
-      transformedResponse: "Recognize the test. Apply Law #7: Self-Control. CUT! Does this serve your Final Scene?",
+      transformedResponse: "Recognize the test. Apply Law #7: Self-Control. KUT! Does this serve your Final Scene?",
       affirmation: "I choose temporary discomfort over permanent regret. Each resistance makes me stronger."
     },
     failure: {
@@ -230,7 +230,7 @@ export const SUCCESS_PRINCIPLES_KB = {
     return {
       response: `Apply Law #${lawNumber} (${law.name}): ${law.coachingPrompt}`,
       affirmation: law.quote,
-      visualPrompt: `The Director faces the challenge. They pause - the CUT! moment. They apply ${law.name}. ${law.application}`
+      visualPrompt: `The Director faces the challenge. They pause - the KUT! moment. They apply ${law.name}. ${law.application}`
     };
   }
 };

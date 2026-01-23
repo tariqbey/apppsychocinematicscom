@@ -183,7 +183,7 @@ export const CINEMATOGRAPHY_TECHNIQUES = {
       name: "Dutch Angle (Tilted)",
       description: "Camera tilted on its axis",
       psychologicalEffect: "Disruption, transformation, breaking old patterns",
-      useFor: ["CUT! moments", "Pattern interrupts", "Paradigm shifts"],
+      useFor: ["KUT! moments", "Pattern interrupts", "Paradigm shifts"],
       prompt: "dynamic dutch angle, tilted frame suggesting transformation"
     },
     overTheShoulder: {

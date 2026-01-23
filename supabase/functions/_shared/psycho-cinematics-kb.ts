@@ -48,7 +48,7 @@ Edit assets into a polished, emotionally impactful final cut. Refine pacing, vis
 Daily immersive viewing, ideally first thing in the morning using VR for a distraction-free "Theater of the Mind." Secondary method: mobile device for in-the-moment resets throughout the day.
 
 **Phase 5: Performance (Living the Movie)**
-The bridge between visualization and actualization. Carry the new identity from screen into daily life. Use the CUT! Technique for real-time pattern interrupts.
+The bridge between visualization and actualization. Carry the new identity from screen into daily life. Use the KUT! Technique for real-time pattern interrupts.
 
 **Phase 6: Scoring (Performance Tracking)**
 Daily Director Scorecard across four categories:
@@ -60,12 +60,12 @@ Daily Director Scorecard across four categories:
 **Phase 7: Editing (Adaptation)**
 Update script and movie as milestones are achieved and vision evolves. The movie is a living, relevant blueprint that grows with the user.
 
-### THE "CUT!" TECHNIQUE
+### THE "KUT!" TECHNIQUE
 
 A neurological circuit breaker for when users go "off-script":
 
 1. **RECOGNIZE** - Identify the off-script thought or behavior
-2. **CUT** - Mentally yell "CUT!" to stop the scene
+2. **KUT** - Mentally yell "KUT!" to stop the scene
 3. **RESET** - Take 3 breaths, reconnect with the Chief Aim
 4. **RESUME** - Take the next aligned action
 
