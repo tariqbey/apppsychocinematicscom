@@ -325,7 +325,44 @@ const Index = () => {
           />
 
           {/* ========== DEFINITE CHIEF AIM STATEMENT ========== */}
-          <DefiniteChiefAimCard aim={chiefAim} onEdit={() => setShowChiefAimWizard(true)} />
+          <DefiniteChiefAimCard 
+            aim={chiefAim} 
+            onEdit={() => setShowChiefAimWizard(true)} 
+            chiefAimSongUrl={profile?.chief_aim_song_url}
+            onSongListened={async () => {
+              // Mark script_review as complete when song is listened to
+              if (!user) return;
+              const today = new Date().toISOString().split('T')[0];
+              
+              // Check if record exists first
+              const { data: existing } = await supabase
+                .from("daily_rituals")
+                .select("id, chief_aim_listened")
+                .eq("user_id", user.id)
+                .eq("ritual_date", today)
+                .maybeSingle();
+              
+              if (existing) {
+                if (!existing.chief_aim_listened) {
+                  await supabase
+                    .from("daily_rituals")
+                    .update({ script_review: true, chief_aim_listened: true })
+                    .eq("user_id", user.id)
+                    .eq("ritual_date", today);
+                }
+              } else {
+                await supabase
+                  .from("daily_rituals")
+                  .insert({
+                    user_id: user.id,
+                    ritual_date: today,
+                    script_review: true,
+                    chief_aim_listened: true,
+                  });
+              }
+              toast.success("Chief Aim ritual complete! 🎵");
+            }}
+          />
 
           {/* ========== 1. DEFINITE CHIEF AIM CREATOR MODULE ========== */}
           <button

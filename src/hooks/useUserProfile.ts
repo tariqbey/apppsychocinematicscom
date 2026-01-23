@@ -22,6 +22,7 @@ export interface UserProfile {
   chief_aim_by_when: string | null;
   chief_aim_exchange: string | null;
   chief_aim_plan: string | null;
+  chief_aim_song_url?: string | null;
   current_act: string | null;
   mind_movie_url: string | null;
   current_streak: number | null;
