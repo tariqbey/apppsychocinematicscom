@@ -37,9 +37,12 @@ type ViewType = "front" | "side" | "back";
 interface Props {
   referencePhotoUrl: string | null;
   onHeroImageGenerated?: (urls: { front: string; side: string; back: string }) => void;
+  onDescriptionChange?: (desc: CharacterDescription) => void;
+  onGenerateStyleSheet?: () => void;
+  isGeneratingStyleSheet?: boolean;
 }
 
-export function CharacterDescriptionForm({ referencePhotoUrl, onHeroImageGenerated }: Props) {
+export function CharacterDescriptionForm({ referencePhotoUrl, onHeroImageGenerated, onDescriptionChange, onGenerateStyleSheet, isGeneratingStyleSheet }: Props) {
   const { user } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -63,6 +66,11 @@ export function CharacterDescriptionForm({ referencePhotoUrl, onHeroImageGenerat
       fetchCharacterDescription();
     }
   }, [user]);
+
+  // Notify parent when description changes
+  useEffect(() => {
+    onDescriptionChange?.(description);
+  }, [description, onDescriptionChange]);
 
   const fetchCharacterDescription = async () => {
     if (!user) return;
