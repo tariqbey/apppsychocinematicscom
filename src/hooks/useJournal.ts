@@ -2,6 +2,7 @@ import { useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
 import { useToast } from "./use-toast";
+import { usePointsContext } from "@/contexts/PointsContext";
 
 export interface JournalEntry {
   id: string;
@@ -44,6 +45,7 @@ export const TAG_OPTIONS = [
 export function useJournal() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { triggerRecalculation } = usePointsContext();
   const [entries, setEntries] = useState<JournalEntry[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -104,6 +106,9 @@ export function useJournal() {
 
       const typedData = data as unknown as JournalEntry;
       setEntries(prev => [typedData, ...prev]);
+
+      // Update points in near-real-time (debounced in provider)
+      void triggerRecalculation();
       
       toast({
         title: "Entry saved",
@@ -143,7 +148,7 @@ export function useJournal() {
       });
       return null;
     }
-  }, [user, toast]);
+  }, [user, toast, triggerRecalculation]);
 
   const updateEntry = useCallback(async (id: string, updates: Partial<JournalEntry>) => {
     if (!user) return null;
@@ -161,6 +166,8 @@ export function useJournal() {
 
       const typedData = data as unknown as JournalEntry;
       setEntries(prev => prev.map(e => e.id === id ? typedData : e));
+
+      void triggerRecalculation();
       
       return typedData;
     } catch (error) {
@@ -172,7 +179,7 @@ export function useJournal() {
       });
       return null;
     }
-  }, [user, toast]);
+  }, [user, toast, triggerRecalculation]);
 
   const deleteEntry = useCallback(async (id: string) => {
     if (!user) return false;
@@ -187,6 +194,8 @@ export function useJournal() {
       if (error) throw error;
 
       setEntries(prev => prev.filter(e => e.id !== id));
+
+      void triggerRecalculation();
       
       toast({
         title: "Entry deleted",
@@ -203,7 +212,7 @@ export function useJournal() {
       });
       return false;
     }
-  }, [user, toast]);
+  }, [user, toast, triggerRecalculation]);
 
   const analyzeEntry = useCallback(async (entryId: string) => {
     if (!user) return null;
