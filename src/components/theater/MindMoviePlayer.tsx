@@ -66,6 +66,26 @@ export const MindMoviePlayer = forwardRef<MindMoviePlayerHandle, MindMoviePlayer
       );
     }, []);
 
+    const prefersNoHover = useMemo(() => {
+      if (typeof window === "undefined" || !window.matchMedia) return false;
+      return window.matchMedia("(hover: none)").matches;
+    }, []);
+
+    const shouldShowControlsAlways = isIOS || prefersNoHover;
+
+    // iOS Safari is extremely sensitive to imperfect Range/206 responses.
+    // Route storage URLs through our Range-safe proxy automatically.
+    const effectiveSrc = useMemo(() => {
+      if (!isIOS) return src;
+      if (!src) return src;
+      if (src.includes("/functions/v1/video-proxy")) return src;
+      if (!src.includes("/storage/v1/object/")) return src;
+
+      const baseUrl = import.meta.env.VITE_SUPABASE_URL;
+      if (!baseUrl) return src;
+      return `${baseUrl}/functions/v1/video-proxy?url=${encodeURIComponent(src)}`;
+    }, [isIOS, src]);
+
     // Playback state
     const [isPlaying, setIsPlaying] = useState(false);
     const [isMuted, setIsMuted] = useState(false);
@@ -182,7 +202,7 @@ export const MindMoviePlayer = forwardRef<MindMoviePlayerHandle, MindMoviePlayer
         video.removeEventListener("error", handleError);
       };
       // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [src]); // only re-bind when src changes
+    }, [effectiveSrc]); // only re-bind when src changes
 
     // Escape to exit widescreen overlay
     useEffect(() => {
@@ -274,7 +294,7 @@ export const MindMoviePlayer = forwardRef<MindMoviePlayerHandle, MindMoviePlayer
 
         <video
           ref={videoRef}
-          src={src}
+          src={effectiveSrc}
           className="theater-video w-full h-full object-contain"
           playsInline
           webkit-playsinline="true"
@@ -287,7 +307,12 @@ export const MindMoviePlayer = forwardRef<MindMoviePlayerHandle, MindMoviePlayer
 
         {/* Custom controls overlay */}
         {!nativeControls && (
-          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 sm:opacity-100 transition-opacity duration-300 pointer-events-none">
+          <div
+            className={cn(
+              "absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent transition-opacity duration-300 pointer-events-none",
+              shouldShowControlsAlways ? "opacity-100" : "opacity-0 group-hover:opacity-100 sm:opacity-100"
+            )}
+          >
             <div className="absolute bottom-0 left-0 right-0 p-3 sm:p-6 pointer-events-auto">
               {/* Progress bar (non-interactive when seeking disabled) */}
               <div

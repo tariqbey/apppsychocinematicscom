@@ -15,6 +15,11 @@ const corsHeaders = {
   "Access-Control-Expose-Headers": "Content-Length, Content-Range, Accept-Ranges",
 };
 
+// iOS Safari often requests `Range: bytes=0-` and expects the server to return a
+// reasonably sized 206 chunk (not the entire remaining file). Returning huge
+// bodies can cause stalls or abrupt stops on mobile.
+const MAX_CHUNK_BYTES = 2 * 1024 * 1024; // 2MB per request
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -78,7 +83,13 @@ serve(async (req) => {
       }
 
       const start = parseInt(rangeMatch[1], 10);
-      const end = rangeMatch[2] ? parseInt(rangeMatch[2], 10) : contentLength - 1;
+      let end = rangeMatch[2] ? parseInt(rangeMatch[2], 10) : contentLength - 1;
+
+      // Cap chunk size to keep mobile Safari stable
+      if (!Number.isFinite(end) || end <= 0) {
+        end = contentLength - 1;
+      }
+      end = Math.min(end, start + MAX_CHUNK_BYTES - 1, contentLength - 1);
 
       if (start >= contentLength || end >= contentLength) {
         return new Response(null, {
@@ -106,6 +117,7 @@ serve(async (req) => {
           "Content-Length": actualLength.toString(),
           "Content-Range": `bytes ${start}-${end}/${contentLength}`,
           "Accept-Ranges": "bytes",
+          "Vary": "Range",
           "Cache-Control": "public, max-age=86400",
         },
       });
