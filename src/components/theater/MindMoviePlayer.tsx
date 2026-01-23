@@ -110,11 +110,17 @@ export const MindMoviePlayer = forwardRef<MindMoviePlayerHandle, MindMoviePlayer
 
     // iOS audio watchdog: some devices can resume video after buffering with silent audio.
     const sawBufferingRef = useRef(false);
+    const lastBufferingAtRef = useRef(0);
     const lastAudioBytesRef = useRef<number | null>(null);
     const hasSeenNonZeroAudioBytesRef = useRef(false);
     const lastAudioNudgeAtRef = useRef(0);
     const lastMediaTimeRef = useRef(0);
     const docHiddenRef = useRef(false);
+
+    // Reduce false positives: require consecutive stalled samples before we recover.
+    const audioStallCountRef = useRef(0);
+    const audioRecoveryAttemptsRef = useRef(0);
+    const audioNudgeTimeoutRef = useRef<number | null>(null);
 
     // Refs for stable callbacks
     const hasCompleted = useRef(false);
@@ -164,11 +170,19 @@ export const MindMoviePlayer = forwardRef<MindMoviePlayerHandle, MindMoviePlayer
       setIsMuted(false);
 
       sawBufferingRef.current = false;
+      lastBufferingAtRef.current = 0;
       lastAudioBytesRef.current = null;
       hasSeenNonZeroAudioBytesRef.current = false;
       lastAudioNudgeAtRef.current = 0;
       lastMediaTimeRef.current = 0;
       docHiddenRef.current = typeof document !== "undefined" ? document.hidden : false;
+
+      audioStallCountRef.current = 0;
+      audioRecoveryAttemptsRef.current = 0;
+      if (audioNudgeTimeoutRef.current) {
+        window.clearTimeout(audioNudgeTimeoutRef.current);
+        audioNudgeTimeoutRef.current = null;
+      }
 
       const getAudioDecodedBytes = () => {
         const anyVideo = video as unknown as { webkitAudioDecodedByteCount?: unknown };
@@ -189,20 +203,32 @@ export const MindMoviePlayer = forwardRef<MindMoviePlayerHandle, MindMoviePlayer
       const nudgeAudioPipeline = (reason: string) => {
         // Throttle nudges to avoid Safari instability.
         const now = Date.now();
-        if (now - lastAudioNudgeAtRef.current < 8000) return;
+        if (now - lastAudioNudgeAtRef.current < 12000) return;
         lastAudioNudgeAtRef.current = now;
 
         if (desiredMutedRef.current) return;
 
         try {
-          // iOS Safari: flipping mute + volume is a low-risk way to reinitialize audio output.
-          const prevVol = video.volume;
+          // iOS Safari: a brief mute/unmute is the least disruptive reinit.
+          // Avoid volume manipulation (can cause audible drops + extra events).
           video.muted = true;
-          video.muted = false;
-          video.defaultMuted = false;
-          video.volume = 0;
-          video.volume = prevVol > 0 ? prevVol : 1;
-          setIsMuted(video.muted);
+          video.defaultMuted = true;
+          setIsMuted(true);
+
+          if (audioNudgeTimeoutRef.current) window.clearTimeout(audioNudgeTimeoutRef.current);
+          audioNudgeTimeoutRef.current = window.setTimeout(() => {
+            const v = videoRef.current;
+            if (!v) return;
+            if (desiredMutedRef.current) return;
+            v.muted = false;
+            v.defaultMuted = false;
+            if (v.volume === 0) v.volume = 1;
+            setIsMuted(false);
+            // Re-assert play to help iOS rehydrate the audio pipeline.
+            void v.play().catch(() => {
+              // User can tap play if needed.
+            });
+          }, 120);
         } catch (e) {
           // Never throw from here.
           console.warn("Audio nudge failed", { reason, e });
@@ -246,10 +272,12 @@ export const MindMoviePlayer = forwardRef<MindMoviePlayerHandle, MindMoviePlayer
 
       const handleWaiting = () => {
         sawBufferingRef.current = true;
+        lastBufferingAtRef.current = Date.now();
       };
 
       const handleStalled = () => {
         sawBufferingRef.current = true;
+        lastBufferingAtRef.current = Date.now();
       };
 
       const handleVolumeChange = () => {
@@ -257,9 +285,10 @@ export const MindMoviePlayer = forwardRef<MindMoviePlayerHandle, MindMoviePlayer
         setIsMuted(video.muted);
 
         // iOS can sometimes flip muted during route changes / interruptions.
-        if (!desiredMutedRef.current && video.muted) {
+        if (!desiredMutedRef.current && (video.muted || video.volume === 0)) {
           video.muted = false;
           video.defaultMuted = false;
+          if (video.volume === 0) video.volume = 1;
           setIsMuted(false);
         }
       };
@@ -277,8 +306,10 @@ export const MindMoviePlayer = forwardRef<MindMoviePlayerHandle, MindMoviePlayer
         }
 
         // If the pause was not user-requested, attempt a gentle resume.
-        // This helps with iOS/network-induced pauses that otherwise look like "stops".
-        if (!userPaused && !video.ended && video.currentTime > 0.5) {
+        // IMPORTANT: only do this if we *just* buffered; otherwise we can create
+        // play/pause loops that feel like "stuttering".
+        const recentlyBuffered = Date.now() - (lastBufferingAtRef.current || 0) < 2500;
+        if (!userPaused && recentlyBuffered && !video.ended && video.currentTime > 0.5) {
           if (autoResumeTimeoutRef.current) window.clearTimeout(autoResumeTimeoutRef.current);
           autoResumeTimeoutRef.current = window.setTimeout(() => {
             // Only resume if we are still paused and the user didn't mute/stop intentionally.
@@ -356,9 +387,21 @@ export const MindMoviePlayer = forwardRef<MindMoviePlayerHandle, MindMoviePlayer
           const timeAdvanced = video.currentTime - (lastMediaTimeRef.current || 0);
           const bytesStalled = bytes === lastAudioBytesRef.current;
 
-          // If video is advancing but audio decoding bytes are not, audio may be silent.
-          if (timeAdvanced > 1 && bytesStalled) {
-            nudgeAudioPipeline("watchdog");
+          // Require consecutive stalled samples before nudging.
+          if (video.currentTime > 2 && timeAdvanced > 0.9 && bytesStalled) {
+            audioStallCountRef.current += 1;
+          } else {
+            audioStallCountRef.current = 0;
+            audioRecoveryAttemptsRef.current = 0;
+          }
+
+          if (audioStallCountRef.current >= 2) {
+            audioStallCountRef.current = 0;
+            audioRecoveryAttemptsRef.current += 1;
+
+            // Step 1: gentle nudge. Step 2+: nudge again (throttled).
+            // We avoid programmatic reload/seek here because it can be more unstable than silence.
+            nudgeAudioPipeline(audioRecoveryAttemptsRef.current > 1 ? "watchdog-repeat" : "watchdog");
           }
         }
 
@@ -383,6 +426,7 @@ export const MindMoviePlayer = forwardRef<MindMoviePlayerHandle, MindMoviePlayer
       return () => {
         if (hideControlsTimeoutRef.current) window.clearTimeout(hideControlsTimeoutRef.current);
         if (autoResumeTimeoutRef.current) window.clearTimeout(autoResumeTimeoutRef.current);
+        if (audioNudgeTimeoutRef.current) window.clearTimeout(audioNudgeTimeoutRef.current);
         window.clearInterval(audioWatchdogInterval);
         video.removeEventListener("loadedmetadata", handleLoadedMetadata);
         video.removeEventListener("durationchange", handleLoadedMetadata);
