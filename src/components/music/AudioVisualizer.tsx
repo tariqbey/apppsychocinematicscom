@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { cn } from '@/lib/utils';
 
 interface AudioVisualizerProps {
@@ -251,6 +251,7 @@ function adjustColorOpacity(color: string, opacity: number): string {
 }
 
 // Simpler bars-only visualizer for inline use (doesn't need audio context)
+// Now supports flexible sizing and more bars for a fuller look
 export function SimpleWaveformBars({
   isPlaying,
   className,
@@ -260,22 +261,42 @@ export function SimpleWaveformBars({
   className?: string;
   barCount?: number;
 }) {
+  // Pre-compute random-ish offsets for more organic motion
+  const barOffsets = useMemo(() => {
+    return Array.from({ length: barCount }).map((_, i) => ({
+      phase: (i / barCount) * Math.PI * 2,
+      speed: 0.8 + Math.random() * 0.4,
+      amplitude: 0.3 + Math.random() * 0.4,
+    }));
+  }, [barCount]);
+
+  const [tick, setTick] = useState(0);
+
+  useEffect(() => {
+    if (!isPlaying) return;
+    const interval = setInterval(() => setTick((t) => t + 1), 100);
+    return () => clearInterval(interval);
+  }, [isPlaying]);
+
   return (
-    <div className={cn('flex items-end gap-0.5 h-4', className)}>
-      {Array.from({ length: barCount }).map((_, i) => (
-        <div
-          key={i}
-          className={cn(
-            'w-1 bg-gold rounded-full transition-all duration-150',
-            isPlaying ? 'animate-pulse' : 'h-1',
-          )}
-          style={{
-            height: isPlaying ? `${40 + Math.sin(i) * 30}%` : '25%',
-            animationDelay: `${i * 0.1}s`,
-            animationDuration: isPlaying ? '0.4s' : '0s',
-          }}
-        />
-      ))}
+    <div className={cn('flex items-end justify-center gap-[2px] h-4 w-full', className)}>
+      {barOffsets.map((bar, i) => {
+        const time = tick * 0.1;
+        const wave = isPlaying
+          ? Math.abs(Math.sin(time * bar.speed + bar.phase)) * bar.amplitude + 0.2
+          : 0.15;
+        return (
+          <div
+            key={i}
+            className="flex-1 max-w-2 bg-gradient-to-t from-gold to-amber-soft rounded-full transition-all duration-100"
+            style={{
+              height: `${wave * 100}%`,
+              minHeight: 2,
+              boxShadow: isPlaying ? '0 0 4px rgba(212, 175, 55, 0.5)' : undefined,
+            }}
+          />
+        );
+      })}
     </div>
   );
 }

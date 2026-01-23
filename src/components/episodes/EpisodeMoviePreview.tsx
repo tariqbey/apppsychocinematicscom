@@ -1,9 +1,35 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Film, Play, X, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { MindMoviePlayer } from "@/components/theater/MindMoviePlayer";
 import { supabase } from "@/integrations/supabase/client";
+
+// iOS detection for proxy routing
+const useIsIOS = () => {
+  return useMemo(() => {
+    if (typeof navigator === "undefined") return false;
+    return (
+      /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+      (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)
+    );
+  }, []);
+};
+
+// Route iOS storage URLs through the proxy for stable Range/206 responses
+const useProxiedUrl = (url: string | null | undefined) => {
+  const isIOS = useIsIOS();
+  return useMemo(() => {
+    if (!url) return null;
+    if (!isIOS) return url;
+    if (url.includes("/functions/v1/video-proxy")) return url;
+    if (!url.includes("/storage/v1/object/")) return url;
+
+    const baseUrl = import.meta.env.VITE_SUPABASE_URL;
+    if (!baseUrl) return url;
+    return `${baseUrl}/functions/v1/video-proxy?url=${encodeURIComponent(url)}`;
+  }, [url, isIOS]);
+};
 
 interface EpisodeMoviePreviewProps {
   scriptId: string;
@@ -136,7 +162,9 @@ interface MoviePreviewDialogProps {
 }
 
 function MoviePreviewDialog({ open, onClose, movie }: MoviePreviewDialogProps) {
-  if (!movie?.movie_url) return null;
+  const proxiedUrl = useProxiedUrl(movie?.movie_url);
+
+  if (!proxiedUrl) return null;
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
@@ -145,7 +173,7 @@ function MoviePreviewDialog({ open, onClose, movie }: MoviePreviewDialogProps) {
           <div className="flex items-center justify-between">
             <DialogTitle className="text-white flex items-center gap-2">
               <Film className="w-5 h-5 text-gold" />
-              {movie.title || "Episode Movie"}
+              {movie?.title || "Episode Movie"}
             </DialogTitle>
             <Button
               variant="ghost"
@@ -160,7 +188,7 @@ function MoviePreviewDialog({ open, onClose, movie }: MoviePreviewDialogProps) {
 
         <div className="pt-14 aspect-video">
           <MindMoviePlayer
-            src={movie.movie_url}
+            src={proxiedUrl}
             disableSeeking={false}
             restartOnInterrupt={false}
             className="w-full h-full"

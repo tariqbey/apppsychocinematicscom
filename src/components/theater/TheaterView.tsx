@@ -65,7 +65,13 @@ export const TheaterView = ({ onClose }: TheaterViewProps) => {
   const playbackSrc = useMemo(() => {
     if (!videoUrl) return null;
     if (!isIOS) return videoUrl;
+    // Already proxied?
+    if (videoUrl.includes("/functions/v1/video-proxy")) return videoUrl;
+    // Only proxy storage URLs
+    if (!videoUrl.includes("/storage/v1/object/")) return videoUrl;
+
     const baseUrl = import.meta.env.VITE_SUPABASE_URL;
+    if (!baseUrl) return videoUrl;
     return `${baseUrl}/functions/v1/video-proxy?url=${encodeURIComponent(videoUrl)}`;
   }, [videoUrl, isIOS]);
 

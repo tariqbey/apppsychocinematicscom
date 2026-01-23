@@ -501,13 +501,13 @@ export const DefiniteChiefAimCard = ({ aim, onEdit, chiefAimSongUrl, onSongListe
                   </div>
                 </div>
                 
-                {/* Waveform Visualizer - only show when song exists */}
+                {/* Waveform Visualizer - LARGE, fills module area */}
                 {chiefAimSongUrl && (
-                  <div className="h-8 w-full rounded-lg bg-black/20 overflow-hidden flex items-center justify-center px-2">
+                  <div className="h-16 sm:h-20 w-full rounded-xl bg-gradient-to-br from-black/30 to-purple-900/20 overflow-hidden flex items-center justify-center px-3 border border-purple-500/20">
                     <SimpleWaveformBars 
                       isPlaying={isPlaying} 
-                      barCount={24}
-                      className="h-6"
+                      barCount={32}
+                      className="h-12 sm:h-16 w-full"
                     />
                   </div>
                 )}
