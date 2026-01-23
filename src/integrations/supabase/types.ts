@@ -668,6 +668,7 @@ export type Database = {
           created_at: string
           evening_review: boolean
           id: string
+          journal_entry: boolean | null
           morning_screening: boolean
           ritual_date: string
           script_review: boolean
@@ -679,6 +680,7 @@ export type Database = {
           created_at?: string
           evening_review?: boolean
           id?: string
+          journal_entry?: boolean | null
           morning_screening?: boolean
           ritual_date?: string
           script_review?: boolean
@@ -690,6 +692,7 @@ export type Database = {
           created_at?: string
           evening_review?: boolean
           id?: string
+          journal_entry?: boolean | null
           morning_screening?: boolean
           ritual_date?: string
           script_review?: boolean
@@ -2177,6 +2180,15 @@ export type Database = {
           p_user_id: string
         }
         Returns: Json
+      }
+      calculate_activity_streak: {
+        Args: { p_user_id: string }
+        Returns: {
+          best_streak: number
+          current_streak: number
+          days_inactive: number
+          last_activity_date: string
+        }[]
       }
       get_leaderboard: {
         Args: never

@@ -23,6 +23,7 @@ import { EpisodeWizard } from "@/components/episodes/EpisodeWizard";
 import { EpisodeCharacterDashboard } from "@/components/dashboard/EpisodeCharacterDashboard";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserProfile } from "@/hooks/useUserProfile";
+import { useActivityStreak } from "@/hooks/useActivityStreak";
 import { useGamification } from "@/hooks/useGamification";
 import { useMindMovies, MindMovie } from "@/hooks/useMindMovies";
 import { useEpisodes } from "@/hooks/useEpisodes";
@@ -77,6 +78,7 @@ const Index = () => {
   const { showOnboarding, completeOnboarding, closeOnboarding } = useOnboarding(user?.id);
   const { createNewMovie } = useMindMovies();
   const { activeEpisode, loading: episodesLoading, updateEpisode } = useEpisodes();
+  const { currentStreak, bestStreak, lastActivityDate, daysInactive } = useActivityStreak();
   const [showEpisodeWizard, setShowEpisodeWizard] = useState(false);
   const [showTestimonialDialog, setShowTestimonialDialog] = useState(false);
   const [showStoryboardWizard, setShowStoryboardWizard] = useState(false);
@@ -163,9 +165,6 @@ const Index = () => {
 
   const currentAct = profile?.current_act || "Act I: The Director Emerges";
   const dayNumber = profile?.day_number || 1;
-  const streak = profile?.current_streak || 0;
-  const bestStreak = profile?.best_streak || 0;
-  const lastActiveDate = profile?.last_viewing_date || null;
 
   // Phase progress checks
   const chiefAimComplete = Boolean(
@@ -306,7 +305,13 @@ const Index = () => {
 
           {/* Streak Banner - Right after Production Status */}
           <div className="animate-slide-up" style={{ animationDelay: "0.15s" }}>
-            <StreakBanner streak={streak} bestStreak={bestStreak} lastActiveDate={lastActiveDate} onKutReset={() => setShowCutReset(true)} />
+            <StreakBanner 
+              streak={currentStreak} 
+              bestStreak={bestStreak} 
+              lastActiveDate={lastActivityDate} 
+              daysInactive={daysInactive}
+              onKutReset={() => setShowCutReset(true)} 
+            />
           </div>
 
           {/* ========== DAILY RITUAL - FRONT AND CENTER ========== */}
@@ -316,6 +321,7 @@ const Index = () => {
             onEveningMindMovieClick={() => {
               setShowTheater(true);
             }}
+            onJournalClick={() => setShowJournal(true)}
           />
 
           {/* ========== DEFINITE CHIEF AIM STATEMENT ========== */}
