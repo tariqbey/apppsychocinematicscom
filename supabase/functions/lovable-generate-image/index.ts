@@ -77,9 +77,7 @@ serve(async (req) => {
       userId: userId.substring(0, 8) 
     });
 
-    const hasReferencePhoto = images && images.length > 0;
-    
-    // Check if user has an approved style sheet to include as additional reference
+    // Check if user has an approved style sheet - this is the PRIMARY reference for character consistency
     let styleSheetUrl: string | null = null;
     let characterDesc = "";
     
@@ -94,16 +92,20 @@ serve(async (req) => {
         
         if (profile?.style_sheet_approved && profile?.character_style_sheet_url) {
           styleSheetUrl = profile.character_style_sheet_url as string;
-          console.log("Using approved style sheet for consistency");
+          console.log("Using approved style sheet as primary character reference");
         }
         
-        // Build character description from profile
+        // Build character description from profile - ALWAYS include for consistency
         const descParts: string[] = [];
         if (profile?.character_height) descParts.push(`${profile.character_height} tall`);
         if (profile?.character_build) descParts.push(`${profile.character_build} build`);
         if (profile?.character_weight) descParts.push(`${profile.character_weight}`);
         if (profile?.character_features) descParts.push(profile.character_features as string);
         characterDesc = descParts.join(", ");
+        
+        if (characterDesc) {
+          console.log("Character description loaded:", characterDesc.substring(0, 50));
+        }
       } catch (err) {
         console.error("Failed to fetch style sheet:", err);
       }
@@ -112,32 +114,32 @@ serve(async (req) => {
     // Build the message content
     let messageContent: any[];
     
-    if (hasReferencePhoto) {
-      // Reference photo mode: Generate a NEW scene featuring the person from the reference photo
-      const imageUrl = images[0];
-      console.log("Reference photo mode - image URL:", imageUrl.substring(0, 50));
-      
-      // Create a comprehensive cinematic prompt with detailed camera specifications
-      // Build aspect ratio instruction
-      // Build explicit dimension requirements
-      const dimensionMap: Record<string, string> = {
-        "16:9": "1920x1080 pixels (WIDE LANDSCAPE)",
-        "9:16": "1080x1920 pixels (TALL PORTRAIT)", 
-        "4:3": "1440x1080 pixels (STANDARD)",
-        "1:1": "1024x1024 pixels (SQUARE)"
-      };
-      const targetDimension = aspect_ratio ? dimensionMap[aspect_ratio] : dimensionMap["16:9"];
-      
-      let enhancedPrompt = `Generate a completely new CINEMATIC IMAGE.
+    // Build explicit dimension requirements
+    const dimensionMap: Record<string, string> = {
+      "16:9": "1920x1080 pixels (WIDE LANDSCAPE)",
+      "9:16": "1080x1920 pixels (TALL PORTRAIT)", 
+      "4:3": "1440x1080 pixels (STANDARD)",
+      "1:1": "1024x1024 pixels (SQUARE)"
+    };
+    const targetDimension = aspect_ratio ? dimensionMap[aspect_ratio] : dimensionMap["16:9"];
+    
+    // Check if prompt likely involves the user's character (not just landscapes/objects)
+    const characterKeywords = ["me", "myself", "i am", "i'm", "my", "character", "person", "man", "woman", "standing", "sitting", "walking", "running", "speaking", "looking", "wearing", "dressed"];
+    const promptLower = prompt.toLowerCase();
+    const involvesCharacter = characterKeywords.some(keyword => promptLower.includes(keyword)) || styleSheetUrl;
+    
+    if (styleSheetUrl && involvesCharacter) {
+      // CHARACTER MODE: Use approved style sheet as the definitive reference
+      let enhancedPrompt = `Generate a completely new CINEMATIC IMAGE featuring the character from the reference style sheet.
 
 **MANDATORY ASPECT RATIO: ${aspect_ratio || "16:9"}**
 **TARGET DIMENSIONS: ${targetDimension}**
 The output image MUST be ${aspect_ratio === "16:9" || aspect_ratio === "4:3" ? "WIDER than it is tall (landscape orientation)" : aspect_ratio === "9:16" ? "TALLER than it is wide (portrait orientation)" : "a perfect square"}.
 
-CRITICAL REQUIREMENTS:
-1. The main character MUST look exactly like the person in the reference photo(s) - same face, same features, same identity
-2. The image dimensions MUST match the specified aspect ratio
-${characterDesc ? `3. Character physical traits: ${characterDesc}` : ""}
+CHARACTER CONSISTENCY REQUIREMENTS (CRITICAL):
+1. The character MUST look exactly like the person in the style sheet reference - same face, same features, same identity
+2. Physical build MUST match: ${characterDesc || "as shown in the style sheet"}
+3. Clothing and accessories can change based on the scene, but facial features and body proportions must remain identical
 
 SCENE TO GENERATE:
 ${prompt}
@@ -147,41 +149,19 @@ PRODUCTION QUALITY:
 - Shallow depth of field with creamy bokeh
 - Natural film grain, professional color grading`;
       
-      // Build message content with reference photo and optionally style sheet
+      // Style sheet is the PRIMARY and ONLY character reference needed
       messageContent = [
-        { 
-          type: "text", 
-          text: enhancedPrompt
-        },
-        { 
-          type: "image_url", 
-          image_url: { url: imageUrl } 
-        }
+        { type: "text", text: enhancedPrompt },
+        { type: "image_url", image_url: { url: styleSheetUrl } }
       ];
       
-      // Add style sheet as second reference if available and approved
-      if (styleSheetUrl) {
-        messageContent.push({
-          type: "image_url",
-          image_url: { url: styleSheetUrl }
-        });
-        console.log("Added approved style sheet as additional reference");
-      }
+      console.log("Character mode: Using style sheet as sole character reference");
     } else {
-      // Build explicit dimension requirements for create mode
-      const dimensionMapCreate: Record<string, string> = {
-        "16:9": "1920x1080 pixels (WIDE LANDSCAPE)",
-        "9:16": "1080x1920 pixels (TALL PORTRAIT)", 
-        "4:3": "1440x1080 pixels (STANDARD)",
-        "1:1": "1024x1024 pixels (SQUARE)"
-      };
-      const targetDimensionCreate = aspect_ratio ? dimensionMapCreate[aspect_ratio] : dimensionMapCreate["16:9"];
-      
-      // For image creation without reference: comprehensive cinematic prompt
+      // NON-CHARACTER MODE: Generate scene without character reference
       let enhancedPrompt = `Generate a CINEMATIC IMAGE with the following specifications:
 
 **MANDATORY ASPECT RATIO: ${aspect_ratio || "16:9"}**
-**TARGET DIMENSIONS: ${targetDimensionCreate}**
+**TARGET DIMENSIONS: ${targetDimension}**
 The output image MUST be ${aspect_ratio === "16:9" || aspect_ratio === "4:3" ? "WIDER than it is tall (landscape orientation)" : aspect_ratio === "9:16" ? "TALLER than it is wide (portrait orientation)" : "a perfect square"}.
 
 SCENE DESCRIPTION:
@@ -192,7 +172,9 @@ REQUIREMENTS:
 - Professional cinematography with volumetric lighting
 - Shallow depth of field, creamy bokeh
 - Natural film grain, Hollywood-grade color grading`;
+      
       messageContent = [{ type: "text", text: enhancedPrompt }];
+      console.log("Non-character mode: Generating scene without character reference");
     }
 
     // Map aspect ratio to pixel dimensions for stricter enforcement
@@ -358,7 +340,7 @@ REQUIREMENTS:
           prompt,
           media_url: finalImageUrl,
           status: "completed",
-          metadata: { aspect_ratio, hasReferencePhoto }
+          metadata: { aspect_ratio, usedStyleSheet: !!styleSheetUrl, characterDesc: characterDesc || null }
         });
       } catch (dbErr) {
         console.error("Failed to save to generated_media");
