@@ -662,6 +662,51 @@ export type Database = {
           },
         ]
       }
+      daily_points: {
+        Row: {
+          bonus_points: number
+          created_at: string
+          id: string
+          journal_points: number
+          penalty_points: number
+          points_date: string
+          ritual_points: number
+          scorecard_points: number
+          task_points: number
+          total_points: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          bonus_points?: number
+          created_at?: string
+          id?: string
+          journal_points?: number
+          penalty_points?: number
+          points_date?: string
+          ritual_points?: number
+          scorecard_points?: number
+          task_points?: number
+          total_points?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          bonus_points?: number
+          created_at?: string
+          id?: string
+          journal_points?: number
+          penalty_points?: number
+          points_date?: string
+          ritual_points?: number
+          scorecard_points?: number
+          task_points?: number
+          total_points?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       daily_rituals: {
         Row: {
           action_execution: boolean
@@ -1313,6 +1358,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      point_transactions: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          metadata: Json | null
+          points: number
+          transaction_date: string
+          transaction_type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          metadata?: Json | null
+          points: number
+          transaction_date?: string
+          transaction_type: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          metadata?: Json | null
+          points?: number
+          transaction_date?: string
+          transaction_type?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       post_comments: {
         Row: {
@@ -2205,6 +2283,31 @@ export type Database = {
           display_name: string
           lifetime_credits: number
           rank: number
+        }[]
+      }
+      get_points_leaderboard: {
+        Args: { time_period?: string }
+        Returns: {
+          avatar_url: string
+          best_streak: number
+          current_streak: number
+          display_name: string
+          rank: number
+          total_points: number
+          user_id: string
+        }[]
+      }
+      get_user_points_summary: {
+        Args: { p_user_id: string; time_period?: string }
+        Returns: {
+          bonus_points: number
+          days_active: number
+          journal_points: number
+          penalty_points: number
+          ritual_points: number
+          scorecard_points: number
+          task_points: number
+          total_points: number
         }[]
       }
       has_role: {
