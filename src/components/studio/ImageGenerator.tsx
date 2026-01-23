@@ -3,7 +3,8 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { Loader2, Sparkles, Download, ImageIcon, Pencil, Film, Wand2, X, Images, LayoutDashboard } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Loader2, Sparkles, Download, ImageIcon, Pencil, Film, Wand2, X, Images, LayoutDashboard, User } from "lucide-react";
 import { useMediaGeneration, VideoModel, MODEL_INFO } from "@/hooks/useMediaGeneration";
 import { ImageUpload } from "./ImageUpload";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -11,6 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useMindMovies } from "@/hooks/useMindMovies";
 import { useGlobalReferencePhoto } from "@/hooks/useGlobalReferencePhoto";
+import { useCharacterStyleSheet } from "@/hooks/useCharacterStyleSheet";
 import { useAuth } from "@/hooks/useAuth";
 
 interface ImageGeneratorProps {
@@ -38,10 +40,21 @@ export function ImageGenerator({
     fetchReferencePhoto,
     isLoading: loadingGlobalPhoto,
   } = useGlobalReferencePhoto();
+
+  // Character style sheet for consistent generation
+  const {
+    styleSheetUrl,
+    isApproved: styleSheetApproved,
+    fetchStyleSheet,
+    isGenerating: loadingStyleSheet,
+  } = useCharacterStyleSheet();
   
   const [mode, setMode] = useState<ImageMode>("create");
   const [prompt, setPrompt] = useState(initialPrompt || "");
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
+  
+  // Character mode toggle - when ON, uses style sheet + character description
+  const [characterModeEnabled, setCharacterModeEnabled] = useState(false);
   
   // Additional reference photos support (the global character reference is automatically included separately)
   const [extraReferencePhotos, setExtraReferencePhotos] = useState<string[]>([]);
@@ -64,10 +77,18 @@ export function ImageGenerator({
     }
   }, [initialPrompt]);
 
-  // Load global character reference photo on mount
+  // Load global character reference photo and style sheet on mount
   useEffect(() => {
     fetchReferencePhoto();
-  }, [fetchReferencePhoto]);
+    fetchStyleSheet();
+  }, [fetchReferencePhoto, fetchStyleSheet]);
+
+  // Auto-enable character mode if style sheet is approved
+  useEffect(() => {
+    if (styleSheetApproved && styleSheetUrl) {
+      setCharacterModeEnabled(true);
+    }
+  }, [styleSheetApproved, styleSheetUrl]);
 
   // Add extra reference photo
   const addExtraReferencePhoto = (url: string) => {
@@ -166,9 +187,14 @@ export function ImageGenerator({
       imagesToUse.push(uploadedImage);
     }
 
-    // Always include the saved global character reference photo (identity) if available
-    if (globalReferencePhoto) {
-      imagesToUse.push(globalReferencePhoto);
+    // Character mode: The backend will automatically use the style sheet when available
+    // We don't need to pass reference images here - the edge function handles it
+    // Only pass extra reference photos for style/wardrobe inspiration
+    if (!characterModeEnabled) {
+      // Legacy mode: include global reference photo if available
+      if (globalReferencePhoto) {
+        imagesToUse.push(globalReferencePhoto);
+      }
     }
     
     // Include any additional reference photos (style/wardrobe/location)
@@ -176,12 +202,13 @@ export function ImageGenerator({
       imagesToUse.push(photo);
     });
 
-    // Enhance prompt with identity + extra references context (keep it short and safe)
+    // Build prompt - character mode is handled server-side via style sheet
     let enhancedPrompt = prompt.trim();
-    if (globalReferencePhoto && mode === "create") {
+    
+    if (!characterModeEnabled && globalReferencePhoto && mode === "create") {
       enhancedPrompt = `Create a new cinematic image featuring the same person as in the character reference photo. ${enhancedPrompt}`;
     }
-    if (globalReferencePhoto && mode === "edit") {
+    if (!characterModeEnabled && globalReferencePhoto && mode === "edit") {
       enhancedPrompt = `Edit the base image according to the request while keeping the person consistent with the character reference photo. ${enhancedPrompt}`;
     }
     if (extraReferencePhotos.length > 0) {
@@ -396,40 +423,58 @@ export function ImageGenerator({
         </div>
       )}
 
-      {/* Reference Images */}
+      {/* Character Mode Toggle */}
+      <div className="space-y-3 p-4 rounded-lg border border-gold/30 bg-gold/5">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-gold to-gold/60 flex items-center justify-center">
+              <User className="w-5 h-5 text-primary-foreground" />
+            </div>
+            <div>
+              <Label className="font-medium">Character Mode</Label>
+              <p className="text-xs text-muted-foreground">
+                Use your style sheet for consistent character appearance
+              </p>
+            </div>
+          </div>
+          <Switch
+            checked={characterModeEnabled}
+            onCheckedChange={setCharacterModeEnabled}
+            disabled={!styleSheetApproved || !styleSheetUrl}
+          />
+        </div>
+
+        {characterModeEnabled && styleSheetUrl && (
+          <div className="flex items-center gap-3 pt-2 border-t border-gold/20">
+            <img
+              src={styleSheetUrl}
+              alt="Your character style sheet"
+              className="w-20 h-20 object-cover rounded-lg border-2 border-gold/50"
+            />
+            <div className="flex-1 text-xs text-muted-foreground">
+              <p className="font-medium text-gold mb-1">✓ Style Sheet Active</p>
+              <p>Your approved style sheet and character description will be used automatically. Clothing can change, but your physical build stays consistent.</p>
+            </div>
+          </div>
+        )}
+
+        {!styleSheetApproved && (
+          <p className="text-xs text-amber-500 flex items-center gap-1">
+            <span>⚠️</span>
+            No approved style sheet. Go to Character Builder to create and approve one.
+          </p>
+        )}
+      </div>
+
+      {/* Additional Reference Images */}
       <div className="space-y-3">
         <Label className="flex items-center gap-2">
           <Images className="h-4 w-4" />
-          Character Reference (Automatic)
+          Additional Reference Images (Optional — up to 5)
         </Label>
-
-        {loadingGlobalPhoto ? (
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <Loader2 className="h-3 w-3 animate-spin" />
-            Loading your saved character reference…
-          </div>
-        ) : globalReferencePhoto ? (
-          <div className="flex items-center gap-3">
-            <img
-              src={globalReferencePhoto}
-              alt="Your character reference"
-              className="w-16 h-16 object-cover rounded-lg border border-border/50"
-            />
-            <div className="text-xs text-muted-foreground">
-              Your saved character reference will be used in every generation (so it stays you).
-            </div>
-          </div>
-        ) : (
-          <p className="text-xs text-muted-foreground">
-            No saved character reference found. Add one in Settings → Reference Photo to lock your likeness into all images.
-          </p>
-        )}
-
-        <div className="pt-2 space-y-2">
-          <Label className="text-sm">Additional Reference Images (Optional — up to 5)</Label>
-          <p className="text-xs text-muted-foreground">
-            Add extra images to influence wardrobe, style, props, or environment.
-          </p>
+        <p className="text-xs text-muted-foreground">
+          Add extra images to influence wardrobe, style, props, or environment.
+        </p>
         
         {/* Display existing extra reference photos */}
         {extraReferencePhotos.length > 0 && (
@@ -463,10 +508,9 @@ export function ImageGenerator({
         )}
         
         <p className="text-xs text-muted-foreground">
-          {globalReferencePhoto ? "Character reference: ON" : "Character reference: OFF"}{" • "}
+          Character mode: {characterModeEnabled ? "ON ✓" : "OFF"}{" • "}
           Additional refs: {extraReferencePhotos.length}/5
         </p>
-        </div>
       </div>
 
       {/* Edit Mode: Image Upload */}
