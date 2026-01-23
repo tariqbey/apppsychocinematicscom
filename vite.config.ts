@@ -49,7 +49,20 @@ export default defineConfig(({ mode }) => ({
         clientsClaim: true,
         runtimeCaching: [
           {
-            urlPattern: /^https:\/\/.*\.supabase\.co\/.*/i,
+            // CRITICAL: never cache media streams.
+            // Caching video/audio responses breaks HTTP Range (206) playback on iOS
+            // and causes freezes/crashes when the player tries to seek/pause.
+            urlPattern: /^https:\/\/.*\.supabase\.co\/storage\/v1\/object\/.*/i,
+            handler: 'NetworkOnly',
+          },
+          {
+            // CRITICAL: never cache the range-safe video proxy.
+            urlPattern: /^https:\/\/.*\.supabase\.co\/functions\/v1\/video-proxy(\?.*)?$/i,
+            handler: 'NetworkOnly',
+          },
+          {
+            // Cache only API-like requests (NOT storage/media)
+            urlPattern: /^https:\/\/.*\.supabase\.co\/(rest|auth|functions)\/v1\/.*/i,
             handler: 'NetworkFirst',
             options: {
               cacheName: 'supabase-api-cache',
