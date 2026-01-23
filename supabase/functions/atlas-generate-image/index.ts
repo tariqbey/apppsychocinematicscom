@@ -84,16 +84,18 @@ serve(async (req) => {
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
     if (!SUPABASE_SERVICE_ROLE_KEY) throw new Error("SUPABASE_SERVICE_ROLE_KEY is not configured");
 
-    const { prompt, aspect_ratio = "1:1", resolution = "2k", images, user_id } = await req.json();
+    const { prompt, aspect_ratio = "1:1", resolution = "2k", images, user_id, character_mode } = await req.json();
 
     if (!prompt) throw new Error("Prompt is required");
 
-    const isEdit = Array.isArray(images) && images.length > 0;
-    const model = isEdit ? "google/nano-banana-pro/edit" : "google/nano-banana-pro/text-to-image";
+    const hasImages = Array.isArray(images) && images.length > 0;
+    // Always use image-to-image when we have reference images
+    const model = hasImages ? "google/nano-banana-pro/edit" : "google/nano-banana-pro/text-to-image";
 
     console.log("Starting Nano Banana Pro image generation:", { 
       prompt: prompt.substring(0, 100),
-      isEdit,
+      hasImages,
+      characterMode: !!character_mode,
       imageCount: images?.length || 0,
       model 
     });
@@ -103,23 +105,65 @@ serve(async (req) => {
     // Build Atlas request
     const generateUrl = "https://api.atlascloud.ai/api/v1/model/generateImage";
     
-    // Build a strong character-locked prompt for edit mode
+    // Fetch character description from user profile when character_mode is enabled
+    let characterDesc = "";
+    if (character_mode && user_id) {
+      try {
+        const { data: profile } = await supabaseAdmin
+          .from("user_profiles")
+          .select("character_height, character_weight, character_build, character_features")
+          .eq("user_id", user_id)
+          .maybeSingle();
+        
+        if (profile) {
+          const descParts: string[] = [];
+          if (profile.character_height) descParts.push(`${profile.character_height} tall`);
+          if (profile.character_build) descParts.push(`${profile.character_build} build`);
+          if (profile.character_weight) descParts.push(`${profile.character_weight}`);
+          if (profile.character_features) descParts.push(profile.character_features as string);
+          characterDesc = descParts.join(", ");
+          console.log("Character description loaded:", characterDesc);
+        }
+      } catch (err) {
+        console.error("Failed to fetch character description:", err);
+      }
+    }
+    
+    // Build the prompt based on mode
     let cleanPrompt = prompt;
-    if (isEdit) {
-      // Comprehensive prompt that forces facial likeness retention
-      cleanPrompt = [
-        "EXACT LIKENESS REQUIRED: Generate an image featuring the EXACT SAME PERSON from the reference photo.",
-        "",
-        "CRITICAL REQUIREMENTS:",
-        "1. The person's FACE must be IDENTICAL to the reference - same bone structure, eyes, nose, mouth, jawline, skin tone, ethnicity.",
-        "2. This is the SAME individual in a new scene, NOT a different person or lookalike.",
-        "3. Preserve their exact age, hair, and distinguishing facial features.",
-        "",
-        "SCENE TO GENERATE:",
-        prompt,
-        "",
-        "PRODUCTION QUALITY: Photorealistic, professional cinematography, volumetric lighting, shallow depth of field."
-      ].join("\n");
+    if (hasImages) {
+      if (character_mode && characterDesc) {
+        // CHARACTER MODE: Use specific physical traits from the user's profile
+        cleanPrompt = [
+          "CHARACTER CONSISTENCY REQUIRED: Generate a NEW CINEMATIC IMAGE of the EXACT SAME PERSON from the reference style sheet.",
+          "",
+          "MANDATORY PHYSICAL TRAITS (DO NOT DEVIATE):",
+          `- ${characterDesc}`,
+          "- The person's FACE, SKIN TONE, ETHNICITY, and BODY PROPORTIONS must be IDENTICAL to the reference.",
+          "- This is the SAME individual in a new scene. Clothing can change, but physical identity CANNOT.",
+          "",
+          "SCENE TO GENERATE:",
+          prompt,
+          "",
+          "PRODUCTION QUALITY: Photorealistic, professional cinematography, volumetric lighting, shallow depth of field, cinematic color grading."
+        ].join("\n");
+        console.log("Using CHARACTER MODE prompt with physical traits");
+      } else {
+        // Standard image-to-image: generic likeness retention
+        cleanPrompt = [
+          "EXACT LIKENESS REQUIRED: Generate an image featuring the EXACT SAME PERSON from the reference photo.",
+          "",
+          "CRITICAL REQUIREMENTS:",
+          "1. The person's FACE must be IDENTICAL to the reference - same bone structure, eyes, nose, mouth, jawline, skin tone, ethnicity.",
+          "2. This is the SAME individual in a new scene, NOT a different person or lookalike.",
+          "3. Preserve their exact age, hair, and distinguishing facial features.",
+          "",
+          "SCENE TO GENERATE:",
+          prompt,
+          "",
+          "PRODUCTION QUALITY: Photorealistic, professional cinematography, volumetric lighting, shallow depth of field."
+        ].join("\n");
+      }
     }
     
     const generateBody: any = {
@@ -132,18 +176,18 @@ serve(async (req) => {
       resolution,
     };
 
-    if (isEdit) {
+    if (hasImages) {
       // Atlas docs for many edit models use `image` (singular). We pass a hosted URL.
       const first = images[0];
       if (typeof first !== "string") throw new Error("Invalid image input");
 
       if (first.startsWith("data:")) {
-        console.log("Edit mode: received data URL, uploading to storage first...");
+        console.log("Image-to-image mode: received data URL, uploading to storage first...");
         const { publicUrl } = await dataUrlToPublicUrl({ supabaseAdmin, dataUrl: first, userId: user_id });
         generateBody.image = publicUrl;
         console.log("Uploaded reference image for Nano Banana:", publicUrl);
       } else {
-        console.log("Edit mode: using provided image URL:", first.substring(0, 50));
+        console.log("Image-to-image mode: using provided image URL:", first.substring(0, 50));
         generateBody.image = first;
       }
     }
@@ -177,7 +221,7 @@ serve(async (req) => {
         prompt,
         status: "processing",
         prediction_id: predictionId,
-        metadata: { aspect_ratio, resolution, mode: isEdit ? "edit" : "create" },
+        metadata: { aspect_ratio, resolution, mode: hasImages ? "image-to-image" : "create", character_mode: !!character_mode },
       });
     }
 
