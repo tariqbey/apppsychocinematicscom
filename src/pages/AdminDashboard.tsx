@@ -14,6 +14,7 @@ import { FeaturedContentManager } from "@/components/admin/FeaturedContentManage
 import { RadioManager } from "@/components/admin/RadioManager";
 import { TestimonialManager } from "@/components/admin/TestimonialManager";
 import { PsychoCinematicsWhitePaper } from "@/components/admin/PsychoCinematicsWhitePaper";
+import { BusinessAnalytics } from "@/components/admin/BusinessAnalytics";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from "recharts";
 import { format, subDays } from "date-fns";
 
@@ -448,6 +449,9 @@ const AdminDashboard = () => {
             </CardContent>
           </Card>
         </div>
+
+        {/* Business Analytics - NEW */}
+        <BusinessAnalytics />
 
         {/* White Paper Download */}
         <PsychoCinematicsWhitePaper />

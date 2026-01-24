@@ -245,12 +245,13 @@ serve(async (req) => {
     }
 
     // Log the transaction (store both credits and dollar amounts for reference)
+    // api_cost_usd stores ACTUAL API cost (not including markup) for accurate profit tracking
     await supabaseClient
       .from("credit_transactions")
       .insert({
         user_id: user.id,
         amount: -creditsToDeduct, // Negative for deductions, in credits
-        api_cost_usd: totalCostDollars, // Total cost including markup
+        api_cost_usd: baseCostDollars, // ACTUAL API cost only (no markup) for profit tracking
         transaction_type: "generation",
         description: `${mediaType} generation - ${creditsToDeduct} credits`,
         media_type: mediaType,
