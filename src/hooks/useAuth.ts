@@ -47,7 +47,13 @@ export const useAuth = () => {
 
   const signOut = async () => {
     const { error } = await supabase.auth.signOut();
-    if (error) throw error;
+    // Don't throw on "session not found" - the user is effectively logged out
+    if (error && error.message !== "Auth session missing!") {
+      throw error;
+    }
+    // Clear local state regardless
+    setUser(null);
+    setSession(null);
   };
 
   const signInWithGoogle = async () => {
