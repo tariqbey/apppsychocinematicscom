@@ -19,6 +19,7 @@ import {
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
+import { Checkbox } from "@/components/ui/checkbox";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 
 interface OnboardingStep {
@@ -99,6 +100,7 @@ interface OnboardingModalProps {
 export const OnboardingModal = ({ isOpen, onClose, onComplete }: OnboardingModalProps) => {
   const [currentStep, setCurrentStep] = useState(0);
   const [isEnablingNotifications, setIsEnablingNotifications] = useState(false);
+  const [dontShowAgain, setDontShowAgain] = useState(false);
   const { isSubscribed, subscribe } = usePushNotifications();
   
   const totalSteps = onboardingSteps.length;
@@ -123,7 +125,7 @@ export const OnboardingModal = ({ isOpen, onClose, onComplete }: OnboardingModal
 
   const handleNext = () => {
     if (isLastStep) {
-      onComplete();
+      onComplete(); // Completing the full tour always saves
     } else {
       setCurrentStep(prev => prev + 1);
     }
@@ -136,7 +138,12 @@ export const OnboardingModal = ({ isOpen, onClose, onComplete }: OnboardingModal
   };
 
   const handleSkip = () => {
-    onComplete();
+    // Only persist if user checked "Don't show again"
+    if (dontShowAgain) {
+      onComplete();
+    } else {
+      onClose(); // Just close - will show again next time
+    }
   };
 
   return (
@@ -148,14 +155,24 @@ export const OnboardingModal = ({ isOpen, onClose, onComplete }: OnboardingModal
             <span className="text-sm text-muted-foreground">
               {currentStep + 1} of {totalSteps}
             </span>
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className="text-muted-foreground hover:text-foreground"
-              onClick={handleSkip}
-            >
-              Skip tour
-            </Button>
+            <div className="flex items-center gap-3">
+              <label className="flex items-center gap-1.5 cursor-pointer">
+                <Checkbox
+                  checked={dontShowAgain}
+                  onCheckedChange={(checked) => setDontShowAgain(checked === true)}
+                  className="h-3.5 w-3.5"
+                />
+                <span className="text-xs text-muted-foreground">Don't show again</span>
+              </label>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="text-muted-foreground hover:text-foreground"
+                onClick={handleSkip}
+              >
+                Skip tour
+              </Button>
+            </div>
           </div>
           <Progress value={progress} className="h-1" />
         </div>
