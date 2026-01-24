@@ -64,6 +64,14 @@ export const LandingPage = ({ onLogin }: LandingPageProps) => {
   const [approvedTestimonials, setApprovedTestimonials] = useState<ApprovedTestimonial[]>([]);
   const navigate = useNavigate();
 
+  // Auto-show login modal if redirected from logout
+  useEffect(() => {
+    if (sessionStorage.getItem('showLoginModal') === 'true') {
+      sessionStorage.removeItem('showLoginModal');
+      setShowAuthModal(true);
+    }
+  }, []);
+
   // Fetch approved testimonials from database
   useEffect(() => {
     const fetchApprovedTestimonials = async () => {
