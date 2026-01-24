@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { Settings, User, LogOut, Trophy, Users, MessageSquare, Shield, GraduationCap, Zap } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -37,16 +38,19 @@ export const Header = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const location = useLocation();
+  const queryClient = useQueryClient();
 
   const isActivePath = (path: string) => location.pathname === path;
 
   const handleSignOut = async () => {
     try {
       await signOut();
+      queryClient.clear(); // Clear all cached queries for clean account switching
       toast({
         title: "Signed out",
         description: "You've left the studio. See you next time, Director!",
       });
+      sessionStorage.setItem('showLoginModal', 'true'); // Signal landing page to show login modal
       navigate("/");
     } catch (error) {
       console.error("Sign out error:", error);
