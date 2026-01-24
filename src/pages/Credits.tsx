@@ -227,9 +227,9 @@ const Credits = () => {
                     <div className="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center">
                       <Film className="w-5 h-5 text-blue-400" />
                     </div>
-                    <span className="font-medium">5-sec Video</span>
+                    <span className="font-medium">10s Video (Wan)</span>
                   </div>
-                  <p className="text-2xl font-bold text-gold">~60</p>
+                  <p className="text-2xl font-bold text-gold">~30</p>
                   <p className="text-xs text-muted-foreground">credits</p>
                 </div>
 
@@ -238,9 +238,9 @@ const Credits = () => {
                     <div className="w-10 h-10 rounded-lg bg-purple-500/20 flex items-center justify-center">
                       <Film className="w-5 h-5 text-purple-400" />
                     </div>
-                    <span className="font-medium">10-sec Video</span>
+                    <span className="font-medium">8s Video (Veo 3)</span>
                   </div>
-                  <p className="text-2xl font-bold text-gold">~110</p>
+                  <p className="text-2xl font-bold text-gold">~50</p>
                   <p className="text-xs text-muted-foreground">credits</p>
                 </div>
 
@@ -251,7 +251,7 @@ const Credits = () => {
                     </div>
                     <span className="font-medium">HD Image</span>
                   </div>
-                  <p className="text-2xl font-bold text-gold">~15</p>
+                  <p className="text-2xl font-bold text-gold">~13</p>
                   <p className="text-xs text-muted-foreground">credits</p>
                 </div>
 
@@ -262,7 +262,7 @@ const Credits = () => {
                     </div>
                     <span className="font-medium">Music</span>
                   </div>
-                  <p className="text-2xl font-bold text-gold">~25</p>
+                  <p className="text-2xl font-bold text-gold">~22</p>
                   <p className="text-xs text-muted-foreground">credits</p>
                 </div>
               </div>

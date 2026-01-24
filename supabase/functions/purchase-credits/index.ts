@@ -14,7 +14,8 @@ const logStep = (step: string, details?: any) => {
   console.log(`[PURCHASE-CREDITS] ${step}${detailsStr}`);
 };
 
-// Credit pack configurations (1 credit = $0.01) - clean $10, $20, $30 blocks
+// Credit pack configurations (1 credit = $0.01)
+// Updated for new API-cost-based pricing
 const CREDIT_PACKS = {
   "pack_10": {
     credits: 1000,     // $10 = 1000 credits
@@ -22,12 +23,12 @@ const CREDIT_PACKS = {
     price: 10
   },
   "pack_20": {
-    credits: 2200,     // $20 = 2200 credits (10% bonus)
+    credits: 2100,     // $20 = 2100 credits (+100 bonus)
     priceId: "price_1So5sBKb1BapFa4iiXsNXHnT",
     price: 20
   },
   "pack_30": {
-    credits: 3500,     // $30 = 3500 credits (~17% bonus)
+    credits: 3300,     // $30 = 3300 credits (+300 bonus)
     priceId: "price_1So5sqKb1BapFa4ipeYeCWYm",
     price: 30
   }
