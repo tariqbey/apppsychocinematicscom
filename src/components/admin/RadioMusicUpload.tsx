@@ -63,16 +63,19 @@ export function RadioMusicUpload({ onUploadComplete, disabled }: RadioMusicUploa
       const duration = await getAudioDuration(selectedFile);
       setProgress(20);
 
-      const fileExt = selectedFile.name.split(".").pop();
-      const fileName = `radio-${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
-      const filePath = `radio-uploads/${fileName}`;
-
-      // Upload file using XHR for progress tracking
-      const formData = new FormData();
-      formData.append("file", selectedFile);
-
       const { data: sessionData } = await supabase.auth.getSession();
       const token = sessionData.session?.access_token;
+      const userId = sessionData.session?.user?.id;
+
+      if (!token || !userId) {
+        toast.error("You must be logged in to upload");
+        return;
+      }
+
+      const fileExt = selectedFile.name.split(".").pop();
+      const fileName = `radio-${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+      // Use user ID in path to satisfy RLS policy
+      const filePath = `${userId}/radio/${fileName}`;
 
       const projectUrl = import.meta.env.VITE_SUPABASE_URL;
       const uploadUrl = `${projectUrl}/storage/v1/object/generated-media/${filePath}`;
