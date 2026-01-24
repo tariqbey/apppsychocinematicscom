@@ -300,37 +300,81 @@ export const OnboardingModal = ({ isOpen, onClose, onComplete }: OnboardingModal
 
 // Hook to manage onboarding state
 export const useOnboarding = (userId: string | undefined) => {
-  const [showOnboarding, setShowOnboarding] = useState(false);
   const storageKey = userId ? `onboarding_complete_${userId}` : null;
+  
+  // Check localStorage synchronously for initial state
+  const getInitialState = (): boolean => {
+    if (!storageKey) return false;
+    try {
+      const hasCompleted = localStorage.getItem(storageKey);
+      return hasCompleted !== 'true'; // Show if NOT completed
+    } catch {
+      return false; // Don't show if localStorage fails
+    }
+  };
+
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
-    if (!storageKey) return;
-    
-    // Check if user has completed onboarding
-    const hasCompleted = localStorage.getItem(storageKey);
-    if (!hasCompleted) {
-      // Small delay to let the page load first
-      const timer = setTimeout(() => {
-        setShowOnboarding(true);
-      }, 1000);
-      return () => clearTimeout(timer);
+    if (!storageKey) {
+      setIsReady(true);
+      return;
     }
+    
+    // Small delay to let the page render first, then check and show
+    const timer = setTimeout(() => {
+      try {
+        const hasCompleted = localStorage.getItem(storageKey);
+        if (hasCompleted !== 'true') {
+          setShowOnboarding(true);
+        }
+      } catch (e) {
+        console.error('Failed to check onboarding state:', e);
+      }
+      setIsReady(true);
+    }, 500); // Reduced delay for faster appearance
+    
+    return () => clearTimeout(timer);
   }, [storageKey]);
+
+  // Also re-check when userId changes (e.g., after login)
+  useEffect(() => {
+    if (!storageKey || !isReady) return;
+    
+    try {
+      const hasCompleted = localStorage.getItem(storageKey);
+      if (hasCompleted !== 'true') {
+        setShowOnboarding(true);
+      }
+    } catch (e) {
+      console.error('Failed to check onboarding state:', e);
+    }
+  }, [storageKey, isReady]);
 
   const completeOnboarding = () => {
     if (storageKey) {
-      localStorage.setItem(storageKey, 'true');
+      try {
+        localStorage.setItem(storageKey, 'true');
+      } catch (e) {
+        console.error('Failed to save onboarding state:', e);
+      }
     }
     setShowOnboarding(false);
   };
 
   const closeOnboarding = () => {
+    // Just close without saving - will show again next session
     setShowOnboarding(false);
   };
 
   const resetOnboarding = () => {
     if (storageKey) {
-      localStorage.removeItem(storageKey);
+      try {
+        localStorage.removeItem(storageKey);
+      } catch (e) {
+        console.error('Failed to reset onboarding state:', e);
+      }
     }
   };
 
