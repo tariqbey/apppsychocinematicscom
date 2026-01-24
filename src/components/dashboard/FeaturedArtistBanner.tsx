@@ -12,11 +12,11 @@ interface FeaturedContent {
   feature_type: string;
   user_id: string;
   movie_id: string | null;
+  banner_image_url?: string | null;
   title: string;
   description: string | null;
   movie_url: string | null;
   thumbnail_url: string | null;
-  banner_image_url: string | null;
   is_active: boolean;
   display_name?: string;
   avatar_url?: string;

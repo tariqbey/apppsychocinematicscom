@@ -21,6 +21,7 @@ import { useRadioAdmin } from "@/hooks/useRadioAdmin";
 import type { RadioPlaylist, RadioTrack } from "@/hooks/useRadio";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { RadioMusicUpload } from "./RadioMusicUpload";
 
 interface PlaylistWithTracks extends RadioPlaylist {
   tracks: RadioTrack[];
@@ -688,6 +689,22 @@ export const RadioManager = () => {
                         <Trash2 className="w-4 h-4" />
                       </Button>
                     </div>
+
+                    {/* Music Upload from Computer */}
+                    <RadioMusicUpload
+                      disabled={loading}
+                      onUploadComplete={async (url, title, duration) => {
+                        await addTrack(
+                          selectedPlaylist.id,
+                          title,
+                          url,
+                          "Admin Upload",
+                          duration,
+                          "admin_upload"
+                        );
+                        loadData();
+                      }}
+                    />
 
                     <ScrollArea className="h-[250px]">
                       {selectedPlaylist.tracks.length === 0 ? (

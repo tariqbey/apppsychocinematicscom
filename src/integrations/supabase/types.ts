@@ -1028,6 +1028,7 @@ export type Database = {
       }
       featured_content: {
         Row: {
+          banner_image_url: string | null
           created_at: string
           description: string | null
           feature_period_end: string
@@ -1044,6 +1045,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          banner_image_url?: string | null
           created_at?: string
           description?: string | null
           feature_period_end: string
@@ -1060,6 +1062,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          banner_image_url?: string | null
           created_at?: string
           description?: string | null
           feature_period_end?: string

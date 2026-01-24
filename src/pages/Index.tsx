@@ -34,6 +34,7 @@ import { Button } from "@/components/ui/button";
 import { InfoTooltip } from "@/components/ui/info-tooltip";
 import { toast } from "sonner";
 import { DirectorRadioCard } from "@/components/radio/DirectorRadioCard";
+import { FeaturedArtistBanner } from "@/components/dashboard/FeaturedArtistBanner";
 import { TestimonialSubmissionDialog } from "@/components/testimonials/TestimonialSubmissionDialog";
 import { EnableNotificationsBanner } from "@/components/notifications/EnableNotificationsBanner";
 import { DirectorBanner } from "@/components/dashboard/DirectorBanner";
@@ -630,7 +631,10 @@ const Index = () => {
             animationIndex={10}
           />
 
-          {/* ========== 12. DIRECTOR RADIO (ANIMATED) ========== */}
+          {/* ========== 12. FEATURED ARTIST/DIRECTOR BANNER ========== */}
+          <FeaturedArtistBanner />
+
+          {/* ========== 13. DIRECTOR RADIO (ANIMATED) ========== */}
           <DirectorRadioCard />
 
           {/* ========== 13. THE SCORE (Personal Music) ========== */}
