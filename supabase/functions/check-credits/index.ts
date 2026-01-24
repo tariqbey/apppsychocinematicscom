@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.89.0";
 import { checkRateLimit, rateLimitResponse } from "../_shared/rate-limiter.ts";
 import { safeErrorResponse } from "../_shared/error-handler.ts";
 
@@ -38,18 +38,24 @@ serve(async (req) => {
       });
     }
 
-    // Use service role client with getUser(token) to validate JWT
+    // Validate JWT using signing-keys compatible verification (ES256)
     const token = authHeader.replace("Bearer ", "");
-    const { data: userData, error: userError } = await supabaseClient.auth.getUser(token);
-    if (userError || !userData?.user) {
-      logStep("Auth failed", { error: userError?.message });
+    const authClient = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_ANON_KEY") ?? "",
+      { auth: { persistSession: false } }
+    );
+
+    const { data: claimsData, error: claimsError } = await authClient.auth.getClaims(token);
+    if (claimsError || !claimsData?.claims?.sub) {
+      logStep("Auth failed", { error: claimsError?.message });
       return new Response(JSON.stringify({ error: "Authentication failed", code: "E1001" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-    
-    const user = userData.user;
+
+    const user = { id: claimsData.claims.sub, email: claimsData.claims.email };
     logStep("User authenticated", { userId: user.id });
 
     // Rate limiting: 60 requests per minute for credit checks
