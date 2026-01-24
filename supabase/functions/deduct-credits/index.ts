@@ -13,28 +13,38 @@ const logStep = (step: string, details?: any) => {
   console.log(`[DEDUCT-CREDITS] ${step}${detailsStr}`);
 };
 
-// API costs in dollars - actual costs you pay per generation
-const API_COSTS = {
+// API costs for generation (in dollars - ACTUAL provider costs)
+const API_COSTS: Record<string, Record<string, number>> = {
   video: {
-    perSecond: 0.10  // $0.10 per second
+    // Model-specific costs per second (actual provider costs)
+    "wan-ai/wan2.1-t2v-480p": 0.02,      // $0.02/sec
+    "wan-ai/wan2.1-i2v-480p": 0.02,      // $0.02/sec  
+    "kling-ai/v1.0/text-to-video": 0.03, // $0.03/sec
+    "kling-ai/v1.0/image-to-video": 0.03,// $0.03/sec
+    "kling-ai/v1.0/video-to-video": 0.04,// $0.04/sec (editing)
+    "google/veo3-fast": 0.05,            // $0.05/sec
+    "google/veo3-fast/image-to-video": 0.05, // $0.05/sec
+    "google/veo3": 0.10,                 // $0.10/sec (quality)
+    "kie-sora-2": 0.015,                 // $0.015/sec (legacy)
+    default: 0.02,                       // Fallback to cheapest
   },
   image: {
-    "2k": 0.05,      // $0.05 per 2K image
-    "4k": 0.08,      // $0.08 per 4K image
-    default: 0.05
+    "2k": 0.03,      // $0.03 per 2K image (actual)
+    "4k": 0.05,      // $0.05 per 4K image (actual)
+    default: 0.03,
   },
   music: {
-    default: 0.15    // $0.15 per song generation
+    default: 0.12,   // $0.12 per song generation (actual Suno cost)
   },
   tts: {
-    default: 0.03    // $0.03 per TTS request
+    default: 0.02,   // $0.02 per TTS request
   },
   voiceChange: {
-    default: 0.08    // $0.08 per voice change
+    default: 0.05,   // $0.05 per voice change
   },
   ai: {
-    default: 0.02    // $0.02 per AI chat/suggestion
-  }
+    default: 0.01,   // $0.01 per AI chat/suggestion
+  },
 };
 
 // Markup added to each generation (in dollars)
@@ -51,8 +61,8 @@ serve(async (req) => {
   try {
     logStep("Function started");
 
-    const { mediaType, duration, resolution, generationId, apiCost } = await req.json();
-    logStep("Request params", { mediaType, duration, resolution, generationId, apiCost });
+    const { mediaType, duration, resolution, generationId, apiCost, model } = await req.json();
+    logStep("Request params", { mediaType, duration, resolution, generationId, apiCost, model });
 
     if (!mediaType) {
       return new Response(JSON.stringify({ error: "Media type is required", code: "E1004" }), {
@@ -129,7 +139,10 @@ serve(async (req) => {
       baseCostDollars = parseFloat(apiCost);
     } else if (mediaType === "video") {
       const durationSeconds = duration || 10;
-      baseCostDollars = durationSeconds * API_COSTS.video.perSecond;
+      // Use model-specific cost or fallback to default
+      const perSecondCost = model && API_COSTS.video[model] ? API_COSTS.video[model] : API_COSTS.video.default;
+      baseCostDollars = durationSeconds * perSecondCost;
+      logStep("Video cost calculation", { model, perSecondCost, durationSeconds, baseCostDollars });
     } else if (mediaType === "image") {
       const res = resolution?.toLowerCase() || "2k";
       baseCostDollars = res.includes("4k") ? API_COSTS.image["4k"] : API_COSTS.image["2k"];
