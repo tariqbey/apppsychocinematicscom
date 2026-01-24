@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, addDays, addMonths } from "date-fns";
+import { FeaturedBannerUpload } from "./FeaturedBannerUpload";
 
 interface CommunityMovie {
   id: string;
@@ -63,6 +64,7 @@ export function FeaturedContentManager() {
   const [featureType, setFeatureType] = useState<"movie_of_week" | "director_of_month">("movie_of_week");
   const [customTitle, setCustomTitle] = useState("");
   const [customDescription, setCustomDescription] = useState("");
+  const [bannerImageUrl, setBannerImageUrl] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
 
   useEffect(() => {
@@ -169,6 +171,7 @@ export function FeaturedContentManager() {
         description: customDescription || null,
         movie_url: featureType === "movie_of_week" ? selectedMovie!.movie_url : null,
         thumbnail_url: featureType === "movie_of_week" ? selectedMovie!.thumbnail_url : selectedUser?.avatar_url || null,
+        banner_image_url: bannerImageUrl || null,
         feature_period_start: periodStart.toISOString(),
         feature_period_end: periodEnd.toISOString(),
         total_votes: featureType === "movie_of_week" ? selectedMovie!.votes_count : 0,
@@ -207,6 +210,7 @@ export function FeaturedContentManager() {
     setSelectedUser(null);
     setCustomTitle("");
     setCustomDescription("");
+    setBannerImageUrl(null);
     setFeatureType("movie_of_week");
   };
 
@@ -352,6 +356,13 @@ export function FeaturedContentManager() {
                     rows={3}
                   />
                 </div>
+
+                {/* Banner Image Upload */}
+                <FeaturedBannerUpload
+                  currentImageUrl={bannerImageUrl}
+                  onImageUploaded={(url) => setBannerImageUrl(url)}
+                  onImageRemoved={() => setBannerImageUrl(null)}
+                />
 
                 <Button onClick={handleCreateFeatured} disabled={creating} className="w-full" variant="gold">
                   {creating ? (
