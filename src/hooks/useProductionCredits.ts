@@ -21,11 +21,12 @@ export interface CreditPack {
   bonus?: string;
 }
 
-// Credit packs (1 credit = $0.01) - clean $10, $20, $30 blocks
+// Credit packs (1 credit = $0.01) - updated for new API-cost-based pricing
+// More generous packs since individual generations now cost less
 export const CREDIT_PACKS: CreditPack[] = [
   { id: "pack_10", credits: 1000, price: 10 },
-  { id: "pack_20", credits: 2200, price: 20, bonus: "+200 bonus" },
-  { id: "pack_30", credits: 3500, price: 30, bonus: "+500 bonus" },
+  { id: "pack_20", credits: 2100, price: 20, bonus: "+100 bonus" },
+  { id: "pack_30", credits: 3300, price: 30, bonus: "+300 bonus" },
 ];
 
 // API costs for generation (in dollars - ACTUAL provider costs)

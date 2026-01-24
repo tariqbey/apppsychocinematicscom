@@ -10,18 +10,18 @@ import { AuthModal } from "@/components/auth/AuthModal";
 const features = [
   { icon: Brain, text: "Director AI Voice Coaching" },
   { icon: Film, text: "Mind Movie Studio - Full access" },
-  { icon: Zap, text: "1000 Monthly Production Credits ($10 value)" },
+  { icon: Zap, text: "1000 Monthly Credits (~33 videos OR 76 images)" },
   { icon: BarChart3, text: "Daily Scorecard & Progress Tracking" },
   { icon: Crown, text: "Chief Aim Wizard & Identity System" },
   { icon: Users, text: "Director's Corner Community" },
 ];
 
 const creditInfo = [
-  { type: "5-second video", cost: "60 credits" },
-  { type: "10-second video", cost: "110 credits" },
-  { type: "HD image", cost: "15 credits" },
-  { type: "2K image", cost: "18 credits" },
-  { type: "Music generation", cost: "25 credits" },
+  { type: "10s video (Wan 2.1)", cost: "30 credits" },
+  { type: "8s video (Veo 3)", cost: "50 credits" },
+  { type: "HD image", cost: "13 credits" },
+  { type: "4K image", cost: "15 credits" },
+  { type: "Music generation", cost: "22 credits" },
 ];
 
 const Subscribe = () => {
@@ -129,7 +129,7 @@ const Subscribe = () => {
                 ))}
               </div>
               <p className="text-xs text-muted-foreground mt-3">
-                1000 credits/month = ~16 videos OR ~66 images (or mix & match!)
+                1000 credits/month = ~33 videos OR ~76 images OR ~45 songs (mix & match!)
               </p>
             </div>
 

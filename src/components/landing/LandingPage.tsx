@@ -193,10 +193,10 @@ export const LandingPage = ({ onLogin }: LandingPageProps) => {
 
   const pricingFeatures = [
     "Director AI Voice Coaching",
-    "$10 Monthly Production Credits",
-    "Full AI Media Studio (Video, Image, Voice, Music)",
+    "1000 Monthly Credits (~33 videos OR 76 images OR 45 songs)",
+    "Full AI Media Studio (Veo 3, Wan 2.1, Kling)",
     "Reference Photo Generation (AI images with YOUR face)",
-    "Professional Timeline Editor with HD Export",
+    "Professional Timeline Editor with 4K Export",
     "5-Step Mind Movie Wizard with Scene Control",
     "Episode Sprints (1, 2, or 4-week focused productions)",
     "Character Builder & 28-Question Archetype Survey",
@@ -259,8 +259,8 @@ export const LandingPage = ({ onLogin }: LandingPageProps) => {
       answer: "Most visualization apps give you static vision boards or generic guided meditations. Psycho-Cinematics gives you a complete production studio with AI video generation, reference photo personalization, voice coaching, animated dashboard modules, and a full character transformation system. It's the difference between looking at a photo and starring in your own movie."
     },
     {
-      question: "What's included in the $10 monthly production credits?",
-      answer: "Your credits fuel AI generations: videos, images (including reference photo generations featuring you), voice transformations, and soundtrack creation. $10 is enough to create multiple complete Mind Movies each month. Heavy users can purchase additional credit packs with up to 17% bonus credits."
+      question: "What's included in the 1000 monthly production credits?",
+      answer: "Your 1000 credits fuel AI generations: ~33 ten-second videos, ~76 HD images (including reference photos featuring YOU), ~45 custom soundtracks, or a mix of all three. That's enough to create 2-3 complete Mind Movies each month. Heavy users can purchase additional credit packs with up to 10% bonus credits."
     },
     {
       question: "How does the Director AI Voice Coach work?",

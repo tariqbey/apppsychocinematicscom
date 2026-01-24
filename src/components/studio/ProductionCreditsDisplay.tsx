@@ -179,11 +179,11 @@ export const ProductionCreditsDisplay = ({ compact = false, showBuyButton = true
 
         <div className="text-xs text-muted-foreground space-y-1">
           <p><strong>Estimated costs:</strong></p>
-          <p>• 5-sec video ≈ 60 credits</p>
-          <p>• 10-sec video ≈ 110 credits</p>
-          <p>• 2K image ≈ 15 credits</p>
-          <p>• 4K image ≈ 18 credits</p>
-          <p>• Music generation ≈ 25 credits</p>
+          <p>• 10s video (Wan 2.1) ≈ 30 credits</p>
+          <p>• 8s video (Veo 3) ≈ 50 credits</p>
+          <p>• HD image ≈ 13 credits</p>
+          <p>• 4K image ≈ 15 credits</p>
+          <p>• Music generation ≈ 22 credits</p>
         </div>
       </CardContent>
     </Card>
