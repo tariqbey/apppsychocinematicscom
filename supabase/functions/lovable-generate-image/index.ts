@@ -2,6 +2,13 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.89.0";
 import { checkRateLimit, rateLimitResponse } from "../_shared/rate-limiter.ts";
 import { safeErrorResponse } from "../_shared/error-handler.ts";
+import { 
+  validateString, 
+  validateEnum,
+  VALID_ASPECT_RATIOS,
+  MAX_LENGTHS,
+  validationErrorResponse 
+} from "../_shared/input-validation.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -63,11 +70,15 @@ serve(async (req) => {
 
     const { prompt, images, aspect_ratio } = await req.json();
 
-    if (!prompt) {
-      return new Response(JSON.stringify({ success: false, error: "Prompt is required", code: "E1004" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    // Input validation
+    const promptResult = validateString(prompt, "prompt", { required: true, maxLength: MAX_LENGTHS.PROMPT });
+    if (!promptResult.valid) {
+      return validationErrorResponse(promptResult.error || "Invalid prompt", corsHeaders);
+    }
+
+    const aspectResult = validateEnum(aspect_ratio, "aspect_ratio", VALID_ASPECT_RATIOS, false);
+    if (!aspectResult.valid) {
+      return validationErrorResponse(aspectResult.error || "Invalid aspect_ratio", corsHeaders);
     }
 
     console.log("Image generation request:", { 

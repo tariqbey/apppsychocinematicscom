@@ -1,5 +1,11 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.89.0";
+import { 
+  validateEnum,
+  validateSocialContent,
+  VALID_SOCIAL_PLATFORMS,
+  validationErrorResponse 
+} from "../_shared/input-validation.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -156,6 +162,17 @@ serve(async (req) => {
     }
 
     const { platform, content, mediaUrl }: PostPayload = await req.json();
+
+    // Input validation
+    const platformResult = validateEnum(platform, "platform", VALID_SOCIAL_PLATFORMS, true);
+    if (!platformResult.valid) {
+      return validationErrorResponse(platformResult.error || "Invalid platform", corsHeaders);
+    }
+
+    const contentResult = validateSocialContent(content, platform);
+    if (!contentResult.valid) {
+      return validationErrorResponse(contentResult.error || "Invalid content", corsHeaders);
+    }
 
     // Get user's social media integration
     const { data: integration } = await supabaseClient

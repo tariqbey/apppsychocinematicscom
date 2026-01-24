@@ -2,6 +2,13 @@ import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.89.0";
 import { PSYCHO_CINEMATICS_KNOWLEDGE } from "../_shared/psycho-cinematics-kb.ts";
+import { 
+  validateMessages, 
+  validateChiefAim,
+  validateEnum,
+  VALID_CHIEF_AIM_STEPS,
+  validationErrorResponse 
+} from "../_shared/input-validation.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -82,10 +89,30 @@ serve(async (req) => {
     }
 
     const { messages, currentStep, currentAim } = await req.json();
+
+    // Input validation
+    const messagesResult = validateMessages(messages, true);
+    if (!messagesResult.valid) {
+      return validationErrorResponse(messagesResult.error || "Invalid messages", corsHeaders);
+    }
+
+    const stepResult = validateEnum(currentStep, "currentStep", VALID_CHIEF_AIM_STEPS, false);
+    if (!stepResult.valid) {
+      return validationErrorResponse(stepResult.error || "Invalid currentStep", corsHeaders);
+    }
+
+    const aimResult = validateChiefAim(currentAim);
+    if (!aimResult.valid) {
+      return validationErrorResponse(aimResult.error || "Invalid currentAim", corsHeaders);
+    }
+
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
 
     if (!LOVABLE_API_KEY) {
-      throw new Error("LOVABLE_API_KEY is not configured");
+      return new Response(
+        JSON.stringify({ error: "AI service unavailable", code: "E1002" }),
+        { status: 503, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
     // Build context about current progress

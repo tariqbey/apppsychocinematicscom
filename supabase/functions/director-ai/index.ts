@@ -3,6 +3,13 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.89.0";
 import { PSYCHO_CINEMATICS_KNOWLEDGE } from "../_shared/psycho-cinematics-kb.ts";
 import { checkRateLimit, rateLimitResponse } from "../_shared/rate-limiter.ts";
 import { safeErrorResponse } from "../_shared/error-handler.ts";
+import { 
+  validateMessages, 
+  validateChiefAim, 
+  validateEnum,
+  VALID_PERSONALITY_STYLES,
+  validationErrorResponse 
+} from "../_shared/input-validation.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -190,6 +197,23 @@ serve(async (req) => {
     }
 
     const { messages, chiefAim, userContext, personalityStyle } = await req.json();
+
+    // Input validation
+    const messagesResult = validateMessages(messages, true);
+    if (!messagesResult.valid) {
+      return validationErrorResponse(messagesResult.error || "Invalid messages", corsHeaders);
+    }
+
+    const chiefAimResult = validateChiefAim(chiefAim);
+    if (!chiefAimResult.valid) {
+      return validationErrorResponse(chiefAimResult.error || "Invalid chiefAim", corsHeaders);
+    }
+
+    const styleResult = validateEnum(personalityStyle, "personalityStyle", VALID_PERSONALITY_STYLES, false);
+    if (!styleResult.valid) {
+      return validationErrorResponse(styleResult.error || "Invalid personalityStyle", corsHeaders);
+    }
+
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     
     if (!LOVABLE_API_KEY) {
