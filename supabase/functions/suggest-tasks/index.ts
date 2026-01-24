@@ -1,6 +1,13 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.89.0";
 import { PSYCHO_CINEMATICS_KNOWLEDGE, analyzeChiefAimCompleteness } from "../_shared/psycho-cinematics-kb.ts";
+import { 
+  validateChiefAim, 
+  validateArray,
+  validateString,
+  MAX_LENGTHS,
+  validationErrorResponse 
+} from "../_shared/input-validation.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -45,6 +52,22 @@ serve(async (req) => {
     }
 
     const { chiefAim, existingTasks, dayOfWeek, activeEpisode } = await req.json();
+
+    // Input validation
+    const chiefAimResult = validateChiefAim(chiefAim);
+    if (!chiefAimResult.valid) {
+      return validationErrorResponse(chiefAimResult.error || "Invalid chiefAim", corsHeaders);
+    }
+
+    const tasksResult = validateArray(existingTasks, "existingTasks", { maxLength: 20 });
+    if (!tasksResult.valid) {
+      return validationErrorResponse(tasksResult.error || "Invalid existingTasks", corsHeaders);
+    }
+
+    const dayResult = validateString(dayOfWeek, "dayOfWeek", { maxLength: 20 });
+    if (!dayResult.valid) {
+      return validationErrorResponse(dayResult.error || "Invalid dayOfWeek", corsHeaders);
+    }
 
     // Analyze the Chief Aim to determine user's current phase
     const aimAnalysis = analyzeChiefAimCompleteness(chiefAim || {});

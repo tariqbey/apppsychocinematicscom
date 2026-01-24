@@ -2240,7 +2240,6 @@ export type Database = {
         Row: {
           avatar_url: string | null
           best_streak: number | null
-          bio: string | null
           current_streak: number | null
           display_name: string | null
           show_on_leaderboard: boolean | null
@@ -2249,7 +2248,6 @@ export type Database = {
         Insert: {
           avatar_url?: string | null
           best_streak?: number | null
-          bio?: string | null
           current_streak?: number | null
           display_name?: string | null
           show_on_leaderboard?: boolean | null
@@ -2258,7 +2256,6 @@ export type Database = {
         Update: {
           avatar_url?: string | null
           best_streak?: number | null
-          bio?: string | null
           current_streak?: number | null
           display_name?: string | null
           show_on_leaderboard?: boolean | null
