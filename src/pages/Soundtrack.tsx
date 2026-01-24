@@ -1,7 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { 
-  ArrowLeft, Music, Sparkles, Loader2, Library, Brain, Target, Check
+  ArrowLeft, Music, Sparkles, Loader2, Library, Brain, Target, Check,
+  Upload, Play, Pause, FolderOpen
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -11,8 +12,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserProfile } from "@/hooks/useUserProfile";
+import { useUserPlaylists, type PlaylistTrack } from "@/hooks/useUserPlaylists";
 import { useMindMovieMusic, MUSIC_STYLES, type MusicStyle } from "@/hooks/useMindMovieMusic";
 import { SoundtrackPlayer } from "@/components/mind-movie/SoundtrackPlayer";
 import { supabase } from "@/integrations/supabase/client";
@@ -23,6 +27,7 @@ export default function Soundtrack() {
   const [searchParams] = useSearchParams();
   const { user, loading: authLoading } = useAuth();
   const { profile, updateProfile, refetch: refetchProfile } = useUserProfile();
+  const { playlists, tracks, fetchPlaylistTracks, addTrackToPlaylist, getDefaultPlaylist } = useUserPlaylists();
   
   const [songTitle, setSongTitle] = useState("My Soundtrack");
   const [customPrompt, setCustomPrompt] = useState("");
@@ -31,6 +36,12 @@ export default function Soundtrack() {
   const [fromAnalysis, setFromAnalysis] = useState(false);
   const [fromChiefAim, setFromChiefAim] = useState(false);
   const [isSettingAsChiefAimSong, setIsSettingAsChiefAimSong] = useState(false);
+  const [activeTab, setActiveTab] = useState<"generate" | "library">("generate");
+  const [isUploadingTrack, setIsUploadingTrack] = useState(false);
+  const [previewTrack, setPreviewTrack] = useState<PlaylistTrack | null>(null);
+  const [isPreviewPlaying, setIsPreviewPlaying] = useState(false);
+  const audioPreviewRef = useRef<HTMLAudioElement | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   const {
     isGeneratingLyrics,
@@ -164,6 +175,7 @@ export default function Soundtrack() {
       await updateProfile({ chief_aim_song_url: audioUrl } as any);
       refetchProfile();
       toast.success("Set as your Chief Aim Anthem! You can now listen to it in your daily ritual.");
+      navigate(-1);
     } catch (error) {
       console.error("Error setting chief aim song:", error);
       toast.error("Failed to set as Chief Aim song");
@@ -171,6 +183,98 @@ export default function Soundtrack() {
       setIsSettingAsChiefAimSong(false);
     }
   };
+
+  // Fetch library tracks when switching to library tab
+  useEffect(() => {
+    if (activeTab === "library" && playlists.length > 0) {
+      fetchPlaylistTracks(playlists[0].id);
+    }
+  }, [activeTab, playlists]);
+
+  // Handle audio preview
+  const togglePreview = (track: PlaylistTrack) => {
+    if (!audioPreviewRef.current) {
+      audioPreviewRef.current = new Audio();
+    }
+
+    if (previewTrack?.id === track.id) {
+      if (isPreviewPlaying) {
+        audioPreviewRef.current.pause();
+        setIsPreviewPlaying(false);
+      } else {
+        audioPreviewRef.current.play();
+        setIsPreviewPlaying(true);
+      }
+    } else {
+      audioPreviewRef.current.src = track.audio_url;
+      audioPreviewRef.current.play();
+      setPreviewTrack(track);
+      setIsPreviewPlaying(true);
+    }
+  };
+
+  // Handle file upload
+  const handleUploadTrack = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+
+    const allowedTypes = ['audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/ogg', 'audio/m4a', 'audio/x-m4a'];
+    if (!allowedTypes.includes(file.type) && !file.name.match(/\.(mp3|wav|ogg|m4a)$/i)) {
+      toast.error('Please upload an audio file (MP3, WAV, OGG, or M4A)');
+      return;
+    }
+
+    setIsUploadingTrack(true);
+
+    try {
+      const fileName = `${user.id}/${Date.now()}-${file.name}`;
+      const { error: uploadError } = await supabase.storage
+        .from('generated-media')
+        .upload(fileName, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('generated-media')
+        .getPublicUrl(fileName);
+
+      // Add to default playlist
+      const targetPlaylist = await getDefaultPlaylist();
+      if (targetPlaylist) {
+        await addTrackToPlaylist(targetPlaylist.id, {
+          title: file.name.replace(/\.[^/.]+$/, ''),
+          audio_url: publicUrl,
+          source_type: 'upload',
+        });
+        await fetchPlaylistTracks(targetPlaylist.id);
+      }
+
+      if (fromChiefAim) {
+        // Set as Chief Aim song directly
+        await handleSetAsChiefAimSong(publicUrl);
+      } else {
+        toast.success('Track uploaded to your library!');
+      }
+    } catch (error) {
+      console.error('Upload error:', error);
+      toast.error('Failed to upload track');
+    } finally {
+      setIsUploadingTrack(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
+  // Cleanup audio preview on unmount
+  useEffect(() => {
+    return () => {
+      if (audioPreviewRef.current) {
+        audioPreviewRef.current.pause();
+        audioPreviewRef.current = null;
+      }
+    };
+  }, []);
 
   const handleGenerateLyrics = async () => {
     if (!chiefAim.what && !customPrompt) {
@@ -316,9 +420,9 @@ export default function Soundtrack() {
               <CardContent className="p-4 flex items-center gap-3">
                 <Target className="w-6 h-6 text-gold" />
                 <div>
-                  <p className="font-semibold text-gold">Creating from Your Definite Chief Aim</p>
+                  <p className="font-semibold text-gold">Set Your Chief Aim Anthem</p>
                   <p className="text-xs text-muted-foreground">
-                    Your Chief Aim and character traits have been loaded. Choose a music style and create your personal anthem!
+                    Generate a new song, pick from your library, or upload your own track.
                   </p>
                 </div>
               </CardContent>
@@ -330,22 +434,157 @@ export default function Soundtrack() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Sparkles className="w-5 h-5 text-gold" />
-                {fromChiefAim ? "Create Your Chief Aim Anthem" : fromAnalysis ? "Create Your Character Anthem" : "Create Your Soundtrack"}
+                {fromChiefAim ? "Choose Your Chief Aim Anthem" : fromAnalysis ? "Create Your Character Anthem" : "Create Your Soundtrack"}
               </CardTitle>
               <CardDescription>
                 {fromChiefAim 
-                  ? "Transform your Definite Chief Aim into a powerful musical affirmation you can listen to daily."
+                  ? "Pick an existing song from your library, upload your own, or generate a new AI-powered anthem."
                   : "Generate AI-powered music and lyrics for your visualizations, movies, or personal motivation."}
               </CardDescription>
             </CardHeader>
           </Card>
 
-          {/* Step 1: Configure */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">1. Configure Your Track</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
+          {/* Tabs for Chief Aim: Generate vs Library */}
+          {fromChiefAim && (
+            <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "generate" | "library")} className="w-full">
+              <TabsList className="grid w-full grid-cols-3 mb-4">
+                <TabsTrigger value="generate" className="gap-2">
+                  <Sparkles className="w-4 h-4" />
+                  Generate New
+                </TabsTrigger>
+                <TabsTrigger value="library" className="gap-2">
+                  <FolderOpen className="w-4 h-4" />
+                  My Library
+                </TabsTrigger>
+                <TabsTrigger value="upload" className="gap-2" onClick={() => setActiveTab("upload" as any)}>
+                  <Upload className="w-4 h-4" />
+                  Upload
+                </TabsTrigger>
+              </TabsList>
+
+              {/* Library Tab Content */}
+              <TabsContent value="library" className="space-y-4">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <Music className="w-5 h-5 text-gold" />
+                      Pick from Your Score Library
+                    </CardTitle>
+                    <CardDescription>
+                      Select any song from your library to use as your Chief Aim Anthem.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {tracks.length === 0 ? (
+                      <div className="text-center py-8 text-muted-foreground">
+                        <Music className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                        <p>No tracks in your library yet.</p>
+                        <p className="text-sm">Generate or upload a track first!</p>
+                      </div>
+                    ) : (
+                      <ScrollArea className="h-[300px] pr-4">
+                        <div className="space-y-2">
+                          {tracks.map((track) => (
+                            <div 
+                              key={track.id} 
+                              className="flex items-center gap-3 p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors"
+                            >
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-10 w-10 rounded-full bg-gold/20 hover:bg-gold/30"
+                                onClick={() => togglePreview(track)}
+                              >
+                                {previewTrack?.id === track.id && isPreviewPlaying ? (
+                                  <Pause className="w-4 h-4 text-gold" />
+                                ) : (
+                                  <Play className="w-4 h-4 text-gold" />
+                                )}
+                              </Button>
+                              <div className="flex-1 min-w-0">
+                                <p className="font-medium truncate">{track.title}</p>
+                                {track.artist && (
+                                  <p className="text-xs text-muted-foreground truncate">{track.artist}</p>
+                                )}
+                              </div>
+                              <Button
+                                variant="gold"
+                                size="sm"
+                                onClick={() => handleSetAsChiefAimSong(track.audio_url)}
+                                disabled={isSettingAsChiefAimSong}
+                              >
+                                {isSettingAsChiefAimSong ? (
+                                  <Loader2 className="w-4 h-4 animate-spin" />
+                                ) : (
+                                  <>
+                                    <Check className="w-4 h-4 mr-1" />
+                                    Use This
+                                  </>
+                                )}
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
+                      </ScrollArea>
+                    )}
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              {/* Upload Tab Content */}
+              <TabsContent value="upload" className="space-y-4">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <Upload className="w-5 h-5 text-gold" />
+                      Upload Your Own Music
+                    </CardTitle>
+                    <CardDescription>
+                      Upload an MP3, WAV, or M4A file from your computer to use as your anthem.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="audio/*"
+                      className="hidden"
+                      onChange={handleUploadTrack}
+                      disabled={isUploadingTrack}
+                    />
+                    <div 
+                      className="border-2 border-dashed rounded-lg p-8 text-center cursor-pointer hover:border-gold/50 hover:bg-gold/5 transition-colors"
+                      onClick={() => fileInputRef.current?.click()}
+                    >
+                      {isUploadingTrack ? (
+                        <div className="flex flex-col items-center gap-3">
+                          <Loader2 className="w-10 h-10 text-gold animate-spin" />
+                          <p className="text-muted-foreground">Uploading and setting as anthem...</p>
+                        </div>
+                      ) : (
+                        <>
+                          <Upload className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
+                          <p className="font-medium">Click to upload your music file</p>
+                          <p className="text-sm text-muted-foreground mt-1">
+                            MP3, WAV, OGG, or M4A • Max 50MB
+                          </p>
+                        </>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            </Tabs>
+          )}
+
+          {/* Step 1: Configure - only show if not using tabs OR if in generate tab */}
+          {(!fromChiefAim || activeTab === "generate") && (
+            <>
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">{fromChiefAim ? "Generate New Anthem" : "1. Configure Your Track"}</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
               {/* Song Title */}
               <div className="space-y-2">
                 <Label htmlFor="songTitle">Song Title</Label>
@@ -463,14 +702,14 @@ export default function Soundtrack() {
                   placeholder="Leave empty for random voice"
                 />
               </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
 
-          {/* Step 2: Generate Lyrics */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">2. Generate Lyrics</CardTitle>
-            </CardHeader>
+            {/* Step 2: Generate Lyrics */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">{fromChiefAim ? "Generate Lyrics" : "2. Generate Lyrics"}</CardTitle>
+              </CardHeader>
             <CardContent className="space-y-4">
               <Button 
                 onClick={handleGenerateLyrics}
@@ -628,6 +867,8 @@ export default function Soundtrack() {
                 )}
               </CardContent>
             </Card>
+          )}
+          </>
           )}
         </div>
       </main>
