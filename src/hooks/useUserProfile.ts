@@ -18,6 +18,9 @@ export interface UserProfile {
   hero_image_side_url?: string | null;
   hero_image_back_url?: string | null;
 
+  // Cover image for Director Banner (cross-device persistence)
+  cover_image_url?: string | null;
+
   chief_aim_what: string | null;
   chief_aim_by_when: string | null;
   chief_aim_exchange: string | null;
