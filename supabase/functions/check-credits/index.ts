@@ -38,24 +38,23 @@ serve(async (req) => {
       });
     }
 
-    // Use getClaims for ES256-signed JWTs (Lovable Cloud)
+    // Create user client with auth header for getUser
     const userClient = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_ANON_KEY") ?? "",
       { global: { headers: { Authorization: authHeader } } }
     );
 
-    const token = authHeader.replace("Bearer ", "");
-    const { data: claimsData, error: claimsError } = await userClient.auth.getClaims(token);
-    if (claimsError || !claimsData?.claims?.sub) {
-      logStep("Auth failed", { error: claimsError?.message });
+    const { data: userData, error: userError } = await userClient.auth.getUser();
+    if (userError || !userData?.user) {
+      logStep("Auth failed", { error: userError?.message });
       return new Response(JSON.stringify({ error: "Authentication failed", code: "E1001" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
     
-    const user = { id: claimsData.claims.sub, email: claimsData.claims.email };
+    const user = userData.user;
     logStep("User authenticated", { userId: user.id });
 
     // Rate limiting: 60 requests per minute for credit checks
