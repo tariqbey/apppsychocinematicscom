@@ -333,9 +333,23 @@ export const MindMoviePlayer = forwardRef<MindMoviePlayerHandle, MindMoviePlayer
 
       const handleEnded = () => {
         setIsPlaying(false);
-        if (!hasCompleted.current) {
+
+        // iOS Safari can fire 'ended' prematurely due to network issues or metadata problems.
+        // Guard: only complete if we're actually near the end of the video (within 2 seconds)
+        // and the duration is a reasonable length (> 10 seconds for mind movies).
+        const dur = video.duration;
+        const pos = video.currentTime;
+        const isNearEnd = Number.isFinite(dur) && dur > 10 && pos >= dur - 2;
+
+        if (!hasCompleted.current && isNearEnd) {
           hasCompleted.current = true;
-          onComplete?.(Math.floor(video.duration || 0));
+          onComplete?.(Math.floor(dur));
+        } else if (!hasCompleted.current && !isNearEnd) {
+          // Video "ended" prematurely - likely iOS network issue.
+          // Try to recover by reloading.
+          console.warn(`Video ended prematurely at ${pos.toFixed(1)}s / ${dur}s - attempting recovery`);
+          // On iOS, calling load() can help reset the stream.
+          video.load();
         }
       };
 
