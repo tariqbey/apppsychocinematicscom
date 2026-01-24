@@ -24,19 +24,26 @@ export function DirectorBanner({ onOpenAIStudio, className }: DirectorBannerProp
   const coverInputRef = useRef<HTMLInputElement>(null);
   const avatarInputRef = useRef<HTMLInputElement>(null);
 
-  // Load images on mount
+  // Load images on mount - cover now persisted in database
   useEffect(() => {
     if (profile) {
       setAvatarUrl(profile.avatar_url);
+      // Load cover from database (cross-device persistence)
+      if (profile.cover_image_url) {
+        setCoverUrl(profile.cover_image_url);
+      } else {
+        // Migrate from localStorage if exists (one-time migration)
+        const savedCover = localStorage.getItem(`director-cover-${user?.id}`);
+        if (savedCover && user?.id) {
+          setCoverUrl(savedCover);
+          // Migrate to database
+          updateProfile({ cover_image_url: savedCover }).then(() => {
+            localStorage.removeItem(`director-cover-${user.id}`);
+          });
+        }
+      }
     }
-    // Try to get cover from active movie or localStorage
-    const savedCover = localStorage.getItem(`director-cover-${user?.id}`);
-    if (savedCover) {
-      setCoverUrl(savedCover);
-    } else if (activeMovie?.movie_url) {
-      // Use first frame of active movie as default cover suggestion
-    }
-  }, [profile, user?.id, activeMovie]);
+  }, [profile, user?.id, updateProfile]);
 
   useEffect(() => {
     if (user) fetchAllMovies();
@@ -66,7 +73,8 @@ export function DirectorBanner({ onOpenAIStudio, className }: DirectorBannerProp
         setAvatarUrl(publicUrl);
         toast.success("Profile picture updated!");
       } else {
-        localStorage.setItem(`director-cover-${user.id}`, publicUrl);
+        // Save cover to database for cross-device persistence
+        await updateProfile({ cover_image_url: publicUrl });
         setCoverUrl(publicUrl);
         toast.success("Cover art updated!");
       }
@@ -99,7 +107,8 @@ export function DirectorBanner({ onOpenAIStudio, className }: DirectorBannerProp
           setAvatarUrl(data.imageUrl);
           toast.success("AI avatar generated!");
         } else {
-          localStorage.setItem(`director-cover-${user.id}`, data.imageUrl);
+          // Save AI-generated cover to database for cross-device persistence
+          await updateProfile({ cover_image_url: data.imageUrl });
           setCoverUrl(data.imageUrl);
           toast.success("AI cover art generated!");
         }

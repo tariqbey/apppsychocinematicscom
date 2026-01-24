@@ -2065,6 +2065,7 @@ export type Database = {
           coaching_call_enabled: boolean | null
           coaching_call_time: string | null
           coaching_call_timezone: string | null
+          cover_image_url: string | null
           created_at: string
           current_act: string | null
           current_cycle: number | null
@@ -2111,6 +2112,7 @@ export type Database = {
           coaching_call_enabled?: boolean | null
           coaching_call_time?: string | null
           coaching_call_timezone?: string | null
+          cover_image_url?: string | null
           created_at?: string
           current_act?: string | null
           current_cycle?: number | null
@@ -2157,6 +2159,7 @@ export type Database = {
           coaching_call_enabled?: boolean | null
           coaching_call_time?: string | null
           coaching_call_timezone?: string | null
+          cover_image_url?: string | null
           created_at?: string
           current_act?: string | null
           current_cycle?: number | null
