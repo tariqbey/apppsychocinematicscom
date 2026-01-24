@@ -1,5 +1,12 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@18.5.0";
+import { 
+  validateString, 
+  validateEmail, 
+  validatePhone,
+  MAX_LENGTHS,
+  validationErrorResponse 
+} from "../_shared/input-validation.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -24,11 +31,20 @@ serve(async (req) => {
 
     const { name, email, phone } = await req.json();
     
-    if (!name || !email) {
-      return new Response(JSON.stringify({ error: "Name and email are required" }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 400,
-      });
+    // Input validation
+    const nameResult = validateString(name, "name", { required: true, maxLength: MAX_LENGTHS.NAME, minLength: 1 });
+    if (!nameResult.valid) {
+      return validationErrorResponse(nameResult.error || "Invalid name", corsHeaders);
+    }
+
+    const emailResult = validateEmail(email, true);
+    if (!emailResult.valid) {
+      return validationErrorResponse(emailResult.error || "Invalid email", corsHeaders);
+    }
+
+    const phoneResult = validatePhone(phone);
+    if (!phoneResult.valid) {
+      return validationErrorResponse(phoneResult.error || "Invalid phone", corsHeaders);
     }
 
     logStep("Customer info received", { name, email, phone: phone ? "provided" : "not provided" });
