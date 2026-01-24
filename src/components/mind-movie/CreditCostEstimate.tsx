@@ -7,9 +7,10 @@ import type { Scene } from "@/hooks/useMindMovieScript";
 interface CreditCostEstimateProps {
   scenes: Scene[];
   className?: string;
+  videoModel?: string; // NEW: optional model for accurate video cost estimation
 }
 
-export function CreditCostEstimate({ scenes, className = "" }: CreditCostEstimateProps) {
+export function CreditCostEstimate({ scenes, className = "", videoModel }: CreditCostEstimateProps) {
   const { credits, estimateCreditCost, canAfford } = useProductionCredits();
 
   const costBreakdown = useMemo(() => {
@@ -18,24 +19,24 @@ export function CreditCostEstimate({ scenes, className = "" }: CreditCostEstimat
     // Also count scenes that will get videos after image generation
     const scenesForVideoAfterImage = scenes.filter(s => !s.generatedImageUrl && !s.generatedVideoUrl);
 
-    // Calculate costs
+    // Calculate costs - pass model for accurate video pricing
     const imageCost = estimateCreditCost("image", undefined, "2k");
-    const videoCostPerSecond = estimateCreditCost("video", 8); // 8 seconds max per video
+    const videoCostPerScene = estimateCreditCost("video", 8, undefined, videoModel); // 8 seconds max per video
 
     const totalImageCost = scenesNeedingImages.length * imageCost;
-    const totalVideoCost = (scenesNeedingVideos.length + scenesForVideoAfterImage.length) * videoCostPerSecond;
+    const totalVideoCost = (scenesNeedingVideos.length + scenesForVideoAfterImage.length) * videoCostPerScene;
     const totalCost = totalImageCost + totalVideoCost;
 
     return {
       imagesNeeded: scenesNeedingImages.length,
       videosNeeded: scenesNeedingVideos.length + scenesForVideoAfterImage.length,
       imageCostEach: imageCost,
-      videoCostEach: videoCostPerSecond,
+      videoCostEach: videoCostPerScene,
       totalImageCost,
       totalVideoCost,
       totalCost,
     };
-  }, [scenes, estimateCreditCost]);
+  }, [scenes, estimateCreditCost, videoModel]);
 
   const canAffordTotal = useMemo(() => {
     if (!credits) return false;

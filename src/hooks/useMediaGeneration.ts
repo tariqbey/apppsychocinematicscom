@@ -57,17 +57,17 @@ export interface GeneratedMedia {
 }
 
 export const MODEL_INFO: Record<VideoModel, { name: string; price: string; description: string }> = {
-  // Wan 2.1
-  "wan-ai/wan2.1-t2v-480p": { name: "Wan 2.1", price: "60-110 credits", description: "Fast text-to-video generation" },
-  "wan-ai/wan2.1-i2v-480p": { name: "Wan 2.1 Image", price: "60-110 credits", description: "Animate images with Wan 2.1" },
-  // Kling 1.0 (with video editing)
-  "kling-ai/v1.0/text-to-video": { name: "Kling 1.0", price: "60-110 credits", description: "Kling AI with video editing features" },
-  "kling-ai/v1.0/image-to-video": { name: "Kling 1.0 Image", price: "60-110 credits", description: "Animate images with Kling 1.0" },
-  "kling-ai/v1.0/video-to-video": { name: "Kling 1.0 Editor", price: "~110 credits", description: "AI video editing with effects & transitions" },
-  // Google Veo 3 (VO3) - has audio
-  "google/veo3": { name: "Veo 3 (VO3)", price: "80-120 credits", description: "Google DeepMind with audio generation" },
-  "google/veo3-fast": { name: "Veo 3 Fast", price: "60-100 credits", description: "Faster Veo 3 with audio" },
-  "google/veo3-fast/image-to-video": { name: "Veo 3 Fast Image", price: "60-100 credits", description: "Animate images with audio" },
+  // Wan 2.1 ($0.02/sec + $0.10 markup = ~30 credits for 10s)
+  "wan-ai/wan2.1-t2v-480p": { name: "Wan 2.1", price: "~30 credits", description: "Fast text-to-video generation" },
+  "wan-ai/wan2.1-i2v-480p": { name: "Wan 2.1 Image", price: "~30 credits", description: "Animate images with Wan 2.1" },
+  // Kling 1.0 ($0.03/sec + $0.10 markup = ~40 credits for 10s)
+  "kling-ai/v1.0/text-to-video": { name: "Kling 1.0", price: "~40 credits", description: "Kling AI with video editing features" },
+  "kling-ai/v1.0/image-to-video": { name: "Kling 1.0 Image", price: "~40 credits", description: "Animate images with Kling 1.0" },
+  "kling-ai/v1.0/video-to-video": { name: "Kling 1.0 Editor", price: "~50 credits", description: "AI video editing with effects & transitions" },
+  // Google Veo 3 ($0.05-0.10/sec + $0.10 markup = ~60-110 credits for 10s)
+  "google/veo3": { name: "Veo 3 (VO3)", price: "~110 credits", description: "Google DeepMind with audio generation" },
+  "google/veo3-fast": { name: "Veo 3 Fast", price: "~60 credits", description: "Faster Veo 3 with audio" },
+  "google/veo3-fast/image-to-video": { name: "Veo 3 Fast Image", price: "~60 credits", description: "Animate images with audio" },
 };
 
 export function useMediaGeneration() {
@@ -83,9 +83,10 @@ export function useMediaGeneration() {
   const canAffordGeneration = useCallback((
     mediaType: "image" | "video",
     duration?: number,
-    resolution?: string
+    resolution?: string,
+    model?: string
   ): boolean => {
-    return canAfford(mediaType, duration, resolution);
+    return canAfford(mediaType, duration, resolution, model);
   }, [canAfford]);
 
   const generateImage = async (params: ImageGenerationParams): Promise<string | null> => {
@@ -223,8 +224,8 @@ export function useMediaGeneration() {
 
     const duration = params.duration ?? 5;
 
-    // Check balance first (in credits)
-    const creditCost = estimateCreditCost("video", duration);
+    // Check balance first (in credits) - use model for accurate pricing
+    const creditCost = estimateCreditCost("video", duration, undefined, params.model);
     if (credits && !credits.isAdmin && credits.totalRemaining < creditCost) {
       toast({
         title: "Insufficient credits",
@@ -239,8 +240,9 @@ export function useMediaGeneration() {
 
     try {
       // Deduct before generation (backend handles the full cost with markup)
+      // Pass model for model-specific pricing
       if (!credits?.isAdmin) {
-        const deductResult = await deductCredits("video", duration);
+        const deductResult = await deductCredits("video", duration, undefined, undefined, undefined, params.model);
         if (!deductResult.success) {
           throw new Error(deductResult.error || "Failed to deduct credits");
         }
