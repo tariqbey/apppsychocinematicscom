@@ -38,14 +38,9 @@ serve(async (req) => {
       });
     }
 
-    // Create user client with auth header for getUser
-    const userClient = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_ANON_KEY") ?? "",
-      { global: { headers: { Authorization: authHeader } } }
-    );
-
-    const { data: userData, error: userError } = await userClient.auth.getUser();
+    // Use service role client with getUser(token) to validate JWT
+    const token = authHeader.replace("Bearer ", "");
+    const { data: userData, error: userError } = await supabaseClient.auth.getUser(token);
     if (userError || !userData?.user) {
       logStep("Auth failed", { error: userError?.message });
       return new Response(JSON.stringify({ error: "Authentication failed", code: "E1001" }), {
