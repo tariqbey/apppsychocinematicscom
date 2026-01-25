@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Film, Plus, Play, Star, Trash2, Copy, Edit3, Check, Loader2, X, Clapperboard, Eye, HardDrive, Download, Share2, Zap, Users } from "lucide-react";
+import { Film, Plus, Play, Star, Trash2, Copy, Edit3, Check, Loader2, X, Clapperboard, Eye, HardDrive, Download, Share2, Zap, Users, Crown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useMindMovies, MindMovie } from "@/hooks/useMindMovies";
 import { useStorageUsage } from "@/hooks/useStorageUsage";
+import { useUserProfile } from "@/hooks/useUserProfile";
 import { MoviePreviewModal } from "./MoviePreviewModal";
 import { ShareToCommunityDialog } from "@/components/sharing/ShareToCommunityDialog";
 import { supabase } from "@/integrations/supabase/client";
@@ -38,13 +39,19 @@ interface MovieVaultProps {
 export function MovieVault({ isOpen, onClose, onSelectMovie, onCreateNew }: MovieVaultProps) {
   const { movies, isLoading, fetchAllMovies, setMovieAsActive, deleteMovie, duplicateMovie } =
     useMindMovies();
+  const { profile } = useUserProfile();
   const { usage, isLoading: isLoadingUsage, calculateUsage, formatUsage, STORAGE_LIMIT_GB } = useStorageUsage();
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [settingActiveId, setSettingActiveId] = useState<string | null>(null);
   const [previewMovie, setPreviewMovie] = useState<MindMovie | null>(null);
+  const [previewRitualMovie, setPreviewRitualMovie] = useState(false);
   const [vaultFilter, setVaultFilter] = useState<VaultFilter>("all");
   const [episodeMovieIds, setEpisodeMovieIds] = useState<Set<string>>(new Set());
   const [shareMovie, setShareMovie] = useState<MindMovie | null>(null);
+  const [shareRitualMovie, setShareRitualMovie] = useState(false);
+
+  // The main ritual movie URL from user profile
+  const ritualMovieUrl = profile?.mind_movie_url;
 
   useEffect(() => {
     if (isOpen) {
@@ -72,6 +79,10 @@ export function MovieVault({ isOpen, onClose, onSelectMovie, onCreateNew }: Movi
     if (vaultFilter === "main") return !isEpisodeMovie;
     return true;
   });
+
+  // Check if ritual movie is the same as any script movie (to avoid duplicate display)
+  const ritualMovieMatchesScript = ritualMovieUrl && movies.some(m => m.movie_url === ritualMovieUrl);
+  const showRitualMovieCard = ritualMovieUrl && !ritualMovieMatchesScript && (vaultFilter === "all" || vaultFilter === "main");
 
   const handleSetActive = async (movieId: string) => {
     setSettingActiveId(movieId);
@@ -201,6 +212,16 @@ export function MovieVault({ isOpen, onClose, onSelectMovie, onCreateNew }: Movi
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {/* Main Ritual Movie Card - Shows the movie from TheaterView */}
+            {showRitualMovieCard && (
+              <RitualMovieCard
+                movieUrl={ritualMovieUrl!}
+                displayName={profile?.display_name || "Director"}
+                onPreview={() => setPreviewRitualMovie(true)}
+                onShareToCommunity={() => setShareRitualMovie(true)}
+              />
+            )}
+            
             {filteredMovies.map((movie) => (
               <MovieCard
                 key={movie.id}
@@ -244,7 +265,7 @@ export function MovieVault({ isOpen, onClose, onSelectMovie, onCreateNew }: Movi
         )}
       </ScrollArea>
 
-      {/* Preview Modal */}
+      {/* Preview Modal for script-based movies */}
       <MoviePreviewModal
         open={!!previewMovie}
         onOpenChange={(open) => !open && setPreviewMovie(null)}
@@ -252,7 +273,15 @@ export function MovieVault({ isOpen, onClose, onSelectMovie, onCreateNew }: Movi
         movieTitle={previewMovie?.title || "Mind Movie Preview"}
       />
 
-      {/* Share to Community Dialog */}
+      {/* Preview Modal for ritual movie */}
+      <MoviePreviewModal
+        open={previewRitualMovie}
+        onOpenChange={(open) => !open && setPreviewRitualMovie(false)}
+        movieUrl={ritualMovieUrl || null}
+        movieTitle="My Mind Movie"
+      />
+
+      {/* Share to Community Dialog for script movies */}
       <ShareToCommunityDialog
         isOpen={!!shareMovie}
         onClose={() => setShareMovie(null)}
@@ -260,7 +289,164 @@ export function MovieVault({ isOpen, onClose, onSelectMovie, onCreateNew }: Movi
         mediaType="video"
         defaultCaption={shareMovie?.chief_aim_snapshot?.what as string || `Check out my Mind Movie: ${shareMovie?.title || "My Vision"}`}
       />
+
+      {/* Share to Community Dialog for ritual movie */}
+      <ShareToCommunityDialog
+        isOpen={shareRitualMovie}
+        onClose={() => setShareRitualMovie(false)}
+        mediaUrl={ritualMovieUrl || ""}
+        mediaType="video"
+        defaultCaption={profile?.chief_aim_what || "Check out my Mind Movie!"}
+      />
     </div>
+  );
+}
+
+// Special card for the main ritual movie (from user_profiles.mind_movie_url)
+interface RitualMovieCardProps {
+  movieUrl: string;
+  displayName: string;
+  onPreview: () => void;
+  onShareToCommunity: () => void;
+}
+
+function RitualMovieCard({ movieUrl, displayName, onPreview, onShareToCommunity }: RitualMovieCardProps) {
+  const [duration, setDuration] = useState<number | null>(null);
+
+  useEffect(() => {
+    const video = document.createElement('video');
+    video.preload = 'metadata';
+    video.src = movieUrl;
+    
+    const handleLoadedMetadata = () => {
+      if (video.duration && Number.isFinite(video.duration)) {
+        setDuration(video.duration);
+      }
+    };
+    
+    video.addEventListener('loadedmetadata', handleLoadedMetadata);
+    return () => {
+      video.removeEventListener('loadedmetadata', handleLoadedMetadata);
+      video.src = '';
+    };
+  }, [movieUrl]);
+
+  const formatDuration = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const handleDownload = async () => {
+    try {
+      const response = await fetch(movieUrl);
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      const ext = movieUrl.includes('.webm') ? 'webm' : 'mp4';
+      a.download = `my-mind-movie.${ext}`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Download failed:', error);
+      toast.error("Failed to download movie");
+    }
+  };
+
+  return (
+    <Card className="group relative overflow-hidden transition-all border-gold ring-1 ring-gold/30 hover:ring-gold/50">
+      {/* Thumbnail / Preview */}
+      <div className="aspect-video bg-gradient-to-br from-muted to-muted/50 relative">
+        <video
+          src={movieUrl}
+          className="w-full h-full object-cover"
+          muted
+          preload="metadata"
+        />
+
+        {/* Duration badge */}
+        {duration !== null && (
+          <div className="absolute bottom-2 right-2 px-1.5 py-0.5 rounded bg-black/80 text-white text-xs font-mono tabular-nums">
+            {formatDuration(duration)}
+          </div>
+        )}
+
+        {/* Main Movie badge with crown */}
+        <div className="absolute top-2 left-2 flex items-center gap-1 px-2 py-1 rounded-md bg-gradient-to-r from-gold to-amber-500 text-primary-foreground text-xs font-medium shadow-lg">
+          <Crown className="w-3 h-3" />
+          My Movie
+        </div>
+
+        {/* Active indicator */}
+        <Badge variant="default" className="absolute top-2 right-2 bg-green-600">
+          Active
+        </Badge>
+
+        {/* Play overlay */}
+        <button
+          onClick={onPreview}
+          className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity"
+        >
+          <div className="w-14 h-14 rounded-full bg-gold/90 flex items-center justify-center">
+            <Play className="w-6 h-6 text-primary-foreground ml-1" />
+          </div>
+        </button>
+      </div>
+
+      {/* Info */}
+      <div className="p-4">
+        <h3 className="font-medium truncate mb-1">My Mind Movie</h3>
+        <p className="text-xs text-muted-foreground mb-3">
+          {displayName}'s daily ritual movie
+        </p>
+        <p className="text-xs text-muted-foreground line-clamp-2 mb-3 italic">
+          This is your main Mind Movie that plays during your morning ritual.
+        </p>
+
+        {/* Actions */}
+        <div className="flex flex-wrap items-center gap-1 sm:gap-2">
+          <Button variant="gold" size="sm" className="flex-1 min-w-[80px]" onClick={onPreview}>
+            <Play className="w-3 h-3 mr-1" />
+            Play
+          </Button>
+
+          <div className="flex items-center gap-1 ml-auto">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 sm:h-8 sm:w-8"
+              onClick={onPreview}
+              title="Preview movie"
+            >
+              <Eye className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            </Button>
+
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 sm:h-8 sm:w-8"
+              onClick={handleDownload}
+              title="Download movie"
+            >
+              <Download className="w-3 h-3" />
+            </Button>
+
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 sm:h-8 sm:w-8 text-gold hover:text-gold/80"
+              onClick={onShareToCommunity}
+              title="Share to Director's Corner"
+            >
+              <Users className="w-3 h-3" />
+            </Button>
+          </div>
+        </div>
+      </div>
+    </Card>
   );
 }
 
