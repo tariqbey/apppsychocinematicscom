@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Film, Plus, Play, Star, Trash2, Copy, Edit3, Check, Loader2, X, Clapperboard, Eye, HardDrive, Download, Share2, Zap, Users, Crown, Upload } from "lucide-react";
+import { Film, Plus, Play, Star, Trash2, Copy, Edit3, Check, Loader2, X, Clapperboard, Eye, HardDrive, Download, Share2, Zap, Users, Crown, Upload, Trophy, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -26,6 +26,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { toast } from "sonner";
+import { useAdminStatus } from "@/hooks/useAdminStatus";
+import { useAuth } from "@/hooks/useAuth";
 
 type VaultFilter = "all" | "main" | "episode";
 
@@ -41,6 +43,8 @@ export function MovieVault({ isOpen, onClose, onSelectMovie, onCreateNew }: Movi
     useMindMovies();
   const { profile } = useUserProfile();
   const { usage, isLoading: isLoadingUsage, calculateUsage, formatUsage, STORAGE_LIMIT_GB } = useStorageUsage();
+  const { isAdmin } = useAdminStatus();
+  const { user } = useAuth();
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [settingActiveId, setSettingActiveId] = useState<string | null>(null);
   const [previewMovie, setPreviewMovie] = useState<MindMovie | null>(null);
@@ -50,8 +54,57 @@ export function MovieVault({ isOpen, onClose, onSelectMovie, onCreateNew }: Movi
   const [shareMovie, setShareMovie] = useState<MindMovie | null>(null);
   const [shareRitualMovie, setShareRitualMovie] = useState(false);
   const [isReplacingRitual, setIsReplacingRitual] = useState(false);
+  const [featuringMovieId, setFeaturingMovieId] = useState<string | null>(null);
   const ritualFileInputRef = useRef<HTMLInputElement>(null);
   const { updateProfile, refetch: refetchProfile } = useUserProfile();
+
+  // Handler to feature a movie as "Movie of the Week" (admin only)
+  const handleFeatureMovie = async (movie: MindMovie) => {
+    if (!isAdmin || !movie.movie_url || !user) return;
+    
+    setFeaturingMovieId(movie.id);
+    try {
+      const now = new Date();
+      const startOfWeek = new Date(now);
+      startOfWeek.setDate(now.getDate() - now.getDay() + 1); // Monday
+      const endOfWeek = new Date(startOfWeek);
+      endOfWeek.setDate(startOfWeek.getDate() + 6); // Sunday
+
+      // Deactivate existing featured content of same type
+      await supabase
+        .from("featured_content")
+        .update({ is_active: false })
+        .eq("feature_type", "movie_of_week")
+        .eq("is_active", true);
+
+      // Get first scene image as thumbnail if available
+      const thumbnailUrl = movie.scenes?.[0]?.generatedImageUrl || null;
+
+      // Create new featured content
+      const { error } = await supabase.from("featured_content").insert({
+        feature_type: "movie_of_week",
+        user_id: user.id,
+        movie_id: movie.id,
+        title: movie.title || "Featured Mind Movie",
+        description: movie.chief_aim_snapshot?.what as string || null,
+        movie_url: movie.movie_url,
+        thumbnail_url: thumbnailUrl,
+        feature_period_start: startOfWeek.toISOString(),
+        feature_period_end: endOfWeek.toISOString(),
+        total_votes: 0,
+        is_active: true,
+      });
+
+      if (error) throw error;
+
+      toast.success("Movie featured as 'Movie of the Week'!");
+    } catch (error) {
+      console.error("Error featuring movie:", error);
+      toast.error("Failed to feature movie");
+    } finally {
+      setFeaturingMovieId(null);
+    }
+  };
 
   // The main ritual movie URL from user profile
   const ritualMovieUrl = profile?.mind_movie_url;
@@ -290,6 +343,8 @@ export function MovieVault({ isOpen, onClose, onSelectMovie, onCreateNew }: Movi
                 isEpisodeMovie={episodeMovieIds.has(movie.id) || movie.title?.startsWith("Episode:")}
                 isDeleting={deletingId === movie.id}
                 isSettingActive={settingActiveId === movie.id}
+                isFeaturing={featuringMovieId === movie.id}
+                isAdmin={isAdmin}
                 onSelect={() => onSelectMovie(movie)}
                 onSetActive={() => handleSetActive(movie.id)}
                 onDelete={() => handleDelete(movie.id)}
@@ -320,6 +375,7 @@ export function MovieVault({ isOpen, onClose, onSelectMovie, onCreateNew }: Movi
                   }
                   setShareMovie(movie);
                 }}
+                onFeatureMovie={() => handleFeatureMovie(movie)}
               />
             ))}
           </div>
@@ -542,6 +598,8 @@ interface MovieCardProps {
   isEpisodeMovie?: boolean;
   isDeleting: boolean;
   isSettingActive: boolean;
+  isFeaturing?: boolean;
+  isAdmin?: boolean;
   onSelect: () => void;
   onSetActive: () => void;
   onDelete: () => void;
@@ -549,6 +607,7 @@ interface MovieCardProps {
   onPreview: () => void;
   onDownload: () => void;
   onShareToCommunity: () => void;
+  onFeatureMovie?: () => void;
 }
 
 function MovieCard({
@@ -556,6 +615,8 @@ function MovieCard({
   isEpisodeMovie,
   isDeleting,
   isSettingActive,
+  isFeaturing,
+  isAdmin,
   onSelect,
   onSetActive,
   onDelete,
@@ -563,6 +624,7 @@ function MovieCard({
   onPreview,
   onDownload,
   onShareToCommunity,
+  onFeatureMovie,
 }: MovieCardProps) {
   const hasVideo = !!movie.movie_url;
   const hasScenes = movie.scenes && movie.scenes.length > 0;
@@ -746,6 +808,24 @@ function MovieCard({
                 title="Share to Director's Corner"
               >
                 <Users className="w-3 h-3" />
+              </Button>
+            )}
+
+            {/* Admin Feature Button */}
+            {isAdmin && hasVideo && movie.status === "complete" && onFeatureMovie && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 sm:h-8 sm:w-8 text-amber-500 hover:text-amber-400"
+                onClick={onFeatureMovie}
+                disabled={isFeaturing}
+                title="Feature as Movie of the Week"
+              >
+                {isFeaturing ? (
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                ) : (
+                  <Trophy className="w-3 h-3" />
+                )}
               </Button>
             )}
 
