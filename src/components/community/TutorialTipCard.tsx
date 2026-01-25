@@ -86,10 +86,10 @@ export const TutorialTipCard = ({
           {icon || <LightbulbIcon className="w-5 h-5" />}
         </div>
         <div className="flex-1 pr-6">
-          <h4 className="font-semibold text-sm mb-2">{title}</h4>
-          <ul className="space-y-1.5">
+          <h4 className="font-semibold text-base sm:text-sm mb-2">{title}</h4>
+          <ul className="space-y-2 sm:space-y-1.5">
             {tips.map((tip, index) => (
-              <li key={index} className="text-xs text-muted-foreground flex items-start gap-2">
+              <li key={index} className="text-sm sm:text-xs text-muted-foreground flex items-start gap-2">
                 <span className={`${iconStyles[variant]} font-bold`}>•</span>
                 <span>{tip}</span>
               </li>

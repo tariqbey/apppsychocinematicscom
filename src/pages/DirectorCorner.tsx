@@ -19,11 +19,13 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 import { 
   Users, Loader2, RefreshCw, Film, Trophy, Star, MessageSquare,
-  Vote, Crown, Calendar, Sparkles, Handshake, Search, Target
+  Vote, Crown, Calendar, Sparkles, Handshake, Search, Target, Camera, Upload
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Link } from "react-router-dom";
 import { format } from "date-fns";
 
@@ -61,6 +63,8 @@ export default function DirectorCorner() {
   
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [activeTab, setActiveTab] = useState("feed");
+  const [isUploadingCover, setIsUploadingCover] = useState(false);
+  const coverInputRef = useRef<HTMLInputElement>(null);
 
   // Cast profile to include new fields (with null-safe access)
   const typedProfile = profile ? (profile as typeof profile & {
@@ -69,7 +73,52 @@ export default function DirectorCorner() {
     looking_for?: string | null;
     can_offer?: string | null;
     show_collaboration_info?: boolean | null;
+    cover_image_url?: string | null;
   }) : null;
+
+  const handleCoverUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please select an image file");
+      return;
+    }
+
+    setIsUploadingCover(true);
+    try {
+      const fileExt = file.name.split(".").pop();
+      const fileName = `${user.id}/cover-${Date.now()}.${fileExt}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("avatars")
+        .upload(fileName, file, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from("avatars")
+        .getPublicUrl(fileName);
+
+      const { error: updateError } = await supabase
+        .from("user_profiles")
+        .update({ cover_image_url: publicUrl })
+        .eq("user_id", user.id);
+
+      if (updateError) throw updateError;
+
+      toast.success("Cover image updated!");
+      refetchProfile();
+    } catch (error) {
+      console.error("Error uploading cover:", error);
+      toast.error("Failed to upload cover image");
+    } finally {
+      setIsUploadingCover(false);
+      if (coverInputRef.current) {
+        coverInputRef.current.value = "";
+      }
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background spotlight film-grain">
@@ -106,52 +155,92 @@ export default function DirectorCorner() {
 
           {/* User Profile Card (if logged in) */}
           {user && profile && (
-            <div className="glass-card p-5 cinematic-border">
-              <div className="flex items-start gap-4">
-                <Avatar className="w-14 h-14 border-2 border-gold/30">
-                  <AvatarImage src={profile.avatar_url || undefined} />
-                  <AvatarFallback className="bg-gold/20 text-gold text-xl font-display">
-                    {profile.display_name?.[0]?.toUpperCase() || "D"}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="flex-1 min-w-0">
-                  <p className="font-display text-lg text-gold">{profile.display_name || "Anonymous Director"}</p>
-                  {profile.bio && (
-                    <p className="text-sm text-muted-foreground line-clamp-1">{profile.bio}</p>
-                  )}
-                  {typedProfile?.public_vision && (
-                    <div className="flex items-center gap-2 mt-2">
-                      <Target className="w-3 h-3 text-purple-400" />
-                      <p className="text-xs text-purple-300 line-clamp-1">{typedProfile.public_vision}</p>
+            <div className="glass-card cinematic-border overflow-hidden">
+              {/* Cover Image Section */}
+              <div className="relative h-28 sm:h-32 w-full group">
+                {typedProfile?.cover_image_url ? (
+                  <img 
+                    src={typedProfile.cover_image_url} 
+                    alt="Cover" 
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full bg-gradient-to-br from-purple-900/40 via-gold/20 to-amber-900/40" />
+                )}
+                {/* Cover Edit Button */}
+                <button
+                  onClick={() => coverInputRef.current?.click()}
+                  disabled={isUploadingCover}
+                  className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                >
+                  {isUploadingCover ? (
+                    <Loader2 className="w-6 h-6 text-white animate-spin" />
+                  ) : (
+                    <div className="flex items-center gap-2 text-white text-sm">
+                      <Camera className="w-5 h-5" />
+                      <span>Change Cover</span>
                     </div>
                   )}
-                  {typedProfile?.skills && typedProfile.skills.length > 0 && (
-                    <div className="flex flex-wrap gap-1 mt-2">
-                      {typedProfile.skills.slice(0, 3).map((skill) => (
-                        <Badge key={skill} variant="secondary" className="bg-amber-500/20 text-amber-300 text-[10px] px-1.5 py-0">
-                          {skill}
-                        </Badge>
-                      ))}
-                      {typedProfile.skills.length > 3 && (
-                        <Badge variant="outline" className="text-[10px] px-1.5 py-0">
-                          +{typedProfile.skills.length - 3}
-                        </Badge>
-                      )}
-                    </div>
-                  )}
-                </div>
-                <ProfileEditor
-                  userId={user.id}
-                  currentDisplayName={profile.display_name || undefined}
-                  currentAvatarUrl={profile.avatar_url || undefined}
-                  currentBio={profile.bio || undefined}
-                  currentPublicVision={typedProfile?.public_vision || undefined}
-                  currentSkills={typedProfile?.skills || undefined}
-                  currentLookingFor={typedProfile?.looking_for || undefined}
-                  currentCanOffer={typedProfile?.can_offer || undefined}
-                  currentShowCollaborationInfo={typedProfile?.show_collaboration_info || false}
-                  onUpdate={refetchProfile}
+                </button>
+                <input
+                  ref={coverInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleCoverUpload}
                 />
+              </div>
+
+              {/* Profile Info Section */}
+              <div className="p-5 -mt-8 relative">
+                <div className="flex items-start gap-4">
+                  <Avatar className="w-14 h-14 border-2 border-gold/30 ring-2 ring-background">
+                    <AvatarImage src={profile.avatar_url || undefined} />
+                    <AvatarFallback className="bg-gold/20 text-gold text-xl font-display">
+                      {profile.display_name?.[0]?.toUpperCase() || "D"}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 min-w-0 pt-6">
+                    <p className="font-display text-lg text-gold">{profile.display_name || "Anonymous Director"}</p>
+                    {profile.bio && (
+                      <p className="text-sm text-muted-foreground line-clamp-1">{profile.bio}</p>
+                    )}
+                    {typedProfile?.public_vision && (
+                      <div className="flex items-center gap-2 mt-2">
+                        <Target className="w-3 h-3 text-purple-400" />
+                        <p className="text-xs text-purple-300 line-clamp-1">{typedProfile.public_vision}</p>
+                      </div>
+                    )}
+                    {typedProfile?.skills && typedProfile.skills.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-2">
+                        {typedProfile.skills.slice(0, 3).map((skill) => (
+                          <Badge key={skill} variant="secondary" className="bg-amber-500/20 text-amber-300 text-[10px] px-1.5 py-0">
+                            {skill}
+                          </Badge>
+                        ))}
+                        {typedProfile.skills.length > 3 && (
+                          <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                            +{typedProfile.skills.length - 3}
+                          </Badge>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  <div className="pt-6">
+                    <ProfileEditor
+                      userId={user.id}
+                      currentDisplayName={profile.display_name || undefined}
+                      currentAvatarUrl={profile.avatar_url || undefined}
+                      currentBio={profile.bio || undefined}
+                      currentPublicVision={typedProfile?.public_vision || undefined}
+                      currentSkills={typedProfile?.skills || undefined}
+                      currentLookingFor={typedProfile?.looking_for || undefined}
+                      currentCanOffer={typedProfile?.can_offer || undefined}
+                      currentShowCollaborationInfo={typedProfile?.show_collaboration_info || false}
+                      onUpdate={refetchProfile}
+                    />
+                  </div>
+                </div>
               </div>
             </div>
           )}
