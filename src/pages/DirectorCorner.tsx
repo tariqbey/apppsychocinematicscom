@@ -62,14 +62,14 @@ export default function DirectorCorner() {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [activeTab, setActiveTab] = useState("feed");
 
-  // Cast profile to include new fields
-  const typedProfile = profile as typeof profile & {
+  // Cast profile to include new fields (with null-safe access)
+  const typedProfile = profile ? (profile as typeof profile & {
     public_vision?: string | null;
     skills?: string[] | null;
     looking_for?: string | null;
     can_offer?: string | null;
     show_collaboration_info?: boolean | null;
-  };
+  }) : null;
 
   return (
     <div className="min-h-screen bg-background spotlight film-grain">
@@ -119,13 +119,13 @@ export default function DirectorCorner() {
                   {profile.bio && (
                     <p className="text-sm text-muted-foreground line-clamp-1">{profile.bio}</p>
                   )}
-                  {typedProfile.public_vision && (
+                  {typedProfile?.public_vision && (
                     <div className="flex items-center gap-2 mt-2">
                       <Target className="w-3 h-3 text-purple-400" />
                       <p className="text-xs text-purple-300 line-clamp-1">{typedProfile.public_vision}</p>
                     </div>
                   )}
-                  {typedProfile.skills && typedProfile.skills.length > 0 && (
+                  {typedProfile?.skills && typedProfile.skills.length > 0 && (
                     <div className="flex flex-wrap gap-1 mt-2">
                       {typedProfile.skills.slice(0, 3).map((skill) => (
                         <Badge key={skill} variant="secondary" className="bg-amber-500/20 text-amber-300 text-[10px] px-1.5 py-0">
@@ -145,11 +145,11 @@ export default function DirectorCorner() {
                   currentDisplayName={profile.display_name || undefined}
                   currentAvatarUrl={profile.avatar_url || undefined}
                   currentBio={profile.bio || undefined}
-                  currentPublicVision={typedProfile.public_vision || undefined}
-                  currentSkills={typedProfile.skills || undefined}
-                  currentLookingFor={typedProfile.looking_for || undefined}
-                  currentCanOffer={typedProfile.can_offer || undefined}
-                  currentShowCollaborationInfo={typedProfile.show_collaboration_info || false}
+                  currentPublicVision={typedProfile?.public_vision || undefined}
+                  currentSkills={typedProfile?.skills || undefined}
+                  currentLookingFor={typedProfile?.looking_for || undefined}
+                  currentCanOffer={typedProfile?.can_offer || undefined}
+                  currentShowCollaborationInfo={typedProfile?.show_collaboration_info || false}
                   onUpdate={refetchProfile}
                 />
               </div>
@@ -292,7 +292,7 @@ export default function DirectorCorner() {
                       : "Be the first to share your dreams and skills with the community!"
                     }
                   </p>
-                  {user && !typedProfile.show_collaboration_info && (
+                  {user && !typedProfile?.show_collaboration_info && (
                     <p className="text-sm text-gold">
                       Enable "Show Collaboration Info" in your profile to appear here.
                     </p>
