@@ -879,8 +879,10 @@ export type Database = {
           media_type: string | null
           media_url: string | null
           post_type: string
+          shared_with_user_ids: string[] | null
           updated_at: string
           user_id: string
+          visibility: string
         }
         Insert: {
           comments_count?: number
@@ -891,8 +893,10 @@ export type Database = {
           media_type?: string | null
           media_url?: string | null
           post_type?: string
+          shared_with_user_ids?: string[] | null
           updated_at?: string
           user_id: string
+          visibility?: string
         }
         Update: {
           comments_count?: number
@@ -903,8 +907,10 @@ export type Database = {
           media_type?: string | null
           media_url?: string | null
           post_type?: string
+          shared_with_user_ids?: string[] | null
           updated_at?: string
           user_id?: string
+          visibility?: string
         }
         Relationships: []
       }
