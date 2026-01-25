@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Film, Plus, Play, Star, Trash2, Copy, Edit3, Check, Loader2, X, Clapperboard, Eye, HardDrive, Download, Share2, Zap } from "lucide-react";
+import { Film, Plus, Play, Star, Trash2, Copy, Edit3, Check, Loader2, X, Clapperboard, Eye, HardDrive, Download, Share2, Zap, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -20,7 +20,7 @@ import {
 import { useMindMovies, MindMovie } from "@/hooks/useMindMovies";
 import { useStorageUsage } from "@/hooks/useStorageUsage";
 import { MoviePreviewModal } from "./MoviePreviewModal";
-import { useFeaturedContent } from "@/hooks/useFeaturedContent";
+import { ShareToCommunityDialog } from "@/components/sharing/ShareToCommunityDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
@@ -39,12 +39,12 @@ export function MovieVault({ isOpen, onClose, onSelectMovie, onCreateNew }: Movi
   const { movies, isLoading, fetchAllMovies, setMovieAsActive, deleteMovie, duplicateMovie } =
     useMindMovies();
   const { usage, isLoading: isLoadingUsage, calculateUsage, formatUsage, STORAGE_LIMIT_GB } = useStorageUsage();
-  const { submitMovieToCommunity } = useFeaturedContent();
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [settingActiveId, setSettingActiveId] = useState<string | null>(null);
   const [previewMovie, setPreviewMovie] = useState<MindMovie | null>(null);
   const [vaultFilter, setVaultFilter] = useState<VaultFilter>("all");
   const [episodeMovieIds, setEpisodeMovieIds] = useState<Set<string>>(new Set());
+  const [shareMovie, setShareMovie] = useState<MindMovie | null>(null);
 
   useEffect(() => {
     if (isOpen) {
@@ -231,20 +231,12 @@ export function MovieVault({ isOpen, onClose, onSelectMovie, onCreateNew }: Movi
                     console.error('Download failed:', error);
                   }
                 }}
-                onSubmitToCommunity={async () => {
+                onShareToCommunity={() => {
                   if (!movie.movie_url) {
-                    toast.error("Complete your movie first before submitting");
+                    toast.error("Complete your movie first before sharing");
                     return;
                   }
-                  const success = await submitMovieToCommunity(
-                    movie.id,
-                    movie.title || "My Mind Movie",
-                    "",
-                    movie.movie_url,
-                    movie.scenes?.[0]?.generatedImageUrl,
-                    movie.chief_aim_snapshot?.what as string
-                  );
-                  if (success) toast.success("🎬 Submitted to community!");
+                  setShareMovie(movie);
                 }}
               />
             ))}
@@ -258,6 +250,15 @@ export function MovieVault({ isOpen, onClose, onSelectMovie, onCreateNew }: Movi
         onOpenChange={(open) => !open && setPreviewMovie(null)}
         movieUrl={previewMovie?.movie_url || null}
         movieTitle={previewMovie?.title || "Mind Movie Preview"}
+      />
+
+      {/* Share to Community Dialog */}
+      <ShareToCommunityDialog
+        isOpen={!!shareMovie}
+        onClose={() => setShareMovie(null)}
+        mediaUrl={shareMovie?.movie_url || ""}
+        mediaType="video"
+        defaultCaption={shareMovie?.chief_aim_snapshot?.what as string || `Check out my Mind Movie: ${shareMovie?.title || "My Vision"}`}
       />
     </div>
   );
@@ -274,7 +275,7 @@ interface MovieCardProps {
   onDuplicate: () => void;
   onPreview: () => void;
   onDownload: () => void;
-  onSubmitToCommunity: () => void;
+  onShareToCommunity: () => void;
 }
 
 function MovieCard({
@@ -288,7 +289,7 @@ function MovieCard({
   onDuplicate,
   onPreview,
   onDownload,
-  onSubmitToCommunity,
+  onShareToCommunity,
 }: MovieCardProps) {
   const hasVideo = !!movie.movie_url;
   const hasScenes = movie.scenes && movie.scenes.length > 0;
@@ -468,10 +469,10 @@ function MovieCard({
                 variant="ghost"
                 size="icon"
                 className="h-7 w-7 sm:h-8 sm:w-8 text-gold hover:text-gold/80"
-                onClick={onSubmitToCommunity}
-                title="Submit to Community"
+                onClick={onShareToCommunity}
+                title="Share to Director's Corner"
               >
-                <Share2 className="w-3 h-3" />
+                <Users className="w-3 h-3" />
               </Button>
             )}
 

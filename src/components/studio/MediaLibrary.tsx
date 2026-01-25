@@ -6,7 +6,7 @@ import { Progress } from "@/components/ui/progress";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Image, Video, Clock, AlertCircle, Loader2, Download, Trash2, HardDrive, X, ChevronLeft, ChevronRight, RefreshCw, Mic2, Clapperboard, Music, Plus, ArrowUpDown, Share2, Radio, ListMusic } from "lucide-react";
+import { Image, Video, Clock, AlertCircle, Loader2, Download, Trash2, HardDrive, X, ChevronLeft, ChevronRight, RefreshCw, Mic2, Clapperboard, Music, Plus, ArrowUpDown, Share2, Radio, ListMusic, Users } from "lucide-react";
 import { useMediaGeneration, GeneratedMedia } from "@/hooks/useMediaGeneration";
 import { useStorageUsage } from "@/hooks/useStorageUsage";
 import { useUserPlaylists } from "@/hooks/useUserPlaylists";
@@ -802,6 +802,21 @@ export function MediaLibrary({ filter = "all", onSelect, onAddToTimeline, onAddM
                     <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2">
                       <span className="text-white text-sm font-medium">Click to preview</span>
                       <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                        {/* Share to Community Button */}
+                        {(item.media_type === "image" || item.media_type === "video") && (
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            className="h-7 px-2 bg-gold/90 hover:bg-gold text-primary-foreground"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setShareDialogMedia(item);
+                            }}
+                          >
+                            <Users className="h-3 w-3 mr-1" />
+                            Share
+                          </Button>
+                        )}
                         <Button
                           size="sm"
                           variant="secondary"
