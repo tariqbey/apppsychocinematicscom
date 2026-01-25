@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Film, Plus, Play, Star, Trash2, Copy, Edit3, Check, Loader2, X, Clapperboard, Eye, HardDrive, Download, Share2, Zap, Users, Crown } from "lucide-react";
+import { Film, Plus, Play, Star, Trash2, Copy, Edit3, Check, Loader2, X, Clapperboard, Eye, HardDrive, Download, Share2, Zap, Users, Crown, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -49,6 +49,9 @@ export function MovieVault({ isOpen, onClose, onSelectMovie, onCreateNew }: Movi
   const [episodeMovieIds, setEpisodeMovieIds] = useState<Set<string>>(new Set());
   const [shareMovie, setShareMovie] = useState<MindMovie | null>(null);
   const [shareRitualMovie, setShareRitualMovie] = useState(false);
+  const [isReplacingRitual, setIsReplacingRitual] = useState(false);
+  const ritualFileInputRef = useRef<HTMLInputElement>(null);
+  const { updateProfile, refetch: refetchProfile } = useUserProfile();
 
   // The main ritual movie URL from user profile
   const ritualMovieUrl = profile?.mind_movie_url;
@@ -101,6 +104,62 @@ export function MovieVault({ isOpen, onClose, onSelectMovie, onCreateNew }: Movi
   const handlePreview = (movie: MindMovie) => {
     if (movie.movie_url) {
       setPreviewMovie(movie);
+    }
+  };
+
+  const handleReplaceRitualMovie = () => {
+    ritualFileInputRef.current?.click();
+  };
+
+  const handleRitualFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('video/')) {
+      toast.error("Please upload a video file");
+      return;
+    }
+
+    setIsReplacingRitual(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error("Please sign in to upload");
+        return;
+      }
+
+      const fileExt = file.name.split('.').pop()?.toLowerCase() || 'mp4';
+      const fileName = `${user.id}/mind-movie-${Date.now()}.${fileExt}`;
+
+      // Upload to mind-movies bucket
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('mind-movies')
+        .upload(fileName, file, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      // Get public URL
+      const { data: urlData } = supabase.storage
+        .from('mind-movies')
+        .getPublicUrl(fileName);
+
+      const newMovieUrl = urlData.publicUrl;
+
+      // Update user profile with new mind_movie_url
+      await updateProfile({ mind_movie_url: newMovieUrl });
+      await refetchProfile();
+      
+      toast.success("Mind Movie replaced successfully!");
+    } catch (error) {
+      console.error('Upload failed:', error);
+      toast.error("Failed to upload movie. Please try again.");
+    } finally {
+      setIsReplacingRitual(false);
+      // Reset input
+      if (ritualFileInputRef.current) {
+        ritualFileInputRef.current.value = '';
+      }
     }
   };
 
@@ -190,7 +249,7 @@ export function MovieVault({ isOpen, onClose, onSelectMovie, onCreateNew }: Movi
           <div className="flex items-center justify-center py-12">
             <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
           </div>
-        ) : filteredMovies.length === 0 ? (
+        ) : (filteredMovies.length === 0 && !showRitualMovieCard) ? (
           <div className="flex flex-col items-center justify-center py-16 text-center">
             <Film className="w-16 h-16 text-muted-foreground/50 mb-4" />
             <h3 className="text-lg font-medium mb-2">
@@ -219,6 +278,8 @@ export function MovieVault({ isOpen, onClose, onSelectMovie, onCreateNew }: Movi
                 displayName={profile?.display_name || "Director"}
                 onPreview={() => setPreviewRitualMovie(true)}
                 onShareToCommunity={() => setShareRitualMovie(true)}
+                onReplace={handleReplaceRitualMovie}
+                isReplacing={isReplacingRitual}
               />
             )}
             
@@ -298,6 +359,15 @@ export function MovieVault({ isOpen, onClose, onSelectMovie, onCreateNew }: Movi
         mediaType="video"
         defaultCaption={profile?.chief_aim_what || "Check out my Mind Movie!"}
       />
+
+      {/* Hidden file input for replacing ritual movie */}
+      <input
+        ref={ritualFileInputRef}
+        type="file"
+        accept="video/*"
+        className="hidden"
+        onChange={handleRitualFileChange}
+      />
     </div>
   );
 }
@@ -308,9 +378,11 @@ interface RitualMovieCardProps {
   displayName: string;
   onPreview: () => void;
   onShareToCommunity: () => void;
+  onReplace: () => void;
+  isReplacing?: boolean;
 }
 
-function RitualMovieCard({ movieUrl, displayName, onPreview, onShareToCommunity }: RitualMovieCardProps) {
+function RitualMovieCard({ movieUrl, displayName, onPreview, onShareToCommunity, onReplace, isReplacing }: RitualMovieCardProps) {
   const [duration, setDuration] = useState<number | null>(null);
 
   useEffect(() => {
@@ -414,6 +486,21 @@ function RitualMovieCard({ movieUrl, displayName, onPreview, onShareToCommunity 
           </Button>
 
           <div className="flex items-center gap-1 ml-auto">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 sm:h-8 sm:w-8"
+              onClick={onReplace}
+              disabled={isReplacing}
+              title="Replace movie"
+            >
+              {isReplacing ? (
+                <Loader2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 animate-spin" />
+              ) : (
+                <Upload className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              )}
+            </Button>
+
             <Button
               variant="ghost"
               size="icon"
