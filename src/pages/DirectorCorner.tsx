@@ -6,18 +6,22 @@ import { TutorialTipCard } from "@/components/community/TutorialTipCard";
 import { FeaturedMovieCard } from "@/components/community/FeaturedMovieCard";
 import { CommunityMovieCard } from "@/components/community/CommunityMovieCard";
 import { AnnualAwardsShowcase } from "@/components/community/AnnualAwardsShowcase";
+import { DirectorProfileCard } from "@/components/community/DirectorProfileCard";
 import { useDirectorCorner } from "@/hooks/useDirectorCorner";
 import { useFeaturedContent } from "@/hooks/useFeaturedContent";
+import { useDirectorProfiles } from "@/hooks/useDirectorProfiles";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { AuthModal } from "@/components/auth/AuthModal";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Badge } from "@/components/ui/badge";
 import { 
   Users, Loader2, RefreshCw, Film, Trophy, Star, MessageSquare,
-  Vote, Crown, Calendar, Sparkles
+  Vote, Crown, Calendar, Sparkles, Handshake, Search, Target
 } from "lucide-react";
 import { useState } from "react";
 import { Link } from "react-router-dom";
@@ -46,9 +50,26 @@ export default function DirectorCorner() {
     loading: featuredLoading,
     voteForMovie,
   } = useFeaturedContent();
+
+  const {
+    profiles: directorProfiles,
+    loading: profilesLoading,
+    searchQuery,
+    setSearchQuery,
+    refetch: refetchProfiles,
+  } = useDirectorProfiles();
   
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [activeTab, setActiveTab] = useState("feed");
+
+  // Cast profile to include new fields
+  const typedProfile = profile as typeof profile & {
+    public_vision?: string | null;
+    skills?: string[] | null;
+    looking_for?: string | null;
+    can_offer?: string | null;
+    show_collaboration_info?: boolean | null;
+  };
 
   return (
     <div className="min-h-screen bg-background spotlight film-grain">
@@ -65,48 +86,73 @@ export default function DirectorCorner() {
               </h1>
             </div>
             <p className="text-muted-foreground">
-              Share insights, celebrate wins, vote on Mind Movies, and connect with fellow Directors.
+              Share insights, collaborate on dreams, vote on Mind Movies, and connect with fellow Directors.
             </p>
           </div>
 
           {/* Tutorial Tip Card */}
           <TutorialTipCard
-            id="directors-corner-intro"
+            id="directors-corner-intro-v2"
             title="Welcome to the Director's Corner!"
             variant="gold"
             icon={<Sparkles className="w-5 h-5" />}
             tips={[
               "Share your wins, insights, and manifestations with the community",
+              "Browse the Directors tab to find collaborators with complementary skills",
+              "Share your dreams and what you're looking for to attract the right people",
               "Vote on Mind Movies to help select our Movie of the Week",
-              "Top contributors earn recognition in our annual Director Awards",
-              "Like and comment on posts to support fellow Directors",
             ]}
           />
 
           {/* User Profile Card (if logged in) */}
           {user && profile && (
-            <div className="glass-card p-5 cinematic-border flex items-center justify-between">
-              <div className="flex items-center gap-4">
+            <div className="glass-card p-5 cinematic-border">
+              <div className="flex items-start gap-4">
                 <Avatar className="w-14 h-14 border-2 border-gold/30">
                   <AvatarImage src={profile.avatar_url || undefined} />
                   <AvatarFallback className="bg-gold/20 text-gold text-xl font-display">
                     {profile.display_name?.[0]?.toUpperCase() || "D"}
                   </AvatarFallback>
                 </Avatar>
-                <div>
+                <div className="flex-1 min-w-0">
                   <p className="font-display text-lg text-gold">{profile.display_name || "Anonymous Director"}</p>
                   {profile.bio && (
                     <p className="text-sm text-muted-foreground line-clamp-1">{profile.bio}</p>
                   )}
+                  {typedProfile.public_vision && (
+                    <div className="flex items-center gap-2 mt-2">
+                      <Target className="w-3 h-3 text-purple-400" />
+                      <p className="text-xs text-purple-300 line-clamp-1">{typedProfile.public_vision}</p>
+                    </div>
+                  )}
+                  {typedProfile.skills && typedProfile.skills.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mt-2">
+                      {typedProfile.skills.slice(0, 3).map((skill) => (
+                        <Badge key={skill} variant="secondary" className="bg-amber-500/20 text-amber-300 text-[10px] px-1.5 py-0">
+                          {skill}
+                        </Badge>
+                      ))}
+                      {typedProfile.skills.length > 3 && (
+                        <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                          +{typedProfile.skills.length - 3}
+                        </Badge>
+                      )}
+                    </div>
+                  )}
                 </div>
+                <ProfileEditor
+                  userId={user.id}
+                  currentDisplayName={profile.display_name || undefined}
+                  currentAvatarUrl={profile.avatar_url || undefined}
+                  currentBio={profile.bio || undefined}
+                  currentPublicVision={typedProfile.public_vision || undefined}
+                  currentSkills={typedProfile.skills || undefined}
+                  currentLookingFor={typedProfile.looking_for || undefined}
+                  currentCanOffer={typedProfile.can_offer || undefined}
+                  currentShowCollaborationInfo={typedProfile.show_collaboration_info || false}
+                  onUpdate={refetchProfile}
+                />
               </div>
-              <ProfileEditor
-                userId={user.id}
-                currentDisplayName={profile.display_name || undefined}
-                currentAvatarUrl={profile.avatar_url || undefined}
-                currentBio={profile.bio || undefined}
-                onUpdate={refetchProfile}
-              />
             </div>
           )}
 
@@ -120,10 +166,14 @@ export default function DirectorCorner() {
 
           {/* Tabs Navigation */}
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-3 bg-card/50 border border-border">
+            <TabsList className="grid w-full grid-cols-4 bg-card/50 border border-border">
               <TabsTrigger value="feed" className="gap-2 data-[state=active]:bg-gold/20">
                 <MessageSquare className="w-4 h-4" />
                 <span className="hidden sm:inline">Feed</span>
+              </TabsTrigger>
+              <TabsTrigger value="directors" className="gap-2 data-[state=active]:bg-gold/20">
+                <Handshake className="w-4 h-4" />
+                <span className="hidden sm:inline">Directors</span>
               </TabsTrigger>
               <TabsTrigger value="movies" className="gap-2 data-[state=active]:bg-gold/20">
                 <Vote className="w-4 h-4" />
@@ -183,6 +233,86 @@ export default function DirectorCorner() {
                       onDelete={deletePost}
                       onFetchComments={fetchComments}
                       onAddComment={addComment}
+                    />
+                  ))}
+                </div>
+              )}
+            </TabsContent>
+
+            {/* Directors Tab - NEW */}
+            <TabsContent value="directors" className="space-y-6 mt-6">
+              {/* Tutorial Tip */}
+              <TutorialTipCard
+                id="directors-collaboration"
+                title="Find Your Dream Team"
+                variant="purple"
+                icon={<Handshake className="w-5 h-5" />}
+                tips={[
+                  "Browse directors who have shared their dreams, skills, and what they're looking for",
+                  "Find collaborators with complementary skills to help manifest your vision",
+                  "Enable 'Show Collaboration Info' in your profile to appear here",
+                  "Search by skill, dream, or what someone is offering",
+                ]}
+              />
+
+              {/* Search */}
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search by skill, dream, or what they offer..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10 border-gold/20 focus:border-gold"
+                />
+              </div>
+
+              {/* Stats */}
+              <div className="flex items-center justify-between">
+                <p className="text-sm text-muted-foreground">
+                  {directorProfiles.length} director{directorProfiles.length !== 1 ? "s" : ""} sharing collaboration info
+                </p>
+                <Button variant="ghost" size="sm" onClick={refetchProfiles} className="gap-2">
+                  <RefreshCw className="h-4 w-4" />
+                  Refresh
+                </Button>
+              </div>
+
+              {/* Director Profiles Grid */}
+              {profilesLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="h-8 w-8 animate-spin text-gold" />
+                </div>
+              ) : directorProfiles.length === 0 ? (
+                <div className="glass-card p-12 cinematic-border text-center">
+                  <Handshake className="h-12 w-12 text-muted-foreground mx-auto mb-4 opacity-50" />
+                  <h3 className="text-xl font-display mb-2">No Directors Sharing Yet</h3>
+                  <p className="text-muted-foreground mb-4">
+                    {searchQuery 
+                      ? "No directors match your search. Try different keywords."
+                      : "Be the first to share your dreams and skills with the community!"
+                    }
+                  </p>
+                  {user && !typedProfile.show_collaboration_info && (
+                    <p className="text-sm text-gold">
+                      Enable "Show Collaboration Info" in your profile to appear here.
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <div className="grid gap-4">
+                  {directorProfiles.map((director) => (
+                    <DirectorProfileCard
+                      key={director.user_id}
+                      userId={director.user_id}
+                      displayName={director.display_name || "Anonymous Director"}
+                      avatarUrl={director.avatar_url || undefined}
+                      bio={director.bio || undefined}
+                      publicVision={director.public_vision || undefined}
+                      skills={director.skills || undefined}
+                      lookingFor={director.looking_for || undefined}
+                      canOffer={director.can_offer || undefined}
+                      currentStreak={director.current_streak || undefined}
+                      bestStreak={director.best_streak || undefined}
                     />
                   ))}
                 </div>

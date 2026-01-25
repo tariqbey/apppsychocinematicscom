@@ -37,6 +37,13 @@ export interface UserProfile {
   bio: string | null;
   created_at: string;
   updated_at: string;
+
+  // Collaboration fields for Director's Corner
+  public_vision?: string | null;
+  skills?: string[] | null;
+  looking_for?: string | null;
+  can_offer?: string | null;
+  show_collaboration_info?: boolean | null;
 }
 
 export const useUserProfile = () => {
