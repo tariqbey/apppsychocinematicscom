@@ -13,6 +13,7 @@ export interface DirectorProfile {
   can_offer: string | null;
   current_streak: number | null;
   best_streak: number | null;
+  cover_image_url: string | null;
 }
 
 export function useDirectorProfiles() {
@@ -36,7 +37,8 @@ export function useDirectorProfiles() {
           looking_for,
           can_offer,
           current_streak,
-          best_streak
+          best_streak,
+          cover_image_url
         `)
         .eq("show_collaboration_info", true)
         .order("current_streak", { ascending: false, nullsFirst: false })

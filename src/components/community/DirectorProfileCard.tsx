@@ -13,6 +13,7 @@ interface DirectorProfileCardProps {
   userId: string;
   displayName: string;
   avatarUrl?: string;
+  coverImageUrl?: string;
   bio?: string;
   publicVision?: string;
   skills?: string[];
@@ -27,6 +28,7 @@ export function DirectorProfileCard({
   userId,
   displayName,
   avatarUrl,
+  coverImageUrl,
   bio,
   publicVision,
   skills,
@@ -42,11 +44,24 @@ export function DirectorProfileCard({
 
   return (
     <Card className="glass-card cinematic-border overflow-hidden group hover:border-gold/50 transition-all duration-300">
-      <CardHeader className="pb-3">
+      {/* Cover Image */}
+      {coverImageUrl ? (
+        <div className="h-24 w-full overflow-hidden">
+          <img 
+            src={coverImageUrl} 
+            alt={`${displayName}'s cover`}
+            className="w-full h-full object-cover"
+          />
+        </div>
+      ) : (
+        <div className="h-24 w-full bg-gradient-to-br from-purple-900/40 via-gold/20 to-amber-900/40" />
+      )}
+      
+      <CardHeader className="pb-3 -mt-8 relative">
         <div className="flex items-start gap-4">
           {/* Avatar */}
           <div className="relative">
-            <Avatar className="w-14 h-14 border-2 border-gold/30 group-hover:border-gold/60 transition-colors">
+            <Avatar className="w-14 h-14 border-2 border-gold/30 group-hover:border-gold/60 transition-colors ring-2 ring-background">
               <AvatarImage src={avatarUrl} />
               <AvatarFallback className="bg-gradient-to-br from-gold/30 to-amber-500/30 text-gold font-display text-xl">
                 {displayName?.[0]?.toUpperCase() || "D"}
@@ -60,7 +75,7 @@ export function DirectorProfileCard({
           </div>
 
           {/* Name & Bio */}
-          <div className="flex-1 min-w-0">
+          <div className="flex-1 min-w-0 pt-6">
             <h3 className="font-display text-lg text-gold truncate group-hover:text-gold/90 transition-colors">
               {displayName}
             </h3>
@@ -75,7 +90,7 @@ export function DirectorProfileCard({
           </div>
 
           {/* Actions */}
-          <div className="flex gap-2">
+          <div className="flex gap-2 pt-6">
             {onMessage && (
               <Button
                 size="icon"

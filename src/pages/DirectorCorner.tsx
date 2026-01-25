@@ -306,6 +306,7 @@ export default function DirectorCorner() {
                       userId={director.user_id}
                       displayName={director.display_name || "Anonymous Director"}
                       avatarUrl={director.avatar_url || undefined}
+                      coverImageUrl={director.cover_image_url || undefined}
                       bio={director.bio || undefined}
                       publicVision={director.public_vision || undefined}
                       skills={director.skills || undefined}
