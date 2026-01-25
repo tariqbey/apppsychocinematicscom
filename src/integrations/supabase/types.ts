@@ -2050,6 +2050,7 @@ export type Database = {
           avatar_url: string | null
           best_streak: number | null
           bio: string | null
+          can_offer: string | null
           character_build: string | null
           character_features: string | null
           character_height: string | null
@@ -2082,12 +2083,16 @@ export type Database = {
           id: string
           journal_reminder_time: string | null
           last_viewing_date: string | null
+          looking_for: string | null
           mind_movie_url: string | null
           morning_ritual_reminder_time: string | null
           phone_number: string | null
+          public_vision: string | null
           push_notifications_enabled: boolean | null
           reference_photo_url: string | null
+          show_collaboration_info: boolean | null
           show_on_leaderboard: boolean
+          skills: string[] | null
           style_sheet_approved: boolean | null
           transformation_start_date: string | null
           updated_at: string
@@ -2097,6 +2102,7 @@ export type Database = {
           avatar_url?: string | null
           best_streak?: number | null
           bio?: string | null
+          can_offer?: string | null
           character_build?: string | null
           character_features?: string | null
           character_height?: string | null
@@ -2129,12 +2135,16 @@ export type Database = {
           id?: string
           journal_reminder_time?: string | null
           last_viewing_date?: string | null
+          looking_for?: string | null
           mind_movie_url?: string | null
           morning_ritual_reminder_time?: string | null
           phone_number?: string | null
+          public_vision?: string | null
           push_notifications_enabled?: boolean | null
           reference_photo_url?: string | null
+          show_collaboration_info?: boolean | null
           show_on_leaderboard?: boolean
+          skills?: string[] | null
           style_sheet_approved?: boolean | null
           transformation_start_date?: string | null
           updated_at?: string
@@ -2144,6 +2154,7 @@ export type Database = {
           avatar_url?: string | null
           best_streak?: number | null
           bio?: string | null
+          can_offer?: string | null
           character_build?: string | null
           character_features?: string | null
           character_height?: string | null
@@ -2176,12 +2187,16 @@ export type Database = {
           id?: string
           journal_reminder_time?: string | null
           last_viewing_date?: string | null
+          looking_for?: string | null
           mind_movie_url?: string | null
           morning_ritual_reminder_time?: string | null
           phone_number?: string | null
+          public_vision?: string | null
           push_notifications_enabled?: boolean | null
           reference_photo_url?: string | null
+          show_collaboration_info?: boolean | null
           show_on_leaderboard?: boolean
+          skills?: string[] | null
           style_sheet_approved?: boolean | null
           transformation_start_date?: string | null
           updated_at?: string
