@@ -19,9 +19,9 @@ const corsHeaders = {
 // reasonably sized 206 chunk (not the entire remaining file). Returning huge
 // bodies can cause stalls or abrupt stops on mobile.
 //
-// NOTE: We keep chunks small, but we also avoid doing an extra HEAD request for
-// every single range request (that overhead can cause stutters/buffering).
-const MAX_CHUNK_BYTES = 4 * 1024 * 1024; // 4MB per request
+// NOTE: Larger chunks reduce round-trip overhead and improve smooth playback,
+// but very large chunks can overwhelm mobile memory. 8MB is a good balance.
+const MAX_CHUNK_BYTES = 8 * 1024 * 1024; // 8MB per request for smoother streaming
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
