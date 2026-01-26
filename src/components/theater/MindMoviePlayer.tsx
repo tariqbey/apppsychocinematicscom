@@ -1,5 +1,5 @@
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
-import { Play, Pause, VolumeX, Volume2, Maximize, Minimize2 } from "lucide-react";
+import { Play, Pause, VolumeX, Volume2, Maximize, Minimize2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { VideoDiagnostics } from "./VideoDiagnostics";
@@ -95,6 +95,8 @@ export const MindMoviePlayer = forwardRef<MindMoviePlayerHandle, MindMoviePlayer
     const [duration, setDuration] = useState(0);
     const [wasInterrupted, setWasInterrupted] = useState(false);
     const [isWidescreen, setIsWidescreen] = useState(false);
+    const [isBuffering, setIsBuffering] = useState(false);
+    const [bufferedPercent, setBufferedPercent] = useState(0);
 
     // Controls auto-hide state
     const [controlsVisible, setControlsVisible] = useState(true);
@@ -257,10 +259,14 @@ export const MindMoviePlayer = forwardRef<MindMoviePlayerHandle, MindMoviePlayer
         setCurrentTime(video.currentTime);
       };
 
-      const handlePlay = () => setIsPlaying(true);
+      const handlePlay = () => {
+        setIsPlaying(true);
+        setIsBuffering(false);
+      };
 
       const handlePlaying = () => {
         setIsPlaying(true);
+        setIsBuffering(false);
         ensureUnmuted();
 
         // If we just recovered from buffering, nudge the audio pipeline once.
@@ -273,11 +279,26 @@ export const MindMoviePlayer = forwardRef<MindMoviePlayerHandle, MindMoviePlayer
       const handleWaiting = () => {
         sawBufferingRef.current = true;
         lastBufferingAtRef.current = Date.now();
+        setIsBuffering(true);
       };
 
       const handleStalled = () => {
         sawBufferingRef.current = true;
         lastBufferingAtRef.current = Date.now();
+        setIsBuffering(true);
+      };
+
+      const handleCanPlay = () => {
+        setIsBuffering(false);
+      };
+
+      const handleProgress = () => {
+        // Update buffered percentage for visual feedback
+        if (video.buffered.length > 0 && video.duration > 0) {
+          const bufferedEnd = video.buffered.end(video.buffered.length - 1);
+          const percent = (bufferedEnd / video.duration) * 100;
+          setBufferedPercent(Math.min(100, percent));
+        }
       };
 
       const handleVolumeChange = () => {
@@ -431,6 +452,8 @@ export const MindMoviePlayer = forwardRef<MindMoviePlayerHandle, MindMoviePlayer
       video.addEventListener("playing", handlePlaying);
       video.addEventListener("waiting", handleWaiting);
       video.addEventListener("stalled", handleStalled);
+      video.addEventListener("canplay", handleCanPlay);
+      video.addEventListener("progress", handleProgress);
       video.addEventListener("pause", handlePause);
       video.addEventListener("ended", handleEnded);
       video.addEventListener("error", handleError);
@@ -449,6 +472,8 @@ export const MindMoviePlayer = forwardRef<MindMoviePlayerHandle, MindMoviePlayer
         video.removeEventListener("playing", handlePlaying);
         video.removeEventListener("waiting", handleWaiting);
         video.removeEventListener("stalled", handleStalled);
+        video.removeEventListener("canplay", handleCanPlay);
+        video.removeEventListener("progress", handleProgress);
         video.removeEventListener("pause", handlePause);
         video.removeEventListener("ended", handleEnded);
         video.removeEventListener("error", handleError);
@@ -590,12 +615,21 @@ export const MindMoviePlayer = forwardRef<MindMoviePlayerHandle, MindMoviePlayer
           className="theater-video w-full h-full object-contain"
           playsInline
           webkit-playsinline="true"
-          preload={isIOS ? "auto" : "metadata"}
+          preload="auto"
           disablePictureInPicture
           controls={nativeControls}
           controlsList="nodownload noremoteplayback nofullscreen"
           onClick={isIOS ? undefined : togglePlay}
         />
+
+        {/* Buffering indicator */}
+        {isBuffering && isPlaying && (
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
+            <div className="bg-black/60 rounded-full p-4">
+              <Loader2 className="w-10 h-10 text-gold animate-spin" />
+            </div>
+          </div>
+        )}
 
         {/* Custom controls overlay */}
         {!nativeControls && (
@@ -609,12 +643,18 @@ export const MindMoviePlayer = forwardRef<MindMoviePlayerHandle, MindMoviePlayer
               {/* Progress bar (non-interactive when seeking disabled) */}
               <div
                 className={cn(
-                  "h-2 sm:h-1 bg-white/30 rounded-full mb-3 sm:mb-4 overflow-hidden",
+                  "relative h-2 sm:h-1 bg-white/20 rounded-full mb-3 sm:mb-4 overflow-hidden",
                   disableSeeking && "cursor-default touch-none"
                 )}
               >
+                {/* Buffered progress (shows how much is loaded) */}
                 <div
-                  className="h-full bg-gradient-to-r from-gold to-amber-soft transition-all"
+                  className="absolute inset-y-0 left-0 bg-white/30 transition-all"
+                  style={{ width: `${bufferedPercent}%` }}
+                />
+                {/* Playback progress */}
+                <div
+                  className="absolute inset-y-0 left-0 bg-gradient-to-r from-gold to-amber-soft transition-all"
                   style={{ width: `${progress}%` }}
                 />
               </div>
