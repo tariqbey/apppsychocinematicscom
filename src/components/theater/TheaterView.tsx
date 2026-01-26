@@ -195,7 +195,7 @@ export const TheaterView = ({ onClose }: TheaterViewProps) => {
   // Render ---------------------------------------------------
   return (
     <>
-      <div className="fixed inset-0 z-50 bg-cinematic-midnight flex flex-col animate-fade-in">
+      <div className="fixed inset-0 z-50 bg-cinematic-midnight flex flex-col animate-fade-in-opacity">
         {/* Header */}
         <div className="flex items-center justify-between p-3 sm:p-4 border-b border-border/50">
           <div className="flex items-center gap-2 sm:gap-4">
