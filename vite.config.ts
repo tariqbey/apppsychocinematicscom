@@ -23,7 +23,7 @@ export default defineConfig(({ mode }) => ({
         theme_color: '#050505',
         background_color: '#050505',
         display: 'standalone',
-        orientation: 'portrait',
+        orientation: 'any', // Allow landscape rotation for Theater immersion
         start_url: '/',
         scope: '/',
         icons: [
