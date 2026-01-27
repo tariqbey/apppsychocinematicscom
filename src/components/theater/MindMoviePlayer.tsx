@@ -1,5 +1,5 @@
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
-import { Play, Pause, VolumeX, Volume2, Maximize, Minimize2, Loader2 } from "lucide-react";
+import { Play, Pause, VolumeX, Volume2, Maximize, Minimize2, Loader2, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { VideoDiagnostics } from "./VideoDiagnostics";
@@ -32,6 +32,8 @@ export interface MindMoviePlayerProps {
   nativeControls?: boolean;
   /** Show diagnostics overlay for debugging (default false) */
   showDiagnostics?: boolean;
+  /** Attempt to pre-download smaller videos before playing to reduce mid-play buffering. Defaults to true on iOS. */
+  enableSmoothPlayback?: boolean;
 }
 
 export interface MindMoviePlayerHandle {
@@ -52,6 +54,7 @@ export const MindMoviePlayer = forwardRef<MindMoviePlayerHandle, MindMoviePlayer
       className,
       nativeControls = false,
       showDiagnostics = false,
+        enableSmoothPlayback,
     },
     ref
   ) => {
@@ -98,6 +101,31 @@ export const MindMoviePlayer = forwardRef<MindMoviePlayerHandle, MindMoviePlayer
     const [isBuffering, setIsBuffering] = useState(false);
     const [bufferedPercent, setBufferedPercent] = useState(0);
 
+    // Smooth playback (download-first)
+    const smoothPlaybackEnabled = enableSmoothPlayback ?? isIOS;
+    const [smoothModeActive, setSmoothModeActive] = useState(false);
+    const [downloadPct, setDownloadPct] = useState<number | null>(null);
+    const [downloadError, setDownloadError] = useState<string | null>(null);
+    const [playSrc, setPlaySrc] = useState(effectiveSrc);
+
+    const smoothObjectUrlRef = useRef<string | null>(null);
+    const downloadAbortRef = useRef<AbortController | null>(null);
+
+    // Avoid flashing buffering UI for micro-stalls.
+    const bufferingTimeoutRef = useRef<number | null>(null);
+    const bufferingVisibleRef = useRef(false);
+
+    const shouldAutoSmoothPlayback = useMemo(() => {
+      if (!smoothPlaybackEnabled) return false;
+      if (typeof navigator === "undefined") return false;
+      const conn = (navigator as any).connection as
+        | { saveData?: boolean; effectiveType?: string }
+        | undefined;
+      if (conn?.saveData) return false;
+      if (conn?.effectiveType && ["slow-2g", "2g"].includes(conn.effectiveType)) return false;
+      return true;
+    }, [smoothPlaybackEnabled]);
+
     // Controls auto-hide state
     const [controlsVisible, setControlsVisible] = useState(true);
     const hideControlsTimeoutRef = useRef<number | null>(null);
@@ -118,6 +146,24 @@ export const MindMoviePlayer = forwardRef<MindMoviePlayerHandle, MindMoviePlayer
     const lastAudioNudgeAtRef = useRef(0);
     const lastMediaTimeRef = useRef(0);
     const docHiddenRef = useRef(false);
+
+    // Keep playSrc in sync with effectiveSrc and cleanup any blob URLs.
+    useEffect(() => {
+      setPlaySrc(effectiveSrc);
+      setSmoothModeActive(false);
+      setDownloadPct(null);
+      setDownloadError(null);
+
+      if (downloadAbortRef.current) {
+        downloadAbortRef.current.abort();
+        downloadAbortRef.current = null;
+      }
+
+      if (smoothObjectUrlRef.current) {
+        URL.revokeObjectURL(smoothObjectUrlRef.current);
+        smoothObjectUrlRef.current = null;
+      }
+    }, [effectiveSrc]);
 
     // Reduce false positives: require consecutive stalled samples before we recover.
     const audioStallCountRef = useRef(0);
@@ -184,6 +230,12 @@ export const MindMoviePlayer = forwardRef<MindMoviePlayerHandle, MindMoviePlayer
       if (audioNudgeTimeoutRef.current) {
         window.clearTimeout(audioNudgeTimeoutRef.current);
         audioNudgeTimeoutRef.current = null;
+      }
+
+      bufferingVisibleRef.current = false;
+      if (bufferingTimeoutRef.current) {
+        window.clearTimeout(bufferingTimeoutRef.current);
+        bufferingTimeoutRef.current = null;
       }
 
       const getAudioDecodedBytes = () => {
@@ -261,11 +313,21 @@ export const MindMoviePlayer = forwardRef<MindMoviePlayerHandle, MindMoviePlayer
 
       const handlePlay = () => {
         setIsPlaying(true);
+        bufferingVisibleRef.current = false;
+        if (bufferingTimeoutRef.current) {
+          window.clearTimeout(bufferingTimeoutRef.current);
+          bufferingTimeoutRef.current = null;
+        }
         setIsBuffering(false);
       };
 
       const handlePlaying = () => {
         setIsPlaying(true);
+        bufferingVisibleRef.current = false;
+        if (bufferingTimeoutRef.current) {
+          window.clearTimeout(bufferingTimeoutRef.current);
+          bufferingTimeoutRef.current = null;
+        }
         setIsBuffering(false);
         ensureUnmuted();
 
@@ -279,16 +341,33 @@ export const MindMoviePlayer = forwardRef<MindMoviePlayerHandle, MindMoviePlayer
       const handleWaiting = () => {
         sawBufferingRef.current = true;
         lastBufferingAtRef.current = Date.now();
-        setIsBuffering(true);
+        if (!bufferingVisibleRef.current) {
+          if (bufferingTimeoutRef.current) window.clearTimeout(bufferingTimeoutRef.current);
+          bufferingTimeoutRef.current = window.setTimeout(() => {
+            bufferingVisibleRef.current = true;
+            setIsBuffering(true);
+          }, 450);
+        }
       };
 
       const handleStalled = () => {
         sawBufferingRef.current = true;
         lastBufferingAtRef.current = Date.now();
-        setIsBuffering(true);
+        if (!bufferingVisibleRef.current) {
+          if (bufferingTimeoutRef.current) window.clearTimeout(bufferingTimeoutRef.current);
+          bufferingTimeoutRef.current = window.setTimeout(() => {
+            bufferingVisibleRef.current = true;
+            setIsBuffering(true);
+          }, 450);
+        }
       };
 
       const handleCanPlay = () => {
+        bufferingVisibleRef.current = false;
+        if (bufferingTimeoutRef.current) {
+          window.clearTimeout(bufferingTimeoutRef.current);
+          bufferingTimeoutRef.current = null;
+        }
         setIsBuffering(false);
       };
 
@@ -461,6 +540,7 @@ export const MindMoviePlayer = forwardRef<MindMoviePlayerHandle, MindMoviePlayer
       document.addEventListener("visibilitychange", handleVisibilityChange);
 
       return () => {
+        if (bufferingTimeoutRef.current) window.clearTimeout(bufferingTimeoutRef.current);
         if (hideControlsTimeoutRef.current) window.clearTimeout(hideControlsTimeoutRef.current);
         if (autoResumeTimeoutRef.current) window.clearTimeout(autoResumeTimeoutRef.current);
         if (audioNudgeTimeoutRef.current) window.clearTimeout(audioNudgeTimeoutRef.current);
@@ -482,6 +562,129 @@ export const MindMoviePlayer = forwardRef<MindMoviePlayerHandle, MindMoviePlayer
       };
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [effectiveSrc]); // only re-bind when src changes
+
+    const stopSmoothDownload = useCallback(() => {
+      if (downloadAbortRef.current) {
+        downloadAbortRef.current.abort();
+        downloadAbortRef.current = null;
+      }
+      setDownloadPct(null);
+    }, []);
+
+    const startSmoothPlayback = useCallback(async () => {
+      if (!smoothPlaybackEnabled) return;
+      if (smoothModeActive) return;
+      if (!effectiveSrc) return;
+
+      // Guard rails: avoid trying to download giant movies into memory.
+      const MAX_AUTO_DOWNLOAD_BYTES = 120 * 1024 * 1024; // 120MB
+
+      try {
+        setDownloadError(null);
+        setDownloadPct(0);
+
+        const controller = new AbortController();
+        downloadAbortRef.current = controller;
+
+        let contentLength = 0;
+        try {
+          const head = await fetch(effectiveSrc, { method: "HEAD", signal: controller.signal });
+          await head.text().catch(() => {
+            // ignore
+          });
+          const len = head.headers.get("content-length");
+          contentLength = len ? parseInt(len, 10) : 0;
+        } catch {
+          contentLength = 0;
+        }
+
+        if (contentLength && contentLength > MAX_AUTO_DOWNLOAD_BYTES) {
+          setDownloadPct(null);
+          setDownloadError("This movie is large; streaming mode is recommended on this device.");
+          downloadAbortRef.current = null;
+          return;
+        }
+
+        const res = await fetch(effectiveSrc, { signal: controller.signal });
+        if (!res.ok || !res.body) {
+          throw new Error(`Download failed (${res.status})`);
+        }
+
+        const contentType = res.headers.get("content-type") || "video/mp4";
+
+        const reader = res.body.getReader();
+        const chunks: ArrayBuffer[] = [];
+        let received = 0;
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          if (value) {
+            // Convert to a standalone ArrayBuffer to satisfy strict TS DOM typings
+            // (avoids SharedArrayBuffer incompatibilities).
+            const buf = (value.buffer as ArrayBuffer).slice(
+              value.byteOffset,
+              value.byteOffset + value.byteLength
+            );
+            chunks.push(buf);
+            received += value.byteLength;
+            if (contentLength) {
+              const pct = Math.round((received / contentLength) * 100);
+              setDownloadPct(Math.max(0, Math.min(100, pct)));
+            }
+          }
+        }
+
+        const blob = new Blob(chunks, { type: contentType });
+        const objUrl = URL.createObjectURL(blob);
+
+        if (smoothObjectUrlRef.current) URL.revokeObjectURL(smoothObjectUrlRef.current);
+        smoothObjectUrlRef.current = objUrl;
+        setPlaySrc(objUrl);
+        setSmoothModeActive(true);
+        setDownloadPct(100);
+
+        // Ensure the element reloads immediately.
+        const video = videoRef.current;
+        if (video) {
+          const shouldResume = !video.paused;
+          const resumeTime = video.currentTime || 0;
+          video.src = objUrl;
+          video.load();
+          if (resumeTime > 0.1) {
+            try {
+              video.currentTime = resumeTime;
+            } catch {
+              // ignore
+            }
+          }
+          if (shouldResume) {
+            await video.play().catch(() => {
+              // user can tap play
+            });
+          }
+        }
+      } catch (e) {
+        if ((e as any)?.name === "AbortError") return;
+        console.warn("Smooth playback download failed", e);
+        setDownloadPct(null);
+        setDownloadError(e instanceof Error ? e.message : "Download failed");
+      } finally {
+        downloadAbortRef.current = null;
+      }
+    }, [effectiveSrc, smoothModeActive, smoothPlaybackEnabled]);
+
+    // Auto-start smooth playback download (before the user presses play), but only
+    // when it makes sense (iOS by default, and not on data-saver / 2g connections).
+    useEffect(() => {
+      if (!shouldAutoSmoothPlayback) return;
+      if (smoothModeActive) return;
+      if (downloadPct !== null) return;
+      if (downloadError) return;
+
+      void startSmoothPlayback();
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [shouldAutoSmoothPlayback, effectiveSrc]);
 
     const scheduleHideControls = useCallback(
       (delayMs = 1600) => {
@@ -529,6 +732,11 @@ export const MindMoviePlayer = forwardRef<MindMoviePlayerHandle, MindMoviePlayer
       const video = videoRef.current;
       if (!video) return;
 
+       // If we're preparing smooth playback, wait until the download finishes.
+       if (!isPlaying && downloadPct !== null && !smoothModeActive) {
+         return;
+       }
+
       if (isPlaying) {
         pauseRequestedRef.current = true;
         video.pause();
@@ -539,6 +747,7 @@ export const MindMoviePlayer = forwardRef<MindMoviePlayerHandle, MindMoviePlayer
             setCurrentTime(0);
             setWasInterrupted(false);
           }
+
           await video.play();
           scheduleHideControls();
         } catch (err) {
@@ -611,7 +820,7 @@ export const MindMoviePlayer = forwardRef<MindMoviePlayerHandle, MindMoviePlayer
 
         <video
           ref={videoRef}
-          src={effectiveSrc}
+          src={playSrc}
           className="theater-video w-full h-full object-contain"
           playsInline
           webkit-playsinline="true"
@@ -627,6 +836,38 @@ export const MindMoviePlayer = forwardRef<MindMoviePlayerHandle, MindMoviePlayer
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
             <div className="bg-black/60 rounded-full p-4">
               <Loader2 className="w-10 h-10 text-gold animate-spin" />
+            </div>
+          </div>
+        )}
+
+        {/* Smooth playback download overlay */}
+        {downloadPct !== null && !smoothModeActive && (
+          <div className="absolute inset-0 flex items-center justify-center z-10">
+            <div className="w-[92%] max-w-sm rounded-xl bg-background/80 backdrop-blur-sm border border-border p-4">
+              <div className="flex items-center gap-2 text-foreground mb-3">
+                <Download className="w-4 h-4" />
+                <span className="text-sm font-medium">Preparing smooth playback…</span>
+              </div>
+              <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
+                <div
+                  className="h-full bg-gradient-to-r from-gold to-amber-soft"
+                  style={{ width: `${downloadPct}%` }}
+                />
+              </div>
+              <div className="mt-2 flex items-center justify-between text-xs text-muted-foreground">
+                <span>{downloadPct}%</span>
+                <button type="button" className="underline" onClick={stopSmoothDownload}>
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {downloadError && !smoothModeActive && (
+          <div className="absolute top-2 left-2 right-2 sm:left-auto sm:right-2 sm:w-[360px] z-10">
+            <div className="rounded-lg bg-background/80 border border-border p-2 text-xs text-muted-foreground">
+              {downloadError}
             </div>
           </div>
         )}
@@ -690,6 +931,18 @@ export const MindMoviePlayer = forwardRef<MindMoviePlayerHandle, MindMoviePlayer
                   <span className="text-xs sm:text-sm text-white font-mono bg-black/50 px-2 py-0.5 rounded">
                     {formatTime(currentTime)} / {formatTime(duration)}
                   </span>
+
+                  {smoothPlaybackEnabled && !smoothModeActive && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => void startSmoothPlayback()}
+                      className="h-8 px-2 text-white"
+                      title="Download first for smoother playback"
+                    >
+                      <Download className="w-4 h-4" />
+                    </Button>
+                  )}
                 </div>
 
                 <Button
