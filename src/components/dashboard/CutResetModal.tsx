@@ -68,9 +68,9 @@ export const CutResetModal = ({ isOpen, onClose, onWatchMindMovie, chiefAim }: C
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm animate-fade-in">
-      <div className="relative w-full max-w-lg mx-4 bg-card border border-red-500/30 rounded-2xl shadow-2xl shadow-red-500/20 overflow-hidden">
+      <div className="relative w-full max-w-lg mx-4 bg-card border border-red-500/30 rounded-2xl shadow-2xl shadow-red-500/20 overflow-hidden max-h-[calc(100dvh-1.5rem)] flex flex-col">
         {/* Header */}
-        <div className="bg-gradient-to-r from-red-600 to-red-700 p-6 text-center relative">
+        <div className="bg-gradient-to-r from-red-600 to-red-700 p-4 sm:p-6 text-center relative">
           <button
             onClick={handleClose}
             className="absolute right-4 top-4 p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors"
@@ -80,14 +80,14 @@ export const CutResetModal = ({ isOpen, onClose, onWatchMindMovie, chiefAim }: C
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-white/20 mb-4">
             <XCircle className="w-10 h-10 text-white" />
           </div>
-          <h2 className="text-3xl font-display tracking-wider text-white mb-2">KUT!</h2>
+          <h2 className="text-2xl sm:text-3xl font-display tracking-wider text-white mb-2">KUT!</h2>
           <p className="text-red-100/80 text-sm">
             Time to reset. The old character just showed up. Let's get you back in the Director's chair.
           </p>
         </div>
 
         {/* Content */}
-        <div className="p-6 space-y-4">
+        <div className="p-4 sm:p-6 space-y-4 overflow-y-auto flex-1 min-h-0">
           {/* Reset Steps */}
           <div className="space-y-3">
             {RESET_QUESTIONS.map((step, index) => {
@@ -100,7 +100,7 @@ export const CutResetModal = ({ isOpen, onClose, onWatchMindMovie, chiefAim }: C
                   key={step.id}
                   onClick={() => handleStepComplete(step.id)}
                   className={cn(
-                    "w-full p-4 rounded-xl border text-left transition-all duration-300",
+                    "w-full p-3 sm:p-4 rounded-xl border text-left transition-all duration-300",
                     isComplete
                       ? "bg-green-500/10 border-green-500/30"
                       : isActive
@@ -111,7 +111,7 @@ export const CutResetModal = ({ isOpen, onClose, onWatchMindMovie, chiefAim }: C
                   <div className="flex items-start gap-4">
                     <div
                       className={cn(
-                        "w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors",
+                        "w-9 h-9 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors",
                         isComplete
                           ? "bg-green-500 text-white"
                           : isActive
@@ -157,7 +157,7 @@ export const CutResetModal = ({ isOpen, onClose, onWatchMindMovie, chiefAim }: C
           <Button
             onClick={handleWatchMovie}
             className={cn(
-              "w-full h-14 text-lg font-semibold transition-all duration-300",
+              "w-full h-12 sm:h-14 text-base sm:text-lg font-semibold transition-all duration-300",
               allStepsComplete
                 ? "bg-gradient-to-r from-gold to-amber-500 text-black hover:from-gold/90 hover:to-amber-500/90 shadow-lg shadow-gold/30"
                 : "bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600"
