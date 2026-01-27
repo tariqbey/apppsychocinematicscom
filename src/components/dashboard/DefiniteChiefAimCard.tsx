@@ -2,10 +2,11 @@ import { Scroll, Calendar, ArrowRight, Sparkles, Pencil, Zap, Music, Play, Pause
 import { SimpleWaveformBars } from "@/components/music/AudioVisualizer";
 import { Button } from "@/components/ui/button";
 import { InfoTooltip } from "@/components/ui/info-tooltip";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useNavigate } from "react-router-dom";
+import { useAudio } from "@/contexts/AudioContext";
 
 interface ChiefAimData {
   what: string;
@@ -22,33 +23,52 @@ interface DefiniteChiefAimCardProps {
   onSongListened?: () => void;
 }
 
-// Floating particle component with enhanced animation
-const FloatingParticle = ({ delay, size = 2, color = "#D4AF37" }: { delay: number; size?: number; color?: string }) => (
-  <div
-    className="absolute rounded-full pointer-events-none"
-    style={{
-      width: size,
-      height: size,
-      left: `${Math.random() * 100}%`,
-      bottom: '0%',
-      background: color,
-      boxShadow: `0 0 6px ${color}`,
-      animation: `float-particle 3s ease-in-out infinite ${delay}s`,
-    }}
-  />
-);
+// Floating particle component with memoized position
+const FloatingParticle = ({ index, size = 2, color = "#D4AF37" }: { index: number; size?: number; color?: string }) => {
+  // Use index-based positioning to prevent re-render jank
+  const position = useMemo(() => ({
+    left: `${(index * 23 + 10) % 100}%`,
+    bottom: '0%',
+  }), [index]);
+
+  return (
+    <div
+      className="absolute rounded-full pointer-events-none"
+      style={{
+        width: size,
+        height: size,
+        left: position.left,
+        bottom: position.bottom,
+        background: color,
+        boxShadow: `0 0 6px ${color}`,
+        animation: `float-particle 3s ease-in-out infinite ${index * 0.5}s`,
+      }}
+    />
+  );
+};
 
 export const DefiniteChiefAimCard = ({ aim, onEdit, onAdjust, chiefAimSongUrl, onSongListened }: DefiniteChiefAimCardProps) => {
   const hasAim = aim.what && aim.byWhen && aim.exchange && aim.plan;
   const [isVisible, setIsVisible] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const [isTouched, setIsTouched] = useState(false);
-  const [isPlaying, setIsPlaying] = useState(false);
   const [hasListenedToday, setHasListenedToday] = useState(false);
   const [wasInterrupted, setWasInterrupted] = useState(false);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
   const isMobile = useIsMobile();
   const navigate = useNavigate();
+
+  // Use global audio context
+  const { 
+    isPlaying: globalIsPlaying, 
+    currentSrc,
+    audioOwner,
+    playAudio, 
+    pauseAudio,
+    stopAudio
+  } = useAudio();
+
+  // Check if this card "owns" the current playback
+  const isPlaying = globalIsPlaying && audioOwner === 'chief-aim-anthem';
 
   const isActive = isHovered || isTouched || (isMobile && isVisible);
 
@@ -57,62 +77,41 @@ export const DefiniteChiefAimCard = ({ aim, onEdit, onAdjust, chiefAimSongUrl, o
     return () => clearTimeout(timer);
   }, []);
 
-  // Initialize audio element
-  useEffect(() => {
-    if (chiefAimSongUrl) {
-      const audio = new Audio(chiefAimSongUrl);
-      audioRef.current = audio;
-      
-      const handleEnded = () => {
-        setIsPlaying(false);
-        // Reset currentTime so user can replay immediately
-        audio.currentTime = 0;
-        // Only mark ritual complete if played uninterrupted and not already done today
-        if (!hasListenedToday && !wasInterrupted) {
-          setHasListenedToday(true);
-          onSongListened?.();
-        }
-        // Reset interruption flag so replay is allowed
-        setWasInterrupted(false);
-      };
-
-      audio.addEventListener('ended', handleEnded);
-      
-      return () => {
-        audio.removeEventListener('ended', handleEnded);
-        audio.pause();
-        audioRef.current = null;
-      };
-    }
-    return () => {
-      if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current = null;
-      }
-    };
-  }, [chiefAimSongUrl]); // Remove reactive deps that caused stale closure issues
-
-  const togglePlayback = () => {
-    if (!audioRef.current) return;
+  const togglePlayback = async () => {
+    if (!chiefAimSongUrl) return;
     
     if (isPlaying) {
-      // Pausing counts as interruption for ritual completion - must listen all the way through
-      audioRef.current.pause();
-      setIsPlaying(false);
-      // Only set interrupted if ritual not already complete
+      // Pausing counts as interruption for ritual completion
+      pauseAudio();
       if (!hasListenedToday) {
         setWasInterrupted(true);
       }
     } else {
       // If interrupted previously and ritual not complete, restart from beginning
       if (wasInterrupted && !hasListenedToday) {
-        audioRef.current.currentTime = 0;
+        stopAudio(); // Reset first
         setWasInterrupted(false);
       }
-      audioRef.current.play().catch(console.error);
-      setIsPlaying(true);
+      await playAudio(chiefAimSongUrl, {
+        title: 'Chief Aim Anthem',
+        artist: 'Your Transformation',
+        owner: 'chief-aim-anthem',
+      });
     }
   };
+
+  // Track when song ends to mark ritual complete
+  useEffect(() => {
+    // When audio stops playing and was owned by this component
+    if (!globalIsPlaying && audioOwner === 'chief-aim-anthem' && currentSrc === chiefAimSongUrl) {
+      // Song finished - mark as listened if it wasn't interrupted
+      if (!hasListenedToday && !wasInterrupted) {
+        setHasListenedToday(true);
+        onSongListened?.();
+      }
+      setWasInterrupted(false);
+    }
+  }, [globalIsPlaying, audioOwner, currentSrc, chiefAimSongUrl, hasListenedToday, wasInterrupted, onSongListened]);
 
   const handleCreateSong = () => {
     // Build context for the Soundtrack page
@@ -226,16 +225,16 @@ export const DefiniteChiefAimCard = ({ aim, onEdit, onAdjust, chiefAimSongUrl, o
         }}
       />
 
-      {/* Floating particles - always visible on mobile after entrance */}
+      {/* Floating particles - use index instead of delay */}
       <div className={cn(
         "absolute inset-0 pointer-events-none overflow-hidden transition-opacity duration-500",
         isActive ? "opacity-100" : "opacity-40"
       )}>
-        <FloatingParticle delay={0} size={3} />
-        <FloatingParticle delay={0.5} size={2} />
-        <FloatingParticle delay={1} size={4} />
-        <FloatingParticle delay={1.5} size={2} />
-        <FloatingParticle delay={2} size={3} />
+        <FloatingParticle index={0} size={3} />
+        <FloatingParticle index={1} size={2} />
+        <FloatingParticle index={2} size={4} />
+        <FloatingParticle index={3} size={2} />
+        <FloatingParticle index={4} size={3} />
       </div>
 
       {/* Holographic shimmer overlay */}

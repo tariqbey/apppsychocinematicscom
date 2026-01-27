@@ -7,6 +7,7 @@ import { SplashScreenWrapper } from "@/components/pwa/SplashScreenWrapper";
 import { PWAInstallPrompt } from "@/components/pwa/PWAInstallPrompt";
 import { PWAUpdatePrompt } from "@/components/pwa/PWAUpdatePrompt";
 import { PointsProvider } from "@/contexts/PointsContext";
+import { AudioProvider } from "@/contexts/AudioContext";
 import Index from "./pages/Index";
 import Signup from "./pages/Signup";
 import DirectorCorner from "./pages/DirectorCorner";
@@ -37,9 +38,10 @@ const queryClient = new QueryClient();
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
-      <PointsProvider>
-        <Toaster />
-        <Sonner />
+      <AudioProvider>
+        <PointsProvider>
+          <Toaster />
+          <Sonner />
         <SplashScreenWrapper>
           <BrowserRouter>
             <Routes>
@@ -75,8 +77,9 @@ const App = () => (
             <PWAInstallPrompt />
             <PWAUpdatePrompt />
           </BrowserRouter>
-        </SplashScreenWrapper>
-      </PointsProvider>
+          </SplashScreenWrapper>
+        </PointsProvider>
+      </AudioProvider>
     </TooltipProvider>
   </QueryClientProvider>
 );

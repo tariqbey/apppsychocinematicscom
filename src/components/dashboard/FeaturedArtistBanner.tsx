@@ -139,12 +139,9 @@ export function FeaturedArtistBanner() {
 
           {/* Content */}
           <div className="flex-1 min-w-0">
-            <Badge 
-              variant="outline" 
-              className="mb-1 border-gold/50 text-gold text-xs"
-            >
+            <span className="inline-flex items-center gap-1 mb-1 border border-gold/50 text-gold text-xs px-2 py-0.5 rounded-full">
               {isMovie ? "🎬 Movie of the Week" : "👑 Director of the Month"}
-            </Badge>
+            </span>
             <h3 className="font-bold text-lg truncate group-hover:text-gold transition-colors">
               {featured.title}
             </h3>

@@ -36,6 +36,7 @@ import { AudioVisualizer, SimpleWaveformBars } from "@/components/music/AudioVis
 import { useMediaSession, configureAudioForBackground, useIOSBackgroundAudio } from "@/hooks/useMediaSession";
 import { useOfflineTracks } from "@/hooks/useOfflineTracks";
 import { Badge } from "@/components/ui/badge";
+import { useAudioOptional } from "@/hooks/useGlobalAudio";
 
 export default function ScorePage() {
   const navigate = useNavigate();
@@ -133,6 +134,15 @@ export default function ScorePage() {
 
   // Track the current audio source to avoid unnecessary reloads
   const currentAudioUrlRef = useRef<string | null>(null);
+
+  // Stop any global audio when Score page mounts (prevents overlap)
+  const globalAudio = useAudioOptional();
+  useEffect(() => {
+    if (globalAudio?.isPlaying) {
+      console.log('[Score] Stopping global audio on mount');
+      globalAudio.stopAudio();
+    }
+  }, []); // Only on mount
 
   // Initialize the audio element once (similar to Director Radio's approach)
   useEffect(() => {

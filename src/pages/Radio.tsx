@@ -24,6 +24,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { AudioVisualizer, SimpleWaveformBars } from "@/components/music/AudioVisualizer";
 import { useMediaSession, configureAudioForBackground, useIOSBackgroundAudio } from "@/hooks/useMediaSession";
+import { useAudioOptional } from "@/hooks/useGlobalAudio";
 
 interface FeaturedArtist {
   id: string;
@@ -115,6 +116,15 @@ export default function RadioPage() {
 
     fetchFeaturedArtists();
   }, []);
+
+  // Stop any global audio when Radio page mounts (prevents overlap)
+  const globalAudio = useAudioOptional();
+  useEffect(() => {
+    if (globalAudio?.isPlaying) {
+      console.log('[Radio] Stopping global audio on mount');
+      globalAudio.stopAudio();
+    }
+  }, []); // Only on mount
 
   // Initialize audio element
   useEffect(() => {
