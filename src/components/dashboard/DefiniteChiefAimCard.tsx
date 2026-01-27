@@ -1,4 +1,4 @@
-import { Scroll, Calendar, ArrowRight, Sparkles, Pencil, Zap, Music, Play, Pause, Volume2 } from "lucide-react";
+import { Scroll, Calendar, ArrowRight, Sparkles, Pencil, Zap, Music, Play, Pause, Volume2, Wand2 } from "lucide-react";
 import { SimpleWaveformBars } from "@/components/music/AudioVisualizer";
 import { Button } from "@/components/ui/button";
 import { InfoTooltip } from "@/components/ui/info-tooltip";
@@ -17,6 +17,7 @@ interface ChiefAimData {
 interface DefiniteChiefAimCardProps {
   aim: ChiefAimData;
   onEdit?: () => void;
+  onAdjust?: () => void;
   chiefAimSongUrl?: string | null;
   onSongListened?: () => void;
 }
@@ -37,7 +38,7 @@ const FloatingParticle = ({ delay, size = 2, color = "#D4AF37" }: { delay: numbe
   />
 );
 
-export const DefiniteChiefAimCard = ({ aim, onEdit, chiefAimSongUrl, onSongListened }: DefiniteChiefAimCardProps) => {
+export const DefiniteChiefAimCard = ({ aim, onEdit, onAdjust, chiefAimSongUrl, onSongListened }: DefiniteChiefAimCardProps) => {
   const hasAim = aim.what && aim.byWhen && aim.exchange && aim.plan;
   const [isVisible, setIsVisible] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
@@ -369,17 +370,30 @@ export const DefiniteChiefAimCard = ({ aim, onEdit, chiefAimSongUrl, onSongListe
             <p className="text-sm sm:text-base text-muted-foreground">Your Definite Chief Aim</p>
           </div>
         </div>
-        {onEdit && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onEdit}
-            className="gap-2 text-muted-foreground hover:text-gold hover:bg-gold/10 text-xs sm:text-sm transition-all duration-300"
-          >
-            <Pencil className="w-3 h-3 sm:w-4 sm:h-4" />
-            <span className="hidden sm:inline">{hasAim ? "Edit" : "Create with AI"}</span>
-          </Button>
-        )}
+        <div className="flex items-center gap-2">
+          {hasAim && onAdjust && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onAdjust}
+              className="gap-2 text-muted-foreground hover:text-gold hover:bg-gold/10 text-xs sm:text-sm transition-all duration-300"
+            >
+              <Wand2 className="w-3 h-3 sm:w-4 sm:h-4" />
+              <span className="hidden sm:inline">Adjust with AI</span>
+            </Button>
+          )}
+          {onEdit && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onEdit}
+              className="gap-2 text-muted-foreground hover:text-gold hover:bg-gold/10 text-xs sm:text-sm transition-all duration-300"
+            >
+              <Pencil className="w-3 h-3 sm:w-4 sm:h-4" />
+              <span className="hidden sm:inline">{hasAim ? "Edit" : "Create with AI"}</span>
+            </Button>
+          )}
+        </div>
       </div>
 
       <div className="space-y-3 sm:space-y-4 relative z-10">
