@@ -1,10 +1,11 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Radio, Play, Pause, Volume2, VolumeX, Music, Headphones, ExternalLink, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Card, CardContent } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
+import { useAudio } from "@/contexts/AudioContext";
 
 interface NowPlaying {
   id: string;
@@ -13,31 +14,51 @@ interface NowPlaying {
   audio_url: string;
 }
 
-// Floating particle component
-const FloatingParticle = ({ delay, size = 2 }: { delay: number; size?: number }) => (
-  <div
-    className="absolute rounded-full bg-gold/30 pointer-events-none"
-    style={{
-      width: size,
-      height: size,
-      left: `${Math.random() * 100}%`,
-      top: `${Math.random() * 100}%`,
-      animation: `float-particle 4s ease-in-out infinite ${delay}s`,
-    }}
-  />
-);
+// Floating particle component with memoized position
+const FloatingParticle = ({ index, size = 2 }: { index: number; size?: number }) => {
+  // Use index-based positioning instead of random to prevent re-render jank
+  const position = useMemo(() => ({
+    left: `${(index * 23) % 100}%`,
+    top: `${(index * 37) % 100}%`,
+  }), [index]);
+
+  return (
+    <div
+      className="absolute rounded-full bg-gold/30 pointer-events-none"
+      style={{
+        width: size,
+        height: size,
+        left: position.left,
+        top: position.top,
+        animation: `float-particle 4s ease-in-out infinite ${index * 0.5}s`,
+      }}
+    />
+  );
+};
 
 export const DirectorRadioCard = () => {
   const navigate = useNavigate();
   const [nowPlaying, setNowPlaying] = useState<NowPlaying | null>(null);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [volume, setVolume] = useState(0.7);
-  const [currentTime, setCurrentTime] = useState(0);
-  const [duration, setDuration] = useState(0);
   const [loading, setLoading] = useState(true);
   const [isVisible, setIsVisible] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [localVolume, setLocalVolume] = useState(0.7);
+
+  // Use global audio context
+  const { 
+    isPlaying, 
+    currentTime, 
+    duration, 
+    currentSrc,
+    audioOwner,
+    playAudio, 
+    pauseAudio, 
+    setVolume,
+    volume 
+  } = useAudio();
+
+  // Check if this card "owns" the current playback
+  const isThisCardPlaying = isPlaying && audioOwner === 'radio-card';
 
   // Entrance animation
   useEffect(() => {
@@ -85,57 +106,23 @@ export const DirectorRadioCard = () => {
     setLoading(false);
   };
 
-  useEffect(() => {
-    if (!audioRef.current) {
-      audioRef.current = new Audio();
-      audioRef.current.volume = volume;
-    }
-
-    const audio = audioRef.current;
+  const togglePlay = async () => {
+    if (!nowPlaying) return;
     
-    const handleTimeUpdate = () => setCurrentTime(audio.currentTime);
-    const handleDurationChange = () => setDuration(audio.duration || 0);
-    const handleEnded = () => setIsPlaying(false);
-
-    audio.addEventListener("timeupdate", handleTimeUpdate);
-    audio.addEventListener("durationchange", handleDurationChange);
-    audio.addEventListener("ended", handleEnded);
-
-    return () => {
-      audio.removeEventListener("timeupdate", handleTimeUpdate);
-      audio.removeEventListener("durationchange", handleDurationChange);
-      audio.removeEventListener("ended", handleEnded);
-    };
-  }, [volume]);
-
-  useEffect(() => {
-    if (nowPlaying && audioRef.current) {
-      const audio = audioRef.current;
-      if (audio.src !== nowPlaying.audio_url) {
-        audio.src = nowPlaying.audio_url;
-        if (isPlaying) {
-          audio.play().catch(console.error);
-        }
-      }
-    }
-  }, [nowPlaying, isPlaying]);
-
-  const togglePlay = () => {
-    if (!audioRef.current || !nowPlaying) return;
-    
-    if (isPlaying) {
-      audioRef.current.pause();
+    if (isThisCardPlaying) {
+      pauseAudio();
     } else {
-      audioRef.current.play().catch(console.error);
+      await playAudio(nowPlaying.audio_url, {
+        title: nowPlaying.track_title,
+        artist: nowPlaying.artist || undefined,
+        owner: 'radio-card',
+      });
     }
-    setIsPlaying(!isPlaying);
   };
 
   const handleVolumeChange = (newVolume: number) => {
+    setLocalVolume(newVolume);
     setVolume(newVolume);
-    if (audioRef.current) {
-      audioRef.current.volume = newVolume;
-    }
   };
 
   const formatTime = (seconds: number) => {
@@ -144,6 +131,10 @@ export const DirectorRadioCard = () => {
     const secs = Math.floor(seconds % 60);
     return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
+
+  // Get current time/duration only if this card owns the playback
+  const displayCurrentTime = isThisCardPlaying ? currentTime : 0;
+  const displayDuration = isThisCardPlaying ? duration : 0;
 
   if (loading) {
     return null;
@@ -182,13 +173,13 @@ export const DirectorRadioCard = () => {
         }}
       />
 
-      {/* Floating particles */}
+      {/* Floating particles - use index instead of random delay */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
-        <FloatingParticle delay={0} size={3} />
-        <FloatingParticle delay={0.5} size={2} />
-        <FloatingParticle delay={1} size={4} />
-        <FloatingParticle delay={1.5} size={2} />
-        <FloatingParticle delay={2} size={3} />
+        <FloatingParticle index={0} size={3} />
+        <FloatingParticle index={1} size={2} />
+        <FloatingParticle index={2} size={4} />
+        <FloatingParticle index={3} size={2} />
+        <FloatingParticle index={4} size={3} />
       </div>
       
       {/* Sparkle particles */}
@@ -203,11 +194,11 @@ export const DirectorRadioCard = () => {
             <div 
               className="w-12 h-12 rounded-xl bg-gradient-to-br from-gold/30 to-amber-600/30 flex items-center justify-center transition-all duration-300 group-hover:scale-110"
               style={{
-                boxShadow: isPlaying ? '0 0 25px rgba(212,175,55,0.5)' : '0 0 15px rgba(212,175,55,0.2)',
-                animation: isPlaying ? 'pulse-ring 2s ease-in-out infinite' : undefined,
+                boxShadow: isThisCardPlaying ? '0 0 25px rgba(212,175,55,0.5)' : '0 0 15px rgba(212,175,55,0.2)',
+                animation: isThisCardPlaying ? 'pulse-ring 2s ease-in-out infinite' : undefined,
               }}
             >
-              {isPlaying ? (
+              {isThisCardPlaying ? (
                 <Radio className="w-6 h-6 text-gold animate-pulse" />
               ) : (
                 <Headphones className="w-6 h-6 text-gold" />
@@ -216,7 +207,7 @@ export const DirectorRadioCard = () => {
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
                 <p className="text-xs text-gold font-medium uppercase tracking-wider">Director Radio</p>
-                {isPlaying && (
+                {isThisCardPlaying && (
                   <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
                 )}
               </div>
@@ -243,14 +234,14 @@ export const DirectorRadioCard = () => {
                 <div 
                   className="h-full bg-gradient-to-r from-gold to-amber-500 transition-all duration-300 rounded-full"
                   style={{ 
-                    width: `${duration > 0 ? (currentTime / duration) * 100 : 0}%`,
+                    width: `${displayDuration > 0 ? (displayCurrentTime / displayDuration) * 100 : 0}%`,
                     boxShadow: '0 0 15px rgba(212, 175, 55, 0.6)',
                   }}
                 />
               </div>
               <div className="flex justify-between text-xs text-muted-foreground">
-                <span>{formatTime(currentTime)}</span>
-                <span>{formatTime(duration)}</span>
+                <span>{formatTime(displayCurrentTime)}</span>
+                <span>{formatTime(displayDuration)}</span>
               </div>
             </div>
 
@@ -262,10 +253,10 @@ export const DirectorRadioCard = () => {
                 className="h-10 w-10 rounded-full border-gold/30 hover:border-gold hover:bg-gold/10 transition-all duration-300"
                 onClick={togglePlay}
                 style={{
-                  boxShadow: isPlaying ? '0 0 20px rgba(212,175,55,0.4)' : undefined,
+                  boxShadow: isThisCardPlaying ? '0 0 20px rgba(212,175,55,0.4)' : undefined,
                 }}
               >
-                {isPlaying ? (
+                {isThisCardPlaying ? (
                   <Pause className="h-4 w-4 text-gold" />
                 ) : (
                   <Play className="h-4 w-4 text-gold ml-0.5" />
@@ -277,16 +268,16 @@ export const DirectorRadioCard = () => {
                   variant="ghost"
                   size="icon"
                   className="h-8 w-8"
-                  onClick={() => handleVolumeChange(volume === 0 ? 0.7 : 0)}
+                  onClick={() => handleVolumeChange(localVolume === 0 ? 0.7 : 0)}
                 >
-                  {volume === 0 ? (
+                  {localVolume === 0 ? (
                     <VolumeX className="h-4 w-4 text-muted-foreground" />
                   ) : (
                     <Volume2 className="h-4 w-4 text-muted-foreground" />
                   )}
                 </Button>
                 <Slider
-                  value={[volume * 100]}
+                  value={[localVolume * 100]}
                   max={100}
                   step={1}
                   onValueChange={([value]) => handleVolumeChange(value / 100)}

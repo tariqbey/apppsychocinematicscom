@@ -1,7 +1,8 @@
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { Play, Pause, Volume2, VolumeX, Download, Music, Library, Check } from 'lucide-react';
+import { useAudio } from '@/contexts/AudioContext';
 
 interface SoundtrackPlayerProps {
   audioUrl: string;
@@ -20,69 +21,62 @@ export const SoundtrackPlayer: React.FC<SoundtrackPlayerProps> = ({
   onSaveToLibrary,
   isSavedToLibrary = false,
 }) => {
-  const audioRef = useRef<HTMLAudioElement>(null);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [currentTime, setCurrentTime] = useState(0);
-  const [duration, setDuration] = useState(0);
-  const [volume, setVolume] = useState(0.8);
+  const [localVolume, setLocalVolume] = useState(0.8);
   const [isMuted, setIsMuted] = useState(false);
 
-  useEffect(() => {
-    const audio = audioRef.current;
-    if (!audio) return;
+  // Use global audio context
+  const { 
+    isPlaying: globalIsPlaying, 
+    currentTime, 
+    duration,
+    currentSrc,
+    audioOwner,
+    playAudio, 
+    pauseAudio,
+    seekTo,
+    setVolume,
+    setMuted
+  } = useAudio();
 
-    const handleTimeUpdate = () => setCurrentTime(audio.currentTime);
-    const handleDurationChange = () => setDuration(audio.duration);
-    const handleEnded = () => setIsPlaying(false);
+  // Check if this player "owns" the current playback
+  const isPlaying = globalIsPlaying && audioOwner === `soundtrack-${audioUrl}`;
+  
+  // Get time/duration only if this player owns playback
+  const displayCurrentTime = isPlaying ? currentTime : 0;
+  const displayDuration = isPlaying ? duration : 0;
 
-    audio.addEventListener('timeupdate', handleTimeUpdate);
-    audio.addEventListener('durationchange', handleDurationChange);
-    audio.addEventListener('ended', handleEnded);
-
-    return () => {
-      audio.removeEventListener('timeupdate', handleTimeUpdate);
-      audio.removeEventListener('durationchange', handleDurationChange);
-      audio.removeEventListener('ended', handleEnded);
-    };
-  }, [audioUrl]);
-
-  const togglePlay = () => {
-    const audio = audioRef.current;
-    if (!audio) return;
-
+  const togglePlay = async () => {
     if (isPlaying) {
-      audio.pause();
+      pauseAudio();
     } else {
-      audio.play();
+      await playAudio(audioUrl, {
+        title,
+        artist: 'Mind Movie',
+        owner: `soundtrack-${audioUrl}`,
+      });
     }
-    setIsPlaying(!isPlaying);
   };
 
   const handleSeek = (value: number[]) => {
-    const audio = audioRef.current;
-    if (!audio) return;
-    audio.currentTime = value[0];
-    setCurrentTime(value[0]);
+    if (isPlaying) {
+      seekTo(value[0]);
+    }
   };
 
   const handleVolumeChange = (value: number[]) => {
-    const audio = audioRef.current;
-    if (!audio) return;
     const newVolume = value[0];
-    audio.volume = newVolume;
+    setLocalVolume(newVolume);
     setVolume(newVolume);
     setIsMuted(newVolume === 0);
   };
 
   const toggleMute = () => {
-    const audio = audioRef.current;
-    if (!audio) return;
-    
     if (isMuted) {
-      audio.volume = volume || 0.8;
+      setMuted(false);
+      setVolume(localVolume || 0.8);
       setIsMuted(false);
     } else {
-      audio.volume = 0;
+      setMuted(true);
       setIsMuted(true);
     }
   };
@@ -129,8 +123,6 @@ export const SoundtrackPlayer: React.FC<SoundtrackPlayerProps> = ({
 
   return (
     <div className="bg-card border border-border rounded-lg p-6">
-      <audio ref={audioRef} src={audioUrl} preload="metadata" />
-      
       <div className="flex items-center gap-4">
         {/* Album Art Placeholder */}
         <div className="w-16 h-16 rounded-lg bg-gradient-to-br from-primary/30 to-accent/30 flex items-center justify-center">
@@ -154,18 +146,18 @@ export const SoundtrackPlayer: React.FC<SoundtrackPlayerProps> = ({
           {/* Progress Bar */}
           <div className="flex items-center gap-3">
             <span className="text-xs text-muted-foreground w-10">
-              {formatTime(currentTime)}
+              {formatTime(displayCurrentTime)}
             </span>
             <Slider
-              value={[currentTime]}
+              value={[displayCurrentTime]}
               min={0}
-              max={duration || 100}
+              max={displayDuration || 100}
               step={0.1}
               onValueChange={handleSeek}
               className="flex-1"
             />
             <span className="text-xs text-muted-foreground w-10">
-              {formatTime(duration)}
+              {formatTime(displayDuration)}
             </span>
           </div>
 
@@ -223,7 +215,7 @@ export const SoundtrackPlayer: React.FC<SoundtrackPlayerProps> = ({
                 )}
               </Button>
               <Slider
-                value={[isMuted ? 0 : volume]}
+                value={[isMuted ? 0 : localVolume]}
                 min={0}
                 max={1}
                 step={0.01}

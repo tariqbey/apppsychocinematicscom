@@ -23,6 +23,7 @@ import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
+import { useAudioOptional } from "@/hooks/useGlobalAudio";
 
 interface Task {
   id: string;
@@ -48,9 +49,20 @@ export const TheaterView = ({ onClose }: TheaterViewProps) => {
   const { profile, recordViewing } = useUserProfile();
   const { user } = useAuth();
   const { toast } = useToast();
+  
+  // Get global audio context - stop any playing music when Theater opens
+  const globalAudio = useAudioOptional();
 
   const streak = profile?.current_streak || 0;
   const videoUrl = profile?.mind_movie_url;
+
+  // Stop any background audio when Theater opens
+  useEffect(() => {
+    if (globalAudio?.isPlaying) {
+      console.log('[TheaterView] Stopping background audio');
+      globalAudio.stopAudio();
+    }
+  }, []); // Only on mount
 
   const isIOS = useMemo(() => {
     if (typeof navigator === "undefined") return false;

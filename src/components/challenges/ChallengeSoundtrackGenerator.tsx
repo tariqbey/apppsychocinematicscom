@@ -11,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useChallengeSoundtrack } from "@/hooks/useChallengeSoundtrack";
 import { useUserPlaylists } from "@/hooks/useUserPlaylists";
 import { MUSIC_STYLES, MusicStyle } from "@/hooks/useMindMovieMusic";
+import { useAudio } from "@/contexts/AudioContext";
 import { toast } from "sonner";
 import { 
   Music, 
@@ -62,8 +63,17 @@ export function ChallengeSoundtrackGenerator({
   const [isEditing, setIsEditing] = useState(false);
   const [vocalGender, setVocalGender] = useState<"m" | "f">("m");
   const [pollInterval, setPollInterval] = useState<NodeJS.Timeout | null>(null);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [audioRef, setAudioRef] = useState<HTMLAudioElement | null>(null);
+
+  // Use global audio context
+  const { 
+    isPlaying: globalIsPlaying, 
+    audioOwner,
+    playAudio, 
+    pauseAudio 
+  } = useAudio();
+  
+  // Check if this player "owns" the current playback
+  const isPlaying = globalIsPlaying && audioOwner === `challenge-${challenge.id}`;
 
   const {
     isGeneratingLyrics,
@@ -188,22 +198,17 @@ export function ChallengeSoundtrackGenerator({
     });
   };
 
-  const togglePlayback = () => {
+  const togglePlayback = async () => {
     if (!soundtrack?.audio_url) return;
 
-    if (!audioRef) {
-      const audio = new Audio(soundtrack.audio_url);
-      audio.onended = () => setIsPlaying(false);
-      setAudioRef(audio);
-      audio.play();
-      setIsPlaying(true);
+    if (isPlaying) {
+      pauseAudio();
     } else {
-      if (isPlaying) {
-        audioRef.pause();
-      } else {
-        audioRef.play();
-      }
-      setIsPlaying(!isPlaying);
+      await playAudio(soundtrack.audio_url, {
+        title: `${challenge.target_trait} Transformation`,
+        artist: selectedStyle,
+        owner: `challenge-${challenge.id}`,
+      });
     }
   };
 
