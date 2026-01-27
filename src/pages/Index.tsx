@@ -12,6 +12,7 @@ import { EditBay } from "@/components/studio/EditBay";
 import { DirectorAIAgent } from "@/components/director-ai/DirectorAIAgent";
 import { DailyScorecard } from "@/components/scorecard/DailyScorecard";
 import { ChiefAimWizard } from "@/components/chief-aim/ChiefAimWizard";
+import { ChiefAimAdjustDialog } from "@/components/chief-aim/ChiefAimAdjustDialog";
 import { MindMovieScriptWizard, TimelineExportData } from "@/components/mind-movie/MindMovieScriptWizard";
 import { MovieVault } from "@/components/mind-movie/MovieVault";
 import { StoryboardWizard } from "@/components/storyboard/StoryboardWizard";
@@ -57,6 +58,7 @@ const Index = () => {
   const [showAIChat, setShowAIChat] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showChiefAimWizard, setShowChiefAimWizard] = useState(false);
+  const [showChiefAimAdjust, setShowChiefAimAdjust] = useState(false);
   const [showMindMovieWizard, setShowMindMovieWizard] = useState(false);
   const [showMovieVault, setShowMovieVault] = useState(false);
   const [selectedMovieId, setSelectedMovieId] = useState<string | undefined>();
@@ -328,7 +330,8 @@ const Index = () => {
           {/* ========== DEFINITE CHIEF AIM STATEMENT ========== */}
           <DefiniteChiefAimCard 
             aim={chiefAim} 
-            onEdit={() => setShowChiefAimWizard(true)} 
+            onEdit={() => setShowChiefAimWizard(true)}
+            onAdjust={() => setShowChiefAimAdjust(true)}
             chiefAimSongUrl={profile?.chief_aim_song_url}
             onSongListened={async () => {
               // Mark script_review as complete when song is listened to
@@ -796,6 +799,14 @@ const Index = () => {
           onSave={handleSaveChiefAim}
         />
       )}
+
+      {/* Chief Aim Adjust Dialog */}
+      <ChiefAimAdjustDialog
+        isOpen={showChiefAimAdjust}
+        onClose={() => setShowChiefAimAdjust(false)}
+        currentAim={chiefAim}
+        onSave={handleSaveChiefAim}
+      />
 
       {/* Storyboard Wizard */}
       <StoryboardWizard
