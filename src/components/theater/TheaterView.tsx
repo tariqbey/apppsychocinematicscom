@@ -56,13 +56,60 @@ export const TheaterView = ({ onClose }: TheaterViewProps) => {
   const streak = profile?.current_streak || 0;
   const videoUrl = profile?.mind_movie_url;
 
-  // Stop any background audio when Theater opens
+  // Hard stop function - kills all audio/video to prevent orphaned playback
+  const hardStopMedia = useCallback((reason: string) => {
+    console.log(`[TheaterView] hardStopMedia called: ${reason}`);
+    
+    // 1. Stop the MindMoviePlayer via ref
+    const video = playerRef.current?.getVideoElement?.();
+    if (video) {
+      try {
+        video.pause();
+        video.removeAttribute("src");
+        video.load(); // Force browser to release audio pipeline
+        console.log('[TheaterView] Video element stopped and cleared');
+      } catch (e) {
+        console.warn('[TheaterView] Error stopping video:', e);
+      }
+    }
+    
+    // 2. Stop any global audio (unconditionally)
+    if (globalAudio) {
+      globalAudio.stopAudio();
+      console.log('[TheaterView] Global audio stopped');
+    }
+  }, [globalAudio]);
+
+  // Close theater with proper cleanup
+  const closeTheater = useCallback((reason: string) => {
+    console.log(`[TheaterView] closeTheater called: ${reason}`);
+    hardStopMedia(reason);
+    onClose();
+  }, [hardStopMedia, onClose]);
+
+  // Stop any background audio when Theater opens (unconditional)
   useEffect(() => {
-    if (globalAudio?.isPlaying) {
-      console.log('[TheaterView] Stopping background audio');
+    console.log('[TheaterView] Mounted - stopping any background audio');
+    if (globalAudio) {
       globalAudio.stopAudio();
     }
-  }, []); // Only on mount
+    
+    // Cleanup on unmount - ensure media is stopped even if component is removed unexpectedly
+    return () => {
+      console.log('[TheaterView] Unmounting - ensuring media is stopped');
+      // Get video element directly since ref may be stale in cleanup
+      const videoElements = document.querySelectorAll('video.theater-video');
+      videoElements.forEach((video) => {
+        try {
+          (video as HTMLVideoElement).pause();
+          (video as HTMLVideoElement).removeAttribute('src');
+          (video as HTMLVideoElement).load();
+        } catch (e) {
+          console.warn('[TheaterView] Cleanup error:', e);
+        }
+      });
+    };
+  }, []);
 
   const isIOS = useMemo(() => {
     if (typeof navigator === "undefined") return false;
@@ -243,7 +290,7 @@ export const TheaterView = ({ onClose }: TheaterViewProps) => {
             <Button
               variant="ghost"
               size="icon"
-              onClick={onClose}
+              onClick={() => closeTheater('user_clicked_x')}
               className="h-8 w-8 sm:h-10 sm:w-10"
             >
               <X className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -418,7 +465,7 @@ export const TheaterView = ({ onClose }: TheaterViewProps) => {
                 </Button>
                 <Button
                   variant="gold"
-                  onClick={onClose}
+                  onClick={() => closeTheater('user_clicked_start_my_day')}
                   disabled={tasks.length === 0}
                   className="text-sm"
                 >

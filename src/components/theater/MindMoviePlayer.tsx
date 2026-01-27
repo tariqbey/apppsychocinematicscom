@@ -165,6 +165,43 @@ export const MindMoviePlayer = forwardRef<MindMoviePlayerHandle, MindMoviePlayer
       }
     }, [effectiveSrc]);
 
+    // HARD STOP on unmount - ensures no orphaned audio/video continues playing
+    useEffect(() => {
+      return () => {
+        console.log('[MindMoviePlayer] Unmounting - hard stop cleanup');
+        
+        // Abort any in-flight download
+        if (downloadAbortRef.current) {
+          downloadAbortRef.current.abort();
+          downloadAbortRef.current = null;
+        }
+        
+        // Revoke blob URL
+        if (smoothObjectUrlRef.current) {
+          URL.revokeObjectURL(smoothObjectUrlRef.current);
+          smoothObjectUrlRef.current = null;
+        }
+        
+        // Force stop the video element
+        const video = videoRef.current;
+        if (video) {
+          try {
+            video.pause();
+            video.removeAttribute('src');
+            video.load(); // Force browser to release audio pipeline
+          } catch (e) {
+            console.warn('[MindMoviePlayer] Cleanup error:', e);
+          }
+        }
+        
+        // Clear all timeouts
+        if (bufferingTimeoutRef.current) window.clearTimeout(bufferingTimeoutRef.current);
+        if (hideControlsTimeoutRef.current) window.clearTimeout(hideControlsTimeoutRef.current);
+        if (autoResumeTimeoutRef.current) window.clearTimeout(autoResumeTimeoutRef.current);
+        if (audioNudgeTimeoutRef.current) window.clearTimeout(audioNudgeTimeoutRef.current);
+      };
+    }, []);
+
     // Reduce false positives: require consecutive stalled samples before we recover.
     const audioStallCountRef = useRef(0);
     const audioRecoveryAttemptsRef = useRef(0);
@@ -339,6 +376,7 @@ export const MindMoviePlayer = forwardRef<MindMoviePlayerHandle, MindMoviePlayer
       };
 
       const handleWaiting = () => {
+        console.log(`[MindMoviePlayer] waiting event - currentTime: ${video.currentTime.toFixed(1)}s`);
         sawBufferingRef.current = true;
         lastBufferingAtRef.current = Date.now();
         if (!bufferingVisibleRef.current) {
@@ -351,6 +389,7 @@ export const MindMoviePlayer = forwardRef<MindMoviePlayerHandle, MindMoviePlayer
       };
 
       const handleStalled = () => {
+        console.log(`[MindMoviePlayer] stalled event - currentTime: ${video.currentTime.toFixed(1)}s`);
         sawBufferingRef.current = true;
         lastBufferingAtRef.current = Date.now();
         if (!bufferingVisibleRef.current) {
@@ -441,15 +480,38 @@ export const MindMoviePlayer = forwardRef<MindMoviePlayerHandle, MindMoviePlayer
         const pos = video.currentTime;
         const isNearEnd = Number.isFinite(dur) && dur > 10 && pos >= dur - 2;
 
+        console.log(`[MindMoviePlayer] ended event - pos: ${pos.toFixed(1)}s, dur: ${dur}s, isNearEnd: ${isNearEnd}`);
+
         if (!hasCompleted.current && isNearEnd) {
           hasCompleted.current = true;
+          console.log('[MindMoviePlayer] Video completed successfully');
           onComplete?.(Math.floor(dur));
         } else if (!hasCompleted.current && !isNearEnd) {
           // Video "ended" prematurely - likely iOS network issue.
-          // Try to recover by reloading.
-          console.warn(`Video ended prematurely at ${pos.toFixed(1)}s / ${dur}s - attempting recovery`);
+          // Try to recover by saving position and reloading.
+          console.warn(`[MindMoviePlayer] Video ended prematurely at ${pos.toFixed(1)}s / ${dur}s - attempting recovery`);
+          
+          // Save current position for recovery
+          const savedTime = Math.max(0, pos - 0.5);
+          
           // On iOS, calling load() can help reset the stream.
           video.load();
+          
+          // Attempt to resume from saved position after a brief delay
+          window.setTimeout(() => {
+            const v = videoRef.current;
+            if (!v) return;
+            try {
+              if (savedTime > 0) {
+                v.currentTime = savedTime;
+              }
+              void v.play().catch(() => {
+                console.log('[MindMoviePlayer] Auto-resume after recovery failed - user can tap play');
+              });
+            } catch (e) {
+              console.warn('[MindMoviePlayer] Recovery seek failed:', e);
+            }
+          }, 500);
         }
       };
 

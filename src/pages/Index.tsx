@@ -52,7 +52,18 @@ import iconSoundtrack from "@/assets/icons/icon-soundtrack.png";
 const Index = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [showTheater, setShowTheater] = useState(false);
+  const [showTheater, setShowTheater] = useState(() => {
+    // Restore theater if it was unexpectedly closed (e.g., component remount)
+    const wasOpen = sessionStorage.getItem('theater_open') === 'true';
+    const openedAt = parseInt(sessionStorage.getItem('theater_opened_at') || '0', 10);
+    const now = Date.now();
+    const tenMinutes = 10 * 60 * 1000;
+    if (wasOpen && openedAt && (now - openedAt) < tenMinutes) {
+      console.log('[Index] Restoring theater state from session');
+      return true;
+    }
+    return false;
+  });
   const [showEditBay, setShowEditBay] = useState(false);
   const [showScorecard, setShowScorecard] = useState(false);
   const [showAIChat, setShowAIChat] = useState(false);
@@ -92,6 +103,19 @@ const Index = () => {
     deadline: string;
     alignment_score?: number | null;
   } | null>(null);
+
+  // Theater state persistence - prevents losing the theater if component remounts
+  useEffect(() => {
+    if (showTheater) {
+      console.log('[Index] Theater opened - persisting state');
+      sessionStorage.setItem('theater_open', 'true');
+      sessionStorage.setItem('theater_opened_at', Date.now().toString());
+    } else {
+      console.log('[Index] Theater closed - clearing persistence');
+      sessionStorage.removeItem('theater_open');
+      sessionStorage.removeItem('theater_opened_at');
+    }
+  }, [showTheater]);
 
   const handleCreateNewMovie = useCallback(async () => {
     const movie = await createNewMovie();
