@@ -100,13 +100,16 @@ export const MindMoviePlayer = forwardRef<MindMoviePlayerHandle, MindMoviePlayer
     const videoSrc = useMemo(() => {
       if (!src) return "";
       if (!isIOS) return src;
+      // In iOS installed-app / standalone mode, prefer direct storage URL.
+      // Proxying can trigger WebKit process crashes on play.
+      if (isStandalone) return src;
       if (src.includes("/functions/v1/video-proxy")) return src;
       if (!src.includes("/storage/v1/object/")) return src;
       
       const baseUrl = import.meta.env.VITE_SUPABASE_URL;
       if (!baseUrl) return src;
       return `${baseUrl}/functions/v1/video-proxy?url=${encodeURIComponent(src)}`;
-    }, [src, isIOS]);
+    }, [src, isIOS, isStandalone]);
 
     // Cleanup on unmount - CRITICAL for preventing orphaned audio
     useEffect(() => {

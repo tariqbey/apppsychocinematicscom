@@ -126,6 +126,11 @@ export const TheaterView = ({ onClose }: TheaterViewProps) => {
   const playbackSrc = useMemo(() => {
     if (!videoUrl) return null;
     if (!isIOS) return videoUrl;
+
+    // IMPORTANT (iOS Installed App / standalone):
+    // We prefer the direct storage URL here because we've seen WebKit hard-crash
+    // on play when streaming via a proxy in standalone mode.
+    if (isStandalone) return videoUrl;
     // Already proxied?
     if (videoUrl.includes("/functions/v1/video-proxy")) return videoUrl;
     // Only proxy storage URLs
@@ -134,7 +139,7 @@ export const TheaterView = ({ onClose }: TheaterViewProps) => {
     const baseUrl = import.meta.env.VITE_SUPABASE_URL;
     if (!baseUrl) return videoUrl;
     return `${baseUrl}/functions/v1/video-proxy?url=${encodeURIComponent(videoUrl)}`;
-  }, [videoUrl, isIOS]);
+  }, [videoUrl, isIOS, isStandalone]);
 
   // Load today's tasks
   const loadTodaysTasks = useCallback(async () => {
