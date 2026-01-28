@@ -1,19 +1,16 @@
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
-import { Play, Pause, VolumeX, Volume2, Maximize, Minimize2, Loader2, Download } from "lucide-react";
+import { Play, Pause, VolumeX, Volume2, Maximize, Minimize2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { VideoDiagnostics } from "./VideoDiagnostics";
+
 /**
- * MindMoviePlayer – A rock-solid, iOS Safari-first video player.
- *
- * Design constraints
- * ------------------
- * • ZERO retry loops / aggressive event handlers that crash Safari.
- * • Single useEffect for all native video events → guaranteed cleanup.
- * • Throttled timeupdate to avoid render churn on low-end devices.
- * • No auto-play; user taps the play button (Safari requires gesture).
- * • Optional "ritual mode" props control whether scrubbing is allowed
- *   and whether interruptions force restart.
+ * MindMoviePlayer – Simplified, stable video player.
+ * 
+ * Key principles:
+ * - Minimal state management
+ * - No complex recovery loops that cause crashes
+ * - Native browser fullscreen only (no custom overlays that conflict with z-index)
+ * - Clean unmount cleanup
  */
 
 export interface MindMoviePlayerProps {
@@ -32,7 +29,7 @@ export interface MindMoviePlayerProps {
   nativeControls?: boolean;
   /** Show diagnostics overlay for debugging (default false) */
   showDiagnostics?: boolean;
-  /** Attempt to pre-download smaller videos before playing to reduce mid-play buffering. Defaults to true on iOS. */
+  /** Enable smooth playback pre-download (ignored in this simplified version) */
   enableSmoothPlayback?: boolean;
 }
 
@@ -54,171 +51,51 @@ export const MindMoviePlayer = forwardRef<MindMoviePlayerHandle, MindMoviePlayer
       className,
       nativeControls = false,
       showDiagnostics = false,
-        enableSmoothPlayback,
     },
     ref
   ) => {
     const videoRef = useRef<HTMLVideoElement>(null);
     const wrapperRef = useRef<HTMLDivElement>(null);
+    const hasCompletedRef = useRef(false);
+    const pauseRequestedRef = useRef(false);
 
+    // Simple state
+    const [isPlaying, setIsPlaying] = useState(false);
+    const [isMuted, setIsMuted] = useState(false);
+    const [currentTime, setCurrentTime] = useState(0);
+    const [duration, setDuration] = useState(0);
+    const [isBuffering, setIsBuffering] = useState(false);
+    const [wasInterrupted, setWasInterrupted] = useState(false);
+    const [isFullscreen, setIsFullscreen] = useState(false);
+    const [controlsVisible, setControlsVisible] = useState(true);
+
+    // Control visibility timer
+    const hideTimerRef = useRef<number | null>(null);
+
+    // Detect iOS for special handling
     const isIOS = useMemo(() => {
       if (typeof navigator === "undefined") return false;
-      return (
-        /iPad|iPhone|iPod/.test(navigator.userAgent) ||
-        (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)
-      );
+      return /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+        (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
     }, []);
 
-    const prefersNoHover = useMemo(() => {
-      if (typeof window === "undefined" || !window.matchMedia) return false;
-      return window.matchMedia("(hover: none)").matches;
-    }, []);
-
-    // On mobile/touch devices, we still auto-hide controls while playing to keep the
-    // video unobstructed. User interaction will reveal controls temporarily.
-    const isTouchUI = isIOS || prefersNoHover;
-
-    // iOS Safari is extremely sensitive to imperfect Range/206 responses.
-    // Route storage URLs through our Range-safe proxy automatically.
+    // Proxy video URLs through video-proxy for iOS Range request compatibility
     const effectiveSrc = useMemo(() => {
-      if (!isIOS) return src;
-      if (!src) return src;
+      if (!isIOS || !src) return src;
       if (src.includes("/functions/v1/video-proxy")) return src;
       if (!src.includes("/storage/v1/object/")) return src;
-
       const baseUrl = import.meta.env.VITE_SUPABASE_URL;
       if (!baseUrl) return src;
       return `${baseUrl}/functions/v1/video-proxy?url=${encodeURIComponent(src)}`;
     }, [isIOS, src]);
 
-    // Playback state
-    const [isPlaying, setIsPlaying] = useState(false);
-    const [isMuted, setIsMuted] = useState(false);
-    const [currentTime, setCurrentTime] = useState(0);
-    const [duration, setDuration] = useState(0);
-    const [wasInterrupted, setWasInterrupted] = useState(false);
-    const [isWidescreen, setIsWidescreen] = useState(false);
-    const [isBuffering, setIsBuffering] = useState(false);
-    const [bufferedPercent, setBufferedPercent] = useState(0);
-
-    // Smooth playback (download-first)
-    const smoothPlaybackEnabled = enableSmoothPlayback ?? isIOS;
-    const [smoothModeActive, setSmoothModeActive] = useState(false);
-    const [downloadPct, setDownloadPct] = useState<number | null>(null);
-    const [downloadError, setDownloadError] = useState<string | null>(null);
-    const [playSrc, setPlaySrc] = useState(effectiveSrc);
-
-    const smoothObjectUrlRef = useRef<string | null>(null);
-    const downloadAbortRef = useRef<AbortController | null>(null);
-
-    // Avoid flashing buffering UI for micro-stalls.
-    const bufferingTimeoutRef = useRef<number | null>(null);
-    const bufferingVisibleRef = useRef(false);
-
-    const shouldAutoSmoothPlayback = useMemo(() => {
-      if (!smoothPlaybackEnabled) return false;
-      if (typeof navigator === "undefined") return false;
-      const conn = (navigator as any).connection as
-        | { saveData?: boolean; effectiveType?: string }
-        | undefined;
-      if (conn?.saveData) return false;
-      if (conn?.effectiveType && ["slow-2g", "2g"].includes(conn.effectiveType)) return false;
-      return true;
-    }, [smoothPlaybackEnabled]);
-
-    // Controls auto-hide state
-    const [controlsVisible, setControlsVisible] = useState(true);
-    const hideControlsTimeoutRef = useRef<number | null>(null);
-
-    // Distinguish user-requested pauses from system/network pauses (iOS can fire
-    // pause events during buffering). Only user pauses count as "interruption".
-    const pauseRequestedRef = useRef(false);
-    const autoResumeTimeoutRef = useRef<number | null>(null);
-
-    // Track user intent for mute so we can recover from iOS/system-induced mute flips.
-    const desiredMutedRef = useRef(false);
-
-    // iOS audio watchdog: some devices can resume video after buffering with silent audio.
-    const sawBufferingRef = useRef(false);
-    const lastBufferingAtRef = useRef(0);
-    const lastAudioBytesRef = useRef<number | null>(null);
-    const hasSeenNonZeroAudioBytesRef = useRef(false);
-    const lastAudioNudgeAtRef = useRef(0);
-    const lastMediaTimeRef = useRef(0);
-    const docHiddenRef = useRef(false);
-
-    // Keep playSrc in sync with effectiveSrc and cleanup any blob URLs.
-    useEffect(() => {
-      setPlaySrc(effectiveSrc);
-      setSmoothModeActive(false);
-      setDownloadPct(null);
-      setDownloadError(null);
-
-      if (downloadAbortRef.current) {
-        downloadAbortRef.current.abort();
-        downloadAbortRef.current = null;
-      }
-
-      if (smoothObjectUrlRef.current) {
-        URL.revokeObjectURL(smoothObjectUrlRef.current);
-        smoothObjectUrlRef.current = null;
-      }
-    }, [effectiveSrc]);
-
-    // HARD STOP on unmount - ensures no orphaned audio/video continues playing
-    useEffect(() => {
-      return () => {
-        console.log('[MindMoviePlayer] Unmounting - hard stop cleanup');
-        
-        // Abort any in-flight download
-        if (downloadAbortRef.current) {
-          downloadAbortRef.current.abort();
-          downloadAbortRef.current = null;
-        }
-        
-        // Revoke blob URL
-        if (smoothObjectUrlRef.current) {
-          URL.revokeObjectURL(smoothObjectUrlRef.current);
-          smoothObjectUrlRef.current = null;
-        }
-        
-        // Force stop the video element
-        const video = videoRef.current;
-        if (video) {
-          try {
-            video.pause();
-            video.removeAttribute('src');
-            video.load(); // Force browser to release audio pipeline
-          } catch (e) {
-            console.warn('[MindMoviePlayer] Cleanup error:', e);
-          }
-        }
-        
-        // Clear all timeouts
-        if (bufferingTimeoutRef.current) window.clearTimeout(bufferingTimeoutRef.current);
-        if (hideControlsTimeoutRef.current) window.clearTimeout(hideControlsTimeoutRef.current);
-        if (autoResumeTimeoutRef.current) window.clearTimeout(autoResumeTimeoutRef.current);
-        if (audioNudgeTimeoutRef.current) window.clearTimeout(audioNudgeTimeoutRef.current);
-      };
-    }, []);
-
-    // Reduce false positives: require consecutive stalled samples before we recover.
-    const audioStallCountRef = useRef(0);
-    const audioRecoveryAttemptsRef = useRef(0);
-    const audioNudgeTimeoutRef = useRef<number | null>(null);
-
-    // Refs for stable callbacks
-    const hasCompleted = useRef(false);
-    const lastTimeUpdate = useRef(0);
-
-    // Expose imperative methods
+    // Expose imperative handle
     useImperativeHandle(ref, () => ({
       play: async () => {
         const video = videoRef.current;
         if (!video) return;
         if (restartOnInterrupt && wasInterrupted) {
           video.currentTime = 0;
-          setCurrentTime(0);
           setWasInterrupted(false);
         }
         await video.play();
@@ -228,592 +105,162 @@ export const MindMoviePlayer = forwardRef<MindMoviePlayerHandle, MindMoviePlayer
         const video = videoRef.current;
         if (!video) return;
         video.currentTime = 0;
-        setCurrentTime(0);
-        hasCompleted.current = false;
+        hasCompletedRef.current = false;
         setWasInterrupted(false);
       },
       getVideoElement: () => videoRef.current,
     }));
 
-    // Single effect for all video listeners
+    // Cleanup on unmount - force stop everything
     useEffect(() => {
-      const video = videoRef.current;
-      if (!video) return;
+      return () => {
+        console.log('[MindMoviePlayer] Unmount cleanup');
+        const video = videoRef.current;
+        if (video) {
+          try {
+            video.pause();
+            video.removeAttribute('src');
+            video.load();
+          } catch (e) {
+            console.warn('[MindMoviePlayer] Cleanup error:', e);
+          }
+        }
+        if (hideTimerRef.current) window.clearTimeout(hideTimerRef.current);
+      };
+    }, []);
 
-      hasCompleted.current = false;
+    // Reset on src change
+    useEffect(() => {
+      hasCompletedRef.current = false;
       setWasInterrupted(false);
       setCurrentTime(0);
       setDuration(0);
       setIsPlaying(false);
-      setControlsVisible(true);
+    }, [effectiveSrc]);
 
-      // Ensure audio is enabled by default
-      video.muted = false;
-      video.defaultMuted = false;
-      video.volume = 1;
-      desiredMutedRef.current = false;
-      setIsMuted(false);
+    // Video event handlers
+    useEffect(() => {
+      const video = videoRef.current;
+      if (!video) return;
 
-      sawBufferingRef.current = false;
-      lastBufferingAtRef.current = 0;
-      lastAudioBytesRef.current = null;
-      hasSeenNonZeroAudioBytesRef.current = false;
-      lastAudioNudgeAtRef.current = 0;
-      lastMediaTimeRef.current = 0;
-      docHiddenRef.current = typeof document !== "undefined" ? document.hidden : false;
-
-      audioStallCountRef.current = 0;
-      audioRecoveryAttemptsRef.current = 0;
-      if (audioNudgeTimeoutRef.current) {
-        window.clearTimeout(audioNudgeTimeoutRef.current);
-        audioNudgeTimeoutRef.current = null;
-      }
-
-      bufferingVisibleRef.current = false;
-      if (bufferingTimeoutRef.current) {
-        window.clearTimeout(bufferingTimeoutRef.current);
-        bufferingTimeoutRef.current = null;
-      }
-
-      const getAudioDecodedBytes = () => {
-        const anyVideo = video as unknown as { webkitAudioDecodedByteCount?: unknown };
-        const v = anyVideo.webkitAudioDecodedByteCount;
-        return typeof v === "number" && Number.isFinite(v) ? v : null;
-      };
-
-      const ensureUnmuted = () => {
-        if (desiredMutedRef.current) return;
-        if (video.muted) {
-          video.muted = false;
-          video.defaultMuted = false;
-        }
-        if (video.volume === 0) video.volume = 1;
-        setIsMuted(video.muted);
-      };
-
-      const nudgeAudioPipeline = (reason: string) => {
-        // Throttle nudges to avoid Safari instability.
-        const now = Date.now();
-        if (now - lastAudioNudgeAtRef.current < 12000) return;
-        lastAudioNudgeAtRef.current = now;
-
-        if (desiredMutedRef.current) return;
-
-        try {
-          // iOS Safari: a brief mute/unmute is the least disruptive reinit.
-          // Avoid volume manipulation (can cause audible drops + extra events).
-          video.muted = true;
-          video.defaultMuted = true;
-          setIsMuted(true);
-
-          if (audioNudgeTimeoutRef.current) window.clearTimeout(audioNudgeTimeoutRef.current);
-          audioNudgeTimeoutRef.current = window.setTimeout(() => {
-            const v = videoRef.current;
-            if (!v) return;
-            if (desiredMutedRef.current) return;
-            v.muted = false;
-            v.defaultMuted = false;
-            if (v.volume === 0) v.volume = 1;
-            setIsMuted(false);
-            // Re-assert play to help iOS rehydrate the audio pipeline.
-            void v.play().catch(() => {
-              // User can tap play if needed.
-            });
-          }, 120);
-        } catch (e) {
-          // Never throw from here.
-          console.warn("Audio nudge failed", { reason, e });
-        }
-      };
-
-      // Handlers -------------------------------------------------
       const handleLoadedMetadata = () => {
-        let dur = video.duration;
-        if (!Number.isFinite(dur) || dur <= 0) {
-          if (video.seekable.length > 0) {
-            dur = video.seekable.end(video.seekable.length - 1);
-          }
-        }
+        const dur = video.duration;
         if (Number.isFinite(dur) && dur > 0) {
           setDuration(dur);
         }
       };
 
       const handleTimeUpdate = () => {
-        // Throttle to avoid render churn (iOS is extremely sensitive)
-        const throttleMs = isIOS ? 1000 : 250;
-        const now = performance.now();
-        if (now - lastTimeUpdate.current < throttleMs) return;
-        lastTimeUpdate.current = now;
         setCurrentTime(video.currentTime);
       };
 
       const handlePlay = () => {
         setIsPlaying(true);
-        bufferingVisibleRef.current = false;
-        if (bufferingTimeoutRef.current) {
-          window.clearTimeout(bufferingTimeoutRef.current);
-          bufferingTimeoutRef.current = null;
-        }
         setIsBuffering(false);
-      };
-
-      const handlePlaying = () => {
-        setIsPlaying(true);
-        bufferingVisibleRef.current = false;
-        if (bufferingTimeoutRef.current) {
-          window.clearTimeout(bufferingTimeoutRef.current);
-          bufferingTimeoutRef.current = null;
-        }
-        setIsBuffering(false);
-        ensureUnmuted();
-
-        // If we just recovered from buffering, nudge the audio pipeline once.
-        if (isIOS && sawBufferingRef.current) {
-          nudgeAudioPipeline("buffer-recover");
-          sawBufferingRef.current = false;
-        }
-      };
-
-      const handleWaiting = () => {
-        console.log(`[MindMoviePlayer] waiting event - currentTime: ${video.currentTime.toFixed(1)}s`);
-        sawBufferingRef.current = true;
-        lastBufferingAtRef.current = Date.now();
-        if (!bufferingVisibleRef.current) {
-          if (bufferingTimeoutRef.current) window.clearTimeout(bufferingTimeoutRef.current);
-          bufferingTimeoutRef.current = window.setTimeout(() => {
-            bufferingVisibleRef.current = true;
-            setIsBuffering(true);
-          }, 450);
-        }
-      };
-
-      const handleStalled = () => {
-        console.log(`[MindMoviePlayer] stalled event - currentTime: ${video.currentTime.toFixed(1)}s`);
-        sawBufferingRef.current = true;
-        lastBufferingAtRef.current = Date.now();
-        if (!bufferingVisibleRef.current) {
-          if (bufferingTimeoutRef.current) window.clearTimeout(bufferingTimeoutRef.current);
-          bufferingTimeoutRef.current = window.setTimeout(() => {
-            bufferingVisibleRef.current = true;
-            setIsBuffering(true);
-          }, 450);
-        }
-      };
-
-      const handleCanPlay = () => {
-        bufferingVisibleRef.current = false;
-        if (bufferingTimeoutRef.current) {
-          window.clearTimeout(bufferingTimeoutRef.current);
-          bufferingTimeoutRef.current = null;
-        }
-        setIsBuffering(false);
-      };
-
-      const handleProgress = () => {
-        // Update buffered percentage for visual feedback
-        if (video.buffered.length > 0 && video.duration > 0) {
-          const bufferedEnd = video.buffered.end(video.buffered.length - 1);
-          const percent = (bufferedEnd / video.duration) * 100;
-          setBufferedPercent(Math.min(100, percent));
-        }
-      };
-
-      const handleVolumeChange = () => {
-        // Keep React state in sync with the element.
-        setIsMuted(video.muted);
-
-        // iOS can sometimes flip muted during route changes / interruptions.
-        if (!desiredMutedRef.current && (video.muted || video.volume === 0)) {
-          video.muted = false;
-          video.defaultMuted = false;
-          if (video.volume === 0) video.volume = 1;
-          setIsMuted(false);
-        }
       };
 
       const handlePause = () => {
         setIsPlaying(false);
-
-        const userPaused = pauseRequestedRef.current;
-        pauseRequestedRef.current = false;
-
-        // Mark interrupted only if user requested pause and NOT at end
-        if (userPaused && !video.ended && video.currentTime > 0.5) {
+        if (pauseRequestedRef.current && !video.ended && video.currentTime > 0.5) {
           setWasInterrupted(true);
-          return;
         }
-
-        // If the pause was not user-requested, attempt a gentle resume.
-        // IMPORTANT: only do this if we *just* buffered; otherwise we can create
-        // play/pause loops that feel like "stuttering".
-        const recentlyBuffered = Date.now() - (lastBufferingAtRef.current || 0) < 2500;
-        if (!userPaused && recentlyBuffered && !video.ended && video.currentTime > 0.5) {
-          if (autoResumeTimeoutRef.current) window.clearTimeout(autoResumeTimeoutRef.current);
-          autoResumeTimeoutRef.current = window.setTimeout(() => {
-            // Only resume if we are still paused and the user didn't mute/stop intentionally.
-            if (!videoRef.current) return;
-            if (!videoRef.current.paused) return;
-            if (docHiddenRef.current) return;
-            // Avoid calling play() while the media isn't ready; it can lead to weird iOS states.
-            if (videoRef.current.readyState < 2) return;
-            // If we want audio, enforce it before resuming.
-            if (!desiredMutedRef.current) {
-              videoRef.current.muted = false;
-              videoRef.current.defaultMuted = false;
-              if (videoRef.current.volume === 0) videoRef.current.volume = 1;
-            }
-            void videoRef.current.play().catch(() => {
-              // Let the user retry manually.
-            });
-          }, 400);
-        }
+        pauseRequestedRef.current = false;
       };
+
+      const handleWaiting = () => setIsBuffering(true);
+      const handlePlaying = () => setIsBuffering(false);
+      const handleCanPlay = () => setIsBuffering(false);
 
       const handleEnded = () => {
         setIsPlaying(false);
-
-        // iOS Safari can fire 'ended' prematurely due to network issues or metadata problems.
-        // Guard: only complete if we're actually near the end of the video (within 2 seconds)
-        // and the duration is a reasonable length (> 10 seconds for mind movies).
         const dur = video.duration;
         const pos = video.currentTime;
-        const isNearEnd = Number.isFinite(dur) && dur > 10 && pos >= dur - 2;
-
-        console.log(`[MindMoviePlayer] ended event - pos: ${pos.toFixed(1)}s, dur: ${dur}s, isNearEnd: ${isNearEnd}`);
-
-        if (!hasCompleted.current && isNearEnd) {
-          hasCompleted.current = true;
-          console.log('[MindMoviePlayer] Video completed successfully');
+        
+        // Only count as complete if we're genuinely near the end
+        if (!hasCompletedRef.current && Number.isFinite(dur) && dur > 5 && pos >= dur - 2) {
+          hasCompletedRef.current = true;
+          console.log('[MindMoviePlayer] Video completed');
           onComplete?.(Math.floor(dur));
-        } else if (!hasCompleted.current && !isNearEnd) {
-          // Video "ended" prematurely - likely iOS network issue.
-          // Try to recover by saving position and reloading.
-          console.warn(`[MindMoviePlayer] Video ended prematurely at ${pos.toFixed(1)}s / ${dur}s - attempting recovery`);
-          
-          // Save current position for recovery
-          const savedTime = Math.max(0, pos - 0.5);
-          
-          // On iOS, calling load() can help reset the stream.
-          video.load();
-          
-          // Attempt to resume from saved position after a brief delay
-          window.setTimeout(() => {
-            const v = videoRef.current;
-            if (!v) return;
-            try {
-              if (savedTime > 0) {
-                v.currentTime = savedTime;
-              }
-              void v.play().catch(() => {
-                console.log('[MindMoviePlayer] Auto-resume after recovery failed - user can tap play');
-              });
-            } catch (e) {
-              console.warn('[MindMoviePlayer] Recovery seek failed:', e);
-            }
-          }, 500);
         }
       };
 
       const handleError = () => {
-        const mediaErr = video.error;
-        const msg =
-          mediaErr?.message ||
-          (mediaErr?.code === MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED
-            ? "Video format not supported"
-            : "Playback error");
+        const err = video.error;
+        const msg = err?.message || "Playback error";
+        console.error('[MindMoviePlayer] Error:', msg);
         onError?.(msg);
       };
 
-      const handleVisibilityChange = () => {
-        docHiddenRef.current = document.hidden;
-
-        // If the doc becomes visible again and video is paused unexpectedly,
-        // give it a chance to resume with audio intact.
-        if (!docHiddenRef.current) {
-          ensureUnmuted();
-          if (!video.ended && video.paused && video.currentTime > 0.5 && video.readyState >= 2) {
-            // A small delay helps iOS rehydrate its media pipeline.
-            window.setTimeout(() => {
-              if (!videoRef.current) return;
-              if (document.hidden) return;
-              if (!videoRef.current.paused) return;
-              ensureUnmuted();
-              void videoRef.current.play().catch(() => {
-                // User can tap play.
-              });
-            }, 250);
-          }
-        }
+      const handleFullscreenChange = () => {
+        const isFs = !!document.fullscreenElement;
+        setIsFullscreen(isFs);
       };
 
-      // iOS audio watchdog interval (only if Safari exposes decoded audio byte count)
-      const audioWatchdogInterval = window.setInterval(() => {
-        if (!isIOS) return;
-        if (docHiddenRef.current) return;
-        if (video.paused || video.ended) return;
-        if (desiredMutedRef.current || video.muted || video.volume === 0) return;
-
-        const bytes = getAudioDecodedBytes();
-        if (bytes == null) return;
-        if (bytes > 0) hasSeenNonZeroAudioBytesRef.current = true;
-
-        // Only attempt recovery if we've *ever* seen non-zero bytes (avoids false positives).
-        if (hasSeenNonZeroAudioBytesRef.current && lastAudioBytesRef.current != null) {
-          const timeAdvanced = video.currentTime - (lastMediaTimeRef.current || 0);
-          const bytesStalled = bytes === lastAudioBytesRef.current;
-
-          // Require consecutive stalled samples before nudging.
-          if (video.currentTime > 2 && timeAdvanced > 0.9 && bytesStalled) {
-            audioStallCountRef.current += 1;
-          } else {
-            audioStallCountRef.current = 0;
-            audioRecoveryAttemptsRef.current = 0;
-          }
-
-          if (audioStallCountRef.current >= 2) {
-            audioStallCountRef.current = 0;
-            audioRecoveryAttemptsRef.current += 1;
-
-            // Step 1: gentle nudge. Step 2+: nudge again (throttled).
-            // We avoid programmatic reload/seek here because it can be more unstable than silence.
-            nudgeAudioPipeline(audioRecoveryAttemptsRef.current > 1 ? "watchdog-repeat" : "watchdog");
-          }
-        }
-
-        lastMediaTimeRef.current = video.currentTime;
-        lastAudioBytesRef.current = bytes;
-      }, 2000);
-
-      // Attach listeners ------------------------------------------
       video.addEventListener("loadedmetadata", handleLoadedMetadata);
-      video.addEventListener("durationchange", handleLoadedMetadata);
       video.addEventListener("timeupdate", handleTimeUpdate);
       video.addEventListener("play", handlePlay);
-      video.addEventListener("playing", handlePlaying);
-      video.addEventListener("waiting", handleWaiting);
-      video.addEventListener("stalled", handleStalled);
-      video.addEventListener("canplay", handleCanPlay);
-      video.addEventListener("progress", handleProgress);
       video.addEventListener("pause", handlePause);
+      video.addEventListener("waiting", handleWaiting);
+      video.addEventListener("playing", handlePlaying);
+      video.addEventListener("canplay", handleCanPlay);
       video.addEventListener("ended", handleEnded);
       video.addEventListener("error", handleError);
-      video.addEventListener("volumechange", handleVolumeChange);
-      document.addEventListener("visibilitychange", handleVisibilityChange);
+      document.addEventListener("fullscreenchange", handleFullscreenChange);
 
       return () => {
-        if (bufferingTimeoutRef.current) window.clearTimeout(bufferingTimeoutRef.current);
-        if (hideControlsTimeoutRef.current) window.clearTimeout(hideControlsTimeoutRef.current);
-        if (autoResumeTimeoutRef.current) window.clearTimeout(autoResumeTimeoutRef.current);
-        if (audioNudgeTimeoutRef.current) window.clearTimeout(audioNudgeTimeoutRef.current);
-        window.clearInterval(audioWatchdogInterval);
         video.removeEventListener("loadedmetadata", handleLoadedMetadata);
-        video.removeEventListener("durationchange", handleLoadedMetadata);
         video.removeEventListener("timeupdate", handleTimeUpdate);
         video.removeEventListener("play", handlePlay);
-        video.removeEventListener("playing", handlePlaying);
-        video.removeEventListener("waiting", handleWaiting);
-        video.removeEventListener("stalled", handleStalled);
-        video.removeEventListener("canplay", handleCanPlay);
-        video.removeEventListener("progress", handleProgress);
         video.removeEventListener("pause", handlePause);
+        video.removeEventListener("waiting", handleWaiting);
+        video.removeEventListener("playing", handlePlaying);
+        video.removeEventListener("canplay", handleCanPlay);
         video.removeEventListener("ended", handleEnded);
         video.removeEventListener("error", handleError);
-        video.removeEventListener("volumechange", handleVolumeChange);
-        document.removeEventListener("visibilitychange", handleVisibilityChange);
+        document.removeEventListener("fullscreenchange", handleFullscreenChange);
       };
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [effectiveSrc]); // only re-bind when src changes
+    }, [effectiveSrc, onComplete, onError]);
 
-    const stopSmoothDownload = useCallback(() => {
-      if (downloadAbortRef.current) {
-        downloadAbortRef.current.abort();
-        downloadAbortRef.current = null;
-      }
-      setDownloadPct(null);
-    }, []);
-
-    const startSmoothPlayback = useCallback(async () => {
-      if (!smoothPlaybackEnabled) return;
-      if (smoothModeActive) return;
-      if (!effectiveSrc) return;
-
-      // Guard rails: avoid trying to download giant movies into memory.
-      const MAX_AUTO_DOWNLOAD_BYTES = 120 * 1024 * 1024; // 120MB
-
-      try {
-        setDownloadError(null);
-        setDownloadPct(0);
-
-        const controller = new AbortController();
-        downloadAbortRef.current = controller;
-
-        let contentLength = 0;
-        try {
-          const head = await fetch(effectiveSrc, { method: "HEAD", signal: controller.signal });
-          await head.text().catch(() => {
-            // ignore
-          });
-          const len = head.headers.get("content-length");
-          contentLength = len ? parseInt(len, 10) : 0;
-        } catch {
-          contentLength = 0;
-        }
-
-        if (contentLength && contentLength > MAX_AUTO_DOWNLOAD_BYTES) {
-          setDownloadPct(null);
-          setDownloadError("This movie is large; streaming mode is recommended on this device.");
-          downloadAbortRef.current = null;
-          return;
-        }
-
-        const res = await fetch(effectiveSrc, { signal: controller.signal });
-        if (!res.ok || !res.body) {
-          throw new Error(`Download failed (${res.status})`);
-        }
-
-        const contentType = res.headers.get("content-type") || "video/mp4";
-
-        const reader = res.body.getReader();
-        const chunks: ArrayBuffer[] = [];
-        let received = 0;
-
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          if (value) {
-            // Convert to a standalone ArrayBuffer to satisfy strict TS DOM typings
-            // (avoids SharedArrayBuffer incompatibilities).
-            const buf = (value.buffer as ArrayBuffer).slice(
-              value.byteOffset,
-              value.byteOffset + value.byteLength
-            );
-            chunks.push(buf);
-            received += value.byteLength;
-            if (contentLength) {
-              const pct = Math.round((received / contentLength) * 100);
-              setDownloadPct(Math.max(0, Math.min(100, pct)));
-            }
-          }
-        }
-
-        const blob = new Blob(chunks, { type: contentType });
-        const objUrl = URL.createObjectURL(blob);
-
-        if (smoothObjectUrlRef.current) URL.revokeObjectURL(smoothObjectUrlRef.current);
-        smoothObjectUrlRef.current = objUrl;
-        setPlaySrc(objUrl);
-        setSmoothModeActive(true);
-        setDownloadPct(100);
-
-        // Ensure the element reloads immediately.
-        const video = videoRef.current;
-        if (video) {
-          const shouldResume = !video.paused;
-          const resumeTime = video.currentTime || 0;
-          video.src = objUrl;
-          video.load();
-          if (resumeTime > 0.1) {
-            try {
-              video.currentTime = resumeTime;
-            } catch {
-              // ignore
-            }
-          }
-          if (shouldResume) {
-            await video.play().catch(() => {
-              // user can tap play
-            });
-          }
-        }
-      } catch (e) {
-        if ((e as any)?.name === "AbortError") return;
-        console.warn("Smooth playback download failed", e);
-        setDownloadPct(null);
-        setDownloadError(e instanceof Error ? e.message : "Download failed");
-      } finally {
-        downloadAbortRef.current = null;
-      }
-    }, [effectiveSrc, smoothModeActive, smoothPlaybackEnabled]);
-
-    // Auto-start smooth playback download (before the user presses play), but only
-    // when it makes sense (iOS by default, and not on data-saver / 2g connections).
-    useEffect(() => {
-      if (!shouldAutoSmoothPlayback) return;
-      if (smoothModeActive) return;
-      if (downloadPct !== null) return;
-      if (downloadError) return;
-
-      void startSmoothPlayback();
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [shouldAutoSmoothPlayback, effectiveSrc]);
-
-    const scheduleHideControls = useCallback(
-      (delayMs = 1600) => {
-        if (hideControlsTimeoutRef.current) window.clearTimeout(hideControlsTimeoutRef.current);
-        if (!isPlaying) {
-          setControlsVisible(true);
-          return;
-        }
-        hideControlsTimeoutRef.current = window.setTimeout(() => {
+    // Auto-hide controls
+    const scheduleHide = useCallback(() => {
+      if (hideTimerRef.current) window.clearTimeout(hideTimerRef.current);
+      if (isPlaying) {
+        hideTimerRef.current = window.setTimeout(() => {
           setControlsVisible(false);
-        }, delayMs);
-      },
-      [isPlaying]
-    );
+        }, 2500);
+      }
+    }, [isPlaying]);
 
-    const revealControls = useCallback(() => {
+    const showControls = useCallback(() => {
       setControlsVisible(true);
-      scheduleHideControls();
-    }, [scheduleHideControls]);
+      scheduleHide();
+    }, [scheduleHide]);
 
-    // Auto-hide controls while playing
     useEffect(() => {
       if (!isPlaying) {
         setControlsVisible(true);
-        return;
+      } else {
+        scheduleHide();
       }
-      scheduleHideControls();
-      return () => {
-        if (hideControlsTimeoutRef.current) window.clearTimeout(hideControlsTimeoutRef.current);
-      };
-    }, [isPlaying, scheduleHideControls]);
+    }, [isPlaying, scheduleHide]);
 
-    // Escape to exit widescreen overlay
-    useEffect(() => {
-      if (!isWidescreen) return;
-      const handleKeyDown = (e: KeyboardEvent) => {
-        if (e.key === "Escape") setIsWidescreen(false);
-      };
-      window.addEventListener("keydown", handleKeyDown);
-      return () => window.removeEventListener("keydown", handleKeyDown);
-    }, [isWidescreen]);
-
-    // User actions -----------------------------------------------
+    // User actions
     const togglePlay = async () => {
       const video = videoRef.current;
       if (!video) return;
-
-       // If we're preparing smooth playback, wait until the download finishes.
-       if (!isPlaying && downloadPct !== null && !smoothModeActive) {
-         return;
-       }
 
       if (isPlaying) {
         pauseRequestedRef.current = true;
         video.pause();
       } else {
+        if (restartOnInterrupt && wasInterrupted) {
+          video.currentTime = 0;
+          setWasInterrupted(false);
+        }
         try {
-          if (restartOnInterrupt && wasInterrupted) {
-            video.currentTime = 0;
-            setCurrentTime(0);
-            setWasInterrupted(false);
-          }
-
           await video.play();
-          scheduleHideControls();
-        } catch (err) {
-          console.warn("Play failed", err);
+        } catch (e) {
+          console.warn('[MindMoviePlayer] Play failed:', e);
         }
       }
     };
@@ -822,36 +269,25 @@ export const MindMoviePlayer = forwardRef<MindMoviePlayerHandle, MindMoviePlayer
       const video = videoRef.current;
       if (!video) return;
       video.muted = !video.muted;
-      desiredMutedRef.current = video.muted;
       setIsMuted(video.muted);
-      revealControls();
     };
 
     const toggleFullscreen = async () => {
-      // iOS Safari fullscreen is a common crash trigger; we disable it entirely.
-      if (isIOS) return;
-
-      const el = wrapperRef.current;
+      const wrapper = wrapperRef.current;
       const video = videoRef.current;
-
+      
       try {
         if (document.fullscreenElement) {
           await document.exitFullscreen();
-        } else if (el?.requestFullscreen) {
-          await el.requestFullscreen();
-        } else if (video?.requestFullscreen) {
-          await video.requestFullscreen();
+        } else if (wrapper?.requestFullscreen) {
+          await wrapper.requestFullscreen();
+        } else if ((video as any)?.webkitEnterFullscreen) {
+          // iOS Safari fallback
+          (video as any).webkitEnterFullscreen();
         }
-      } catch (err) {
-        console.warn("Fullscreen failed", err);
+      } catch (e) {
+        console.warn('[MindMoviePlayer] Fullscreen toggle failed:', e);
       }
-    };
-
-    const toggleWidescreen = () => {
-      // "Widescreen" is an in-app overlay (more stable than true fullscreen on mobile).
-      // Users can rotate their device to landscape while in this mode.
-      setIsWidescreen((v) => !v);
-      revealControls();
     };
 
     const formatTime = (s: number) => {
@@ -863,38 +299,29 @@ export const MindMoviePlayer = forwardRef<MindMoviePlayerHandle, MindMoviePlayer
 
     const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
 
-    // Render -----------------------------------------------------
     return (
       <div
         ref={wrapperRef}
         className={cn(
-          "relative w-full h-full bg-black overflow-hidden group",
-          isWidescreen && "fixed inset-0 z-[80] rounded-none",
+          "relative w-full h-full bg-black overflow-hidden",
           className
         )}
-        onMouseMove={revealControls}
-        onTouchStart={revealControls}
+        onMouseMove={showControls}
+        onTouchStart={showControls}
       >
-        {/* Diagnostics overlay for debugging */}
-        {showDiagnostics && (
-          <VideoDiagnostics videoRef={videoRef} videoSrc={src} />
-        )}
-
         <video
           ref={videoRef}
-          src={playSrc}
+          src={effectiveSrc}
           className="theater-video w-full h-full object-contain"
           playsInline
-          webkit-playsinline="true"
           preload="auto"
-          disablePictureInPicture
           controls={nativeControls}
-          controlsList="nodownload noremoteplayback nofullscreen"
-          onClick={isIOS ? undefined : togglePlay}
+          controlsList="nodownload noremoteplayback"
+          onClick={togglePlay}
         />
 
         {/* Buffering indicator */}
-        {isBuffering && isPlaying && (
+        {isBuffering && (
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
             <div className="bg-black/60 rounded-full p-4">
               <Loader2 className="w-10 h-10 text-gold animate-spin" />
@@ -902,39 +329,7 @@ export const MindMoviePlayer = forwardRef<MindMoviePlayerHandle, MindMoviePlayer
           </div>
         )}
 
-        {/* Smooth playback download overlay */}
-        {downloadPct !== null && !smoothModeActive && (
-          <div className="absolute inset-0 flex items-center justify-center z-10">
-            <div className="w-[92%] max-w-sm rounded-xl bg-background/80 backdrop-blur-sm border border-border p-4">
-              <div className="flex items-center gap-2 text-foreground mb-3">
-                <Download className="w-4 h-4" />
-                <span className="text-sm font-medium">Preparing smooth playback…</span>
-              </div>
-              <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
-                <div
-                  className="h-full bg-gradient-to-r from-gold to-amber-soft"
-                  style={{ width: `${downloadPct}%` }}
-                />
-              </div>
-              <div className="mt-2 flex items-center justify-between text-xs text-muted-foreground">
-                <span>{downloadPct}%</span>
-                <button type="button" className="underline" onClick={stopSmoothDownload}>
-                  Cancel
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {downloadError && !smoothModeActive && (
-          <div className="absolute top-2 left-2 right-2 sm:left-auto sm:right-2 sm:w-[360px] z-10">
-            <div className="rounded-lg bg-background/80 border border-border p-2 text-xs text-muted-foreground">
-              {downloadError}
-            </div>
-          </div>
-        )}
-
-        {/* Custom controls overlay */}
+        {/* Custom controls */}
         {!nativeControls && (
           <div
             className={cn(
@@ -943,19 +338,13 @@ export const MindMoviePlayer = forwardRef<MindMoviePlayerHandle, MindMoviePlayer
             )}
           >
             <div className="absolute bottom-0 left-0 right-0 p-3 sm:p-6 pointer-events-auto">
-              {/* Progress bar (non-interactive when seeking disabled) */}
+              {/* Progress bar */}
               <div
                 className={cn(
                   "relative h-2 sm:h-1 bg-white/20 rounded-full mb-3 sm:mb-4 overflow-hidden",
                   disableSeeking && "cursor-default touch-none"
                 )}
               >
-                {/* Buffered progress (shows how much is loaded) */}
-                <div
-                  className="absolute inset-y-0 left-0 bg-white/30 transition-all"
-                  style={{ width: `${bufferedPercent}%` }}
-                />
-                {/* Playback progress */}
                 <div
                   className="absolute inset-y-0 left-0 bg-gradient-to-r from-gold to-amber-soft transition-all"
                   style={{ width: `${progress}%` }}
@@ -993,27 +382,15 @@ export const MindMoviePlayer = forwardRef<MindMoviePlayerHandle, MindMoviePlayer
                   <span className="text-xs sm:text-sm text-white font-mono bg-black/50 px-2 py-0.5 rounded">
                     {formatTime(currentTime)} / {formatTime(duration)}
                   </span>
-
-                  {smoothPlaybackEnabled && !smoothModeActive && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => void startSmoothPlayback()}
-                      className="h-8 px-2 text-white"
-                      title="Download first for smoother playback"
-                    >
-                      <Download className="w-4 h-4" />
-                    </Button>
-                  )}
                 </div>
 
                 <Button
                   variant="ghost"
                   size="icon"
-                  onClick={isIOS ? toggleWidescreen : toggleFullscreen}
+                  onClick={toggleFullscreen}
                   className="h-8 w-8 sm:h-10 sm:w-10 text-white"
                 >
-                  {isWidescreen ? (
+                  {isFullscreen ? (
                     <Minimize2 className="w-4 h-4 sm:w-5 sm:h-5" />
                   ) : (
                     <Maximize className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -1021,6 +398,16 @@ export const MindMoviePlayer = forwardRef<MindMoviePlayerHandle, MindMoviePlayer
                 </Button>
               </div>
             </div>
+          </div>
+        )}
+
+        {/* Debug info */}
+        {showDiagnostics && (
+          <div className="absolute top-2 left-2 bg-black/80 text-white text-xs p-2 rounded z-20">
+            <div>Playing: {isPlaying ? "Yes" : "No"}</div>
+            <div>Buffering: {isBuffering ? "Yes" : "No"}</div>
+            <div>Time: {currentTime.toFixed(1)}s / {duration.toFixed(1)}s</div>
+            <div>Fullscreen: {isFullscreen ? "Yes" : "No"}</div>
           </div>
         )}
       </div>

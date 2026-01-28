@@ -50,66 +50,59 @@ export const TheaterView = ({ onClose }: TheaterViewProps) => {
   const { user } = useAuth();
   const { toast } = useToast();
   
-  // Get global audio context - stop any playing music when Theater opens
   const globalAudio = useAudioOptional();
 
   const streak = profile?.current_streak || 0;
   const videoUrl = profile?.mind_movie_url;
 
-  // Hard stop function - kills all audio/video to prevent orphaned playback
-  const hardStopMedia = useCallback((reason: string) => {
-    console.log(`[TheaterView] hardStopMedia called: ${reason}`);
+  // Force stop all media on close
+  const stopAllMedia = useCallback(() => {
+    console.log('[TheaterView] Stopping all media');
     
-    // 1. Stop the MindMoviePlayer via ref
+    // Stop the player
     const video = playerRef.current?.getVideoElement?.();
     if (video) {
       try {
         video.pause();
         video.removeAttribute("src");
-        video.load(); // Force browser to release audio pipeline
-        console.log('[TheaterView] Video element stopped and cleared');
+        video.load();
       } catch (e) {
-        console.warn('[TheaterView] Error stopping video:', e);
+        console.warn('[TheaterView] Video stop error:', e);
       }
     }
     
-    // 2. Stop any global audio (unconditionally)
-    if (globalAudio) {
-      globalAudio.stopAudio();
-      console.log('[TheaterView] Global audio stopped');
-    }
+    // Stop global audio
+    globalAudio?.stopAudio();
   }, [globalAudio]);
 
-  // Close theater with proper cleanup
-  const closeTheater = useCallback((reason: string) => {
-    console.log(`[TheaterView] closeTheater called: ${reason}`);
-    hardStopMedia(reason);
+  // Close handler with cleanup
+  const closeTheater = useCallback(() => {
+    console.log('[TheaterView] Closing theater');
+    stopAllMedia();
     onClose();
-  }, [hardStopMedia, onClose]);
+  }, [stopAllMedia, onClose]);
 
-  // Stop any background audio when Theater opens (unconditional)
+  // Stop background audio when Theater opens
   useEffect(() => {
-    console.log('[TheaterView] Mounted - stopping any background audio');
-    if (globalAudio) {
-      globalAudio.stopAudio();
-    }
+    console.log('[TheaterView] Mounted - stopping background audio');
+    globalAudio?.stopAudio();
     
-    // Cleanup on unmount - ensure media is stopped even if component is removed unexpectedly
     return () => {
-      console.log('[TheaterView] Unmounting - ensuring media is stopped');
-      // Get video element directly since ref may be stale in cleanup
-      const videoElements = document.querySelectorAll('video.theater-video');
-      videoElements.forEach((video) => {
+      console.log('[TheaterView] Unmounting - cleanup');
+      // Find and stop any orphaned video elements
+      const videos = document.querySelectorAll('video.theater-video');
+      videos.forEach((v) => {
         try {
-          (video as HTMLVideoElement).pause();
-          (video as HTMLVideoElement).removeAttribute('src');
-          (video as HTMLVideoElement).load();
+          const video = v as HTMLVideoElement;
+          video.pause();
+          video.removeAttribute('src');
+          video.load();
         } catch (e) {
           console.warn('[TheaterView] Cleanup error:', e);
         }
       });
     };
-  }, []);
+  }, [globalAudio]);
 
   const isIOS = useMemo(() => {
     if (typeof navigator === "undefined") return false;
@@ -290,7 +283,7 @@ export const TheaterView = ({ onClose }: TheaterViewProps) => {
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => closeTheater('user_clicked_x')}
+              onClick={closeTheater}
               className="h-8 w-8 sm:h-10 sm:w-10"
             >
               <X className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -465,7 +458,7 @@ export const TheaterView = ({ onClose }: TheaterViewProps) => {
                 </Button>
                 <Button
                   variant="gold"
-                  onClick={() => closeTheater('user_clicked_start_my_day')}
+                  onClick={closeTheater}
                   disabled={tasks.length === 0}
                   className="text-sm"
                 >
