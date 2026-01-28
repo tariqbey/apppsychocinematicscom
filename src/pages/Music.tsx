@@ -267,16 +267,26 @@ export default function MusicPage() {
       {/* Hidden audio element */}
       <audio ref={audioRef} preload="auto" crossOrigin="anonymous" />
 
+      {/* Mobile floating back button - easier to reach */}
+      <Button
+        variant="default"
+        size="icon"
+        className="fixed bottom-44 left-4 z-50 h-12 w-12 rounded-full shadow-lg bg-gold hover:bg-gold/90 text-primary-foreground sm:hidden"
+        onClick={() => navigate('/')}
+      >
+        <ArrowLeft className="w-5 h-5" />
+      </Button>
+
       {/* Header */}
       <header className="sticky top-0 z-40 border-b border-border/50 bg-background/80 backdrop-blur-sm w-full">
         <div className="container mx-auto px-3 sm:px-4 h-14 sm:h-16 flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-shrink-0">
-            <Button variant="ghost" size="icon" className="h-8 w-8 sm:h-10 sm:w-10 flex-shrink-0" onClick={() => navigate('/')}>
+            <Button variant="ghost" size="icon" className="h-8 w-8 sm:h-10 sm:w-10 flex-shrink-0 hidden sm:flex" onClick={() => navigate('/')}>
               <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
             </Button>
             <div className="flex items-center gap-1.5 sm:gap-2">
               <Music className="w-5 h-5 sm:w-6 sm:h-6 text-gold flex-shrink-0" />
-              <h1 className="text-lg sm:text-xl font-display tracking-wide truncate">Director Radio</h1>
+              <h1 className="text-lg sm:text-xl font-display tracking-wide truncate">THE SCORE</h1>
             </div>
           </div>
           <label className="flex-shrink-0">
