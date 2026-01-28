@@ -112,6 +112,15 @@ export const TheaterView = ({ onClose }: TheaterViewProps) => {
     );
   }, []);
 
+  const isStandalone = useMemo(() => {
+    if (typeof window === "undefined") return false;
+    const mql = window.matchMedia?.("(display-mode: standalone)");
+    const legacyIOSStandalone = (navigator as any)?.standalone === true;
+    return Boolean(mql?.matches || legacyIOSStandalone);
+  }, []);
+
+  const isIOSStandalone = isIOS && isStandalone;
+
   // iOS Safari is extremely sensitive to Range/206 correctness. Route through
   // our Range-safe proxy on iOS to prevent stalls/crashes.
   const playbackSrc = useMemo(() => {
@@ -292,8 +301,21 @@ export const TheaterView = ({ onClose }: TheaterViewProps) => {
         </div>
 
         {/* Video Player Area */}
-        <div className="flex-1 flex items-center justify-center p-2 sm:p-4 md:p-8 relative overflow-hidden">
-          <div className="theater-player w-full h-full sm:h-auto sm:max-w-5xl sm:aspect-video rounded-lg sm:rounded-xl bg-card border border-border overflow-hidden relative">
+        <div
+          className={cn(
+            "flex-1 flex items-center justify-center p-2 sm:p-4 md:p-8 relative",
+            // iOS PWA can crash when video is clipped (rounded + overflow-hidden) during fullscreen/rotation
+            isIOSStandalone ? "overflow-visible" : "overflow-hidden"
+          )}
+        >
+          <div
+            className={cn(
+              "theater-player w-full h-full sm:h-auto sm:max-w-5xl sm:aspect-video bg-card border border-border relative",
+              isIOSStandalone
+                ? "rounded-none border-0 overflow-visible"
+                : "rounded-lg sm:rounded-xl overflow-hidden"
+            )}
+          >
             {playbackSrc ? (
               <>
                 <MindMoviePlayer
