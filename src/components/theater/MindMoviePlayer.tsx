@@ -58,6 +58,9 @@ export const MindMoviePlayer = forwardRef<MindMoviePlayerHandle, MindMoviePlayer
     const wrapperRef = useRef<HTMLDivElement>(null);
     const hasCompletedRef = useRef(false);
     const pauseRequestedRef = useRef(false);
+    const lastTimeUpdateMsRef = useRef(0);
+    const bufferingTimerRef = useRef<number | null>(null);
+    const iosNativeFullscreenRef = useRef(false);
 
     // Simple state
     const [isPlaying, setIsPlaying] = useState(false);
@@ -126,6 +129,7 @@ export const MindMoviePlayer = forwardRef<MindMoviePlayerHandle, MindMoviePlayer
           }
         }
         if (hideTimerRef.current) window.clearTimeout(hideTimerRef.current);
+        if (bufferingTimerRef.current) window.clearTimeout(bufferingTimerRef.current);
       };
     }, []);
 
@@ -151,6 +155,10 @@ export const MindMoviePlayer = forwardRef<MindMoviePlayerHandle, MindMoviePlayer
       };
 
       const handleTimeUpdate = () => {
+        // Throttle time state updates to avoid heavy rerendering on mobile fullscreen/rotation.
+        const now = typeof performance !== "undefined" ? performance.now() : Date.now();
+        if (now - lastTimeUpdateMsRef.current < 250) return;
+        lastTimeUpdateMsRef.current = now;
         setCurrentTime(video.currentTime);
       };
 
@@ -167,9 +175,23 @@ export const MindMoviePlayer = forwardRef<MindMoviePlayerHandle, MindMoviePlayer
         pauseRequestedRef.current = false;
       };
 
-      const handleWaiting = () => setIsBuffering(true);
-      const handlePlaying = () => setIsBuffering(false);
-      const handleCanPlay = () => setIsBuffering(false);
+      const setBufferingDelayed = () => {
+        // Avoid spinner flashing during brief stalls.
+        if (bufferingTimerRef.current) window.clearTimeout(bufferingTimerRef.current);
+        bufferingTimerRef.current = window.setTimeout(() => {
+          setIsBuffering(true);
+        }, 450);
+      };
+
+      const clearBuffering = () => {
+        if (bufferingTimerRef.current) window.clearTimeout(bufferingTimerRef.current);
+        bufferingTimerRef.current = null;
+        setIsBuffering(false);
+      };
+
+      const handleWaiting = () => setBufferingDelayed();
+      const handlePlaying = () => clearBuffering();
+      const handleCanPlay = () => clearBuffering();
 
       const handleEnded = () => {
         setIsPlaying(false);
@@ -193,7 +215,36 @@ export const MindMoviePlayer = forwardRef<MindMoviePlayerHandle, MindMoviePlayer
 
       const handleFullscreenChange = () => {
         const isFs = !!document.fullscreenElement;
-        setIsFullscreen(isFs);
+        setIsFullscreen(isFs || iosNativeFullscreenRef.current);
+      };
+
+      // iOS native fullscreen events (not reflected in document.fullscreenElement)
+      const handleWebkitBeginFullscreen = () => {
+        iosNativeFullscreenRef.current = true;
+        setIsFullscreen(true);
+      };
+
+      const handleWebkitEndFullscreen = () => {
+        iosNativeFullscreenRef.current = false;
+        setIsFullscreen(!!document.fullscreenElement);
+      };
+
+      // Rotation can pause/stall playback in fullscreen on some devices.
+      const handleOrientationChange = () => {
+        const v = videoRef.current;
+        if (!v) return;
+        const wasPlayingBefore = !v.paused && !v.ended;
+
+        // Let the browser finish relayout, then try to resume if it got paused.
+        window.setTimeout(() => {
+          const vv = videoRef.current;
+          if (!vv) return;
+          if (wasPlayingBefore && vv.paused && !vv.ended) {
+            vv.play().catch(() => {
+              // Autoplay restrictions may block this; ignore.
+            });
+          }
+        }, 250);
       };
 
       video.addEventListener("loadedmetadata", handleLoadedMetadata);
@@ -205,7 +256,10 @@ export const MindMoviePlayer = forwardRef<MindMoviePlayerHandle, MindMoviePlayer
       video.addEventListener("canplay", handleCanPlay);
       video.addEventListener("ended", handleEnded);
       video.addEventListener("error", handleError);
+      video.addEventListener("webkitbeginfullscreen" as any, handleWebkitBeginFullscreen);
+      video.addEventListener("webkitendfullscreen" as any, handleWebkitEndFullscreen);
       document.addEventListener("fullscreenchange", handleFullscreenChange);
+      window.addEventListener("orientationchange", handleOrientationChange);
 
       return () => {
         video.removeEventListener("loadedmetadata", handleLoadedMetadata);
@@ -217,7 +271,10 @@ export const MindMoviePlayer = forwardRef<MindMoviePlayerHandle, MindMoviePlayer
         video.removeEventListener("canplay", handleCanPlay);
         video.removeEventListener("ended", handleEnded);
         video.removeEventListener("error", handleError);
+        video.removeEventListener("webkitbeginfullscreen" as any, handleWebkitBeginFullscreen);
+        video.removeEventListener("webkitendfullscreen" as any, handleWebkitEndFullscreen);
         document.removeEventListener("fullscreenchange", handleFullscreenChange);
+        window.removeEventListener("orientationchange", handleOrientationChange);
       };
     }, [effectiveSrc, onComplete, onError]);
 
@@ -273,16 +330,37 @@ export const MindMoviePlayer = forwardRef<MindMoviePlayerHandle, MindMoviePlayer
     };
 
     const toggleFullscreen = async () => {
-      const wrapper = wrapperRef.current;
       const video = videoRef.current;
-      
+      const wrapper = wrapperRef.current;
+      const theaterContainer = (wrapper?.closest?.(".theater-player") as HTMLElement | null) ?? null;
+
       try {
+        // If iOS native fullscreen is active, exit it first.
+        if (iosNativeFullscreenRef.current && (video as any)?.webkitExitFullscreen) {
+          (video as any).webkitExitFullscreen();
+          return;
+        }
+
         if (document.fullscreenElement) {
           await document.exitFullscreen();
-        } else if (wrapper?.requestFullscreen) {
-          await wrapper.requestFullscreen();
-        } else if ((video as any)?.webkitEnterFullscreen) {
-          // iOS Safari fallback
+          return;
+        }
+
+        // On iOS, prefer native video fullscreen (more stable during rotation).
+        if (isIOS && (video as any)?.webkitEnterFullscreen) {
+          (video as any).webkitEnterFullscreen();
+          return;
+        }
+
+        // On other browsers, fullscreen the outer Theater container so our fullscreen CSS applies.
+        const target = theaterContainer ?? wrapper;
+        if (target?.requestFullscreen) {
+          await target.requestFullscreen();
+          return;
+        }
+
+        // Final fallback.
+        if ((video as any)?.webkitEnterFullscreen) {
           (video as any).webkitEnterFullscreen();
         }
       } catch (e) {
