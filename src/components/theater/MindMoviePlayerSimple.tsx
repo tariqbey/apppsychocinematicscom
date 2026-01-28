@@ -209,21 +209,37 @@ export const MindMoviePlayer = forwardRef<MindMoviePlayerHandle, MindMoviePlayer
       };
     }, [effectiveSrc, disableSeeking, restartOnInterrupt, onComplete, onError]);
 
+    // Detect if running as installed PWA (standalone mode)
+    const isStandalone = useMemo(() => {
+      if (typeof window === "undefined") return false;
+      return (
+        (window.navigator as any).standalone === true ||
+        window.matchMedia("(display-mode: standalone)").matches
+      );
+    }, []);
+
     return (
-      <div className={cn("relative w-full h-full bg-background overflow-hidden", className)}>
+      <div className={cn("relative w-full h-full bg-black overflow-hidden", className)}>
+        {/*
+          iOS PWA stability fix:
+          - Always use playsInline to keep video in the React DOM
+          - Let iOS handle fullscreen via its native controls (tap the expand icon)
+          - This prevents crashes during orientation changes in standalone mode
+        */}
         <video
           ref={videoRef}
           src={effectiveSrc}
           className="theater-video w-full h-full object-contain"
-          // iOS is most stable when it controls fullscreen itself.
-          playsInline={!isIOS}
+          playsInline
           preload="metadata"
           controls
+          controlsList="nodownload"
         />
 
         {showDiagnostics && (
-          <div className="absolute top-2 left-2 rounded-md border border-border bg-card/80 px-2 py-1 text-xs text-foreground backdrop-blur">
+          <div className="absolute top-2 left-2 rounded-md border border-border bg-card/80 px-2 py-1 text-xs text-foreground backdrop-blur z-10">
             <div>iOS: {isIOS ? "Yes" : "No"}</div>
+            <div>Standalone: {isStandalone ? "Yes" : "No"}</div>
             <div>Seeking locked: {disableSeeking ? "Yes" : "No"}</div>
             <div>Restart on pause: {restartOnInterrupt ? "Yes" : "No"}</div>
           </div>
