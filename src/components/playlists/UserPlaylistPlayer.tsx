@@ -276,7 +276,7 @@ export function UserPlaylistPlayer({ className, compact = false }: UserPlaylistP
           </Card>
         )}
 
-        {/* Playlist selector */}
+        {/* Playlist selector with Play All button */}
         {playlists.length > 0 && (
           <div className="space-y-2">
             <div className="flex items-center justify-between">
@@ -284,7 +284,24 @@ export function UserPlaylistPlayer({ className, compact = false }: UserPlaylistP
                 <List className="w-4 h-4" />
                 {currentPlaylist?.name || 'Select Playlist'}
               </Label>
-              <Badge variant="outline">{tracks.length} tracks</Badge>
+              <div className="flex items-center gap-2">
+                <Badge variant="outline">{tracks.length} tracks</Badge>
+                {tracks.length > 0 && (
+                  <Button
+                    variant="gold"
+                    size="sm"
+                    className="h-7 px-2"
+                    onClick={() => {
+                      if (tracks.length > 0) {
+                        playTrack(tracks[0]);
+                      }
+                    }}
+                  >
+                    <Play className="w-3 h-3 mr-1" />
+                    Play All
+                  </Button>
+                )}
+              </div>
             </div>
           </div>
         )}
