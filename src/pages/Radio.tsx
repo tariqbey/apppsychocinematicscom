@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { 
   ArrowLeft, Play, Pause, SkipBack, SkipForward, Volume2, VolumeX,
   Shuffle, Repeat, Music, Radio as RadioIcon, Crown, Sparkles,
-  User, ChevronLeft, ChevronRight, Headphones
+  User, ChevronLeft, ChevronRight, Headphones, MoreHorizontal, Edit2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -16,6 +16,12 @@ import {
   CarouselNext,
   CarouselPrevious,
 } from "@/components/ui/carousel";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { useRadio, type RadioTrack, type FeaturedTrack } from "@/hooks/useRadio";
@@ -25,6 +31,8 @@ import { cn } from "@/lib/utils";
 import { AudioVisualizer, SimpleWaveformBars } from "@/components/music/AudioVisualizer";
 import { useMediaSession, configureAudioForBackground, useIOSBackgroundAudio } from "@/hooks/useMediaSession";
 import { useAudioOptional } from "@/hooks/useGlobalAudio";
+import { TrackEditDialog } from "@/components/music/TrackEditDialog";
+import { useAdminStatus } from "@/hooks/useAdminStatus";
 
 interface FeaturedArtist {
   id: string;
@@ -69,7 +77,11 @@ export default function RadioPage() {
   const [currentTrack, setCurrentTrack] = useState<RadioTrack | FeaturedTrack | null>(null);
   const [isShuffle, setIsShuffle] = useState(false);
   const [isRepeat, setIsRepeat] = useState(false);
+  const [editingTrack, setEditingTrack] = useState<RadioTrack | null>(null);
   
+  // Admin status for edit permissions
+  const { isAdmin } = useAdminStatus();
+
   // Featured artists state
   const [featuredArtists, setFeaturedArtists] = useState<FeaturedArtist[]>([]);
   const [loadingArtists, setLoadingArtists] = useState(true);
@@ -329,7 +341,7 @@ export default function RadioPage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-background via-background to-muted/20 flex flex-col overflow-x-hidden w-full max-w-[100vw]">
       {/* Header */}
-      <header className="sticky top-0 z-40 border-b border-border/50 bg-background/80 backdrop-blur-sm w-full">
+      <header className="sticky top-0 z-40 border-b border-border/50 bg-background/80 backdrop-blur-sm w-full pt-[env(safe-area-inset-top)]">
         <div className="container mx-auto px-3 sm:px-4 h-14 sm:h-16 flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-shrink-0">
             <Button variant="ghost" size="icon" className="h-8 w-8 sm:h-10 sm:w-10 flex-shrink-0" onClick={() => navigate('/')}>
@@ -610,27 +622,35 @@ export default function RadioPage() {
                       {stationTracks.map((track, index) => {
                         const isCurrentTrack = currentTrack && 'id' in currentTrack && currentTrack.id === track.id;
                         return (
-                          <button
+                          <div
                             key={track.id}
-                            onClick={() => handlePlayTrack(track)}
                             className={cn(
                               "w-full flex items-center gap-4 p-3 rounded-lg transition-all text-left group",
                               "hover:bg-muted/50",
                               isCurrentTrack && "bg-gold/10 border border-gold/30"
                             )}
                           >
-                            <div className="w-8 h-8 flex items-center justify-center text-muted-foreground">
+                            <button
+                              onClick={() => handlePlayTrack(track)}
+                              className="w-8 h-8 flex items-center justify-center text-muted-foreground"
+                            >
                               {isCurrentTrack && localIsPlaying ? (
                                 <SimpleWaveformBars isPlaying={true} barCount={4} />
                               ) : (
                                 <span className="text-sm group-hover:hidden">{index + 1}</span>
                               )}
                               <Play className="w-4 h-4 hidden group-hover:block" />
-                            </div>
-                            <div className="w-10 h-10 rounded bg-gradient-to-br from-gold/20 to-amber-500/10 flex items-center justify-center flex-shrink-0">
+                            </button>
+                            <button
+                              onClick={() => handlePlayTrack(track)}
+                              className="w-10 h-10 rounded bg-gradient-to-br from-gold/20 to-amber-500/10 flex items-center justify-center flex-shrink-0"
+                            >
                               <Music className="w-5 h-5 text-gold/70" />
-                            </div>
-                            <div className="flex-1 min-w-0">
+                            </button>
+                            <button
+                              onClick={() => handlePlayTrack(track)}
+                              className="flex-1 min-w-0 text-left"
+                            >
                               <p className={cn(
                                 "font-medium truncate",
                                 isCurrentTrack && "text-gold"
@@ -640,11 +660,31 @@ export default function RadioPage() {
                               <p className="text-sm text-muted-foreground truncate">
                                 {track.artist || 'Director Radio'}
                               </p>
-                            </div>
+                            </button>
                             <span className="text-sm text-muted-foreground">
                               {track.duration_seconds ? formatTime(track.duration_seconds) : '--:--'}
                             </span>
-                          </button>
+                            {isAdmin && (
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
+                                    onClick={(e) => e.stopPropagation()}
+                                  >
+                                    <MoreHorizontal className="w-4 h-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuItem onClick={() => setEditingTrack(track)}>
+                                    <Edit2 className="w-4 h-4 mr-2" />
+                                    Edit Details
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            )}
+                          </div>
                         );
                       })}
                     </div>
@@ -782,6 +822,24 @@ export default function RadioPage() {
           </div>
         </div>
       </div>
+
+      {/* Track Edit Dialog - Admin only */}
+      {isAdmin && (
+        <TrackEditDialog
+          open={!!editingTrack}
+          onOpenChange={(open) => !open && setEditingTrack(null)}
+          track={editingTrack ? {
+            id: editingTrack.id,
+            title: editingTrack.title,
+            artist: editingTrack.artist,
+          } : null}
+          tableName="radio_playlist_tracks"
+          onSave={() => {
+            // Refresh tracks after editing
+            window.location.reload();
+          }}
+        />
+      )}
     </div>
   );
 }
