@@ -218,8 +218,15 @@ export default function Soundtrack() {
     const file = e.target.files?.[0];
     if (!file || !user) return;
 
-    const allowedTypes = ['audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/ogg', 'audio/m4a', 'audio/x-m4a'];
-    if (!allowedTypes.includes(file.type) && !file.name.match(/\.(mp3|wav|ogg|m4a)$/i)) {
+    // More permissive audio type detection
+    const allowedTypes = ['audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/wave', 'audio/x-wav', 'audio/ogg', 'audio/m4a', 'audio/x-m4a', 'audio/mp4', 'audio/aac'];
+    const audioExtensions = /\.(mp3|wav|ogg|m4a|aac|flac|wma)$/i;
+    const hasValidType = allowedTypes.includes(file.type) || file.type.startsWith('audio/');
+    const hasValidExtension = audioExtensions.test(file.name);
+    
+    console.log(`[Soundtrack Upload] File: ${file.name}, Type: ${file.type}, ValidType: ${hasValidType}, ValidExt: ${hasValidExtension}`);
+
+    if (!hasValidType && !hasValidExtension) {
       toast.error('Please upload an audio file (MP3, WAV, OGG, or M4A)');
       return;
     }
@@ -227,12 +234,23 @@ export default function Soundtrack() {
     setIsUploadingTrack(true);
 
     try {
-      const fileName = `${user.id}/${Date.now()}-${file.name}`;
+      // Sanitize filename
+      const sanitizedName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+      const fileName = `${user.id}/${Date.now()}-${sanitizedName}`;
+      
+      console.log(`[Soundtrack Upload] Uploading: ${fileName}, Size: ${file.size} bytes`);
+      
       const { error: uploadError } = await supabase.storage
         .from('generated-media')
-        .upload(fileName, file);
+        .upload(fileName, file, {
+          cacheControl: '3600',
+          upsert: false
+        });
 
-      if (uploadError) throw uploadError;
+      if (uploadError) {
+        console.error(`[Soundtrack Upload] Storage error:`, uploadError);
+        throw uploadError;
+      }
 
       const { data: { publicUrl } } = supabase.storage
         .from('generated-media')
@@ -255,8 +273,8 @@ export default function Soundtrack() {
       } else {
         toast.success('Track uploaded to your library!');
       }
-    } catch (error) {
-      console.error('Upload error:', error);
+    } catch (error: any) {
+      console.error('[Soundtrack Upload] Error:', error?.message || error);
       toast.error('Failed to upload track');
     } finally {
       setIsUploadingTrack(false);

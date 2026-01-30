@@ -332,10 +332,16 @@ export default function ScorePage() {
     const files = e.target.files;
     if (!files || files.length === 0 || !user) return;
 
-    const allowedTypes = ['audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/ogg', 'audio/m4a', 'audio/x-m4a'];
-    const validFiles = Array.from(files).filter(file => 
-      allowedTypes.includes(file.type) || file.name.match(/\.(mp3|wav|ogg|m4a)$/i)
-    );
+    // More permissive audio type detection - check MIME type OR extension
+    const allowedTypes = ['audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/wave', 'audio/x-wav', 'audio/ogg', 'audio/m4a', 'audio/x-m4a', 'audio/mp4', 'audio/aac'];
+    const audioExtensions = /\.(mp3|wav|ogg|m4a|aac|flac|wma)$/i;
+    
+    const validFiles = Array.from(files).filter(file => {
+      const hasValidType = allowedTypes.includes(file.type) || file.type.startsWith('audio/');
+      const hasValidExtension = audioExtensions.test(file.name);
+      console.log(`[Score Upload] File: ${file.name}, Type: ${file.type}, ValidType: ${hasValidType}, ValidExt: ${hasValidExtension}`);
+      return hasValidType || hasValidExtension;
+    });
 
     if (validFiles.length === 0) {
       toast.error('Please upload audio files (MP3, WAV, OGG, or M4A)');
@@ -365,12 +371,25 @@ export default function ScorePage() {
       setUploadProgress({ current: i + 1, total: validFiles.length });
 
       try {
-        const fileName = `${user.id}/${Date.now()}-${file.name}`;
-        const { error: uploadError } = await supabase.storage
+        // Sanitize filename to avoid special characters issues
+        const sanitizedName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+        const fileName = `${user.id}/${Date.now()}-${sanitizedName}`;
+        
+        console.log(`[Score Upload] Uploading: ${fileName}, Size: ${file.size} bytes`);
+        
+        const { error: uploadError, data: uploadData } = await supabase.storage
           .from('generated-media')
-          .upload(fileName, file);
+          .upload(fileName, file, {
+            cacheControl: '3600',
+            upsert: false
+          });
 
-        if (uploadError) throw uploadError;
+        if (uploadError) {
+          console.error(`[Score Upload] Storage error:`, uploadError);
+          throw uploadError;
+        }
+
+        console.log(`[Score Upload] Success:`, uploadData);
 
         const { data: { publicUrl } } = supabase.storage
           .from('generated-media')
@@ -382,8 +401,8 @@ export default function ScorePage() {
           source_type: 'upload',
         });
         successCount++;
-      } catch (error) {
-        console.error(`Upload error for ${file.name}:`, error);
+      } catch (error: any) {
+        console.error(`[Score Upload] Error for ${file.name}:`, error?.message || error);
         failCount++;
       }
     }
