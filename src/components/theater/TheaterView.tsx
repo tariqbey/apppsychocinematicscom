@@ -57,8 +57,6 @@ export const TheaterView = ({ onClose }: TheaterViewProps) => {
 
   // Force stop all media on close
   const stopAllMedia = useCallback(() => {
-    console.log('[TheaterView] Stopping all media');
-    
     // Stop the player
     const video = playerRef.current?.getVideoElement?.();
     if (video) {
@@ -66,8 +64,8 @@ export const TheaterView = ({ onClose }: TheaterViewProps) => {
         video.pause();
         video.removeAttribute("src");
         video.load();
-      } catch (e) {
-        console.warn('[TheaterView] Video stop error:', e);
+      } catch {
+        // Ignore
       }
     }
     
@@ -77,19 +75,16 @@ export const TheaterView = ({ onClose }: TheaterViewProps) => {
 
   // Close handler with cleanup
   const closeTheater = useCallback(() => {
-    console.log('[TheaterView] Closing theater');
     stopAllMedia();
     onClose();
   }, [stopAllMedia, onClose]);
 
   // Stop background audio when Theater opens
   useEffect(() => {
-    console.log('[TheaterView] Mounted - stopping background audio');
     globalAudio?.stopAudio();
     
     return () => {
-      console.log('[TheaterView] Unmounting - cleanup');
-      // Find and stop any orphaned video elements
+      // Find and stop any orphaned video elements on true unmount
       const videos = document.querySelectorAll('video.theater-video');
       videos.forEach((v) => {
         try {
@@ -97,8 +92,8 @@ export const TheaterView = ({ onClose }: TheaterViewProps) => {
           video.pause();
           video.removeAttribute('src');
           video.load();
-        } catch (e) {
-          console.warn('[TheaterView] Cleanup error:', e);
+        } catch {
+          // Ignore
         }
       });
     };
@@ -341,7 +336,6 @@ export const TheaterView = ({ onClose }: TheaterViewProps) => {
                   onComplete={handleVideoComplete}
                   onError={handleVideoError}
                   className="w-full h-full"
-                  showDiagnostics
                 />
 
                 {hasRecordedViewing && (

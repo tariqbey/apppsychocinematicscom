@@ -4,6 +4,7 @@ import {
   useImperativeHandle,
   useMemo,
   useRef,
+  useState,
 } from "react";
 import { cn } from "@/lib/utils";
 
@@ -52,6 +53,8 @@ export const MindMoviePlayer = forwardRef<MindMoviePlayerHandle, MindMoviePlayer
   ) => {
     const videoRef = useRef<HTMLVideoElement>(null);
     const completedRef = useRef(false);
+    const mountedRef = useRef(true);
+    const [isReady, setIsReady] = useState(false);
 
     // Expose minimal API
     useImperativeHandle(ref, () => ({
@@ -107,23 +110,38 @@ export const MindMoviePlayer = forwardRef<MindMoviePlayerHandle, MindMoviePlayer
       return `${baseUrl}/functions/v1/video-proxy?url=${encodeURIComponent(src)}`;
     }, [src, isIOS, isStandalone]);
 
-    // Cleanup on unmount - CRITICAL for preventing orphaned audio
+    // Track mount state to prevent cleanup during StrictMode re-renders
     useEffect(() => {
+      mountedRef.current = true;
       return () => {
-        const video = videoRef.current;
-        if (video) {
-          try {
-            video.pause();
-            video.src = "";
-            video.load();
-          } catch {
-            // Ignore
-          }
-        }
+        mountedRef.current = false;
       };
     }, []);
 
-    // Only two event listeners: ended and error
+    // Cleanup on TRUE unmount only - use a delayed check to handle StrictMode
+    useEffect(() => {
+      const video = videoRef.current;
+      
+      return () => {
+        // Delay the cleanup to check if we're actually unmounting
+        // React StrictMode will remount immediately, so we check after a tick
+        const videoToClean = video;
+        setTimeout(() => {
+          if (!mountedRef.current && videoToClean) {
+            try {
+              console.log('[MindMoviePlayer] True unmount - cleaning up video');
+              videoToClean.pause();
+              videoToClean.removeAttribute('src');
+              videoToClean.load();
+            } catch {
+              // Ignore
+            }
+          }
+        }, 100);
+      };
+    }, []);
+
+    // Event listeners for video lifecycle
     useEffect(() => {
       const video = videoRef.current;
       if (!video) return;
@@ -137,15 +155,23 @@ export const MindMoviePlayer = forwardRef<MindMoviePlayerHandle, MindMoviePlayer
       };
 
       const handleError = () => {
-        onError?.(video.error?.message || "Video playback error");
+        const errorMsg = video.error?.message || "Video playback error";
+        console.error('[MindMoviePlayer] Error:', video.error?.code, errorMsg);
+        onError?.(errorMsg);
+      };
+
+      const handleCanPlay = () => {
+        setIsReady(true);
       };
 
       video.addEventListener("ended", handleEnded);
       video.addEventListener("error", handleError);
+      video.addEventListener("canplay", handleCanPlay);
 
       return () => {
         video.removeEventListener("ended", handleEnded);
         video.removeEventListener("error", handleError);
+        video.removeEventListener("canplay", handleCanPlay);
       };
     }, [videoSrc, onComplete, onError]);
 
