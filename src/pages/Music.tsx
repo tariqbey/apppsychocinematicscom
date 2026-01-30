@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { 
   ArrowLeft, Play, Pause, SkipBack, SkipForward, Volume2, VolumeX,
   Shuffle, Repeat, Plus, Music, Heart, MoreHorizontal, Upload,
-  ListMusic, Radio, Mic2, User, Crown, Sparkles, Edit2
+  ListMusic, Radio, Mic2, User, Crown, Sparkles, Edit2, Share2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -25,6 +25,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { AudioVisualizer, SimpleWaveformBars } from "@/components/music/AudioVisualizer";
 import { TrackEditDialog } from "@/components/music/TrackEditDialog";
+import { ShareTrackDialog } from "@/components/sharing/ShareTrackDialog";
 
 export default function MusicPage() {
   const navigate = useNavigate();
@@ -72,6 +73,7 @@ export default function MusicPage() {
   const [isUploadingTrack, setIsUploadingTrack] = useState(false);
   const [audioReady, setAudioReady] = useState(false);
   const [editingTrack, setEditingTrack] = useState<PlaylistTrack | null>(null);
+  const [sharingTrack, setSharingTrack] = useState<PlaylistTrack | null>(null);
 
   // Audio playback - handle track changes
   useEffect(() => {
@@ -515,6 +517,10 @@ export default function MusicPage() {
                                   <Edit2 className="w-4 h-4 mr-2" />
                                   Edit Details
                                 </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => setSharingTrack(track)}>
+                                  <Share2 className="w-4 h-4 mr-2" />
+                                  Share to Community
+                                </DropdownMenuItem>
                               </DropdownMenuContent>
                             </DropdownMenu>
                           </div>
@@ -777,6 +783,19 @@ export default function MusicPage() {
           window.location.reload();
         }}
       />
+
+      {/* Share Track Dialog */}
+      {sharingTrack && (
+        <ShareTrackDialog
+          open={!!sharingTrack}
+          onOpenChange={(open) => !open && setSharingTrack(null)}
+          track={{
+            title: sharingTrack.title,
+            artist: sharingTrack.artist,
+            audio_url: sharingTrack.audio_url,
+          }}
+        />
+      )}
     </div>
   );
 }

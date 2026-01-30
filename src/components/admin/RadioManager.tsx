@@ -22,6 +22,7 @@ import type { RadioPlaylist, RadioTrack } from "@/hooks/useRadio";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { RadioMusicUpload } from "./RadioMusicUpload";
+import { BulkTrackUpload } from "./BulkTrackUpload";
 
 interface PlaylistWithTracks extends RadioPlaylist {
   tracks: RadioTrack[];
@@ -690,7 +691,7 @@ export const RadioManager = () => {
                       </Button>
                     </div>
 
-                    {/* Music Upload from Computer */}
+                    {/* Music Upload from Computer - Single file */}
                     <RadioMusicUpload
                       disabled={loading}
                       onUploadComplete={async (url, title, duration) => {
@@ -704,6 +705,13 @@ export const RadioManager = () => {
                         );
                         loadData();
                       }}
+                    />
+
+                    {/* Bulk Upload Multiple Tracks */}
+                    <BulkTrackUpload
+                      playlistId={selectedPlaylist.id}
+                      disabled={loading}
+                      onUploadComplete={loadData}
                     />
 
                     <ScrollArea className="h-[250px]">
