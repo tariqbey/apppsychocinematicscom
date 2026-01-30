@@ -18,6 +18,8 @@ interface DirectorProfile {
   display_name: string | null;
   avatar_url: string | null;
   bio: string | null;
+  public_vision: string | null;
+  cover_image_url: string | null;
   current_streak: number;
   best_streak: number;
   created_at: string;
@@ -60,14 +62,22 @@ export default function DirectorProfilePage() {
     setLoading(true);
 
     try {
-      // Fetch profile
+      // Fetch profile - only select public-safe fields (no phone, no sensitive settings)
       const { data: profileData, error: profileError } = await supabase
         .from("user_profiles")
-        .select("user_id, display_name, avatar_url, bio, current_streak, best_streak, created_at")
+        .select("user_id, display_name, avatar_url, bio, current_streak, best_streak, created_at, cover_image_url, public_vision")
         .eq("user_id", userId)
         .maybeSingle();
 
       if (profileError) throw profileError;
+      
+      // If profile doesn't exist, show not found
+      if (!profileData) {
+        setProfile(null);
+        setLoading(false);
+        return;
+      }
+      
       setProfile(profileData);
 
       // Fetch public movies
