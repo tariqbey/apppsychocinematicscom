@@ -3,13 +3,19 @@ import { useNavigate } from "react-router-dom";
 import { 
   ArrowLeft, Play, Pause, SkipBack, SkipForward, Volume2, VolumeX,
   Shuffle, Repeat, Plus, Music, Heart, MoreHorizontal, Upload,
-  ListMusic, Radio, Mic2, User, Crown, Sparkles
+  ListMusic, Radio, Mic2, User, Crown, Sparkles, Edit2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Slider } from "@/components/ui/slider";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { useUserPlaylists, type PlaylistTrack, type Playlist } from "@/hooks/useUserPlaylists";
@@ -18,6 +24,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { AudioVisualizer, SimpleWaveformBars } from "@/components/music/AudioVisualizer";
+import { TrackEditDialog } from "@/components/music/TrackEditDialog";
 
 export default function MusicPage() {
   const navigate = useNavigate();
@@ -64,6 +71,7 @@ export default function MusicPage() {
   const [isRepeat, setIsRepeat] = useState(false);
   const [isUploadingTrack, setIsUploadingTrack] = useState(false);
   const [audioReady, setAudioReady] = useState(false);
+  const [editingTrack, setEditingTrack] = useState<PlaylistTrack | null>(null);
 
   // Audio playback - handle track changes
   useEffect(() => {
@@ -278,7 +286,7 @@ export default function MusicPage() {
       </Button>
 
       {/* Header */}
-      <header className="sticky top-0 z-40 border-b border-border/50 bg-background/80 backdrop-blur-sm w-full">
+      <header className="sticky top-0 z-40 border-b border-border/50 bg-background/80 backdrop-blur-sm w-full pt-[env(safe-area-inset-top)]">
         <div className="container mx-auto px-3 sm:px-4 h-14 sm:h-16 flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-shrink-0">
             <Button variant="ghost" size="icon" className="h-8 w-8 sm:h-10 sm:w-10 flex-shrink-0 hidden sm:flex" onClick={() => navigate('/')}>
@@ -449,27 +457,35 @@ export default function MusicPage() {
                         </div>
                       ) : (
                         tracks.map((track, index) => (
-                          <button
+                          <div
                             key={track.id}
-                            onClick={() => handlePlayTrack(track)}
                             className={cn(
                               "w-full flex items-center gap-4 p-3 rounded-lg transition-all text-left group",
                               "hover:bg-muted/50",
                               currentTrack?.id === track.id && "bg-gold/10 border border-gold/30"
                             )}
                           >
-                            <div className="w-8 h-8 flex items-center justify-center text-muted-foreground">
+                            <button
+                              onClick={() => handlePlayTrack(track)}
+                              className="w-8 h-8 flex items-center justify-center text-muted-foreground"
+                            >
                               {currentTrack?.id === track.id && isPlaying ? (
                                 <SimpleWaveformBars isPlaying={true} barCount={4} />
                               ) : (
                                 <span className="text-sm group-hover:hidden">{index + 1}</span>
                               )}
                               <Play className="w-4 h-4 hidden group-hover:block" />
-                            </div>
-                            <div className="w-10 h-10 rounded bg-gradient-to-br from-gold/20 to-amber-500/10 flex items-center justify-center flex-shrink-0">
+                            </button>
+                            <button
+                              onClick={() => handlePlayTrack(track)}
+                              className="w-10 h-10 rounded bg-gradient-to-br from-gold/20 to-amber-500/10 flex items-center justify-center flex-shrink-0"
+                            >
                               <Music className="w-5 h-5 text-gold/70" />
-                            </div>
-                            <div className="flex-1 min-w-0">
+                            </button>
+                            <button
+                              onClick={() => handlePlayTrack(track)}
+                              className="flex-1 min-w-0 text-left"
+                            >
                               <p className={cn(
                                 "font-medium truncate",
                                 currentTrack?.id === track.id && "text-gold"
@@ -479,11 +495,29 @@ export default function MusicPage() {
                               <p className="text-sm text-muted-foreground truncate">
                                 {track.artist || displayName}
                               </p>
-                            </div>
+                            </button>
                             <span className="text-sm text-muted-foreground">
                               {track.duration_seconds ? formatTime(track.duration_seconds) : '--:--'}
                             </span>
-                          </button>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <MoreHorizontal className="w-4 h-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => setEditingTrack(track)}>
+                                  <Edit2 className="w-4 h-4 mr-2" />
+                                  Edit Details
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
                         ))
                       )}
                     </div>
@@ -731,6 +765,18 @@ export default function MusicPage() {
           </div>
         </div>
       </div>
+
+      {/* Track Edit Dialog */}
+      <TrackEditDialog
+        open={!!editingTrack}
+        onOpenChange={(open) => !open && setEditingTrack(null)}
+        track={editingTrack}
+        tableName="user_playlist_tracks"
+        onSave={() => {
+          // Refresh track list after editing
+          window.location.reload();
+        }}
+      />
     </div>
   );
 }
