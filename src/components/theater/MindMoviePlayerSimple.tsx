@@ -84,17 +84,13 @@ export const MindMoviePlayer = forwardRef<MindMoviePlayerHandle, MindMoviePlayer
     }, []);
 
     // iOS PWA/standalone has unique fullscreen+rotation behavior.
-    // We detect it so we can avoid forcing inline playback (which removes native fullscreen).
+    // We detect it for proxy decisions.
     const isStandalone = useMemo(() => {
       if (typeof window === "undefined") return false;
       const mql = window.matchMedia?.("(display-mode: standalone)");
       const legacyIOSStandalone = (navigator as any)?.standalone === true;
       return Boolean(mql?.matches || legacyIOSStandalone);
     }, []);
-
-    // In iOS standalone, allow native fullscreen (no playsInline).
-    // This restores the fullscreen button and avoids CSS-based fake fullscreen.
-    const allowNativeFullscreen = isIOS && isStandalone;
 
     // Proxy storage URLs on iOS for Range header compatibility
     const videoSrc = useMemo(() => {
@@ -160,7 +156,8 @@ export const MindMoviePlayer = forwardRef<MindMoviePlayerHandle, MindMoviePlayer
           src={videoSrc}
           className="theater-video w-full h-full object-contain bg-background"
           controls
-          playsInline={!allowNativeFullscreen}
+          // Force inline playback to avoid iOS PWA fullscreen/rotation crashes.
+          playsInline
           preload="metadata"
         />
       </div>
