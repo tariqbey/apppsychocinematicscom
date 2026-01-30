@@ -4,6 +4,7 @@ import { Radio, Play, Pause, Volume2, VolumeX, Music, Headphones, ExternalLink, 
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Card, CardContent } from "@/components/ui/card";
+import { SimpleWaveformBars } from "@/components/music/AudioVisualizer";
 import { supabase } from "@/integrations/supabase/client";
 import { useAudio } from "@/contexts/AudioContext";
 
@@ -228,6 +229,13 @@ export const DirectorRadioCard = () => {
         {/* Controls */}
         {nowPlaying && (
           <div className="p-4 space-y-3">
+            {/* Animated Waveform Visualizer */}
+            {isThisCardPlaying && (
+              <div className="h-8 mb-2">
+                <SimpleWaveformBars isPlaying={isThisCardPlaying} barCount={24} className="h-full" />
+              </div>
+            )}
+
             {/* Progress */}
             <div className="space-y-1">
               <div className="h-1.5 bg-muted/30 rounded-full overflow-hidden">
