@@ -38,6 +38,7 @@ interface UserData {
   credits_used: number;
   image_count: number;
   video_count: number;
+  is_beta_user: boolean;
 }
 
 interface DailyStats {
@@ -171,6 +172,14 @@ const AdminDashboard = () => {
         ? authUsers.map((u) => ({ user_id: u.id, email: u.email, created_at: u.created_at || new Date().toISOString() }))
         : (profiles || []).map((p) => ({ user_id: p.user_id, email: emailMap[p.user_id] || null, created_at: p.created_at }));
 
+    // Fetch beta user redemptions (BETA2026 code)
+    const { data: betaRedemptions } = await supabase
+      .from("access_code_redemptions")
+      .select("user_id, access_codes!inner(code)")
+      .eq("access_codes.code", "BETA2026");
+
+    const betaUserIds = new Set((betaRedemptions || []).map((r) => r.user_id));
+
     const userStats = await Promise.all(
       baseUsers.map(async (u) => {
         const profile = profileMap.get(u.user_id);
@@ -195,6 +204,7 @@ const AdminDashboard = () => {
           credits_used: transactions?.reduce((sum, t) => sum + Math.abs(Number(t.amount)), 0) || 0,
           image_count: media?.filter((m) => m.media_type === "image").length || 0,
           video_count: media?.filter((m) => m.media_type === "video").length || 0,
+          is_beta_user: betaUserIds.has(u.user_id),
         };
       })
     );
@@ -519,7 +529,14 @@ const AdminDashboard = () => {
                         <TableRow key={user.user_id}>
                           <TableCell>
                             <div>
-                              <div className="font-medium">{user.display_name || "Unnamed"}</div>
+                              <div className="flex items-center gap-2">
+                                <span className="font-medium">{user.display_name || "Unnamed"}</span>
+                                {user.is_beta_user && (
+                                  <Badge variant="outline" className="border-gold/50 text-gold text-[10px] px-1.5 py-0">
+                                    BETA
+                                  </Badge>
+                                )}
+                              </div>
                               {user.email && (
                                 <div className="text-xs text-muted-foreground">
                                   {user.email}

@@ -131,10 +131,10 @@ export function MobileNavSheet({
         <Button
           variant="ghost"
           size="icon"
-          className="md:hidden shrink-0"
+          className="md:hidden shrink-0 h-12 w-12"
           aria-label="Open navigation menu"
         >
-          <Menu className="h-6 w-6" />
+          <Menu className="h-8 w-8" />
         </Button>
       </SheetTrigger>
 

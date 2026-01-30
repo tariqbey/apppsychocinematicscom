@@ -1530,6 +1530,8 @@ export type Database = {
       }
       radio_featured_tracks: {
         Row: {
+          album_cover_url: string | null
+          album_name: string | null
           artist: string | null
           audio_url: string
           featured_at: string
@@ -1539,6 +1541,8 @@ export type Database = {
           track_title: string
         }
         Insert: {
+          album_cover_url?: string | null
+          album_name?: string | null
           artist?: string | null
           audio_url: string
           featured_at?: string
@@ -1548,6 +1552,8 @@ export type Database = {
           track_title: string
         }
         Update: {
+          album_cover_url?: string | null
+          album_name?: string | null
           artist?: string | null
           audio_url?: string
           featured_at?: string
@@ -1560,6 +1566,8 @@ export type Database = {
       }
       radio_playlist_tracks: {
         Row: {
+          album_cover_url: string | null
+          album_name: string | null
           artist: string | null
           audio_url: string
           created_at: string
@@ -1572,6 +1580,8 @@ export type Database = {
           track_order: number | null
         }
         Insert: {
+          album_cover_url?: string | null
+          album_name?: string | null
           artist?: string | null
           audio_url: string
           created_at?: string
@@ -1584,6 +1594,8 @@ export type Database = {
           track_order?: number | null
         }
         Update: {
+          album_cover_url?: string | null
+          album_name?: string | null
           artist?: string | null
           audio_url?: string
           created_at?: string
@@ -1961,6 +1973,8 @@ export type Database = {
       }
       user_playlist_tracks: {
         Row: {
+          album_cover_url: string | null
+          album_name: string | null
           artist: string | null
           audio_url: string
           created_at: string
@@ -1975,6 +1989,8 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          album_cover_url?: string | null
+          album_name?: string | null
           artist?: string | null
           audio_url: string
           created_at?: string
@@ -1989,6 +2005,8 @@ export type Database = {
           user_id: string
         }
         Update: {
+          album_cover_url?: string | null
+          album_name?: string | null
           artist?: string | null
           audio_url?: string
           created_at?: string

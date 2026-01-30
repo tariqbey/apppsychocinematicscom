@@ -30,6 +30,7 @@ import DoneForYou from "./pages/DoneForYou";
 import DFYSuccess from "./pages/DFYSuccess";
 import Challenges from "./pages/Challenges";
 import ResetPassword from "./pages/ResetPassword";
+import DirectorProfile from "./pages/DirectorProfile";
 import NotFound from "./pages/NotFound";
 import { RequireAdmin } from "./components/auth/RequireAdmin";
 
@@ -71,6 +72,7 @@ const App = () => (
               <Route path="/dfy-success" element={<DFYSuccess />} />
               <Route path="/challenges" element={<Challenges />} />
               <Route path="/reset-password" element={<ResetPassword />} />
+              <Route path="/director/:userId" element={<DirectorProfile />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
