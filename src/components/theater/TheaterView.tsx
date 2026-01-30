@@ -298,12 +298,22 @@ export const TheaterView = ({ onClose }: TheaterViewProps) => {
               variant="ghost"
               size="icon"
               onClick={closeTheater}
-              className="h-8 w-8 sm:h-10 sm:w-10"
+              className="h-12 w-12 sm:h-14 sm:w-14 bg-gold/20 hover:bg-gold/30 border border-gold/40 rounded-full ml-2"
             >
-              <X className="w-4 h-4 sm:w-5 sm:h-5" />
+              <X className="w-6 h-6 sm:w-7 sm:h-7 text-gold" />
             </Button>
           </div>
         </div>
+
+        {/* Floating close button for mobile - positioned lower for easy thumb access */}
+        <Button
+          variant="default"
+          size="lg"
+          onClick={closeTheater}
+          className="fixed bottom-24 right-4 z-50 h-14 w-14 rounded-full bg-gold/90 hover:bg-gold text-black shadow-lg shadow-gold/30 sm:hidden"
+        >
+          <X className="w-7 h-7" />
+        </Button>
 
         {/* Video Player Area */}
         <div
