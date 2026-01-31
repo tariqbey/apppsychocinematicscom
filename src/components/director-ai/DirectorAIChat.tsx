@@ -583,8 +583,13 @@ export const DirectorAIChat = ({ isOpen, onToggle, chiefAim, userId }: DirectorA
               <Trash2 className="w-4 h-4 text-muted-foreground hover:text-destructive" />
             </Button>
           )}
-          <Button variant="ghost" size="icon" onClick={onToggle}>
-            <X className="w-5 h-5" />
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={onToggle}
+            className="h-10 w-10 bg-gold/20 hover:bg-gold/30 border border-gold/40 rounded-full"
+          >
+            <X className="w-5 h-5 text-gold" />
           </Button>
         </div>
       </div>

@@ -17,15 +17,24 @@ export function TestimonialVideoModal({
 }: TestimonialVideoModalProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl p-0 bg-black border-none">
+      <DialogContent className="max-w-3xl p-0 bg-black border-none" hideCloseButton>
         <div className="relative">
           <Button
             variant="ghost"
             size="icon"
-            className="absolute top-2 right-2 z-10 bg-black/50 hover:bg-black/70 text-white"
+            className="absolute top-3 right-3 z-10 h-12 w-12 bg-gold/80 hover:bg-gold rounded-full text-black shadow-lg shadow-gold/30"
             onClick={() => onOpenChange(false)}
           >
-            <X className="h-5 w-5" />
+            <X className="h-6 w-6" />
+          </Button>
+          {/* Floating close button for mobile - easy thumb access */}
+          <Button
+            variant="default"
+            size="lg"
+            onClick={() => onOpenChange(false)}
+            className="fixed bottom-24 right-4 z-50 h-14 w-14 rounded-full bg-gold/90 hover:bg-gold text-black shadow-lg shadow-gold/30 sm:hidden"
+          >
+            <X className="w-7 h-7" />
           </Button>
           <video
             src={videoUrl}
