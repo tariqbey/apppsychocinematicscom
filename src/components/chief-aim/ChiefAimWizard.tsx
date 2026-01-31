@@ -243,7 +243,7 @@ export const ChiefAimWizard = ({ isOpen, onClose, initialAim, onSave }: ChiefAim
     <div className="fixed inset-0 z-50 bg-background/95 backdrop-blur-sm animate-fade-in">
       <div className="h-full flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-border/50">
+        <div className="flex items-center justify-between p-4 border-b border-border/50 pt-[env(safe-area-inset-top)]">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-gold/20 to-gold/5 flex items-center justify-center">
               <Sparkles className="w-5 h-5 text-gold" />
@@ -253,10 +253,25 @@ export const ChiefAimWizard = ({ isOpen, onClose, initialAim, onSave }: ChiefAim
               <p className="text-sm text-muted-foreground">Craft Your Definite Chief Aim</p>
             </div>
           </div>
-          <Button variant="ghost" size="icon" onClick={onClose}>
-            <X className="w-5 h-5" />
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={onClose}
+            className="h-12 w-12 bg-gold/20 hover:bg-gold/30 border border-gold/40 rounded-full"
+          >
+            <X className="w-6 h-6 text-gold" />
           </Button>
         </div>
+        
+        {/* Floating close button for mobile */}
+        <Button
+          variant="default"
+          size="lg"
+          onClick={onClose}
+          className="fixed bottom-24 right-4 z-50 h-14 w-14 rounded-full bg-gold/90 hover:bg-gold text-black shadow-lg shadow-gold/30 sm:hidden"
+        >
+          <X className="w-7 h-7" />
+        </Button>
 
         {/* Progress Steps */}
         <div className="px-4 py-3 border-b border-border/30 bg-secondary/20">

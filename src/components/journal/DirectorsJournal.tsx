@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { X, Plus, BookOpen, Sparkles, TrendingUp, Target, Loader2, ChevronDown, ChevronUp, Trash2, Bell, Save, BookMarked, FileText } from "lucide-react";
+import { X, Plus, BookOpen, Sparkles, TrendingUp, Target, Loader2, ChevronDown, ChevronUp, Trash2, Bell, Save, BookMarked, FileText, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
@@ -37,6 +37,7 @@ export function DirectorsJournal({ isOpen, onClose }: DirectorsJournalProps) {
     isAnalyzing,
     fetchEntries,
     createEntry,
+    updateEntry,
     deleteEntry,
     analyzeEntry,
     getProgressReport,
@@ -127,7 +128,7 @@ export function DirectorsJournal({ isOpen, onClose }: DirectorsJournalProps) {
   return (
     <div className="fixed inset-0 z-50 bg-background/95 backdrop-blur-sm flex flex-col animate-fade-in">
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-border">
+      <div className="flex items-center justify-between p-4 border-b border-border pt-[env(safe-area-inset-top)]">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
             <BookOpen className="w-5 h-5 text-white" />
@@ -139,10 +140,25 @@ export function DirectorsJournal({ isOpen, onClose }: DirectorsJournalProps) {
             </p>
           </div>
         </div>
-        <Button variant="ghost" size="icon" onClick={onClose}>
-          <X className="w-5 h-5" />
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          onClick={onClose}
+          className="h-12 w-12 bg-gold/20 hover:bg-gold/30 border border-gold/40 rounded-full"
+        >
+          <X className="w-6 h-6 text-gold" />
         </Button>
       </div>
+      
+      {/* Floating close button for mobile */}
+      <Button
+        variant="default"
+        size="lg"
+        onClick={onClose}
+        className="fixed bottom-24 right-4 z-50 h-14 w-14 rounded-full bg-gold/90 hover:bg-gold text-black shadow-lg shadow-gold/30 sm:hidden"
+      >
+        <X className="w-7 h-7" />
+      </Button>
 
       {/* Content */}
       <div className="flex-1 overflow-hidden">
@@ -270,6 +286,7 @@ export function DirectorsJournal({ isOpen, onClose }: DirectorsJournalProps) {
                       onToggle={() => setExpandedEntry(expandedEntry === entry.id ? null : entry.id)}
                       onAnalyze={() => handleAnalyze(entry.id)}
                       onDelete={() => deleteEntry(entry.id)}
+                      onUpdate={updateEntry}
                       isAnalyzing={isAnalyzing}
                     />
                   ))
@@ -463,6 +480,7 @@ interface JournalEntryCardProps {
   onToggle: () => void;
   onAnalyze: () => void;
   onDelete: () => void;
+  onUpdate: (id: string, updates: Partial<JournalEntry>) => Promise<JournalEntry | null>;
   isAnalyzing: boolean;
 }
 
@@ -472,8 +490,35 @@ function JournalEntryCard({
   onToggle,
   onAnalyze,
   onDelete,
+  onUpdate,
   isAnalyzing,
 }: JournalEntryCardProps) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [editTitle, setEditTitle] = useState(entry.title || "");
+  const [editContent, setEditContent] = useState(entry.content);
+  const [editMood, setEditMood] = useState(entry.mood || "");
+  const [isSaving, setIsSaving] = useState(false);
+
+  const handleSaveEdit = async () => {
+    if (!editContent.trim()) return;
+    setIsSaving(true);
+    const result = await onUpdate(entry.id, {
+      title: editTitle.trim() || null,
+      content: editContent.trim(),
+      mood: editMood || null,
+    });
+    setIsSaving(false);
+    if (result) {
+      setIsEditing(false);
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditTitle(entry.title || "");
+    setEditContent(entry.content);
+    setEditMood(entry.mood || "");
+    setIsEditing(false);
+  };
   const moodInfo = MOOD_OPTIONS.find(m => m.value === entry.mood);
 
   return (
@@ -513,72 +558,136 @@ function JournalEntryCard({
 
       {isExpanded && (
         <div className="px-4 pb-4 border-t border-border pt-4 space-y-4">
-          {/* Full content */}
-          <div>
-            <p className="text-sm whitespace-pre-wrap">{entry.content}</p>
-          </div>
-
-          {/* Tags */}
-          {entry.tags && entry.tags.length > 0 && (
-            <div className="flex flex-wrap gap-1">
-              {entry.tags.map((tag) => (
-                <Badge key={tag} variant="outline" className="text-xs">
-                  #{tag}
-                </Badge>
-              ))}
-            </div>
-          )}
-
-          {/* AI Analysis */}
-          {entry.ai_analysis ? (
-            <div className="p-4 bg-gradient-to-br from-purple-500/10 to-pink-500/10 rounded-lg border border-purple-500/20">
-              <div className="flex items-center gap-2 mb-2">
-                <Sparkles className="w-4 h-4 text-purple-400" />
-                <span className="text-sm font-medium">AI Insights</span>
+          {isEditing ? (
+            /* Edit Mode */
+            <div className="space-y-4">
+              <Input
+                placeholder="Entry title (optional)"
+                value={editTitle}
+                onChange={(e) => setEditTitle(e.target.value)}
+                className="text-lg font-medium"
+              />
+              <Textarea
+                value={editContent}
+                onChange={(e) => setEditContent(e.target.value)}
+                className="min-h-[120px] resize-none"
+                placeholder="Write your entry..."
+              />
+              <div>
+                <p className="text-sm font-medium mb-2">How are you feeling?</p>
+                <div className="flex flex-wrap gap-2">
+                  {MOOD_OPTIONS.map((mood) => (
+                    <button
+                      key={mood.value}
+                      onClick={() => setEditMood(editMood === mood.value ? "" : mood.value)}
+                      className={cn(
+                        "px-3 py-1.5 rounded-full text-sm transition-all",
+                        editMood === mood.value
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-muted hover:bg-muted/80"
+                      )}
+                    >
+                      {mood.emoji} {mood.label}
+                    </button>
+                  ))}
+                </div>
               </div>
-              <p className="text-sm whitespace-pre-wrap">{entry.ai_analysis}</p>
+              <div className="flex gap-2 justify-end">
+                <Button variant="outline" size="sm" onClick={handleCancelEdit}>
+                  Cancel
+                </Button>
+                <Button 
+                  variant="gold" 
+                  size="sm" 
+                  onClick={handleSaveEdit}
+                  disabled={!editContent.trim() || isSaving}
+                >
+                  {isSaving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
+                  Save
+                </Button>
+              </div>
             </div>
           ) : (
-            <Button
-              onClick={onAnalyze}
-              disabled={isAnalyzing}
-              variant="outline"
-              size="sm"
-            >
-              {isAnalyzing ? (
-                <Loader2 className="w-4 h-4 animate-spin mr-2" />
-              ) : (
-                <Sparkles className="w-4 h-4 mr-2" />
-              )}
-              Get AI Feedback
-            </Button>
-          )}
+            /* View Mode */
+            <>
+              {/* Full content */}
+              <div>
+                <p className="text-sm whitespace-pre-wrap">{entry.content}</p>
+              </div>
 
-          {/* Delete */}
-          <div className="flex justify-end">
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-destructive">
-                  <Trash2 className="w-4 h-4 mr-1" />
-                  Delete
+              {/* Tags */}
+              {entry.tags && entry.tags.length > 0 && (
+                <div className="flex flex-wrap gap-1">
+                  {entry.tags.map((tag) => (
+                    <Badge key={tag} variant="outline" className="text-xs">
+                      #{tag}
+                    </Badge>
+                  ))}
+                </div>
+              )}
+
+              {/* AI Analysis */}
+              {entry.ai_analysis ? (
+                <div className="p-4 bg-gradient-to-br from-purple-500/10 to-pink-500/10 rounded-lg border border-purple-500/20">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Sparkles className="w-4 h-4 text-purple-400" />
+                    <span className="text-sm font-medium">AI Insights</span>
+                  </div>
+                  <p className="text-sm whitespace-pre-wrap">{entry.ai_analysis}</p>
+                </div>
+              ) : (
+                <Button
+                  onClick={onAnalyze}
+                  disabled={isAnalyzing}
+                  variant="outline"
+                  size="sm"
+                >
+                  {isAnalyzing ? (
+                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                  ) : (
+                    <Sparkles className="w-4 h-4 mr-2" />
+                  )}
+                  Get AI Feedback
                 </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Delete Entry?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    This will permanently delete this journal entry. This action cannot be undone.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction onClick={onDelete} className="bg-destructive hover:bg-destructive/90">
-                    Delete
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-          </div>
+              )}
+
+              {/* Action Buttons */}
+              <div className="flex justify-between items-center">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => setIsEditing(true)}
+                  className="gap-2"
+                >
+                  <Pencil className="w-4 h-4" />
+                  Edit
+                </Button>
+                
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-destructive">
+                      <Trash2 className="w-4 h-4 mr-1" />
+                      Delete
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Delete Entry?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        This will permanently delete this journal entry. This action cannot be undone.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction onClick={onDelete} className="bg-destructive hover:bg-destructive/90">
+                        Delete
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </div>
+            </>
+          )}
         </div>
       )}
     </Card>

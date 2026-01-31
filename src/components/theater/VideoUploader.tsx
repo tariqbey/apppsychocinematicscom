@@ -310,10 +310,25 @@ export const VideoUploader = ({
               <p className="text-sm text-muted-foreground">Your AI-generated vision</p>
             </div>
           </div>
-          <Button variant="ghost" size="icon" onClick={onClose}>
-            <X className="w-5 h-5" />
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={onClose}
+            className="h-12 w-12 bg-gold/20 hover:bg-gold/30 border border-gold/40 rounded-full"
+          >
+            <X className="w-6 h-6 text-gold" />
           </Button>
         </div>
+
+        {/* Floating close button for mobile */}
+        <Button
+          variant="default"
+          size="lg"
+          onClick={onClose}
+          className="fixed bottom-24 right-4 z-50 h-14 w-14 rounded-full bg-gold/90 hover:bg-gold text-black shadow-lg shadow-gold/30 sm:hidden"
+        >
+          <X className="w-7 h-7" />
+        </Button>
 
         {/* Upload Area */}
         <div className="p-6">
