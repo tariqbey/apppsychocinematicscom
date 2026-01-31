@@ -46,16 +46,24 @@ Rules:
 
 Return ONLY the enhanced exchange statement, no explanations.`,
 
-  plan: `You are an expert at crafting powerful action plans for Definite Chief Aims.
+  plan: `You are an expert strategist and action planner based on Napoleon Hill's Laws of Success.
 
-The user has written their initial plan/first steps. Your job is to enhance it into clear, actionable commitments.
+The user has written their overall plan or strategy for achieving their Definite Chief Aim. Your job is to enhance it into a powerful, actionable master plan.
+
+CRITICAL: You will receive context about their goal (what they want). Use this to suggest SPECIFIC strategies and actions tailored to their objective.
 
 Rules:
-- Break into 2-3 specific, immediate action items
-- Make each action measurable and time-bound
-- Start each with action verbs
-- Focus on THIS WEEK's actions, not the whole journey
-- Keep practical and achievable
+- Take their initial idea and expand it into a comprehensive yet concise plan
+- Include 3-5 specific, actionable strategies
+- Suggest concrete steps they may not have thought of (resources, skills to develop, people to connect with, tools to use)
+- Make each action measurable with clear milestones
+- Start each item with power verbs (Build, Create, Launch, Connect, Master, etc.)
+- Include both immediate actions (this week) and longer-term phases
+- If their goal involves business, suggest marketing, systems, or revenue strategies
+- If their goal involves health, suggest specific habits, accountability measures
+- If their goal involves skills, suggest learning resources, practice schedules
+- Format clearly with line breaks between major action items
+- Write with conviction and ownership (I will, I am, etc.)
 
 Return ONLY the enhanced plan statement, no explanations.`,
 };
@@ -116,12 +124,19 @@ serve(async (req) => {
     let contextNote = "";
     if (fullAim) {
       const parts = [];
-      if (fullAim.what && field !== "what") parts.push(`Their goal: ${fullAim.what}`);
-      if (fullAim.byWhen && field !== "byWhen") parts.push(`Their deadline: ${fullAim.byWhen}`);
-      if (fullAim.exchange && field !== "exchange") parts.push(`Their exchange: ${fullAim.exchange}`);
-      if (fullAim.plan && field !== "plan") parts.push(`Their plan: ${fullAim.plan}`);
+      // For the plan field, always prioritize showing the goal
+      if (field === "plan" && fullAim.what) {
+        parts.push(`THEIR GOAL/OBJECTIVE: ${fullAim.what}`);
+        if (fullAim.byWhen) parts.push(`Their deadline: ${fullAim.byWhen}`);
+        if (fullAim.exchange) parts.push(`What they're willing to give: ${fullAim.exchange}`);
+      } else {
+        if (fullAim.what && field !== "what") parts.push(`Their goal: ${fullAim.what}`);
+        if (fullAim.byWhen && field !== "byWhen") parts.push(`Their deadline: ${fullAim.byWhen}`);
+        if (fullAim.exchange && field !== "exchange") parts.push(`Their exchange: ${fullAim.exchange}`);
+        if (fullAim.plan && field !== "plan") parts.push(`Their plan: ${fullAim.plan}`);
+      }
       if (parts.length > 0) {
-        contextNote = `\n\nContext from their other Chief Aim components:\n${parts.join("\n")}`;
+        contextNote = `\n\nContext from their Chief Aim:\n${parts.join("\n")}`;
       }
     }
 

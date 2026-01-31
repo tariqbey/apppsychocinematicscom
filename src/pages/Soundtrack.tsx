@@ -9,16 +9,15 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { useUserPlaylists, type PlaylistTrack } from "@/hooks/useUserPlaylists";
-import { useMindMovieMusic, MUSIC_STYLES, type MusicStyle } from "@/hooks/useMindMovieMusic";
+import { useMindMovieMusic, type MusicStyle } from "@/hooks/useMindMovieMusic";
 import { SoundtrackPlayer } from "@/components/mind-movie/SoundtrackPlayer";
+import { MusicStyleSelector } from "@/components/soundtrack/MusicStyleSelector";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -362,18 +361,6 @@ export default function Soundtrack() {
     return null;
   }
 
-  // Group music styles by category
-  const styleCategories = [
-    { label: "Hip-Hop/Rap", styles: MUSIC_STYLES.filter(s => ['Hip-Hop Motivational', 'Cinematic Hip-Hop', 'Conscious Rap', 'Lo-Fi Hip-Hop', 'Trap Inspirational', 'Boom Bap', 'West Coast Rap', 'UK Drill', 'Jazz Rap'].includes(s.value)) },
-    { label: "Pop & Electronic", styles: MUSIC_STYLES.filter(s => ['Uplifting Pop', 'Cinematic Electronic', 'Ambient Chill', 'Synthwave Retro', 'Indie Pop', 'EDM Anthem', 'Future Bass', 'Deep House', 'Tropical House', 'Electro Swing', 'Hyperpop', 'Dream Pop', 'Synth-pop', 'Vaporwave'].includes(s.value)) },
-    { label: "Rock & Alternative", styles: MUSIC_STYLES.filter(s => ['Indie Rock Anthem', 'Alternative Rock', 'Classic Rock', 'Punk Rock', 'Pop Rock', 'Progressive Rock', 'Grunge', 'Post-Rock'].includes(s.value)) },
-    { label: "Orchestral & Cinematic", styles: MUSIC_STYLES.filter(s => ['Epic Orchestral', 'Inspirational Piano', 'Cinematic Drama', 'Cinematic Inspirational', 'Neoclassical', 'Movie Soundtrack'].includes(s.value)) },
-    { label: "R&B & Soul", styles: MUSIC_STYLES.filter(s => ['R&B Soul', 'Contemporary R&B', 'Neo Soul', 'Motown', 'Funk'].includes(s.value)) },
-    { label: "Jazz & Blues", styles: MUSIC_STYLES.filter(s => ['Smooth Jazz', 'Jazz Fusion', 'Blues', 'Delta Blues', 'Cool Jazz'].includes(s.value)) },
-    { label: "Folk & Country", styles: MUSIC_STYLES.filter(s => ['Acoustic Folk', 'Indie Folk', 'Country Inspirational', 'Bluegrass', 'Americana'].includes(s.value)) },
-    { label: "Gospel & Spiritual", styles: MUSIC_STYLES.filter(s => ['Gospel Inspirational', 'Contemporary Gospel', 'Spiritual'].includes(s.value)) },
-    { label: "World & Latin", styles: MUSIC_STYLES.filter(s => ['Reggae', 'Afrobeat', 'Latin Pop', 'Salsa', 'Bossa Nova', 'K-pop', 'J-pop'].includes(s.value)) },
-  ];
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-background via-background to-muted/20">
@@ -631,43 +618,13 @@ export default function Soundtrack() {
                 />
               </div>
 
-              {/* Music Style */}
-              <div className="space-y-2">
-                <Label>Music Style</Label>
-                <Select value={musicStyle} onValueChange={(v) => setMusicStyle(v as MusicStyle)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Choose a style" />
-                  </SelectTrigger>
-                  <SelectContent className="max-h-[300px]">
-                    {styleCategories.map((category) => (
-                      <div key={category.label}>
-                        <div className="px-2 py-1.5 text-sm font-semibold text-muted-foreground">
-                          {category.label}
-                        </div>
-                        {category.styles.map((style) => (
-                          <SelectItem key={style.value} value={style.value}>
-                            {style.label}
-                          </SelectItem>
-                        ))}
-                      </div>
-                    ))}
-                    <SelectItem value="Custom">✨ Custom Style</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Custom Style Text */}
-              {musicStyle === 'Custom' && (
-                <div className="space-y-2">
-                  <Label htmlFor="customStyle">Describe Your Style</Label>
-                  <Input
-                    id="customStyle"
-                    value={customStyleText}
-                    onChange={(e) => setCustomStyleText(e.target.value)}
-                    placeholder="e.g., 'Dark trap with orchestral elements and motivational energy'"
-                  />
-                </div>
-              )}
+              {/* Music Style Selector */}
+              <MusicStyleSelector
+                value={musicStyle}
+                onChange={(v) => setMusicStyle(v as MusicStyle)}
+                customStyleText={customStyleText}
+                onCustomStyleTextChange={setCustomStyleText}
+              />
 
               {/* Vocal Gender */}
               <div className="space-y-2">
