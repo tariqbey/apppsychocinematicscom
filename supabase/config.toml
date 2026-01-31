@@ -77,3 +77,12 @@ verify_jwt = false
 
 [functions.generate-character-style-sheet]
 verify_jwt = false
+
+[functions.enhance-chief-aim]
+verify_jwt = false
+
+[functions.adjust-chief-aim]
+verify_jwt = false
+
+[functions.plan-episode-strategy]
+verify_jwt = false
