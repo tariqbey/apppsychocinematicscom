@@ -150,31 +150,59 @@ export function useJournal() {
     }
   }, [user, toast, triggerRecalculation]);
 
-  const updateEntry = useCallback(async (id: string, updates: Partial<JournalEntry>) => {
-    if (!user) return null;
+  const updateEntry = useCallback(async (id: string, updates: {
+    title?: string | null;
+    content?: string;
+    mood?: string | null;
+    tags?: string[] | null;
+  }) => {
+    if (!user) {
+      console.error("[Journal] Update failed: No user");
+      return null;
+    }
 
     try {
+      // Build clean update object - only include defined fields
+      const cleanUpdates: Record<string, unknown> = {
+        updated_at: new Date().toISOString(),
+      };
+      
+      if (updates.title !== undefined) cleanUpdates.title = updates.title;
+      if (updates.content !== undefined) cleanUpdates.content = updates.content;
+      if (updates.mood !== undefined) cleanUpdates.mood = updates.mood;
+      if (updates.tags !== undefined) cleanUpdates.tags = updates.tags;
+
+      console.log("[Journal] Updating entry:", { id, updates: cleanUpdates });
+
       const { data, error } = await supabase
         .from("journal_entries")
-        .update(updates)
+        .update(cleanUpdates)
         .eq("id", id)
         .eq("user_id", user.id)
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error("[Journal] Supabase update error:", error);
+        throw error;
+      }
 
       const typedData = data as unknown as JournalEntry;
       setEntries(prev => prev.map(e => e.id === id ? typedData : e));
 
       void triggerRecalculation();
       
+      toast({
+        title: "Entry updated",
+        description: "Your journal entry has been saved.",
+      });
+      
       return typedData;
     } catch (error) {
-      console.error("Error updating journal entry:", error);
+      console.error("[Journal] Error updating journal entry:", error);
       toast({
         title: "Error",
-        description: "Failed to update journal entry",
+        description: error instanceof Error ? error.message : "Failed to update journal entry",
         variant: "destructive",
       });
       return null;

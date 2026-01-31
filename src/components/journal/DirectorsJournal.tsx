@@ -502,14 +502,19 @@ function JournalEntryCard({
   const handleSaveEdit = async () => {
     if (!editContent.trim()) return;
     setIsSaving(true);
-    const result = await onUpdate(entry.id, {
-      title: editTitle.trim() || null,
-      content: editContent.trim(),
-      mood: editMood || null,
-    });
-    setIsSaving(false);
-    if (result) {
-      setIsEditing(false);
+    try {
+      const result = await onUpdate(entry.id, {
+        title: editTitle.trim() || null,
+        content: editContent.trim(),
+        mood: editMood || null,
+      });
+      if (result) {
+        setIsEditing(false);
+      }
+    } catch (error) {
+      console.error("[Journal] Save edit error:", error);
+    } finally {
+      setIsSaving(false);
     }
   };
 
