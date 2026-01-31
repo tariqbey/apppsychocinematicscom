@@ -2,22 +2,23 @@ import { useState, useEffect, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { 
   ArrowLeft, Music, Sparkles, Loader2, Library, Brain, Target, Check,
-  Upload, Play, Pause, FolderOpen
+  Upload, Play, Pause, FolderOpen, Settings2, ChevronDown, ChevronUp
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { useUserPlaylists, type PlaylistTrack } from "@/hooks/useUserPlaylists";
 import { useMindMovieMusic, type MusicStyle } from "@/hooks/useMindMovieMusic";
-import { SoundtrackPlayer } from "@/components/mind-movie/SoundtrackPlayer";
 import { MusicStyleSelector } from "@/components/soundtrack/MusicStyleSelector";
+import { MusicCustomizationPanel, defaultMusicCustomization, getCustomizationStyleTags, type MusicCustomization } from "@/components/soundtrack/MusicCustomizationPanel";
+import { SongVersionCard } from "@/components/soundtrack/SongVersionCard";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -39,6 +40,9 @@ export default function Soundtrack() {
   const [isUploadingTrack, setIsUploadingTrack] = useState(false);
   const [previewTrack, setPreviewTrack] = useState<PlaylistTrack | null>(null);
   const [isPreviewPlaying, setIsPreviewPlaying] = useState(false);
+  const [showAdvancedSettings, setShowAdvancedSettings] = useState(false);
+  const [musicCustomization, setMusicCustomization] = useState<MusicCustomization>(defaultMusicCustomization);
+  const [regeneratingIndex, setRegeneratingIndex] = useState<number | null>(null);
   const audioPreviewRef = useRef<HTMLAudioElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
@@ -57,6 +61,7 @@ export default function Soundtrack() {
     songs,
     generateLyrics,
     generateMusic,
+    regenerateMusic,
     saveToLibrary,
     setGeneratedLyrics,
   } = useMindMovieMusic();
@@ -331,7 +336,12 @@ export default function Soundtrack() {
 
     // Use a temporary script ID for standalone generation
     const tempScriptId = `standalone-${Date.now()}`;
-    const effectiveStyle = musicStyle === 'Custom' ? customStyleText : undefined;
+    
+    // Combine base style with customization tags
+    const customizationTags = getCustomizationStyleTags(musicCustomization);
+    const effectiveStyle = musicStyle === 'Custom' 
+      ? `${customStyleText}, ${customizationTags}`
+      : `${musicStyle}, ${customizationTags}`;
     
     await generateMusic(
       generatedLyrics,
@@ -340,6 +350,31 @@ export default function Soundtrack() {
       effectiveStyle,
       songCount
     );
+  };
+
+  const handleRegenerateSong = async (index: number) => {
+    if (!generatedLyrics) return;
+    
+    setRegeneratingIndex(index);
+    const tempScriptId = `standalone-regen-${Date.now()}`;
+    
+    // Combine base style with customization tags
+    const customizationTags = getCustomizationStyleTags(musicCustomization);
+    const effectiveStyle = musicStyle === 'Custom' 
+      ? `${customStyleText}, ${customizationTags}`
+      : `${musicStyle}, ${customizationTags}`;
+    
+    try {
+      await regenerateMusic(
+        generatedLyrics,
+        songTitle,
+        tempScriptId,
+        effectiveStyle,
+        1 // Regenerate single song
+      );
+    } finally {
+      setRegeneratingIndex(null);
+    }
   };
 
   const handleSaveToLibrary = async (songIndex?: number) => {
@@ -626,57 +661,37 @@ export default function Soundtrack() {
                 onCustomStyleTextChange={setCustomStyleText}
               />
 
-              {/* Vocal Gender */}
-              <div className="space-y-2">
-                <Label>Vocal Style</Label>
-                <RadioGroup 
-                  value={vocalGender} 
-                  onValueChange={(v) => setVocalGender(v as 'm' | 'f')}
-                  className="flex gap-4"
-                >
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="m" id="male" />
-                    <Label htmlFor="male">Male Voice</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="f" id="female" />
-                    <Label htmlFor="female">Female Voice</Label>
-                  </div>
-                </RadioGroup>
-              </div>
-
-              {/* Song Count */}
-              <div className="space-y-2">
-                <Label>Number of Versions</Label>
-                <RadioGroup 
-                  value={songCount.toString()} 
-                  onValueChange={(v) => setSongCount(parseInt(v) as 1 | 2)}
-                  className="flex gap-4"
-                >
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="1" id="one" />
-                    <Label htmlFor="one">1 Version</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="2" id="two" />
-                    <Label htmlFor="two">2 Versions</Label>
-                  </div>
-                </RadioGroup>
-              </div>
-
-              {/* Persona ID (Advanced) */}
-              <div className="space-y-2">
-                <Label htmlFor="personaId">
-                  Persona ID
-                  <span className="text-muted-foreground text-sm ml-2">(optional - use a specific voice)</span>
-                </Label>
-                <Input
-                  id="personaId"
-                  value={personaId}
-                  onChange={(e) => setPersonaId(e.target.value)}
-                  placeholder="Leave empty for random voice"
-                />
-              </div>
+              {/* Advanced Settings Collapsible */}
+              <Collapsible open={showAdvancedSettings} onOpenChange={setShowAdvancedSettings}>
+                <CollapsibleTrigger asChild>
+                  <Button 
+                    variant="outline" 
+                    className="w-full justify-between gap-2"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Settings2 className="w-4 h-4" />
+                      Advanced Music Settings
+                    </div>
+                    {showAdvancedSettings ? (
+                      <ChevronUp className="w-4 h-4" />
+                    ) : (
+                      <ChevronDown className="w-4 h-4" />
+                    )}
+                  </Button>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="pt-4">
+                  <MusicCustomizationPanel
+                    customization={musicCustomization}
+                    onChange={setMusicCustomization}
+                    vocalGender={vocalGender}
+                    onVocalGenderChange={setVocalGender}
+                    personaId={personaId}
+                    onPersonaIdChange={setPersonaId}
+                    songCount={songCount}
+                    onSongCountChange={setSongCount}
+                  />
+                </CollapsibleContent>
+              </Collapsible>
               </CardContent>
             </Card>
 
@@ -744,100 +759,52 @@ export default function Soundtrack() {
                   )}
                 </Button>
 
-                {/* Show generated songs */}
-                {songs.length > 0 && songs.map((song, index) => (
-                  <div key={index} className="space-y-3">
-                    <h4 className="font-medium text-sm text-muted-foreground">
-                      Version {index + 1}
-                    </h4>
-                    {song.soundtrackUrl && (
-                      <>
-                        <SoundtrackPlayer
-                          audioUrl={song.soundtrackUrl}
-                          title={`${songTitle} (v${index + 1})`}
-                          isGenerating={isGeneratingMusic && !song.soundtrackUrl}
-                          generationStatus={song.generationStatus}
-                          onSaveToLibrary={() => handleSaveToLibrary(index)}
-                          isSavedToLibrary={song.isSavedToLibrary}
-                        />
-                        {/* Use as Chief Aim Song button */}
-                        {(fromChiefAim || fromAnalysis) && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleSetAsChiefAimSong(song.soundtrackUrl!)}
-                            disabled={isSettingAsChiefAimSong || profile?.chief_aim_song_url === song.soundtrackUrl}
-                            className="w-full gap-2 border-gold/30 text-gold hover:bg-gold/10"
-                          >
-                            {profile?.chief_aim_song_url === song.soundtrackUrl ? (
-                              <>
-                                <Check className="w-4 h-4" />
-                                Set as Chief Aim Anthem
-                              </>
-                            ) : isSettingAsChiefAimSong ? (
-                              <>
-                                <Loader2 className="w-4 h-4 animate-spin" />
-                                Setting...
-                              </>
-                            ) : (
-                              <>
-                                <Target className="w-4 h-4" />
-                                Use as Chief Aim Anthem
-                              </>
-                            )}
-                          </Button>
-                        )}
-                      </>
-                    )}
-                    {/* Error state - Content Policy Violation or Failed */}
-                    {!song.soundtrackUrl && (song.generationStatus === 'Content Policy Error' || song.generationStatus === 'Failed' || song.generationStatus === 'Error') && (
-                      <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-6">
-                        <div className="flex items-center gap-4">
-                          <div className="w-16 h-16 rounded-lg bg-destructive/20 flex items-center justify-center">
-                            <Music className="h-8 w-8 text-destructive" />
-                          </div>
-                          <div className="flex-1">
-                            <h4 className="font-medium text-destructive">Generation Failed</h4>
-                            <p className="text-sm text-muted-foreground mt-1">
-                              {song.generationStatus === 'Content Policy Error' 
-                                ? 'Your lyrics contain words that violate the music service policy. Please edit your lyrics and try again with different wording.'
-                                : 'There was an error generating your song. Please try again.'}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                    {/* Loading state */}
-                    {!song.soundtrackUrl && !['Content Policy Error', 'Failed', 'Error'].includes(song.generationStatus || '') && isGeneratingMusic && (
-                      <div className="bg-card border border-border rounded-lg p-6">
-                        <div className="flex items-center gap-4">
-                          <div className="w-16 h-16 rounded-lg bg-primary/10 flex items-center justify-center">
-                            <Music className="h-8 w-8 text-primary animate-pulse" />
-                          </div>
-                          <div className="flex-1">
-                            <h4 className="font-medium text-foreground">Creating Your Soundtrack</h4>
-                            <p className="text-sm text-muted-foreground mt-1">
-                              {song.generationStatus || 'Processing...'}
-                            </p>
-                            <div className="mt-3 h-2 bg-muted rounded-full overflow-hidden">
-                              <div className="h-full bg-primary/50 animate-pulse w-2/3" />
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    )}
+                {/* Show generated songs using new SongVersionCard */}
+                {songs.length > 0 && (
+                  <div className="space-y-4 pt-4">
+                    {songs.map((song, index) => (
+                      <SongVersionCard
+                        key={index}
+                        audioUrl={song.soundtrackUrl}
+                        title={songTitle}
+                        versionNumber={index + 1}
+                        isGenerating={isGeneratingMusic && !song.soundtrackUrl}
+                        generationStatus={song.generationStatus}
+                        hasError={['Content Policy Error', 'Failed', 'Error'].includes(song.generationStatus || '')}
+                        errorMessage={
+                          song.generationStatus === 'Content Policy Error'
+                            ? 'Your lyrics contain words that violate the music service policy. Please edit your lyrics and try again.'
+                            : undefined
+                        }
+                        onRegenerate={() => handleRegenerateSong(index)}
+                        onSaveToLibrary={() => handleSaveToLibrary(index)}
+                        onSetAsAnthem={
+                          (fromChiefAim || fromAnalysis) && song.soundtrackUrl
+                            ? () => handleSetAsChiefAimSong(song.soundtrackUrl!)
+                            : undefined
+                        }
+                        isSavedToLibrary={song.isSavedToLibrary}
+                        isSettingAsAnthem={isSettingAsChiefAimSong}
+                        isCurrentAnthem={profile?.chief_aim_song_url === song.soundtrackUrl}
+                        showAnthemButton={fromChiefAim || fromAnalysis}
+                        isRegenerating={regeneratingIndex === index}
+                      />
+                    ))}
                   </div>
-                ))}
+                )}
 
                 {/* Fallback for single song display */}
                 {songs.length === 0 && soundtrackUrl && (
-                  <SoundtrackPlayer
+                  <SongVersionCard
                     audioUrl={soundtrackUrl}
                     title={songTitle}
+                    versionNumber={1}
                     isGenerating={isGeneratingMusic}
                     generationStatus={generationStatus}
+                    onRegenerate={() => handleRegenerateSong(0)}
                     onSaveToLibrary={() => handleSaveToLibrary()}
                     isSavedToLibrary={false}
+                    isRegenerating={regeneratingIndex === 0}
                   />
                 )}
               </CardContent>
