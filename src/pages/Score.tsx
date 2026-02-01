@@ -989,10 +989,7 @@ export default function ScorePage() {
                               </p>
                             </div>
                             
-                            {/* Duration - hidden on xs */}
-                            <span className="hidden xs:block text-xs sm:text-sm text-muted-foreground flex-shrink-0">
-                              {track.duration_seconds ? formatTime(track.duration_seconds) : '--:--'}
-                            </span>
+                            {/* Duration column removed (not displayed) */}
                             
                             {/* Offline download button - quick access */}
                             {isServiceWorkerReady && (
