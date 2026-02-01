@@ -393,16 +393,19 @@ export default function ScorePage() {
         
         console.log(`[Score Upload] Uploading: ${fileName}, Size: ${file.size} bytes, ContentType: ${contentType}`);
         
+        console.log(`[Score Upload] Starting upload with explicit contentType: ${contentType}`);
+        
         const { error: uploadError, data: uploadData } = await supabase.storage
           .from('generated-media')
           .upload(fileName, file, {
             cacheControl: '3600',
-            upsert: false,
+            upsert: true, // Allow overwriting if same filename exists
             contentType: contentType,
           });
 
         if (uploadError) {
-          console.error(`[Score Upload] Storage error:`, uploadError);
+          console.error(`[Score Upload] Storage error:`, uploadError.message, uploadError);
+          toast.error(`Upload failed: ${uploadError.message}`);
           throw uploadError;
         }
 
@@ -619,9 +622,9 @@ export default function ScorePage() {
             <label>
               <input 
                 type="file" 
-                accept="audio/*"
+                accept=".mp3,.wav,.ogg,.m4a,.aac,.flac,.wma,audio/*"
                 multiple
-                className="hidden" 
+                className="hidden"
                 onChange={handleUploadTracks}
                 disabled={isUploadingTrack}
               />
@@ -877,9 +880,9 @@ export default function ScorePage() {
                             <label>
                               <input 
                                 type="file" 
-                                accept="audio/*"
+                                accept=".mp3,.wav,.ogg,.m4a,.aac,.flac,.wma,audio/*"
                                 multiple
-                                className="hidden" 
+                                className="hidden"
                                 onChange={handleUploadTracks}
                               />
                               <Button size="sm" variant="outline" asChild>
