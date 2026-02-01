@@ -415,10 +415,37 @@ export default function ScorePage() {
           .from('generated-media')
           .getPublicUrl(fileName);
 
+        // Extract audio duration from file
+        let durationSeconds: number | undefined;
+        try {
+          durationSeconds = await new Promise<number>((resolve, reject) => {
+            const tempAudio = new Audio();
+            tempAudio.preload = 'metadata';
+            const objectUrl = URL.createObjectURL(file);
+            
+            tempAudio.onloadedmetadata = () => {
+              const duration = Math.round(tempAudio.duration);
+              URL.revokeObjectURL(objectUrl);
+              resolve(duration);
+            };
+            
+            tempAudio.onerror = () => {
+              URL.revokeObjectURL(objectUrl);
+              reject(new Error('Failed to load audio metadata'));
+            };
+            
+            tempAudio.src = objectUrl;
+          });
+          console.log(`[Score Upload] Duration extracted: ${durationSeconds}s`);
+        } catch (err) {
+          console.warn(`[Score Upload] Could not extract duration:`, err);
+        }
+
         await addTrackToPlaylist(targetPlaylist.id, {
           title: file.name.replace(/\.[^/.]+$/, ''),
           audio_url: publicUrl,
           source_type: 'upload',
+          duration_seconds: durationSeconds,
         });
         successCount++;
       } catch (error: any) {
