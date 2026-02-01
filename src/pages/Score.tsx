@@ -375,13 +375,30 @@ export default function ScorePage() {
         const sanitizedName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
         const fileName = `${user.id}/${Date.now()}-${sanitizedName}`;
         
-        console.log(`[Score Upload] Uploading: ${fileName}, Size: ${file.size} bytes`);
+        // Determine proper content type - fallback to audio/mpeg for mp3
+        let contentType = file.type;
+        if (!contentType || !contentType.startsWith('audio/')) {
+          const ext = file.name.split('.').pop()?.toLowerCase();
+          const mimeMap: Record<string, string> = {
+            'mp3': 'audio/mpeg',
+            'wav': 'audio/wav',
+            'ogg': 'audio/ogg',
+            'm4a': 'audio/mp4',
+            'aac': 'audio/aac',
+            'flac': 'audio/flac',
+            'wma': 'audio/x-ms-wma',
+          };
+          contentType = mimeMap[ext || ''] || 'audio/mpeg';
+        }
+        
+        console.log(`[Score Upload] Uploading: ${fileName}, Size: ${file.size} bytes, ContentType: ${contentType}`);
         
         const { error: uploadError, data: uploadData } = await supabase.storage
           .from('generated-media')
           .upload(fileName, file, {
             cacheControl: '3600',
-            upsert: false
+            upsert: false,
+            contentType: contentType,
           });
 
         if (uploadError) {
