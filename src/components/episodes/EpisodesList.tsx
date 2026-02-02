@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Zap, Plus, Filter, ChevronDown, Clock } from "lucide-react";
+import { Zap, Plus, Filter, ChevronDown, Clock, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -12,6 +12,7 @@ import { useEpisodes, Episode } from "@/hooks/useEpisodes";
 import { EpisodeCard } from "./EpisodeCard";
 import { EpisodeWizard } from "./EpisodeWizard";
 import { EpisodeTimeline } from "./EpisodeTimeline";
+import { EpisodeDetailView } from "./EpisodeDetailView";
 import { MindMovieScriptWizard } from "@/components/mind-movie/MindMovieScriptWizard";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -24,6 +25,7 @@ export function EpisodesList() {
   const [activeView, setActiveView] = useState<"list" | "timeline">("list");
   const [movieWizardEpisode, setMovieWizardEpisode] = useState<Episode | null>(null);
   const [chiefAim, setChiefAim] = useState<{ what?: string; byWhen?: string; exchange?: string; plan?: string }>({});
+  const [selectedEpisode, setSelectedEpisode] = useState<Episode | null>(null);
 
   // Fetch chief aim for movie wizard
   const fetchChiefAim = async () => {
@@ -58,6 +60,14 @@ export function EpisodesList() {
     }
   };
 
+  const handleEpisodeClick = (episode: Episode) => {
+    setSelectedEpisode(episode);
+  };
+
+  const handleBackFromDetail = () => {
+    setSelectedEpisode(null);
+  };
+
   const filteredEpisodes = episodes.filter(ep => 
     filter === "all" ? true : ep.status === filter
   );
@@ -75,6 +85,36 @@ export function EpisodesList() {
       <div className="glass-card p-8 text-center">
         <div className="animate-pulse text-muted-foreground">Loading episodes...</div>
       </div>
+    );
+  }
+
+  // Show detail view if an episode is selected
+  if (selectedEpisode) {
+    // Get the latest version of the episode from the list
+    const currentEpisode = episodes.find(e => e.id === selectedEpisode.id) || selectedEpisode;
+    
+    return (
+      <EpisodeDetailView
+        episode={currentEpisode}
+        onBack={handleBackFromDetail}
+        onComplete={async () => {
+          await completeEpisode(currentEpisode.id);
+          handleBackFromDetail();
+        }}
+        onPause={async () => {
+          await pauseEpisode(currentEpisode.id);
+        }}
+        onResume={async () => {
+          await resumeEpisode(currentEpisode.id);
+        }}
+        onDelete={async () => {
+          if (confirm("Are you sure you want to delete this episode?")) {
+            await deleteEpisode(currentEpisode.id);
+            handleBackFromDetail();
+          }
+        }}
+        onCreateMindMovie={() => handleCreateMindMovie(currentEpisode)}
+      />
     );
   }
 
@@ -184,6 +224,7 @@ export function EpisodesList() {
                   onComplete={completeEpisode}
                   onPause={pauseEpisode}
                   onResume={resumeEpisode}
+                  onClick={() => handleEpisodeClick(episode)}
                 />
               ))}
             </div>

@@ -15,6 +15,7 @@ interface EpisodeCardProps {
   onComplete?: (episodeId: string) => Promise<boolean>;
   onPause?: (episodeId: string) => Promise<boolean>;
   onResume?: (episodeId: string) => Promise<boolean>;
+  onClick?: () => void;
 }
 
 export function EpisodeCard({ 
@@ -25,7 +26,8 @@ export function EpisodeCard({
   onDelete,
   onComplete,
   onPause,
-  onResume 
+  onResume,
+  onClick
 }: EpisodeCardProps) {
   const { completeEpisode, pauseEpisode, resumeEpisode, deleteEpisode, getDaysRemaining, getProgress } = useEpisodes();
   const [expanded, setExpanded] = useState(false);
@@ -89,9 +91,12 @@ export function EpisodeCard({
   };
 
   return (
-    <div className={`glass-card p-4 border transition-all ${
-      episode.status === "active" ? "border-amber-500/30" : "border-border"
-    }`}>
+    <div 
+      className={`glass-card p-4 border transition-all ${
+        episode.status === "active" ? "border-amber-500/30" : "border-border"
+      } ${onClick ? "cursor-pointer hover:border-amber-500/50" : ""}`}
+      onClick={onClick}
+    >
       <div className="flex items-start gap-3">
         {/* Icon */}
         <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${
@@ -182,7 +187,10 @@ export function EpisodeCard({
           variant="ghost"
           size="icon"
           className="h-8 w-8 shrink-0"
-          onClick={() => setExpanded(!expanded)}
+          onClick={(e) => {
+            e.stopPropagation();
+            setExpanded(!expanded);
+          }}
         >
           {expanded ? (
             <ChevronUp className="w-4 h-4" />
@@ -194,7 +202,10 @@ export function EpisodeCard({
 
       {/* Actions (when expanded) */}
       {expanded && episode.status !== "abandoned" && (
-        <div className="flex items-center gap-2 mt-4 pt-3 border-t border-border flex-wrap">
+        <div 
+          className="flex items-center gap-2 mt-4 pt-3 border-t border-border flex-wrap"
+          onClick={(e) => e.stopPropagation()}
+        >
           {episode.status === "active" && (
             <Button
               size="sm"
