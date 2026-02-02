@@ -86,3 +86,12 @@ verify_jwt = false
 
 [functions.plan-episode-strategy]
 verify_jwt = false
+
+[functions.telegram-webhook]
+verify_jwt = false
+
+[functions.telegram-test]
+verify_jwt = false
+
+[functions.telegram-proactive]
+verify_jwt = false

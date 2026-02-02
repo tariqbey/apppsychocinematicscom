@@ -4,9 +4,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Check, Trash2, ExternalLink, Eye, EyeOff, Mic2, MessageSquare, FileText, Send } from "lucide-react";
+import { Loader2, Check, Trash2, ExternalLink, Eye, EyeOff, Mic2, MessageSquare, FileText } from "lucide-react";
 import { useUserIntegrations } from "@/hooks/useUserIntegrations";
 import { IntegrationCard } from "./IntegrationCard";
+import { TelegramIntegrationCard } from "./TelegramIntegrationCard";
 import { SocialMediaConnections } from "./SocialMediaConnections";
 import type { Json } from "@/integrations/supabase/types";
 
@@ -113,27 +114,11 @@ export function IntegrationsTab() {
           note="Enable auto-sync to automatically send journal entries and scorecards to Notion when saved."
         />
 
-        {/* Telegram Integration */}
-        <IntegrationCard
-          name="Telegram"
-          description="Receive notifications and reminders via Telegram"
-          icon={Send}
+        {/* Telegram Integration - Enhanced with two-way chat */}
+        <TelegramIntegrationCard
           isConnected={!!getIntegration("telegram")?.api_key}
           onSave={(key, settings) => handleSaveIntegration("telegram", key, settings)}
           onDelete={() => handleDeleteIntegration("telegram")}
-          inputLabel="Bot Token"
-          inputPlaceholder="123456789:ABCdefGHIjklMNOpqrsTUVwxyz..."
-          additionalFields={[
-            { key: "chat_id", label: "Chat ID", placeholder: "Your Telegram chat ID..." },
-          ]}
-          helpUrl="https://core.telegram.org/bots#creating-a-new-bot"
-          helpSteps={[
-            "Message @BotFather on Telegram",
-            "Send /newbot and follow the prompts",
-            "Copy the bot token provided",
-            "Start a chat with your bot and get your chat ID",
-          ]}
-          note="Morning ritual reminders, evening scorecard prompts, and achievement alerts will be sent via Telegram."
         />
       </div>
 
