@@ -122,7 +122,7 @@ export function EpisodeCard({
         `⏰ *Time Remaining:* ${daysLeft > 0 ? `${daysLeft} days left` : `${Math.abs(daysLeft)} days overdue`}\n\n` +
         `🔥 Stay focused and make it happen, Director!`;
       
-      const { error } = await supabase.functions.invoke("telegram-proactive", {
+       const { data, error } = await supabase.functions.invoke("telegram-proactive", {
         body: {
           userId: user.id,
           messageType: "episode_reminder",
@@ -131,7 +131,13 @@ export function EpisodeCard({
       });
       
       if (error) throw error;
-      toast.success("Episode reminder sent to Telegram!");
+
+       if (!data?.success) {
+         toast.error(data?.error || "Failed to send Telegram message");
+         return;
+       }
+
+       toast.success("Episode reminder sent to Telegram!");
     } catch (error) {
       console.error("Telegram send error:", error);
       toast.error("Failed to send Telegram message");

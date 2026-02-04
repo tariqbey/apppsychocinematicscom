@@ -12,7 +12,11 @@ interface ProactiveMessage {
   message: string;
 }
 
-async function sendTelegramMessage(botToken: string, chatId: string, text: string): Promise<boolean> {
+async function sendTelegramMessage(
+  botToken: string,
+  chatId: string,
+  text: string
+): Promise<{ success: boolean; error?: string }> {
   try {
     const response = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
       method: "POST",
@@ -24,10 +28,27 @@ async function sendTelegramMessage(botToken: string, chatId: string, text: strin
       }),
     });
     const data = await response.json();
-    return data.ok === true;
+
+    if (data?.ok === true) return { success: true };
+
+    const description =
+      data?.description ||
+      (typeof data === "string" ? data : null) ||
+      `Telegram send failed (HTTP ${response.status})`;
+
+    console.error("Telegram send failed:", {
+      chatId,
+      status: response.status,
+      description,
+    });
+
+    return { success: false, error: description };
   } catch (error) {
     console.error("Telegram send error:", error);
-    return false;
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Network error",
+    };
   }
 }
 
@@ -138,6 +159,18 @@ serve(async (req) => {
         );
       }
 
+      // For direct messages, Telegram chat IDs are numeric. Usernames like @something are not valid DM targets.
+      if (typeof chatId === "string" && chatId.trim().startsWith("@")) {
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error:
+              "Your Chat ID looks like an @username. Please update it to a numeric Chat ID (get it from @userinfobot).",
+          }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
       // Get user context for personalized messages
       const { data: profile } = await supabaseClient
         .from("user_profiles")
@@ -166,10 +199,14 @@ serve(async (req) => {
       // Generate or use custom message
       const message = customMessage || await generateProactiveMessage(messageType || "motivation", userContext);
 
-      const success = await sendTelegramMessage(integration.api_key, chatId, message);
+      const result = await sendTelegramMessage(integration.api_key, chatId, message);
 
       return new Response(
-        JSON.stringify({ success, message: success ? "Message sent" : "Failed to send" }),
+        JSON.stringify({
+          success: result.success,
+          message: result.success ? "Message sent" : "Failed to send",
+          error: result.success ? undefined : result.error,
+        }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     } else {
@@ -197,7 +234,7 @@ serve(async (req) => {
 
         if (chatId && integration.api_key) {
           const sent = await sendTelegramMessage(integration.api_key, chatId, message);
-          if (sent) successCount++;
+          if (sent.success) successCount++;
         }
       }
 
