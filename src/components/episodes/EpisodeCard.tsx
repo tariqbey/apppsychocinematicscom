@@ -1,16 +1,21 @@
 import { useState } from "react";
-import { Zap, Calendar, CheckCircle, Pause, Play, Trash2, ChevronDown, ChevronUp, Film, Pencil } from "lucide-react";
+import { Zap, Calendar, CheckCircle, Pause, Play, Trash2, ChevronDown, ChevronUp, Film, Pencil, Upload, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { useEpisodes, Episode } from "@/hooks/useEpisodes";
 import { EpisodeMoviePreview } from "./EpisodeMoviePreview";
+import { EpisodeMovieUpload } from "./EpisodeMovieUpload";
 import { format } from "date-fns";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { toast } from "sonner";
 
 interface EpisodeCardProps {
   episode: Episode;
   variant?: "compact" | "full";
   onCreateMindMovie?: (episode: Episode) => void;
   onEditMindMovie?: (episode: Episode) => void;
+  onUploadMovie?: (episode: Episode) => void;
   onDelete?: (episodeId: string) => Promise<boolean>;
   onComplete?: (episodeId: string) => Promise<boolean>;
   onPause?: (episodeId: string) => Promise<boolean>;
@@ -23,16 +28,19 @@ export function EpisodeCard({
   variant = "compact", 
   onCreateMindMovie,
   onEditMindMovie,
+  onUploadMovie,
   onDelete,
   onComplete,
   onPause,
   onResume,
   onClick
 }: EpisodeCardProps) {
-  const { completeEpisode, pauseEpisode, resumeEpisode, deleteEpisode, getDaysRemaining, getProgress } = useEpisodes();
+  const { user } = useAuth();
+  const { completeEpisode, pauseEpisode, resumeEpisode, deleteEpisode, getDaysRemaining, getProgress, fetchEpisodes } = useEpisodes();
   const [expanded, setExpanded] = useState(false);
   const [loading, setLoading] = useState(false);
-
+  const [showUploadModal, setShowUploadModal] = useState(false);
+  const [sendingTelegram, setSendingTelegram] = useState(false);
   const daysRemaining = getDaysRemaining(episode.deadline);
   const progress = getProgress(episode);
   const isOverdue = daysRemaining < 0 && episode.status === "active";
@@ -88,6 +96,54 @@ export function EpisodeCard({
       }
       setLoading(false);
     }
+  };
+
+  const handleSendTelegram = async () => {
+    if (!user) return;
+    
+    setSendingTelegram(true);
+    try {
+      // Get user's telegram settings from user_integrations
+      const { data: integration } = await supabase
+        .from("user_integrations")
+        .select("api_key, settings")
+        .eq("user_id", user.id)
+        .eq("service_name", "telegram")
+        .single();
+      
+      if (!integration?.api_key) {
+        toast.error("Please configure your Telegram integration in Settings first");
+        return;
+      }
+      
+      const daysLeft = getDaysRemaining(episode.deadline);
+      const message = `🎬 *Episode Update: ${episode.title}*\n\n` +
+        `📋 *Objective:* ${episode.objective}\n\n` +
+        `⏰ *Time Remaining:* ${daysLeft > 0 ? `${daysLeft} days left` : `${Math.abs(daysLeft)} days overdue`}\n\n` +
+        `🔥 Stay focused and make it happen, Director!`;
+      
+      const { error } = await supabase.functions.invoke("telegram-proactive", {
+        body: {
+          userId: user.id,
+          messageType: "episode_reminder",
+          customMessage: message,
+        },
+      });
+      
+      if (error) throw error;
+      toast.success("Episode reminder sent to Telegram!");
+    } catch (error) {
+      console.error("Telegram send error:", error);
+      toast.error("Failed to send Telegram message");
+    } finally {
+      setSendingTelegram(false);
+    }
+  };
+
+  const handleUploadSuccess = async () => {
+    await fetchEpisodes();
+    setShowUploadModal(false);
+    toast.success("Movie uploaded successfully!");
   };
 
   return (
@@ -231,6 +287,19 @@ export function EpisodeCard({
             </Button>
           )}
           
+          {/* Upload Movie Button */}
+          {!episode.mind_movie_script_id && episode.status !== "completed" && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="border-amber-500/30 text-amber-400 hover:bg-amber-500/10"
+              onClick={() => setShowUploadModal(true)}
+            >
+              <Upload className="w-4 h-4 mr-1" />
+              Upload Movie
+            </Button>
+          )}
+          
           {/* Edit Mind Movie Button for Episodes with existing Movies */}
           {onEditMindMovie && episode.mind_movie_script_id && episode.status !== "completed" && (
             <Button
@@ -241,6 +310,20 @@ export function EpisodeCard({
             >
               <Pencil className="w-4 h-4 mr-1" />
               Edit Movie
+            </Button>
+          )}
+
+          {/* Send Telegram Reminder */}
+          {episode.status === "active" && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/10"
+              onClick={handleSendTelegram}
+              disabled={sendingTelegram}
+            >
+              <Send className="w-4 h-4 mr-1" />
+              {sendingTelegram ? "Sending..." : "Telegram"}
             </Button>
           )}
           
@@ -280,6 +363,15 @@ export function EpisodeCard({
           </Button>
         </div>
       )}
+
+      {/* Upload Movie Modal */}
+      <EpisodeMovieUpload
+        episodeId={episode.id}
+        episodeTitle={episode.title}
+        isOpen={showUploadModal}
+        onClose={() => setShowUploadModal(false)}
+        onSuccess={handleUploadSuccess}
+      />
     </div>
   );
 }

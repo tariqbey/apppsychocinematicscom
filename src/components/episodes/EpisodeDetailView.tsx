@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { 
   ArrowLeft, Zap, Calendar, Target, Film, Upload, Play, 
-  CheckCircle, Pause, Trash2, AlertCircle, Sparkles
+  CheckCircle, Pause, Trash2, AlertCircle, Sparkles, Send
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -13,6 +13,8 @@ import { EpisodeMoviePreview } from "./EpisodeMoviePreview";
 import { EpisodeTaskSuggestions } from "./EpisodeTaskSuggestions";
 import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { toast } from "sonner";
 
 interface EpisodeDetailViewProps {
   episode: Episode;
@@ -33,10 +35,12 @@ export function EpisodeDetailView({
   onDelete,
   onCreateMindMovie,
 }: EpisodeDetailViewProps) {
+  const { user } = useAuth();
   const navigate = useNavigate();
   const { getDaysRemaining, getProgress, fetchEpisodes } = useEpisodes();
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [movieUrl, setMovieUrl] = useState<string | null>(null);
+  const [sendingTelegram, setSendingTelegram] = useState(false);
 
   const daysRemaining = getDaysRemaining(episode.deadline);
   const progress = getProgress(episode);
@@ -75,6 +79,48 @@ export function EpisodeDetailView({
 
   const handleViewActions = () => {
     navigate("/actions");
+  };
+
+  const handleSendTelegram = async () => {
+    if (!user) return;
+    
+    setSendingTelegram(true);
+    try {
+      // Check if telegram is configured
+      const { data: integration } = await supabase
+        .from("user_integrations")
+        .select("api_key")
+        .eq("user_id", user.id)
+        .eq("service_name", "telegram")
+        .single();
+      
+      if (!integration?.api_key) {
+        toast.error("Please configure your Telegram integration in Settings first");
+        return;
+      }
+      
+      const daysLeft = getDaysRemaining(episode.deadline);
+      const message = `🎬 *Episode Update: ${episode.title}*\n\n` +
+        `📋 *Objective:* ${episode.objective}\n\n` +
+        `⏰ *Time Remaining:* ${daysLeft > 0 ? `${daysLeft} days left` : `${Math.abs(daysLeft)} days overdue`}\n\n` +
+        `🔥 Stay focused and make it happen, Director!`;
+      
+      const { error } = await supabase.functions.invoke("telegram-proactive", {
+        body: {
+          userId: user.id,
+          messageType: "episode_reminder",
+          customMessage: message,
+        },
+      });
+      
+      if (error) throw error;
+      toast.success("Episode reminder sent to Telegram!");
+    } catch (error) {
+      console.error("Telegram send error:", error);
+      toast.error("Failed to send Telegram message");
+    } finally {
+      setSendingTelegram(false);
+    }
   };
 
   return (
@@ -269,6 +315,17 @@ export function EpisodeDetailView({
                   Pause
                 </>
               )}
+            </Button>
+
+            {/* Telegram Reminder Button */}
+            <Button
+              variant="outline"
+              onClick={handleSendTelegram}
+              disabled={sendingTelegram}
+              className="border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/10"
+            >
+              <Send className="w-4 h-4 mr-2" />
+              {sendingTelegram ? "Sending..." : "Send to Telegram"}
             </Button>
             
             <Button
