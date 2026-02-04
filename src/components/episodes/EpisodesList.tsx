@@ -214,19 +214,57 @@ export function EpisodesList() {
               )}
             </div>
           ) : (
-            <div className="grid gap-4">
-              {filteredEpisodes.map((episode) => (
-                <EpisodeCard 
-                  key={episode.id} 
-                  episode={episode} 
-                  onCreateMindMovie={() => handleCreateMindMovie(episode)}
-                  onDelete={deleteEpisode}
-                  onComplete={completeEpisode}
-                  onPause={pauseEpisode}
-                  onResume={resumeEpisode}
-                  onClick={() => handleEpisodeClick(episode)}
-                />
-              ))}
+            <div className="space-y-6">
+              {/* Active Episodes Section */}
+              {filteredEpisodes.filter(ep => ep.status === "active").length > 0 && (
+                <div className="space-y-3">
+                  <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-amber-500"></span>
+                    Active Episodes
+                  </h3>
+                  <div className="grid gap-4">
+                    {filteredEpisodes
+                      .filter(ep => ep.status === "active")
+                      .map((episode) => (
+                        <EpisodeCard 
+                          key={episode.id} 
+                          episode={episode} 
+                          onCreateMindMovie={() => handleCreateMindMovie(episode)}
+                          onDelete={deleteEpisode}
+                          onComplete={completeEpisode}
+                          onPause={pauseEpisode}
+                          onResume={resumeEpisode}
+                          onClick={() => handleEpisodeClick(episode)}
+                        />
+                      ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Other Episodes Section */}
+              {filteredEpisodes.filter(ep => ep.status !== "active").length > 0 && (
+                <div className="space-y-3">
+                  <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
+                    Other Episodes ({filteredEpisodes.filter(ep => ep.status !== "active").length})
+                  </h3>
+                  <div className="grid gap-4">
+                    {filteredEpisodes
+                      .filter(ep => ep.status !== "active")
+                      .map((episode) => (
+                        <EpisodeCard 
+                          key={episode.id} 
+                          episode={episode} 
+                          onCreateMindMovie={() => handleCreateMindMovie(episode)}
+                          onDelete={deleteEpisode}
+                          onComplete={completeEpisode}
+                          onPause={pauseEpisode}
+                          onResume={resumeEpisode}
+                          onClick={() => handleEpisodeClick(episode)}
+                        />
+                      ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </>
