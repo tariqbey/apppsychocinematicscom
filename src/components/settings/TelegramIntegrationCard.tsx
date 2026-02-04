@@ -61,8 +61,22 @@ export function TelegramIntegrationCard({ isConnected, onSave, onDelete }: Teleg
       return;
     }
 
+    const trimmedChatId = chatId.trim();
+
+    // Telegram DM chat IDs are numeric (often 8-11 digits, can be negative for groups)
+    // Usernames like @something are NOT valid for DMs (and @...bot is a bot username, not a chat id)
+    if (trimmedChatId.startsWith("@")) {
+      toast.error("Chat ID must be a numeric ID (not an @username). Get it from @userinfobot.");
+      return;
+    }
+
+    if (!/^-?\d+$/.test(trimmedChatId)) {
+      toast.error("Chat ID must be numbers only (example: 123456789 or -1001234567890)");
+      return;
+    }
+
     setSaving(true);
-    const success = await onSave(botToken.trim(), { chat_id: chatId.trim() });
+    const success = await onSave(botToken.trim(), { chat_id: trimmedChatId });
     if (success) {
       setBotToken("");
       setChatId("");
@@ -294,7 +308,7 @@ export function TelegramIntegrationCard({ isConnected, onSave, onDelete }: Teleg
               <Label>Chat ID</Label>
               <Input
                 type="text"
-                placeholder="Your Telegram chat ID..."
+                placeholder="123456789 (numbers only)"
                 value={chatId}
                 onChange={(e) => setChatId(e.target.value)}
               />
@@ -321,7 +335,7 @@ export function TelegramIntegrationCard({ isConnected, onSave, onDelete }: Teleg
                 <li>Send /newbot and follow the prompts</li>
                 <li>Copy the bot token provided</li>
                 <li>Start a chat with your bot</li>
-                <li>Get your chat ID from @userinfobot</li>
+                <li>Get your numeric chat ID from @userinfobot</li>
               </ol>
               <a
                 href="https://core.telegram.org/bots#creating-a-new-bot"
