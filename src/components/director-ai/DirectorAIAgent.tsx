@@ -102,7 +102,13 @@ const generateProactiveOpening = (context: ReturnType<typeof useCoachingContext>
   return `${greeting}${name}! Day ${dayNumber} of your production. You're on a ${currentStreak}-day streak. Your Three Things are locked in. What's the first take we're shooting today?`;
 };
 
-export function DirectorAIAgent({ isOpen, onClose, chiefAim }: DirectorAIAgentProps) {
+export function DirectorAIAgent(props: DirectorAIAgentProps) {
+  // Important: keep hooks out of the “closed” path to avoid mobile perf issues + hook-order crashes
+  if (!props.isOpen) return null;
+  return <DirectorAIAgentInner {...props} />;
+}
+
+function DirectorAIAgentInner({ isOpen, onClose, chiefAim }: DirectorAIAgentProps) {
   const [messages, setMessages] = useState<TranscriptMessage[]>([]);
   const [currentResponse, setCurrentResponse] = useState("");
   const [inputText, setInputText] = useState("");
@@ -416,75 +422,51 @@ export function DirectorAIAgent({ isOpen, onClose, chiefAim }: DirectorAIAgentPr
   };
 
   const stopSpeaking = useCallback(() => {
-    console.log("[DirectorAI] stopSpeaking called - FORCE KILLING ALL AUDIO");
-    
+    console.log("[DirectorAI] stopSpeaking called");
+
     // Mark as stopped FIRST to prevent any pending callbacks from resuming
     stopRequestedRef.current = true;
-    
-    // Increment TTS request ID to invalidate any pending TTS
+
+    // Invalidate any pending TTS work
     ttsRequestIdRef.current += 1;
-    
+
     // Abort TTS fetch request immediately
     if (ttsAbortControllerRef.current) {
       ttsAbortControllerRef.current.abort();
       ttsAbortControllerRef.current = null;
     }
-    
-    // AGGRESSIVE: Find and kill ALL audio elements in the document
-    // This catches any orphaned Audio instances that lost their reference
-    try {
-      document.querySelectorAll("audio").forEach((audio) => {
-        audio.pause();
-        audio.currentTime = 0;
-        audio.src = "";
-        audio.load();
-      });
-    } catch (e) {
-      console.warn("[DirectorAI] Error stopping document audio elements:", e);
-    }
-    
-    // Stop our tracked audio ref
-    if (audioRef.current) {
-      const audio = audioRef.current;
-      // Remove callbacks first to prevent any firing
-      audio.onended = null;
-      audio.onerror = null;
-      audio.onplay = null;
-      audio.onpause = null;
-      audio.onloadeddata = null;
-      audio.oncanplay = null;
-      // Stop playback aggressively
-      audio.pause();
-      audio.currentTime = 0;
-      audio.src = "";
-      audio.load(); // Force browser to release the audio
-      audioRef.current = null;
-    }
-    
-    // Also stop the hidden audio element if it exists
-    const hiddenAudio = document.querySelector("audio.hidden") as HTMLAudioElement;
-    if (hiddenAudio) {
-      hiddenAudio.pause();
-      hiddenAudio.currentTime = 0;
-      hiddenAudio.src = "";
-    }
-    
-    // Revoke audio URL to free memory
-    if (audioUrlRef.current) {
-      URL.revokeObjectURL(audioUrlRef.current);
-      audioUrlRef.current = null;
-    }
-    
+
     // Clear level animation interval
     if (audioLevelIntervalRef.current) {
       clearInterval(audioLevelIntervalRef.current);
       audioLevelIntervalRef.current = null;
     }
-    
+
+    // Stop our tracked audio ref (we purposely do NOT touch other page audio)
+    if (audioRef.current) {
+      const audio = audioRef.current;
+      audio.onended = null;
+      audio.onerror = null;
+
+      try {
+        audio.pause();
+        audio.currentTime = 0;
+        audio.src = "";
+      } catch {
+        // ignore
+      }
+
+      audioRef.current = null;
+    }
+
+    // Revoke audio URL to free memory
+    if (audioUrlRef.current) {
+      URL.revokeObjectURL(audioUrlRef.current);
+      audioUrlRef.current = null;
+    }
+
     setOrbState("idle");
     setAudioLevel(0);
-    
-    console.log("[DirectorAI] All audio forcefully stopped");
   }, []);
 
   const stopConversation = useCallback(() => {
@@ -728,7 +710,7 @@ export function DirectorAIAgent({ isOpen, onClose, chiefAim }: DirectorAIAgentPr
     streamChat("KUT! I need to reset. Walk me through the KUT technique right now - help me Recognize what's happening, Kut the scene, Reset my state, and Resume as my Director Character.");
   };
 
-  if (!isOpen) return null;
+  // isOpen is guaranteed by the outer DirectorAIAgent wrapper
 
   // Show loading state while initializing to prevent freeze
   if (!isReady) {
@@ -803,7 +785,7 @@ export function DirectorAIAgent({ isOpen, onClose, chiefAim }: DirectorAIAgentPr
         </div>
 
         {/* ROW 2: Scrollable content area */}
-        <div className="flex-1 flex flex-col items-center overflow-y-auto overflow-x-hidden overscroll-contain px-4 py-4 sm:py-6">
+        <div className="flex-1 min-h-0 flex flex-col items-center overflow-hidden px-4 py-4 sm:py-6">
           {/* Title */}
           <div className="text-center mb-4 sm:mb-6 flex-shrink-0">
             <h1 className="font-display text-xl sm:text-3xl md:text-4xl text-gold tracking-wider mb-1">
@@ -947,8 +929,6 @@ export function DirectorAIAgent({ isOpen, onClose, chiefAim }: DirectorAIAgentPr
         </div>
       </div>
 
-      {/* Hidden audio element */}
-      <audio ref={audioRef} className="hidden" />
     </div>
   );
 }
