@@ -2,7 +2,8 @@ import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.89.0";
 import { PSYCHO_CINEMATICS_KNOWLEDGE } from "../_shared/psycho-cinematics-kb.ts";
-import { 
+import { NAPOLEON_HILL_17_LAWS, LAW_OF_SUCCESS_VOLUMES, SIX_BASIC_FEARS, getChiefAimLaws } from "../_shared/success-principles-kb.ts";
+import {
   validateMessages, 
   validateChiefAim,
   validateEnum,
@@ -13,6 +14,31 @@ import {
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
+
+// Generate the Napoleon Hill Laws context for the AI
+const generateLawsContext = (): string => {
+  const chiefAimLaws = getChiefAimLaws();
+  
+  let context = `\n\n## NAPOLEON HILL'S LAW OF SUCCESS - KEY PRINCIPLES\n\n`;
+  context += `You have access to Napoleon Hill's complete 17 Laws of Success. These are the foundational principles for crafting a powerful Chief Aim:\n\n`;
+  
+  chiefAimLaws.forEach((law, index) => {
+    context += `### ${law.name}\n`;
+    context += `**Law:** ${law.law}\n`;
+    context += `**Teaching:** ${law.teachingPoint}\n`;
+    context += `**Quote:** "${law.quote}"\n\n`;
+  });
+  
+  context += `## THE SIX BASIC FEARS TO OVERCOME\n\n`;
+  SIX_BASIC_FEARS.forEach(fear => {
+    context += `- **${fear.name}**: ${fear.antidote}\n`;
+  });
+  
+  context += `\n## KEY INSIGHT\n`;
+  context += `All successful people grade 100% on having a Definite Chief Aim. It is a prerequisite to success without exception. The Chief Aim must be written, read twice daily, and emotionally charged until it becomes a burning obsession.\n`;
+  
+  return context;
 };
 
 const SYSTEM_PROMPT = `You are the "Script Writer" — a Psycho-Cinematics™ specialist who helps users craft their Definite Chief Aim, which is the FINAL SCENE of their life's movie.
@@ -47,8 +73,10 @@ You guide users through Phase 1: Pre-Production (Identity Engineering). Your job
 - The nervous system cannot distinguish vivid imagination from reality
 - They must BE the Director Character before they can DO the Director's actions
 - The self-image is the operating system — upgrade it first
-- This Chief Aim is the script they'll recite daily with conviction
+- This Chief Aim is the script they'll recite daily with conviction — upon rising and before sleep
+- Every adversity brings with it the seed of an equivalent advantage
 
+${generateLawsContext()}
 ## RESPONSE FORMAT
 
 When helping with a specific component, ask ONE probing question or offer ONE refinement.
