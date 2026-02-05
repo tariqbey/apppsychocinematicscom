@@ -39,6 +39,8 @@ import { FeaturedArtistBanner } from "@/components/dashboard/FeaturedArtistBanne
 import { TestimonialSubmissionDialog } from "@/components/testimonials/TestimonialSubmissionDialog";
 import { EnableNotificationsBanner } from "@/components/notifications/EnableNotificationsBanner";
 import { DirectorBanner } from "@/components/dashboard/DirectorBanner";
+ import { MovieStudioModule } from "@/components/dashboard/MovieStudioModule";
+ import { ChiefAimCountdown } from "@/components/dashboard/ChiefAimCountdown";
 
 // Custom module icons
 import iconChiefAim from "@/assets/icons/icon-chief-aim.png";
@@ -392,6 +394,15 @@ const Index = () => {
             }}
           />
 
+           {/* ========== CHIEF AIM COUNTDOWN CLOCK ========== */}
+           {chiefAim.byWhen && (
+             <ChiefAimCountdown 
+               byWhen={chiefAim.byWhen} 
+               whatSummary={chiefAim.what ? chiefAim.what.slice(0, 100) : undefined}
+               className="animate-fade-in"
+             />
+           )}
+ 
           {/* ========== 1. DEFINITE CHIEF AIM CREATOR MODULE ========== */}
           <button
             onClick={() => setShowChiefAimWizard(true)}
@@ -481,77 +492,17 @@ const Index = () => {
             animationIndex={1}
           />
 
-          {/* ========== 3. SOUNDTRACK STUDIO ========== */}
-          <ModuleCard
-            onClick={() => navigate("/soundtrack")}
-            iconImage={iconSoundtrack}
-            icon={null}
-            title="Soundtrack Studio"
-            description="Create custom AI soundtracks • 50+ music genres • Save to library"
-            actionText="Create Music"
-            colorScheme="pink"
-            tooltip="Create AI-generated music and lyrics for your Mind Movies. Choose from 50+ genres and styles to match your vision."
-            animationIndex={2}
+           {/* ========== 3. PSYCHO CINEMATIC MOVIE STUDIO (Consolidated) ========== */}
+           <MovieStudioModule
+             onOpenEditBay={() => {
+               setEditBayInitialPrompt(undefined);
+               setEditBaySceneContext(undefined);
+               setShowEditBay(true);
+             }}
+             onOpenMovieVault={() => setShowMovieVault(true)}
+             onOpenStoryboard={() => setShowStoryboardWizard(true)}
+             className="animate-fade-in"
           />
-
-          {/* ========== 4. STORYBOARD ========== */}
-          <ModuleCard
-            onClick={() => setShowStoryboardWizard(true)}
-            icon={<Film className="w-7 h-7 text-amber-500" />}
-            title="Storyboard"
-            description="AI-powered scene generation • Create your movie script • Generate visuals & videos"
-            actionText="Create Storyboard"
-            colorScheme="amber"
-            tooltip="Use AI to create your Mind Movie storyboard. Answer questions about your vision, generate scenes, create images, and animate them into 8-second video clips."
-            featured={chiefAimComplete}
-            animationIndex={3}
-          />
-
-          {/* ========== 5. EDIT BAY (AI STUDIO) ========== */}
-          <ModuleCard
-            onClick={() => {
-              setEditBayInitialPrompt(undefined);
-              setEditBaySceneContext(undefined);
-              setShowEditBay(true);
-            }}
-            iconImage={iconEditBay}
-            icon={null}
-            title="The Edit Bay"
-            description="AI Media Generation Studio — Create images, animate them into videos, and build your Mind Movie."
-            actionText="Enter Studio"
-            colorScheme="gold"
-            tooltip="Generate AI images of your future self and goals, then animate them into videos. Use reference photos of yourself to see YOU living your Chief Aim. Great for creating Mind Movie visuals."
-            animationIndex={4}
-          />
-
-          {/* ========== 6. MIND MOVIE VAULT ========== */}
-          <div className="flex flex-col sm:flex-row gap-4">
-            <ModuleCard
-              onClick={() => setShowMovieVault(true)}
-              iconImage={iconMindMovie}
-              icon={null}
-              title="Mind Movie Vault"
-              description="Manage multiple Mind Movies — One for each goal or scenario."
-              actionText="Open Vault"
-              colorScheme="amber"
-              tooltip="Create and manage multiple Mind Movies for different goals and scenarios. Each movie has its own Chief Aim snapshot, storyboard, and soundtrack."
-              className="flex-1"
-              animationIndex={5}
-            />
-
-            {/* Quick Create New Movie Button */}
-            {chiefAimComplete && (
-              <Button
-                variant="gold"
-                onClick={handleCreateNewMovie}
-                className="sm:w-auto h-auto py-4 px-6 animate-fade-in"
-                style={{ animationDelay: "0.6s" }}
-              >
-                <Clapperboard className="w-5 h-5 mr-2" />
-                Start New Movie
-              </Button>
-            )}
-          </div>
 
           {/* ========== 7. EPISODE FEATURES ========== */}
           {/* Active Episode Banner */}
@@ -563,9 +514,7 @@ const Index = () => {
           )}
 
           {/* Episode Character Dashboard */}
-          {activeEpisode?.character_transformation && (
-            <EpisodeCharacterDashboard episode={activeEpisode} />
-          )}
+           {/* Moved to Episodes page */}
 
           {/* Resume Production Button */}
           {activeEpisode?.mind_movie_script_id && activeEpisode.status !== "completed" && (
@@ -634,16 +583,16 @@ const Index = () => {
             animationIndex={8}
           />
 
-          {/* ========== 10. CHALLENGES & ADVERSITY (BLUE) ========== */}
-          <ModuleCard
-            onClick={() => navigate("/challenges")}
-            icon={<Target className="w-7 h-7 text-blue-500" />}
-            title="Challenges & Adversity"
-            description="Character training • XP rewards • Transformation tracking"
-            actionText="Train Now"
-            colorScheme="cyan"
-            tooltip="Train your character through scenario-based emotional adversity. Earn XP by responding transformatively to challenges."
-            animationIndex={9}
+           {/* ========== 10. EPISODES MODULE (Consolidated Challenges) ========== */}
+           <ModuleCard
+             onClick={() => navigate("/episodes")}
+             icon={<Zap className="w-7 h-7 text-amber-500" />}
+             title="Episodes & Challenges"
+             description="Tactical sprints • Adversity training • XP rewards"
+             actionText="View Episodes"
+             colorScheme="amber"
+             tooltip="Create focused episodes (short-term sprints) and train your character through adversity challenges."
+             animationIndex={9}
           />
 
           {/* ========== 11. KUT / RESET ========== */}
@@ -672,8 +621,8 @@ const Index = () => {
             description="Your personal music library • Create playlists • Stream your tracks anywhere"
             actionText="Open Score"
             colorScheme="gold"
-            tooltip="Your personal music player. Organize tracks into playlists, drag to reorder, and stream your transformation soundtrack."
-            animationIndex={11}
+             tooltip="Your personal music player. Organize tracks into playlists and stream your transformation soundtrack."
+             animationIndex={10}
           />
 
           {/* ========== 14. SHARE YOUR STORY ========== */}
@@ -684,7 +633,7 @@ const Index = () => {
             description="Record a testimonial • Inspire other directors • Get featured on the landing page"
             actionText="Share"
             colorScheme="emerald"
-            animationIndex={12}
+             animationIndex={11}
           />
         </div>
       </main>

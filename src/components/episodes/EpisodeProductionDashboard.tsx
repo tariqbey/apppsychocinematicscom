@@ -2,8 +2,8 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { 
   X, Zap, CheckCircle, Circle, Film, Clapperboard, 
-  Palette, Play, Download, Calendar, Target, User,
-  ChevronRight, Sparkles, Image, Video, Loader2
+   Palette, Play, Download, Calendar, Target, User, Upload,
+   ChevronRight, Sparkles, Image, Video, Loader2, CloudUpload
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -11,6 +11,8 @@ import { Episode, useEpisodes } from "@/hooks/useEpisodes";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { EditBay } from "@/components/studio/EditBay";
+ import { EpisodeMovieUpload } from "./EpisodeMovieUpload";
+ import { toast } from "sonner";
 
 interface EpisodeProductionDashboardProps {
   episode: Episode;
@@ -51,6 +53,7 @@ export function EpisodeProductionDashboard({
   const [scriptData, setScriptData] = useState<ScriptData | null>(null);
   const [loadingScript, setLoadingScript] = useState(false);
   const [showEditBay, setShowEditBay] = useState(false);
+   const [showDirectUpload, setShowDirectUpload] = useState(false);
   
   const daysRemaining = getDaysRemaining(episode.deadline);
   const progress = getProgress(episode);
@@ -197,6 +200,23 @@ export function EpisodeProductionDashboard({
     return false;
   };
 
+   // Handle direct movie upload (bypass production workflow)
+   const handleDirectUploadSuccess = async (url: string) => {
+     setShowDirectUpload(false);
+     toast.success("Movie uploaded! Production complete.");
+     // Refresh the production dashboard
+     if (episode.mind_movie_script_id) {
+       const { data } = await supabase
+         .from("mind_movie_scripts")
+         .select("id, title, scenes, movie_url, soundtrack_url")
+         .eq("id", episode.mind_movie_script_id)
+         .single();
+       if (data) {
+         setScriptData(data as ScriptData);
+       }
+     }
+   };
+ 
   if (showEditBay) {
     return (
       <EditBay 
@@ -235,6 +255,25 @@ export function EpisodeProductionDashboard({
           </Button>
         </div>
 
+         {/* Quick Upload Bypass Option */}
+         <div className="p-4 border-b border-border bg-gradient-to-r from-green-500/5 to-emerald-600/5">
+           <button
+             onClick={() => setShowDirectUpload(true)}
+             className="w-full flex items-center gap-4 p-4 rounded-lg border-2 border-dashed border-green-500/30 hover:border-green-500/50 hover:bg-green-500/5 transition-all group"
+           >
+             <div className="w-12 h-12 rounded-full bg-green-500/20 flex items-center justify-center group-hover:scale-110 transition-transform">
+               <CloudUpload className="w-6 h-6 text-green-400" />
+             </div>
+             <div className="flex-1 text-left">
+               <p className="font-medium text-green-400">Skip Production — Upload My Movie</p>
+               <p className="text-sm text-muted-foreground">
+                 Already have a movie? Upload it directly and bypass the production workflow.
+               </p>
+             </div>
+             <ChevronRight className="w-5 h-5 text-green-400 group-hover:translate-x-1 transition-transform" />
+           </button>
+         </div>
+ 
         {/* Production Progress */}
         <div className="p-4 border-b border-border bg-muted/30">
           <div className="flex items-center justify-between mb-2">
@@ -338,6 +377,15 @@ export function EpisodeProductionDashboard({
           </div>
         </div>
       </div>
+       
+       {/* Direct Upload Modal */}
+       <EpisodeMovieUpload
+         episodeId={episode.id}
+         episodeTitle={episode.title}
+         isOpen={showDirectUpload}
+         onClose={() => setShowDirectUpload(false)}
+         onSuccess={handleDirectUploadSuccess}
+       />
     </div>
   );
 }
