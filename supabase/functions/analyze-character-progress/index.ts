@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { NAPOLEON_HILL_17_LAWS } from '../_shared/success-principles-kb.ts';
+import { NAPOLEON_HILL_17_LAWS, SIX_BASIC_FEARS } from '../_shared/success-principles-kb.ts';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -210,40 +210,40 @@ serve(async (req) => {
     const currentArchetype = METU_NETER_ARCHETYPES[resolvedArchetypeId];
 
     // Identify relevant Napoleon Hill Laws based on user's current situation
-    const identifiedLaws: Array<{ lawNumber: number; name: string; application: string; quote: string }> = [];
+    const identifiedLaws: Array<{ lawNumber: number; name: string; application: string; quote: string; teachingPoint?: string; practicalExercise?: string }> = [];
     
     // Analyze task completion for relevant law
     if (taskCompletionRate < 50) {
-      const law = NAPOLEON_HILL_17_LAWS[7]; // Self-Control
-      identifiedLaws.push({ lawNumber: 7, name: law.name, application: law.application, quote: law.quote });
+      const law = NAPOLEON_HILL_17_LAWS[8]; // Self-Control (Law 8)
+      identifiedLaws.push({ lawNumber: 8, name: law.name, application: law.application, quote: law.quote, teachingPoint: law.teachingPoint, practicalExercise: law.practicalExercise });
     }
     
     // Check for confidence issues based on challenges
     if (cutChallenges > completedChallenges) {
-      const law = NAPOLEON_HILL_17_LAWS[2]; // Self-Confidence
-      identifiedLaws.push({ lawNumber: 2, name: law.name, application: law.application, quote: law.quote });
+      const law = NAPOLEON_HILL_17_LAWS[3]; // Self-Confidence (Law 3)
+      identifiedLaws.push({ lawNumber: 3, name: law.name, application: law.application, quote: law.quote, teachingPoint: law.teachingPoint, practicalExercise: law.practicalExercise });
     }
     
     // Check for goal clarity
     if (!profile?.chief_aim_what || profile?.chief_aim_what === 'Not set') {
-      const law = NAPOLEON_HILL_17_LAWS[1]; // Definite Chief Aim
-      identifiedLaws.push({ lawNumber: 1, name: law.name, application: law.application, quote: law.quote });
+      const law = NAPOLEON_HILL_17_LAWS[2]; // A Definite Chief Aim (Law 2)
+      identifiedLaws.push({ lawNumber: 2, name: law.name, application: law.application, quote: law.quote, teachingPoint: law.teachingPoint, practicalExercise: law.practicalExercise });
     }
     
     // Check for initiative based on activity
     if (totalTasks < 7) {
-      const law = NAPOLEON_HILL_17_LAWS[4]; // Initiative and Leadership
-      identifiedLaws.push({ lawNumber: 4, name: law.name, application: law.application, quote: law.quote });
+      const law = NAPOLEON_HILL_17_LAWS[5]; // Initiative and Leadership (Law 5)
+      identifiedLaws.push({ lawNumber: 5, name: law.name, application: law.application, quote: law.quote, teachingPoint: law.teachingPoint, practicalExercise: law.practicalExercise });
     }
     
     // Add imagination law for visualization
-    const imaginationLaw = NAPOLEON_HILL_17_LAWS[5];
-    identifiedLaws.push({ lawNumber: 5, name: imaginationLaw.name, application: imaginationLaw.application, quote: imaginationLaw.quote });
+    const imaginationLaw = NAPOLEON_HILL_17_LAWS[6]; // Imagination (Law 6)
+    identifiedLaws.push({ lawNumber: 6, name: imaginationLaw.name, application: imaginationLaw.application, quote: imaginationLaw.quote, teachingPoint: imaginationLaw.teachingPoint, practicalExercise: imaginationLaw.practicalExercise });
     
     // Add profiting from failure if they have cuts
     if (cutChallenges > 0) {
-      const law = NAPOLEON_HILL_17_LAWS[13]; // Profiting from Failure
-      identifiedLaws.push({ lawNumber: 13, name: law.name, application: law.application, quote: law.quote });
+      const law = NAPOLEON_HILL_17_LAWS[14]; // Profiting by Failure (Law 14)
+      identifiedLaws.push({ lawNumber: 14, name: law.name, application: law.application, quote: law.quote, teachingPoint: law.teachingPoint, practicalExercise: law.practicalExercise });
     }
 
     // Build context for AI
@@ -272,8 +272,11 @@ serve(async (req) => {
     };
 
     // Build Napoleon Hill guidance section
-    const napoleonHillGuidance = identifiedLaws.slice(0, 3).map(law => 
-      `LAW #${law.lawNumber} (${law.name}): ${law.application}\n   Quote: "${law.quote}"`
+    const napoleonHillGuidance = identifiedLaws.slice(0, 4).map(law => 
+      `LAW #${law.lawNumber} (${law.name}): ${law.application}
+   Teaching: ${law.teachingPoint || 'Apply this law daily.'}
+   Exercise: ${law.practicalExercise || 'Implement this in your next action.'}
+   Quote: "${law.quote}"`
     ).join('\n\n');
 
     // Build Metu Neter archetype context
@@ -311,6 +314,15 @@ ${context.recentReflections.join('\n---\n') || 'No recent entries'}
 
 RECENT CHALLENGES:
 ${JSON.stringify(context.recentChallenges, null, 2)}
+
+THE SIX BASIC FEARS (from Napoleon Hill's Self-Confidence):
+${SIX_BASIC_FEARS.map(f => `- ${f.name}: ${f.antidote}`).join('\n')}
+
+NAPOLEON HILL'S 17 LAWS ORGANIZED BY VOLUME:
+- Volume I (Self-Mastery): Laws 1-4 (Master Mind, Definite Chief Aim, Self-Confidence, Habit of Saving)
+- Volume II (Self-Creation): Laws 5-8 (Initiative & Leadership, Imagination, Enthusiasm, Self-Control)
+- Volume III (Personal Power): Laws 9-12 (Doing More Than Paid For, Pleasing Personality, Accurate Thinking, Concentration)
+- Volume IV (Harmonious Conduct): Laws 13-17 (Cooperation, Profiting by Failure, Tolerance, Golden Rule, Cosmic Habitforce)
 
 NAPOLEON HILL'S LAWS RELEVANT TO THIS USER:
 ${napoleonHillGuidance || 'Use your judgment to identify relevant laws.'}
