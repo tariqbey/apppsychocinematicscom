@@ -53,8 +53,6 @@ export const MindMoviePlayer = forwardRef<MindMoviePlayerHandle, MindMoviePlayer
   ) => {
     const videoRef = useRef<HTMLVideoElement>(null);
     const completedRef = useRef(false);
-    const mountedRef = useRef(true);
-    const [isReady, setIsReady] = useState(false);
 
     // Expose minimal API
     useImperativeHandle(ref, () => ({
@@ -95,14 +93,17 @@ export const MindMoviePlayer = forwardRef<MindMoviePlayerHandle, MindMoviePlayer
       return Boolean(mql?.matches || legacyIOSStandalone);
     }, []);
 
-    // Proxy storage URLs on iOS for Range header compatibility
+    // Proxy storage URLs on iOS Safari browser (NOT in standalone/PWA mode)
+    // In standalone mode, bypass proxy entirely to avoid WebKit crashes
     const videoSrc = useMemo(() => {
       if (!src) return "";
-      if (!isIOS) return src;
-      // In iOS installed-app / standalone mode, prefer direct storage URL.
-      // Proxying can trigger WebKit process crashes on play.
+      // Always use direct URL in standalone mode - proxy causes crashes
       if (isStandalone) return src;
+      // Non-iOS devices don't need proxy
+      if (!isIOS) return src;
+      // Already proxied
       if (src.includes("/functions/v1/video-proxy")) return src;
+      // Only proxy Supabase storage URLs
       if (!src.includes("/storage/v1/object/")) return src;
       
       const baseUrl = import.meta.env.VITE_SUPABASE_URL;
@@ -110,34 +111,20 @@ export const MindMoviePlayer = forwardRef<MindMoviePlayerHandle, MindMoviePlayer
       return `${baseUrl}/functions/v1/video-proxy?url=${encodeURIComponent(src)}`;
     }, [src, isIOS, isStandalone]);
 
-    // Track mount state to prevent cleanup during StrictMode re-renders
-    useEffect(() => {
-      mountedRef.current = true;
-      return () => {
-        mountedRef.current = false;
-      };
-    }, []);
-
-    // Cleanup on TRUE unmount only - use a delayed check to handle StrictMode
+    // Simple cleanup on unmount
     useEffect(() => {
       const video = videoRef.current;
       
       return () => {
-        // Delay the cleanup to check if we're actually unmounting
-        // React StrictMode will remount immediately, so we check after a tick
-        const videoToClean = video;
-        setTimeout(() => {
-          if (!mountedRef.current && videoToClean) {
-            try {
-              console.log('[MindMoviePlayer] True unmount - cleaning up video');
-              videoToClean.pause();
-              videoToClean.removeAttribute('src');
-              videoToClean.load();
-            } catch {
-              // Ignore
-            }
+        if (video) {
+          try {
+            video.pause();
+            video.removeAttribute('src');
+            video.load();
+          } catch {
+            // Ignore cleanup errors
           }
-        }, 100);
+        }
       };
     }, []);
 
@@ -161,7 +148,7 @@ export const MindMoviePlayer = forwardRef<MindMoviePlayerHandle, MindMoviePlayer
       };
 
       const handleCanPlay = () => {
-        setIsReady(true);
+        // Video ready to play
       };
 
       video.addEventListener("ended", handleEnded);
@@ -176,13 +163,12 @@ export const MindMoviePlayer = forwardRef<MindMoviePlayerHandle, MindMoviePlayer
     }, [videoSrc, onComplete, onError]);
 
     return (
-      <div className={cn("relative w-full h-full bg-background", className)}>
+      <div className={cn("relative w-full h-full bg-black", className)}>
         <video
           ref={videoRef}
           src={videoSrc}
-          className="theater-video w-full h-full object-contain bg-background"
+          className="w-full h-full object-contain"
           controls
-          // Force inline playback to avoid iOS PWA fullscreen/rotation crashes.
           playsInline
           preload="metadata"
         />
