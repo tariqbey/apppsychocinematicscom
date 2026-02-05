@@ -97,21 +97,22 @@ export function EpisodeProductionDashboard({
       completedSteps.push("script");
       currentStep = "visuals";
       
-      // Check if visuals are generated
-      const scenes = scriptData.scenes || [];
-      const hasImages = scenes.some(s => s.image_url);
-      const hasVideos = scenes.some(s => s.video_url);
-      
-      if (hasImages || hasVideos) {
-        completedSteps.push("visuals");
-        currentStep = "edit";
-      }
-      
-      // Check if movie is exported
+      // If movie URL exists (either uploaded or exported), mark ALL steps complete
       if (scriptData.movie_url) {
+        completedSteps.push("visuals");
         completedSteps.push("edit");
         completedSteps.push("export");
         currentStep = "export";
+      } else {
+        // Check if visuals are generated (only if no movie yet)
+        const scenes = scriptData.scenes || [];
+        const hasImages = scenes.some(s => s.image_url);
+        const hasVideos = scenes.some(s => s.video_url);
+        
+        if (hasImages || hasVideos) {
+          completedSteps.push("visuals");
+          currentStep = "edit";
+        }
       }
     }
     
