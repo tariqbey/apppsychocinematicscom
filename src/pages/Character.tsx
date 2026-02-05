@@ -4,7 +4,6 @@ import { CharacterCentral } from "@/components/character/CharacterCentral";
 import { CharacterScorecard } from "@/components/character/CharacterScorecard";
 import { CharacterWeeklySummary } from "@/components/character/CharacterWeeklySummary";
 import { CharacterTransformationCoach } from "@/components/character/CharacterTransformationCoach";
-import { AnnualSelfAnalysis } from "@/components/character/AnnualSelfAnalysis";
 import { CharacterEvolution } from "@/components/character/CharacterEvolution";
 import { CycleProgress } from "@/components/character/CycleProgress";
 import { CycleReviewWizard } from "@/components/character/CycleReviewWizard";
@@ -13,9 +12,9 @@ import { CharacterCreator } from "@/components/character/CharacterCreator";
 import { AICharacterAnalysis } from "@/components/character/AICharacterAnalysis";
 import { AnimatedCharacterCharts } from "@/components/character/AnimatedCharacterCharts";
 import { ArchetypesGuide } from "@/components/character/ArchetypesGuide";
-import { NapoleonHillSelfAnalysis } from "@/components/character/NapoleonHillSelfAnalysis";
 import { ArchetypeResult } from "@/components/character/ArchetypeResult";
 import { SelfAnalysisReminder } from "@/components/character/SelfAnalysisReminder";
+import { CharacterSurvey } from "@/components/character/CharacterSurvey";
 import { useAuth } from "@/hooks/useAuth";
 import { useCycleTracking } from "@/hooks/useCycleTracking";
 import { Loader2, ArrowLeft, User2, Target, TrendingUp, Brain, Calendar, GitBranch, RotateCcw, UserPlus, Sparkles, BarChart3, BookOpen, ClipboardList } from "lucide-react";
@@ -32,53 +31,19 @@ const Character = () => {
   const { refetch } = useCycleTracking();
   const { toast } = useToast();
   const [showCycleReview, setShowCycleReview] = useState(false);
-  const [showHillAnalysis, setShowHillAnalysis] = useState(false);
+  const [showSurvey, setShowSurvey] = useState(false);
   const [showResult, setShowResult] = useState(false);
   const [resultArchetype, setResultArchetype] = useState<Archetype | null>(null);
   const [resultScores, setResultScores] = useState<Record<string, number>>({});
 
-  const handleHillAnalysisComplete = async (
+  const handleSurveyComplete = async (
     archetype: Archetype,
     scores: Record<string, number>,
-    lawScores: Record<number, number>
+    responses: Record<string, string>
   ) => {
     if (!user) return;
 
-    // Convert law scores to responses format for storage
-    const responses: Record<string, string> = {};
-    Object.entries(lawScores).forEach(([lawNum, score]) => {
-      responses[`law_${lawNum}`] = `${score}%`;
-    });
-
-    // Calculate strengths and weaknesses from law scores
-    const lawNames: Record<number, string> = {
-      1: "The Master Mind",
-      2: "A Definite Chief Aim",
-      3: "Self-Confidence",
-      4: "The Habit of Saving",
-      5: "Initiative and Leadership",
-      6: "Imagination",
-      7: "Enthusiasm",
-      8: "Self-Control",
-      9: "Doing More Than Paid For",
-      10: "A Pleasing Personality",
-      11: "Accurate Thinking",
-      12: "Concentration",
-      13: "Cooperation",
-      14: "Profiting by Failure",
-      15: "Tolerance",
-      16: "Practicing the Golden Rule",
-      17: "The Universal Law"
-    };
-
-    const sortedLaws = Object.entries(lawScores)
-      .map(([num, score]) => ({ lawNum: parseInt(num), score, name: lawNames[parseInt(num)] }))
-      .sort((a, b) => b.score - a.score);
-
-    const strengths = sortedLaws.slice(0, 5).map(l => `${l.name} (${l.score}%)`);
-    const weaknesses = sortedLaws.slice(-5).reverse().map(l => `${l.name} (${l.score}%)`);
-
-    // Save comprehensive data to database
+    // Save to database
     const { error } = await supabase
       .from("character_profiles")
       .upsert(
@@ -88,10 +53,6 @@ const Character = () => {
           archetype_score: scores,
           survey_responses: responses,
           light_shadow_state: "light",
-          napoleon_hill_law_scores: lawScores,
-          napoleon_hill_analysis_date: new Date().toISOString(),
-          napoleon_hill_strengths: strengths,
-          napoleon_hill_weaknesses: weaknesses,
           updated_at: new Date().toISOString()
         },
         { onConflict: "user_id" }
@@ -116,7 +77,7 @@ const Character = () => {
       setShowResult(true);
     }
 
-    setShowHillAnalysis(false);
+    setShowSurvey(false);
   };
 
   if (authLoading) {
@@ -162,7 +123,7 @@ const Character = () => {
           </div>
 
           {/* 21-Day Self-Analysis Reminder */}
-          <SelfAnalysisReminder onStartAnalysis={() => setShowHillAnalysis(true)} />
+          <SelfAnalysisReminder onStartAnalysis={() => setShowSurvey(true)} />
 
           {/* Tabs Navigation */}
           <Tabs defaultValue="analytics" className="w-full">
@@ -225,18 +186,18 @@ const Character = () => {
                     <ClipboardList className="w-5 h-5 text-gold" />
                   </div>
                   <div>
-                    <h2 className="text-xl font-display text-gold">Napoleon Hill Self-Analysis</h2>
-                    <p className="text-sm text-muted-foreground">Rate yourself on the 17 Laws of Success</p>
+                    <h2 className="text-xl font-display text-gold">Character Self-Analysis</h2>
+                    <p className="text-sm text-muted-foreground">28-question Metu Neter assessment</p>
                   </div>
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  This comprehensive self-analysis is based on Napoleon Hill's 17 Laws of Success. 
-                  Rate yourself honestly on each law to discover your Director archetype and identify 
-                  areas for growth in your transformation journey.
+                  This comprehensive 28-question assessment reveals your Director archetype based on the 
+                  11 Spheres of the Metu Neter. Answer honestly—shadow responses reveal your growth edges 
+                  and help the AI coach you more effectively.
                 </p>
                 <Button 
                   variant="gold" 
-                  onClick={() => setShowHillAnalysis(true)} 
+                  onClick={() => setShowSurvey(true)} 
                   className="w-full gap-2"
                 >
                   <BookOpen className="h-4 w-4" />
@@ -318,11 +279,11 @@ const Character = () => {
         }}
       />
 
-      {/* Napoleon Hill Self-Analysis Modal */}
-      {showHillAnalysis && (
-        <NapoleonHillSelfAnalysis
-          onComplete={handleHillAnalysisComplete}
-          onClose={() => setShowHillAnalysis(false)}
+      {/* Character Survey Modal */}
+      {showSurvey && (
+        <CharacterSurvey
+          onComplete={handleSurveyComplete}
+          onClose={() => setShowSurvey(false)}
         />
       )}
 
@@ -334,7 +295,7 @@ const Character = () => {
           onClose={() => setShowResult(false)}
           onRetake={() => {
             setShowResult(false);
-            setShowHillAnalysis(true);
+            setShowSurvey(true);
           }}
         />
       )}

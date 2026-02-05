@@ -22,14 +22,14 @@ export function SelfAnalysisReminder({ onStartAnalysis }: SelfAnalysisReminderPr
     const checkAnalysisDate = async () => {
       const { data } = await supabase
         .from("character_profiles")
-        .select("napoleon_hill_analysis_date")
+        .select("updated_at")
         .eq("user_id", user.id)
         .order("created_at", { ascending: false })
         .limit(1)
         .single();
 
-      if (data?.napoleon_hill_analysis_date) {
-        const days = differenceInDays(new Date(), new Date(data.napoleon_hill_analysis_date));
+      if (data?.updated_at) {
+        const days = differenceInDays(new Date(), new Date(data.updated_at));
         setDaysSinceAnalysis(days);
         // Show reminder if 21+ days since last analysis
         if (days >= 21) {
@@ -57,13 +57,13 @@ export function SelfAnalysisReminder({ onStartAnalysis }: SelfAnalysisReminderPr
           <div className="flex-1 min-w-0">
             <h3 className="font-medium text-gold mb-1">
               {daysSinceAnalysis === null 
-                ? "Complete Your Self-Analysis"
+                ? "Complete Your Character Assessment"
                 : `Time for Your 21-Day Check-In`}
             </h3>
             <p className="text-sm text-muted-foreground mb-3">
               {daysSinceAnalysis === null 
-                ? "Take the Napoleon Hill Self-Analysis to discover your Director archetype and identify growth areas."
-                : `It's been ${daysSinceAnalysis} days since your last self-analysis. Track your transformation progress by retaking the test.`}
+                ? "Take the 28-question Metu Neter assessment to discover your Director archetype and identify growth areas."
+                : `It's been ${daysSinceAnalysis} days since your last assessment. Track your transformation progress by retaking it.`}
             </p>
             <div className="flex flex-wrap gap-2">
               <Button
@@ -76,7 +76,7 @@ export function SelfAnalysisReminder({ onStartAnalysis }: SelfAnalysisReminderPr
                 className="gap-2"
               >
                 <BookOpen className="w-4 h-4" />
-                {daysSinceAnalysis === null ? "Begin Self-Analysis" : "Retake Analysis"}
+                {daysSinceAnalysis === null ? "Begin Assessment" : "Retake Assessment"}
               </Button>
               <Button
                 variant="ghost"
