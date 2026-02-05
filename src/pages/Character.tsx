@@ -12,9 +12,10 @@ import { TransformationRoadmap } from "@/components/character/TransformationRoad
 import { CharacterCreator } from "@/components/character/CharacterCreator";
 import { AICharacterAnalysis } from "@/components/character/AICharacterAnalysis";
 import { AnimatedCharacterCharts } from "@/components/character/AnimatedCharacterCharts";
+import { ArchetypesGuide } from "@/components/character/ArchetypesGuide";
 import { useAuth } from "@/hooks/useAuth";
 import { useCycleTracking } from "@/hooks/useCycleTracking";
-import { Loader2, ArrowLeft, User2, Target, TrendingUp, Brain, Calendar, GitBranch, RotateCcw, UserPlus, Sparkles, BarChart3 } from "lucide-react";
+import { Loader2, ArrowLeft, User2, Target, TrendingUp, Brain, Calendar, GitBranch, RotateCcw, UserPlus, Sparkles, BarChart3, BookOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useNavigate } from "react-router-dom";
@@ -69,10 +70,14 @@ const Character = () => {
 
           {/* Tabs Navigation */}
           <Tabs defaultValue="analytics" className="w-full">
-            <TabsList className="grid w-full grid-cols-4 sm:grid-cols-8 mb-6 h-auto">
+            <TabsList className="grid w-full grid-cols-5 sm:grid-cols-9 mb-6 h-auto">
               <TabsTrigger value="analytics" className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 py-2">
                 <BarChart3 className="w-4 h-4" />
                 <span className="text-xs sm:text-sm">Analytics</span>
+              </TabsTrigger>
+              <TabsTrigger value="guide" className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 py-2">
+                <BookOpen className="w-4 h-4" />
+                <span className="text-xs sm:text-sm">Guide</span>
               </TabsTrigger>
               <TabsTrigger value="ai" className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 py-2">
                 <Sparkles className="w-4 h-4" />
@@ -110,6 +115,10 @@ const Character = () => {
             <TabsContent value="analytics" className="space-y-6">
               <AnimatedCharacterCharts />
               <CharacterWeeklySummary />
+            </TabsContent>
+
+            <TabsContent value="guide" className="space-y-6">
+              <ArchetypesGuide />
             </TabsContent>
 
             <TabsContent value="ai" className="space-y-6">
