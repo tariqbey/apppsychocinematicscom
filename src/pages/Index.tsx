@@ -324,6 +324,15 @@ const Index = () => {
             className="animate-fade-in"
           />
 
+          {/* ========== CHIEF AIM COUNTDOWN CLOCK (Under Welcome Banner) ========== */}
+          {chiefAim.byWhen && (
+            <ChiefAimCountdown 
+              byWhen={chiefAim.byWhen} 
+              whatSummary={chiefAim.what ? chiefAim.what.slice(0, 100) : undefined}
+              className="animate-fade-in"
+            />
+          )}
+
           {/* Push Notifications Banner - Reminds users to enable */}
           <EnableNotificationsBanner className="animate-slide-up" />
 
@@ -426,15 +435,6 @@ const Index = () => {
             className="animate-fade-in"
           />
 
-           {/* ========== CHIEF AIM COUNTDOWN CLOCK ========== */}
-           {chiefAim.byWhen && (
-             <ChiefAimCountdown 
-               byWhen={chiefAim.byWhen} 
-               whatSummary={chiefAim.what ? chiefAim.what.slice(0, 100) : undefined}
-               className="animate-fade-in"
-             />
-           )}
- 
           {/* ========== 1. DEFINITE CHIEF AIM CREATOR MODULE ========== */}
           <button
             onClick={() => setShowChiefAimWizard(true)}
@@ -511,6 +511,21 @@ const Index = () => {
             </div>
           </button>
 
+          {/* ========== DIRECTOR RADIO (Under Anthem) ========== */}
+          <DirectorRadioCard />
+
+          {/* ========== THE SCORE (Under Radio) ========== */}
+          <ModuleCard
+            onClick={() => navigate("/score")}
+            icon={<Music className="w-7 h-7 text-gold" />}
+            title="The Score"
+            description="Your personal music library • Create playlists • Stream your tracks anywhere"
+            actionText="Open Score"
+            colorScheme="gold"
+            tooltip="Your personal music player. Organize tracks into playlists and stream your transformation soundtrack."
+            animationIndex={3}
+          />
+
           {/* ========== 2. CHARACTER BUILDER ========== */}
           <ModuleCard
             onClick={() => navigate("/character")}
@@ -535,59 +550,6 @@ const Index = () => {
              onOpenStoryboard={() => setShowStoryboardWizard(true)}
              className="animate-fade-in"
           />
-
-          {/* ========== 7. EPISODE FEATURES ========== */}
-          {/* Active Episode Banner */}
-          {activeEpisode && (
-            <ActiveEpisodeBanner 
-              episode={activeEpisode} 
-              clickToNavigate={true}
-            />
-          )}
-
-          {/* Episode Character Dashboard */}
-           {/* Moved to Episodes page */}
-
-          {/* Resume Production Button */}
-          {activeEpisode?.mind_movie_script_id && activeEpisode.status !== "completed" && (
-            <button
-              onClick={() => {
-                setSelectedMovieId(activeEpisode.mind_movie_script_id!);
-                setEpisodeForMovie({
-                  id: activeEpisode.id,
-                  title: activeEpisode.title,
-                  objective: activeEpisode.objective,
-                  deadline: activeEpisode.deadline,
-                  alignment_score: activeEpisode.alignment_score,
-                });
-                setShowMindMovieWizard(true);
-              }}
-              className="w-full glass-card p-4 cinematic-border animate-slide-up group hover:border-green-500/50 transition-all duration-300 text-left flex items-center gap-4"
-            >
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-green-500/20 to-emerald-600/20 flex items-center justify-center animate-pulse">
-                <Clapperboard className="w-6 h-6 text-green-500" />
-              </div>
-              <div className="flex-1">
-                <h3 className="font-medium group-hover:text-green-500 transition-colors">Resume Production</h3>
-                <p className="text-sm text-muted-foreground">Continue editing "{activeEpisode.title}" Mind Movie</p>
-              </div>
-              <span className="text-green-500 hidden sm:block">Continue →</span>
-            </button>
-          )}
-
-          {/* New Episode Button */}
-          {!activeEpisode && !episodesLoading && chiefAimComplete && (
-            <ModuleCard
-              onClick={() => setShowEpisodeWizard(true)}
-              icon={<Zap className="w-7 h-7 text-orange-500" />}
-              title="Create Episode"
-              description="Short-term sprints aligned with your Chief Aim • Mini Mind Movies"
-              actionText="+ New Episode"
-              colorScheme="amber"
-              tooltip="Create focused episodes (2-4 week sprints) that advance your Chief Aim. Each episode gets its own mini Mind Movie."
-              animationIndex={6}
-            />
-          )}
 
           {/* ========== 8. ACTION EXECUTION ========== */}
           <ModuleCard
@@ -620,10 +582,10 @@ const Index = () => {
              onClick={() => navigate("/episodes")}
              icon={<Zap className="w-7 h-7 text-amber-500" />}
              title="Episodes & Challenges"
-             description="Tactical sprints • Adversity training • XP rewards"
+             description="Tactical sprints • Active episodes • Adversity training • XP rewards"
              actionText="View Episodes"
              colorScheme="amber"
-             tooltip="Create focused episodes (short-term sprints) and train your character through adversity challenges."
+             tooltip="Create and manage episodes (short-term sprints), track active episodes, and train through adversity challenges."
              animationIndex={9}
           />
 
@@ -641,21 +603,6 @@ const Index = () => {
 
           {/* ========== 12. FEATURED ARTIST/DIRECTOR BANNER ========== */}
           <FeaturedArtistBanner />
-
-          {/* ========== 13. DIRECTOR RADIO (ANIMATED) ========== */}
-          <DirectorRadioCard />
-
-          {/* ========== 13. THE SCORE (Personal Music) ========== */}
-          <ModuleCard
-            onClick={() => navigate("/score")}
-            icon={<Music className="w-7 h-7 text-gold" />}
-            title="The Score"
-            description="Your personal music library • Create playlists • Stream your tracks anywhere"
-            actionText="Open Score"
-            colorScheme="gold"
-             tooltip="Your personal music player. Organize tracks into playlists and stream your transformation soundtrack."
-             animationIndex={10}
-          />
 
           {/* ========== 14. SHARE YOUR STORY ========== */}
           <ModuleCard
