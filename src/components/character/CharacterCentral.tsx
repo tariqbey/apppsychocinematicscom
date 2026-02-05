@@ -146,12 +146,12 @@ export function CharacterCentral() {
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-sm text-muted-foreground">
-              Take a quick survey to discover your character archetype. For the full Napoleon Hill Self-Analysis, 
-              use the dedicated "Self-Analysis" tab above.
+              Take our 28-question Metu Neter assessment to discover your character archetype. 
+              Answer honestly—shadow responses reveal your growth edges.
             </p>
             <Button variant="gold" onClick={() => setShowSurvey(true)} className="w-full gap-2">
               <Sparkles className="h-4 w-4" />
-              Quick Archetype Survey
+              Begin Character Assessment
             </Button>
           </CardContent>
         </Card>
