@@ -40,6 +40,7 @@ import { TestimonialSubmissionDialog } from "@/components/testimonials/Testimoni
 import { EnableNotificationsBanner } from "@/components/notifications/EnableNotificationsBanner";
 import { DirectorBanner } from "@/components/dashboard/DirectorBanner";
 import { MovieStudioModule } from "@/components/dashboard/MovieStudioModule";
+import { ChiefAimCountdown } from "@/components/dashboard/ChiefAimCountdown";
 
 // Custom module icons
 import iconChiefAim from "@/assets/icons/icon-chief-aim.png";
@@ -324,6 +325,15 @@ const Index = () => {
             chiefAimSummary={chiefAim.what ? chiefAim.what.slice(0, 100) : undefined}
             className="animate-fade-in"
           />
+
+          {/* Chief Aim Countdown - Standalone countdown clock */}
+          {chiefAim.byWhen && (
+            <ChiefAimCountdown 
+              byWhen={chiefAim.byWhen}
+              whatSummary={chiefAim.what ? chiefAim.what.slice(0, 100) : undefined}
+              className="animate-slide-up"
+            />
+          )}
 
           {/* Push Notifications Banner - Reminds users to enable */}
           <EnableNotificationsBanner className="animate-slide-up" />
