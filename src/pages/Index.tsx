@@ -4,7 +4,7 @@ import { Header } from "@/components/layout/Header";
 import { LandingPage } from "@/components/landing/LandingPage";
 import { ProductionStatus } from "@/components/dashboard/ProductionStatus";
 import { DailyRitualChecklist } from "@/components/dashboard/DailyRitualChecklist";
-import { DefiniteChiefAimCard } from "@/components/dashboard/DefiniteChiefAimCard";
+import { ChiefAimAnthemCard } from "@/components/dashboard/ChiefAimAnthemCard";
 import { StreakBanner } from "@/components/dashboard/StreakBanner";
 import { CutResetModal } from "@/components/dashboard/CutResetModal";
 import { TheaterView } from "@/components/theater/TheaterView";
@@ -351,20 +351,51 @@ const Index = () => {
               setShowTheater(true);
             }}
             onJournalClick={() => setShowJournal(true)}
+             chiefAim={chiefAim}
+             chiefAimSongUrl={profile?.chief_aim_song_url}
+             onEditChiefAim={() => setShowChiefAimWizard(true)}
+             onAdjustChiefAim={() => setShowChiefAimAdjust(true)}
+             onSongListened={async () => {
+               if (!user) return;
+               const today = new Date().toISOString().split('T')[0];
+               
+               const { data: existing } = await supabase
+                 .from("daily_rituals")
+                 .select("id, chief_aim_listened")
+                 .eq("user_id", user.id)
+                 .eq("ritual_date", today)
+                 .maybeSingle();
+               
+               if (existing) {
+                 if (!existing.chief_aim_listened) {
+                   await supabase
+                     .from("daily_rituals")
+                     .update({ script_review: true, chief_aim_listened: true })
+                     .eq("user_id", user.id)
+                     .eq("ritual_date", today);
+                 }
+               } else {
+                 await supabase
+                   .from("daily_rituals")
+                   .insert({
+                     user_id: user.id,
+                     ritual_date: today,
+                     script_review: true,
+                     chief_aim_listened: true,
+                   });
+               }
+               toast.success("Chief Aim ritual complete! 🎵");
+             }}
           />
 
-          {/* ========== DEFINITE CHIEF AIM STATEMENT ========== */}
-          <DefiniteChiefAimCard 
-            aim={chiefAim} 
-            onEdit={() => setShowChiefAimWizard(true)}
-            onAdjust={() => setShowChiefAimAdjust(true)}
+          {/* ========== CHIEF AIM ANTHEM (Standalone Card) ========== */}
+          <ChiefAimAnthemCard
             chiefAimSongUrl={profile?.chief_aim_song_url}
+            chiefAimContext={chiefAim}
             onSongListened={async () => {
-              // Mark script_review as complete when song is listened to
               if (!user) return;
               const today = new Date().toISOString().split('T')[0];
               
-              // Check if record exists first
               const { data: existing } = await supabase
                 .from("daily_rituals")
                 .select("id, chief_aim_listened")
@@ -392,6 +423,7 @@ const Index = () => {
               }
               toast.success("Chief Aim ritual complete! 🎵");
             }}
+            className="animate-fade-in"
           />
 
            {/* ========== CHIEF AIM COUNTDOWN CLOCK ========== */}
