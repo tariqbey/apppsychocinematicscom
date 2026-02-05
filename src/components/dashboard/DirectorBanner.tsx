@@ -1,5 +1,5 @@
-import { useState, useRef, useEffect, useMemo } from "react";
-import { Camera, Sparkles, Upload, Loader2, User, Film, Wand2, Target, Zap } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
+import { Camera, Sparkles, Upload, Loader2, User, Film, Wand2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -7,32 +7,13 @@ import { useUserProfile } from "@/hooks/useUserProfile";
 import { useMindMovies } from "@/hooks/useMindMovies";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { differenceInDays, differenceInHours, differenceInMinutes, parse, isValid } from "date-fns";
 
 interface DirectorBannerProps {
   onOpenAIStudio?: () => void;
   className?: string;
-  chiefAimByWhen?: string;
-  chiefAimSummary?: string;
 }
 
-function parseFlexibleDate(dateStr: string): Date | null {
-  if (!dateStr) return null;
-  const formats = [
-    "MMMM d, yyyy", "MMMM dd, yyyy", "MMM d, yyyy", "MMM dd, yyyy",
-    "yyyy-MM-dd", "MM/dd/yyyy", "M/d/yyyy",
-  ];
-  for (const format of formats) {
-    try {
-      const parsed = parse(dateStr, format, new Date());
-      if (isValid(parsed)) return parsed;
-    } catch { /* continue */ }
-  }
-  const fallback = new Date(dateStr);
-  return isValid(fallback) ? fallback : null;
-}
-
-export function DirectorBanner({ onOpenAIStudio, className, chiefAimByWhen, chiefAimSummary }: DirectorBannerProps) {
+export function DirectorBanner({ onOpenAIStudio, className }: DirectorBannerProps) {
   const { user } = useAuth();
   const { profile, updateProfile } = useUserProfile();
   const { activeMovie, fetchAllMovies } = useMindMovies();
@@ -42,28 +23,6 @@ export function DirectorBanner({ onOpenAIStudio, className, chiefAimByWhen, chie
   const [generatingAI, setGeneratingAI] = useState<"avatar" | "cover" | null>(null);
   const coverInputRef = useRef<HTMLInputElement>(null);
   const avatarInputRef = useRef<HTMLInputElement>(null);
-
-  // Countdown logic
-  const targetDate = useMemo(() => chiefAimByWhen ? parseFlexibleDate(chiefAimByWhen) : null, [chiefAimByWhen]);
-  const [timeRemaining, setTimeRemaining] = useState<{ days: number; hours: number; minutes: number; isPast: boolean } | null>(null);
-
-  useEffect(() => {
-    if (!targetDate) {
-      setTimeRemaining(null);
-      return;
-    }
-    const updateTime = () => {
-      const now = new Date();
-      const isPast = targetDate < now;
-      const totalDays = Math.abs(differenceInDays(targetDate, now));
-      const totalHours = Math.abs(differenceInHours(targetDate, now)) % 24;
-      const totalMinutes = Math.abs(differenceInMinutes(targetDate, now)) % 60;
-      setTimeRemaining({ days: totalDays, hours: totalHours, minutes: totalMinutes, isPast });
-    };
-    updateTime();
-    const interval = setInterval(updateTime, 60000);
-    return () => clearInterval(interval);
-  }, [targetDate]);
 
   // Load images on mount - cover now persisted in database
   useEffect(() => {
@@ -202,61 +161,7 @@ export function DirectorBanner({ onOpenAIStudio, className, chiefAimByWhen, chie
         <div className="absolute inset-0 bg-gradient-to-t from-background via-background/60 to-transparent" />
         <div className="absolute inset-0 bg-gradient-to-r from-background/80 via-transparent to-background/80" />
 
-        {/* Countdown Overlay - positioned in the center-right of banner */}
-        {timeRemaining && (
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
-            <div className="text-center px-4">
-              {/* Mini header */}
-              <div className="flex items-center justify-center gap-2 mb-1">
-                <Target className="w-4 h-4 text-gold" />
-                <span className="text-xs sm:text-sm font-display tracking-wider uppercase text-gold/90">
-                  Final Scene Countdown
-                </span>
-                <Zap className="w-3 h-3 text-gold animate-pulse" />
-              </div>
-              
-              {/* Countdown numbers */}
-              <div className="flex items-center justify-center gap-1 sm:gap-3">
-                <div className="text-center">
-                  <div className={cn(
-                    "text-3xl sm:text-4xl md:text-5xl font-display tracking-wider tabular-nums",
-                    timeRemaining.isPast ? "text-amber-400" : "text-gold"
-                  )} style={{ textShadow: '0 0 30px rgba(212, 175, 55, 0.6)' }}>
-                    {timeRemaining.days}
-                  </div>
-                  <div className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-wider">Days</div>
-                </div>
-                <div className="text-xl sm:text-2xl text-gold/50 font-light pb-4">:</div>
-                <div className="text-center">
-                  <div className={cn(
-                    "text-3xl sm:text-4xl md:text-5xl font-display tracking-wider tabular-nums",
-                    timeRemaining.isPast ? "text-amber-400" : "text-gold"
-                  )} style={{ textShadow: '0 0 30px rgba(212, 175, 55, 0.6)' }}>
-                    {timeRemaining.hours.toString().padStart(2, '0')}
-                  </div>
-                  <div className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-wider">Hours</div>
-                </div>
-                <div className="text-xl sm:text-2xl text-gold/50 font-light pb-4">:</div>
-                <div className="text-center">
-                  <div className={cn(
-                    "text-3xl sm:text-4xl md:text-5xl font-display tracking-wider tabular-nums",
-                    timeRemaining.isPast ? "text-amber-400" : "text-gold"
-                  )} style={{ textShadow: '0 0 30px rgba(212, 175, 55, 0.6)' }}>
-                    {timeRemaining.minutes.toString().padStart(2, '0')}
-                  </div>
-                  <div className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-wider">Min</div>
-                </div>
-              </div>
-
-              {/* Chief Aim summary */}
-              {chiefAimSummary && (
-                <p className="mt-2 text-xs sm:text-sm text-muted-foreground/80 max-w-md mx-auto line-clamp-1">
-                  "{chiefAimSummary}"
-                </p>
-              )}
-            </div>
-          </div>
-        )}
+        {/* Countdown moved to standalone ChiefAimCountdown component below banner */}
 
         {/* Cover upload/generate buttons - show on hover */}
         <div className="absolute top-3 right-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
