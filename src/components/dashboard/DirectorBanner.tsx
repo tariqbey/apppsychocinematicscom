@@ -166,7 +166,7 @@ export function DirectorBanner({ onOpenAIStudio, className, chiefAimByWhen, chie
   return (
     <div className={cn("relative overflow-hidden rounded-2xl", className)}>
       {/* Cover Image / Banner */}
-      <div className="relative h-32 sm:h-40 md:h-48 lg:h-56 overflow-hidden group">
+      <div className="relative h-44 sm:h-48 md:h-56 lg:h-64 overflow-hidden group">
         {/* Animated background gradient when no cover */}
         {!coverUrl ? (
           <div className="absolute inset-0 bg-gradient-to-br from-background via-card to-gold/10 overflow-hidden">
@@ -197,45 +197,45 @@ export function DirectorBanner({ onOpenAIStudio, className, chiefAimByWhen, chie
           />
         )}
 
-        {/* Gradient overlay for text readability */}
-        <div className="absolute inset-0 bg-gradient-to-t from-background via-background/60 to-transparent" />
-        <div className="absolute inset-0 bg-gradient-to-r from-background/80 via-transparent to-background/80" />
+        {/* Gradient overlay for text readability - stronger on mobile */}
+        <div className="absolute inset-0 bg-gradient-to-t from-background via-background/70 to-background/30" />
+        <div className="absolute inset-0 bg-gradient-to-r from-background/60 via-transparent to-background/60" />
 
-        {/* Countdown Overlay */}
+        {/* Countdown Overlay - positioned at top on mobile to avoid text overlap */}
         {timeRemaining && (
-          <div className="absolute inset-0 flex items-center justify-center z-10">
-            <div className="text-center px-4">
-              <div className="flex items-center justify-center gap-2 mb-2">
-                <Target className="w-4 h-4 sm:w-5 sm:h-5 text-gold" />
-                <span className="text-xs sm:text-sm font-medium text-gold uppercase tracking-wider">
+          <div className="absolute top-2 sm:top-auto sm:inset-0 left-0 right-0 sm:flex sm:items-center sm:justify-center z-10 px-2">
+            <div className="text-center bg-black/40 sm:bg-transparent backdrop-blur-sm sm:backdrop-blur-none rounded-lg px-3 py-2 sm:p-0">
+              <div className="flex items-center justify-center gap-1.5 sm:gap-2 mb-1 sm:mb-2">
+                <Target className="w-3 h-3 sm:w-5 sm:h-5 text-gold" />
+                <span className="text-[10px] sm:text-sm font-medium text-gold uppercase tracking-wider">
                   Final Scene Countdown
                 </span>
-                <Zap className="w-3 h-3 sm:w-4 sm:h-4 text-gold animate-pulse" />
+                <Zap className="w-2.5 h-2.5 sm:w-4 sm:h-4 text-gold animate-pulse" />
               </div>
-              <div className="flex items-center justify-center gap-2 sm:gap-4">
+              <div className="flex items-center justify-center gap-1.5 sm:gap-4">
                 <div className="text-center">
-                  <div className="text-3xl sm:text-4xl md:text-5xl font-display tracking-wider tabular-nums text-gold" style={{ textShadow: '0 0 20px rgba(212, 175, 55, 0.5)' }}>
+                  <div className="text-xl sm:text-4xl md:text-5xl font-display tracking-wider tabular-nums text-gold" style={{ textShadow: '0 0 20px rgba(212, 175, 55, 0.5)' }}>
                     {timeRemaining.days}
                   </div>
-                  <div className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-wider">Days</div>
+                  <div className="text-[8px] sm:text-xs text-muted-foreground uppercase tracking-wider">Days</div>
                 </div>
-                <div className="text-xl sm:text-2xl text-gold/50 font-light">:</div>
+                <div className="text-base sm:text-2xl text-gold/50 font-light">:</div>
                 <div className="text-center">
-                  <div className="text-3xl sm:text-4xl md:text-5xl font-display tracking-wider tabular-nums text-gold" style={{ textShadow: '0 0 20px rgba(212, 175, 55, 0.5)' }}>
+                  <div className="text-xl sm:text-4xl md:text-5xl font-display tracking-wider tabular-nums text-gold" style={{ textShadow: '0 0 20px rgba(212, 175, 55, 0.5)' }}>
                     {timeRemaining.hours.toString().padStart(2, '0')}
                   </div>
-                  <div className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-wider">Hours</div>
+                  <div className="text-[8px] sm:text-xs text-muted-foreground uppercase tracking-wider">Hours</div>
                 </div>
-                <div className="text-xl sm:text-2xl text-gold/50 font-light">:</div>
+                <div className="text-base sm:text-2xl text-gold/50 font-light">:</div>
                 <div className="text-center">
-                  <div className="text-3xl sm:text-4xl md:text-5xl font-display tracking-wider tabular-nums text-gold" style={{ textShadow: '0 0 20px rgba(212, 175, 55, 0.5)' }}>
+                  <div className="text-xl sm:text-4xl md:text-5xl font-display tracking-wider tabular-nums text-gold" style={{ textShadow: '0 0 20px rgba(212, 175, 55, 0.5)' }}>
                     {timeRemaining.minutes.toString().padStart(2, '0')}
                   </div>
-                  <div className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-wider">Min</div>
+                  <div className="text-[8px] sm:text-xs text-muted-foreground uppercase tracking-wider">Min</div>
                 </div>
               </div>
               {chiefAimSummary && (
-                <p className="mt-2 text-xs sm:text-sm text-muted-foreground max-w-md mx-auto line-clamp-1">
+                <p className="mt-1 sm:mt-2 text-[10px] sm:text-sm text-white/80 max-w-md mx-auto line-clamp-1 drop-shadow-md">
                   "{chiefAimSummary}"
                 </p>
               )}
@@ -288,12 +288,12 @@ export function DirectorBanner({ onOpenAIStudio, className, chiefAimByWhen, chie
       </div>
 
       {/* Profile Section - Overlapping avatar */}
-      <div className="relative px-4 sm:px-6 pb-4 -mt-12 sm:-mt-14">
-        <div className="flex items-end gap-4">
+      <div className="relative px-3 sm:px-6 pb-4 -mt-8 sm:-mt-14">
+        <div className="flex items-end gap-3 sm:gap-4">
           {/* Avatar */}
-          <div className="relative group/avatar">
+          <div className="relative group/avatar flex-shrink-0">
             <div className={cn(
-              "w-20 h-20 sm:w-24 sm:h-24 rounded-2xl border-4 border-background overflow-hidden shadow-xl",
+              "w-16 h-16 sm:w-24 sm:h-24 rounded-xl sm:rounded-2xl border-3 sm:border-4 border-background overflow-hidden shadow-xl",
               "bg-gradient-to-br from-gold/30 to-purple-500/30"
             )}>
               {avatarUrl ? (
@@ -304,13 +304,13 @@ export function DirectorBanner({ onOpenAIStudio, className, chiefAimByWhen, chie
                 />
               ) : (
                 <div className="w-full h-full flex items-center justify-center">
-                  <User className="w-10 h-10 sm:w-12 sm:h-12 text-gold/60" />
+                  <User className="w-8 h-8 sm:w-12 sm:h-12 text-gold/60" />
                 </div>
               )}
             </div>
 
             {/* Avatar edit overlay */}
-            <div className="absolute inset-0 rounded-2xl bg-black/60 opacity-0 group-hover/avatar:opacity-100 transition-opacity flex items-center justify-center gap-1">
+            <div className="absolute inset-0 rounded-xl sm:rounded-2xl bg-black/60 opacity-0 group-hover/avatar:opacity-100 transition-opacity flex items-center justify-center gap-1">
               <input
                 ref={avatarInputRef}
                 type="file"
@@ -321,45 +321,46 @@ export function DirectorBanner({ onOpenAIStudio, className, chiefAimByWhen, chie
               <Button
                 size="icon"
                 variant="ghost"
-                className="h-8 w-8 text-white hover:bg-white/20"
+                className="h-7 w-7 sm:h-8 sm:w-8 text-white hover:bg-white/20"
                 onClick={() => avatarInputRef.current?.click()}
                 disabled={!!uploading || !!generatingAI}
               >
                 {uploading === "avatar" ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <Loader2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 animate-spin" />
                 ) : (
-                  <Camera className="w-4 h-4" />
+                  <Camera className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                 )}
               </Button>
               <Button
                 size="icon"
                 variant="ghost"
-                className="h-8 w-8 text-white hover:bg-white/20"
+                className="h-7 w-7 sm:h-8 sm:w-8 text-white hover:bg-white/20"
                 onClick={() => generateAIImage("avatar")}
                 disabled={!!uploading || !!generatingAI}
               >
                 {generatingAI === "avatar" ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <Loader2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 animate-spin" />
                 ) : (
-                  <Sparkles className="w-4 h-4" />
+                  <Sparkles className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                 )}
               </Button>
             </div>
 
             {/* Active movie indicator */}
             {activeMovie && (
-              <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-gold border-2 border-background flex items-center justify-center">
-                <Film className="w-3 h-3 text-background" />
+              <div className="absolute -bottom-1 -right-1 w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-gold border-2 border-background flex items-center justify-center">
+                <Film className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-background" />
               </div>
             )}
           </div>
 
           {/* Director Info */}
-          <div className="flex-1 min-w-0 pb-1">
-            <h1 className="text-xl sm:text-2xl md:text-3xl font-display tracking-wide truncate">
-              Welcome Back, <span className="text-gold-gradient">{directorName}</span>
+          <div className="flex-1 min-w-0 pb-0.5 sm:pb-1">
+            <h1 className="text-base sm:text-2xl md:text-3xl font-display tracking-wide leading-tight">
+              <span className="text-muted-foreground text-xs sm:text-base block sm:inline">Welcome Back, </span>
+              <span className="text-gold-gradient block sm:inline truncate">{directorName}</span>
             </h1>
-            <p className="text-sm text-muted-foreground truncate">
+            <p className="text-xs sm:text-sm text-muted-foreground truncate mt-0.5">
               {activeMovie?.title 
                 ? `Now Producing: ${activeMovie.title}`
                 : "The set is ready. Let's make today's scene count."}
