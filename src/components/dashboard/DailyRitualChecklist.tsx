@@ -9,6 +9,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { usePointsContext } from "@/contexts/PointsContext";
 import { format, startOfWeek, addDays, isToday, isSameDay } from "date-fns";
+ import { ScriptReviewModal } from "./ScriptReviewModal";
 
 interface RitualItem {
   id: string;
@@ -26,6 +27,17 @@ interface DailyRitualChecklistProps {
   onScorecardClick: () => void;
   onEveningMindMovieClick?: () => void;
   onJournalClick?: () => void;
+   onScriptReviewClick?: () => void;
+   chiefAim?: {
+     what: string;
+     byWhen: string;
+     exchange: string;
+     plan: string;
+   };
+   chiefAimSongUrl?: string | null;
+   onEditChiefAim?: () => void;
+   onAdjustChiefAim?: () => void;
+   onSongListened?: () => void;
 }
 
 // Floating particle component with enhanced animation
@@ -44,11 +56,23 @@ const FloatingParticle = ({ delay, size = 2, color = "#D4AF37" }: { delay: numbe
   />
 );
 
-export const DailyRitualChecklist = ({ onTheaterClick, onScorecardClick, onEveningMindMovieClick, onJournalClick }: DailyRitualChecklistProps) => {
+export const DailyRitualChecklist = ({ 
+   onTheaterClick, 
+   onScorecardClick, 
+   onEveningMindMovieClick, 
+   onJournalClick,
+   onScriptReviewClick,
+   chiefAim,
+   chiefAimSongUrl,
+   onEditChiefAim,
+   onAdjustChiefAim,
+   onSongListened,
+ }: DailyRitualChecklistProps) => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   const { triggerRecalculation } = usePointsContext();
+   const [showScriptModal, setShowScriptModal] = useState(false);
   const [rituals, setRituals] = useState<RitualItem[]>([
     {
       id: "morning",
@@ -219,6 +243,14 @@ export const DailyRitualChecklist = ({ onTheaterClick, onScorecardClick, onEveni
       if (onJournalClick) {
         onJournalClick();
       }
+     } else if (id === "script") {
+       // Open script review modal instead of toggling
+       if (onScriptReviewClick) {
+         onScriptReviewClick();
+       } else {
+         setShowScriptModal(true);
+       }
+       return; // Don't auto-toggle, let modal handle completion
     }
     toggleRitual(id);
   };
@@ -230,7 +262,41 @@ export const DailyRitualChecklist = ({ onTheaterClick, onScorecardClick, onEveni
 
   const isRitualActive = (id: string) => hoveredRitual === id || touchedRitual === id;
 
+   const handleScriptRitualComplete = async () => {
+     if (!user) return;
+     const today = format(new Date(), "yyyy-MM-dd");
+     
+     const { data: existing } = await supabase
+       .from("daily_rituals")
+       .select("id")
+       .eq("user_id", user.id)
+       .eq("ritual_date", today)
+       .maybeSingle();
+     
+     if (existing) {
+       await supabase
+         .from("daily_rituals")
+         .update({ script_review: true })
+         .eq("user_id", user.id)
+         .eq("ritual_date", today);
+     } else {
+       await supabase
+         .from("daily_rituals")
+         .insert({
+           user_id: user.id,
+           ritual_date: today,
+           script_review: true,
+         });
+     }
+     
+     setRituals(prev =>
+       prev.map(r => r.id === "script" ? { ...r, completed: true } : r)
+     );
+     triggerRecalculation();
+   };
+
   return (
+     <>
     <div 
       className={`glass-card p-4 sm:p-6 cinematic-border space-y-4 relative overflow-hidden group transition-all duration-500 hover:border-gold/50 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}
       style={{ 
@@ -589,6 +655,19 @@ export const DailyRitualChecklist = ({ onTheaterClick, onScorecardClick, onEveni
         })}
       </div>
     </div>
+
+     {/* Script Review Modal */}
+     <ScriptReviewModal
+       open={showScriptModal}
+       onOpenChange={setShowScriptModal}
+       aim={chiefAim || { what: '', byWhen: '', exchange: '', plan: '' }}
+       chiefAimSongUrl={chiefAimSongUrl}
+       onEdit={onEditChiefAim}
+       onAdjust={onAdjustChiefAim}
+       onSongListened={onSongListened}
+       onRitualComplete={handleScriptRitualComplete}
+     />
+     </>
   );
 };
 
