@@ -15,6 +15,7 @@ import { AnimatedCharacterCharts } from "@/components/character/AnimatedCharacte
 import { ArchetypesGuide } from "@/components/character/ArchetypesGuide";
 import { NapoleonHillSelfAnalysis } from "@/components/character/NapoleonHillSelfAnalysis";
 import { ArchetypeResult } from "@/components/character/ArchetypeResult";
+import { SelfAnalysisReminder } from "@/components/character/SelfAnalysisReminder";
 import { useAuth } from "@/hooks/useAuth";
 import { useCycleTracking } from "@/hooks/useCycleTracking";
 import { Loader2, ArrowLeft, User2, Target, TrendingUp, Brain, Calendar, GitBranch, RotateCcw, UserPlus, Sparkles, BarChart3, BookOpen, ClipboardList } from "lucide-react";
@@ -49,7 +50,35 @@ const Character = () => {
       responses[`law_${lawNum}`] = `${score}%`;
     });
 
-    // Save to database
+    // Calculate strengths and weaknesses from law scores
+    const lawNames: Record<number, string> = {
+      1: "The Master Mind",
+      2: "A Definite Chief Aim",
+      3: "Self-Confidence",
+      4: "The Habit of Saving",
+      5: "Initiative and Leadership",
+      6: "Imagination",
+      7: "Enthusiasm",
+      8: "Self-Control",
+      9: "Doing More Than Paid For",
+      10: "A Pleasing Personality",
+      11: "Accurate Thinking",
+      12: "Concentration",
+      13: "Cooperation",
+      14: "Profiting by Failure",
+      15: "Tolerance",
+      16: "Practicing the Golden Rule",
+      17: "The Universal Law"
+    };
+
+    const sortedLaws = Object.entries(lawScores)
+      .map(([num, score]) => ({ lawNum: parseInt(num), score, name: lawNames[parseInt(num)] }))
+      .sort((a, b) => b.score - a.score);
+
+    const strengths = sortedLaws.slice(0, 5).map(l => `${l.name} (${l.score}%)`);
+    const weaknesses = sortedLaws.slice(-5).reverse().map(l => `${l.name} (${l.score}%)`);
+
+    // Save comprehensive data to database
     const { error } = await supabase
       .from("character_profiles")
       .upsert(
@@ -59,6 +88,10 @@ const Character = () => {
           archetype_score: scores,
           survey_responses: responses,
           light_shadow_state: "light",
+          napoleon_hill_law_scores: lawScores,
+          napoleon_hill_analysis_date: new Date().toISOString(),
+          napoleon_hill_strengths: strengths,
+          napoleon_hill_weaknesses: weaknesses,
           updated_at: new Date().toISOString()
         },
         { onConflict: "user_id" }
@@ -127,6 +160,9 @@ const Character = () => {
               </p>
             </div>
           </div>
+
+          {/* 21-Day Self-Analysis Reminder */}
+          <SelfAnalysisReminder onStartAnalysis={() => setShowHillAnalysis(true)} />
 
           {/* Tabs Navigation */}
           <Tabs defaultValue="analytics" className="w-full">

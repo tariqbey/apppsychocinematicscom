@@ -287,6 +287,10 @@ export type Database = {
           created_at: string
           id: string
           light_shadow_state: string | null
+          napoleon_hill_analysis_date: string | null
+          napoleon_hill_law_scores: Json | null
+          napoleon_hill_strengths: string[] | null
+          napoleon_hill_weaknesses: string[] | null
           survey_responses: Json
           transformation_analysis: Json | null
           transformation_chief_aim_snapshot: Json | null
@@ -300,6 +304,10 @@ export type Database = {
           created_at?: string
           id?: string
           light_shadow_state?: string | null
+          napoleon_hill_analysis_date?: string | null
+          napoleon_hill_law_scores?: Json | null
+          napoleon_hill_strengths?: string[] | null
+          napoleon_hill_weaknesses?: string[] | null
           survey_responses?: Json
           transformation_analysis?: Json | null
           transformation_chief_aim_snapshot?: Json | null
@@ -313,6 +321,10 @@ export type Database = {
           created_at?: string
           id?: string
           light_shadow_state?: string | null
+          napoleon_hill_analysis_date?: string | null
+          napoleon_hill_law_scores?: Json | null
+          napoleon_hill_strengths?: string[] | null
+          napoleon_hill_weaknesses?: string[] | null
           survey_responses?: Json
           transformation_analysis?: Json | null
           transformation_chief_aim_snapshot?: Json | null
