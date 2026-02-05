@@ -551,6 +551,8 @@ export function DirectorAIAgent({ isOpen, onClose, chiefAim }: DirectorAIAgentPr
         bestStreak: coachingContext.bestStreak,
         chiefAimComplete: coachingContext.chiefAimComplete,
         directorCharacterName: coachingContext.directorCharacterName,
+        characterArchetype: coachingContext.characterArchetype,
+        transformationAnalysis: coachingContext.transformationAnalysis,
         tasksSetForToday: coachingContext.tasksSetForToday,
         allTasksCompleted: coachingContext.allTasksCompleted,
         completedTasksCount: coachingContext.completedTasksCount,
