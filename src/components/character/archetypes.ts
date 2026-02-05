@@ -1,156 +1,146 @@
  export interface Archetype {
    id: string;
    name: string;
-   cinematicDefinition: string;
-   superpower: string;
-   superpowerDescription: string;
-   shadow: string;
-   shadowDescription: string;
+   sphere: number;
+   deity: string;
+   law: string;
+   role: string;
    directorsNote: string;
-   lightShadow: { light: string; shadow: string };
  }
  
  export const ARCHETYPES: Archetype[] = [
    {
-     id: "concerned_observer",
-     name: "The Concerned Observer",
-     cinematicDefinition: "Derived from Michael Rabiger's concept of the 'Concerned Observer'—the weightless spirit that watches events with empathy but does not intercede.",
-     superpower: "High-Fidelity Perception",
-     superpowerDescription: "They see the 'Mise-en-scène' clearly without emotional distortion. They hold the space for the cast.",
-     shadow: "The Passive Spectator",
-     shadowDescription: "They watch the dailies of their life without ever yelling 'Action.' They suffer from 'Analysis Paralysis' or becoming a voyeur of their own existence.",
-     directorsNote: "You capture the perfect shot, but you refuse to release the shutter.",
-     lightShadow: { light: "High-Fidelity Perception", shadow: "Passive Spectator" }
+     id: "blank_canvas",
+     name: "The Blank Canvas",
+     sphere: 0,
+     deity: "Amen (The Concealed/The Unconditioned)",
+     law: "Potential. The realization that the essential self is unconditioned energy, meaning you are not your script, your role, or your past history. You are the silence before the film starts.",
+     role: "The source of infinite possibility. It represents the 'peace' (Hetep) that comes from realizing you are none of the things you create. It is the ability to 'zero out' and detach from the drama of the movie.",
+     directorsNote: "I am not the movie. I am the silence behind the sound."
    },
    {
-     id: "showrunner",
-     name: "The Showrunner",
-     cinematicDefinition: "The person with ultimate creative and management authority who ensures the 'Bible' of the show is followed.",
-     superpower: "Total Production Control",
-     superpowerDescription: "They instinctively understand the 'Superobjective' of the entire production. They ensure the crew and cast are aligned.",
-     shadow: "The Micromanager",
-     shadowDescription: "They stifle the actors' spontaneity. They try to control every light and prop, leading to 'Sensory Overload' and production burnout.",
-     directorsNote: "You are running the set, but you forgot to let the actors breathe.",
-     lightShadow: { light: "Total Production Control", shadow: "Micromanager" }
+     id: "auteur",
+     name: "The Auteur",
+     sphere: 1,
+     deity: "Ausar (The Indwelling Intelligence)",
+     law: "Oneness. The recognition that all parts of the production (life) are integral parts of a single Whole. It is the ability to see unity in diversity.",
+     role: "The visionary who holds the 'True Self.' This character does not identify with the limited personality (the actor) but with the intelligence running the whole show. It represents the state where there is no conflict, only a single, unified vision.",
+     directorsNote: "I don't take sides. I see the whole picture."
    },
    {
-     id: "lead_editor",
-     name: "The Lead Editor",
-     cinematicDefinition: "The architect of the 'Final Cut.' They ruthlessly remove scenes that do not serve the story.",
-     superpower: "The K-U-T",
-     superpowerDescription: "They possess the ability to 'cut out destructive frames' and spot inconsistency immediately. They value narrative flow over sentimentality.",
-     shadow: "The Butcher",
-     shadowDescription: "They cut so aggressively that the movie loses its soul. They focus on the flaws in the footage rather than the potential of the scene.",
-     directorsNote: "You cut the truth, but you left the emotion on the floor.",
-     lightShadow: { light: "The K-U-T", shadow: "The Butcher" }
+     id: "oracle",
+     name: "The Oracle",
+     sphere: 2,
+     deity: "Tehuti (Wisdom/Measurement)",
+     law: "Wisdom. The ability to quell mental noise to receive intuitive guidance. It uses 'Oracles' and 'Mathematics' to place everything in its correct time and space.",
+     role: "The master planner. This character does not guess; they calculate. They possess the blueprint. They represent the 'Double Measure'—weighing the script against reality to ensure accuracy and truth.",
+     directorsNote: "Show me the proof. If the math doesn't work, the scene doesn't work."
    },
    {
-     id: "studio_executive",
-     name: "The Studio Executive",
-     cinematicDefinition: "The 'Greenlight' authority. They hold the purse strings and demand that the movie be profitable and meet the 'embedded values' of the studio.",
-     superpower: "High Standards",
-     superpowerDescription: "They ensure the 'Production Value' is elite. They refuse to accept B-movie effort for an A-list life.",
-     shadow: "The Killjoy",
-     shadowDescription: "They cancel the project before it starts because the budget (emotional risk) looks too high. They judge the 'dailies' too harshly before post-production is finished.",
-     directorsNote: "You are judging the rough cut like it's the premiere.",
-     lightShadow: { light: "High Standards", shadow: "The Killjoy" }
+     id: "system_builder",
+     name: "The System Builder",
+     sphere: 3,
+     deity: "Seker (Structure/Cycles/Life Force)",
+     law: "Structure. The imposition of discipline, cycles, and limitations to build the container for power. This sphere is often associated with the 'death' of the old to make way for the new.",
+     role: "The force that builds the set and establishes the schedule. They understand that without a strict container (discipline), the energy (Life Force) dissipates. They manage the 'destiny' or the 'plan' of the production.",
+     directorsNote: "Stick to the schedule. No structure, no power."
    },
    {
-     id: "screenwriter",
-     name: "The Screenwriter",
-     cinematicDefinition: "The architect of the 'Paradigm.' They understand structure, plot points, and the linear progression of the story.",
-     superpower: "The Blueprint",
-     superpowerDescription: "They create the 'Three-Act Structure' that makes success inevitable. They value logic and cause-and-effect.",
-     shadow: "The Formulaic Hack",
-     shadowDescription: "They become obsessed with the 'formula' rather than the 'form'. They create rigid scripts that allow no room for improvisation or the 'magic if'.",
-     directorsNote: "You wrote a perfect script, but there's no life in the dialogue.",
-     lightShadow: { light: "The Blueprint", shadow: "Formulaic Hack" }
+     id: "law_keeper",
+     name: "The Law Keeper",
+     sphere: 4,
+     deity: "Maat (Law/Truth/Abundance)",
+     law: "Balance. The understanding of the interdependence of all things. Giving and sharing creates abundance. It is the 'optimistic' view that sees the whole.",
+     role: "The judge who ensures the script follows the 'Divine Law.' They represent optimism, generosity, and the 'overview' that connects disparate parts. They ensure the production is balanced and resources are shared.",
+     directorsNote: "Is it balanced? Does it serve the whole production, or just one actor?"
    },
    {
-     id: "script_doctor",
-     name: "The Script Doctor",
-     cinematicDefinition: "The expert brought in to fix a broken story. They diagnose 'plot holes' and 'character inconsistencies'.",
-     superpower: "Diagnostic Logic",
-     superpowerDescription: "They can look at a life that isn't working and immediately identify the 'Inciting Incident' that caused the problem.",
-     shadow: "The Critic",
-     shadowDescription: "They can explain why the movie is bad, but they cannot create a good one. They are stuck in 'intellectualizing' the role rather than living it.",
-     directorsNote: "You can analyze the scene, but can you play it?",
-     lightShadow: { light: "Diagnostic Logic", shadow: "The Critic" }
+     id: "sentinel",
+     name: "The Sentinel",
+     sphere: 5,
+     deity: "Herukhuti (Divine Justice/Defense)",
+     law: "Justice. The analytical separator. It protects the righteous and enforces consequences. It represents immediate action and the 'immune system' of the narrative.",
+     role: "The warrior who clears the path. They use 'analysis' to separate friend from foe. They are the analytical force that cuts through confusion to protect the integrity of the Director's vision.",
+     directorsNote: "I cut the scenes that don't belong. I protect the vision at all costs."
    },
    {
-     id: "method_actor",
-     name: "The Method Actor",
-     cinematicDefinition: "The performer who uses 'Emotional Memory' to completely transform into the character. They don't act; they are.",
-     superpower: "Identity Shifting",
-     superpowerDescription: "They can completely overwrite their 'Old Self' with a 'New Self' through sheer intensity of belief.",
-     shadow: "Lost in Character",
-     shadowDescription: "They lose their 'Grounding' and cannot separate the role from reality. They risk emotional burnout from high-intensity performance without a 'KUT!' mechanism.",
-     directorsNote: "You're deep in the role, but you forgot who you are when the camera stops.",
-     lightShadow: { light: "Identity Shifting", shadow: "Lost in Character" }
+     id: "sovereign_will",
+     name: "The Sovereign Will",
+     sphere: 6,
+     deity: "Heru (The Will/Freedom)",
+     law: "The Will. The freedom to ignore emotional impulses to follow the higher law. It is the victory of the higher self over the lower instincts.",
+     role: "The central protagonist who must fight to reclaim the throne from the 'Lower Self' (Set). They represent the ability to command the self and others, not through force, but through authority and will.",
+     directorsNote: "I don't react to the noise. I command the action."
    },
    {
-     id: "stunt_coordinator",
-     name: "The Stunt Coordinator",
-     cinematicDefinition: "The expert who manages high-risk sequences. They ensure 'Safety' while executing dangerous maneuvers.",
-     superpower: "Risk Mitigation",
-     superpowerDescription: "They anticipate danger before it happens. They protect the 'Lead Actor' (the self) from physical and emotional harm.",
-     shadow: "The Paranoiac",
-     shadowDescription: "They refuse to let the actor perform the stunt because it 'might' go wrong. They pad the set so much that the movie becomes boring and safe.",
-     directorsNote: "You padded the walls so well that we can't hear the dialogue.",
-     lightShadow: { light: "Risk Mitigation", shadow: "The Paranoiac" }
+     id: "creative_muse",
+     name: "The Creative Muse",
+     sphere: 7,
+     deity: "Het-Heru (Imagination/Joy)",
+     law: "Creative Imagination. The gestation of the will through joy, pleasure, and visualization. It uses imagery to 'program' the life force.",
+     role: "The artistic force. They use beauty, visuals, and emotional arousal to fuel the production. They turn the dry script into a vivid, sensory experience. They are the 'lens' through which the future is seen.",
+     directorsNote: "If you can't visualize it, you can't film it. Make it beautiful."
    },
    {
-     id: "ensemble_director",
-     name: "The Ensemble Director",
-     cinematicDefinition: "The director who specializes in 'Casting' and 'Chemistry.' They focus on the interplay between the supporting cast.",
-     superpower: "Chemistry Management",
-     superpowerDescription: "They ensure the 'Supporting Cast' supports the Lead. They create a 'Safe Set' policy where everyone thrives.",
-     shadow: "The People Pleaser",
-     shadowDescription: "They refuse to fire a 'Supporting Actor' who is sabotaging the production because they want everyone to get along. They let the extras crowd the frame.",
-     directorsNote: "You're keeping the extras happy at the expense of the star.",
-     lightShadow: { light: "Chemistry Management", shadow: "People Pleaser" }
+     id: "analyst",
+     name: "The Analyst",
+     sphere: 8,
+     deity: "Sebek (Logic/Communication)",
+     law: "Verbal Logic. Defining, naming, and communicating information. Separating things by their external differences/form.",
+     role: "The editor and diplomat. They manage the files, the definitions, and the specific details. They can become the 'Trickster' if not guided by wisdom (Sphere 2), but they are essential for technical execution and easing the way.",
+     directorsNote: "Let's define the terms. Let's look at the technical specs."
    },
    {
-     id: "location_scout",
-     name: "The Location Scout",
-     cinematicDefinition: "The visionary who goes out before production to find the perfect world for the story to take place.",
-     superpower: "Visionary Exploration",
-     superpowerDescription: "They find 'New Worlds' and possibilities that others cannot see. They are always looking at the horizon/future acts.",
-     shadow: "The Escapist",
-     shadowDescription: "They are always scouting the next movie and never actually shooting the current one. They prefer the dream of the location to the reality of the set.",
-     directorsNote: "Stop scouting. Start filming.",
-     lightShadow: { light: "Visionary Exploration", shadow: "The Escapist" }
+     id: "deep_memory",
+     name: "The Deep Memory",
+     sphere: 9,
+     deity: "Auset (Devotion/Receptivity)",
+     law: "Receptivity. The subconscious memory and the power of trance/hypnosis. It is the foundation that receives the seed of the Will.",
+     role: "The vessel that holds the programming. Instead of 'Mother,' think of this as the Foundation. It is the trance state that allows the script to sink into the subconscious. It nurtures the vision until it is ready to be born.",
+     directorsNote: "I hold the vision in the dark until it is ready for the light."
    },
    {
-     id: "distributor",
-     name: "The Distributor",
-     cinematicDefinition: "The force that connects the movie to the audience. They understand 'Marketability' and 'Genre'.",
-     superpower: "Connection",
-     superpowerDescription: "They know how to 'Pitch' the vision to the world. They weave the personal story into the collective narrative (The Hive Mind).",
-     shadow: "The Sellout",
-     shadowDescription: "They edit the movie just to please the audience (social approval) rather than honoring the Director's vision. They lose their 'Artistic Identity' for likes and views.",
-     directorsNote: "You sold the tickets, but you lost the movie.",
-     lightShadow: { light: "Connection", shadow: "The Sellout" }
+     id: "anchor",
+     name: "The Anchor",
+     sphere: 10,
+     deity: "Geb (Earth/Physics)",
+     law: "Verification. The physical body and resources. The check-and-balance of spiritual work in the physical realm.",
+     role: "The reality check. They ensure the 'Divine Plan' actually works on set (physical reality). They deal with the budget, the physical health of the crew, and the tangible results.",
+     directorsNote: "It's not real until it's on film. Let's see the physical results."
    }
  ];
 
-export function getArchetypeById(id: string): Archetype | undefined {
-  return ARCHETYPES.find(a => a.id === id);
-}
+ export function getArchetypeById(id: string): Archetype | undefined {
+   return ARCHETYPES.find(a => a.id === id);
+ }
  
  // Legacy ID mapping for backward compatibility with existing database records
+ // Maps original mystical IDs → cinematic IDs → current Metu Neter IDs
  export const LEGACY_ID_MAP: Record<string, string> = {
-   "still_center": "concerned_observer",
-   "sovereign": "showrunner",
-   "truth_keeper": "lead_editor",
-   "sacred_judge": "studio_executive",
-   "master_builder": "screenwriter",
-   "divine_analyst": "script_doctor",
-   "alchemist": "method_actor",
-   "protector": "stunt_coordinator",
-   "harmonizer": "ensemble_director",
-   "wayfinder": "location_scout",
-   "weaver": "distributor"
+   // Original mystical names
+   "still_center": "blank_canvas",
+   "sovereign": "auteur",
+   "truth_keeper": "sentinel",
+   "sacred_judge": "law_keeper",
+   "master_builder": "system_builder",
+   "divine_analyst": "oracle",
+   "alchemist": "creative_muse",
+   "protector": "anchor",
+   "harmonizer": "deep_memory",
+   "wayfinder": "sovereign_will",
+   "weaver": "analyst",
+   // Previous cinematic names
+   "concerned_observer": "blank_canvas",
+   "showrunner": "auteur",
+   "lead_editor": "sentinel",
+   "studio_executive": "law_keeper",
+   "screenwriter": "system_builder",
+   "script_doctor": "oracle",
+   "method_actor": "creative_muse",
+   "stunt_coordinator": "anchor",
+   "ensemble_director": "deep_memory",
+   "location_scout": "sovereign_will",
+   "distributor": "analyst"
  };
  
  export function getArchetypeByIdWithLegacy(id: string): Archetype | undefined {
