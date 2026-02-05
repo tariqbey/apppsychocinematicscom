@@ -53,6 +53,12 @@ NLP PATTERNS TO USE:
 
 The goal is CHARACTER DEVELOPMENT through navigating emotional adversity with clarity and maturity.`;
 
+    // Extract character transformation details if available
+    const characterTransformation = episodeContext?.characterTransformation;
+    const requiredCharacter = characterTransformation?.requiredCharacter;
+    const currentCharacterProfile = characterTransformation?.currentCharacterProfile;
+    const transformationGap = characterTransformation?.transformationGap;
+
     const userPrompt = `Generate an adversity challenge:
 
 SCENARIO TYPE: ${scenarioType}
@@ -60,11 +66,32 @@ TARGET TRAIT: ${targetTrait}
 ${referencePhotoUrl ? `REFERENCE PHOTO: User has uploaded a reference photo for personalized visualizations` : ''}
 ${episodeContext ? `
 EPISODE CONTEXT:
-- Title: ${episodeContext.title}
-- Objective: ${episodeContext.objective}
+- Episode Title: ${episodeContext.title}
+- Episode Objective: ${episodeContext.objective}
+${requiredCharacter ? `
+CHARACTER TO BECOME:
+- Character Name: ${requiredCharacter.name}
+- Core Traits: ${requiredCharacter.traits?.join(', ') || 'Not specified'}
+- Required Behaviors: ${requiredCharacter.behaviors?.join(', ') || 'Not specified'}
+- Required Mindset: ${requiredCharacter.mindset || 'Not specified'}
+` : ''}
+${currentCharacterProfile ? `
+WEAKNESSES TO ADDRESS:
+- Limiting Beliefs: ${currentCharacterProfile.limitingBeliefs?.join(', ') || 'None identified'}
+- Sabotage Patterns: ${currentCharacterProfile.sabotagePatterns?.join(', ') || 'None identified'}
+` : ''}
+${transformationGap ? `
+TRANSFORMATION GAP:
+- Patterns That Must Die: ${transformationGap.whatMustDie?.join(', ') || 'Not specified'}
+- Patterns That Must Emerge: ${transformationGap.whatMustEmerge?.join(', ') || 'Not specified'}
+` : ''}
 ` : ''}
 
-Create a realistic situation that would trigger emotional reactivity and test the target trait.
+Create a HIGHLY SPECIFIC challenge scenario that:
+1. Directly tests the user's identified weaknesses and sabotage patterns
+2. Requires them to embody the required character's traits and behaviors
+3. Creates a realistic situation they might face while pursuing the episode objective
+4. Forces a choice between old limiting patterns and the new transformed identity
 
 IDEAL RESPONSE PATTERN (from Napoleon Hill's Laws of Success):
 ${idealResponse}
@@ -74,10 +101,11 @@ ${affirmation}
 
 Return JSON with these fields:
 {
-  "situation": "A detailed 2-3 sentence description of the adversity scenario",
-  "trigger": "The specific emotional trigger that would cause reactive behavior (1 sentence)",
-  "idealResponse": "How the Director Character should handle this situation (2-3 sentences based on Napoleon Hill's principles)",
+  "situation": "A detailed 2-3 sentence description of the adversity scenario - MUST be specific to their episode objective and weaknesses",
+  "trigger": "The specific emotional trigger that would cause their sabotage patterns to activate (1 sentence)",
+  "idealResponse": "How the ${requiredCharacter?.name || 'Director Character'} should handle this situation (2-3 sentences based on Napoleon Hill's principles)",
   "affirmation": "A powerful first-person affirmation for this specific challenge",
+  "targetedWeakness": "Which specific limiting belief or sabotage pattern this challenge addresses",
   "visualizationScript": [
     {
       "scene": 1,
