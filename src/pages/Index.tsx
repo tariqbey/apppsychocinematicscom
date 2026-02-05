@@ -39,8 +39,7 @@ import { FeaturedArtistBanner } from "@/components/dashboard/FeaturedArtistBanne
 import { TestimonialSubmissionDialog } from "@/components/testimonials/TestimonialSubmissionDialog";
 import { EnableNotificationsBanner } from "@/components/notifications/EnableNotificationsBanner";
 import { DirectorBanner } from "@/components/dashboard/DirectorBanner";
- import { MovieStudioModule } from "@/components/dashboard/MovieStudioModule";
- import { ChiefAimCountdown } from "@/components/dashboard/ChiefAimCountdown";
+import { MovieStudioModule } from "@/components/dashboard/MovieStudioModule";
 
 // Custom module icons
 import iconChiefAim from "@/assets/icons/icon-chief-aim.png";
@@ -314,24 +313,17 @@ const Index = () => {
       {/* Main Content */}
       <main className="container mx-auto px-3 sm:px-4 pt-20 sm:pt-24 pb-28 sm:pb-32 overflow-x-hidden w-full">
         <div className="max-w-4xl mx-auto space-y-4 sm:space-y-6">
-          {/* Director Banner - Futuristic cover art + profile picture */}
+          {/* Director Banner - With integrated countdown */}
           <DirectorBanner 
             onOpenAIStudio={() => {
               setEditBayInitialPrompt(undefined);
               setEditBaySceneContext(undefined);
               setShowEditBay(true);
             }}
+            chiefAimByWhen={chiefAim.byWhen}
+            chiefAimSummary={chiefAim.what ? chiefAim.what.slice(0, 100) : undefined}
             className="animate-fade-in"
           />
-
-          {/* ========== CHIEF AIM COUNTDOWN CLOCK (Under Welcome Banner) ========== */}
-          {chiefAim.byWhen && (
-            <ChiefAimCountdown 
-              byWhen={chiefAim.byWhen} 
-              whatSummary={chiefAim.what ? chiefAim.what.slice(0, 100) : undefined}
-              className="animate-fade-in"
-            />
-          )}
 
           {/* Push Notifications Banner - Reminds users to enable */}
           <EnableNotificationsBanner className="animate-slide-up" />
