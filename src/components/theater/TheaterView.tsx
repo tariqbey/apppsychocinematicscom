@@ -11,6 +11,7 @@ import {
   Trash2,
   Loader2,
 } from "lucide-react";
+ import { EpisodeMovieSelector } from "./EpisodeMovieSelector";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -44,6 +45,14 @@ export const TheaterView = ({ onClose }: TheaterViewProps) => {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [newTaskText, setNewTaskText] = useState("");
   const [isLoadingTasks, setIsLoadingTasks] = useState(false);
+   
+   // Episode movie mode
+   const [videoSource, setVideoSource] = useState<"mind-movie" | "episode">("mind-movie");
+   const [selectedEpisode, setSelectedEpisode] = useState<{
+     id: string;
+     title: string;
+     movie_url: string;
+   } | null>(null);
 
   const playerRef = useRef<MindMoviePlayerHandle>(null);
   const { profile, recordViewing } = useUserProfile();
@@ -53,7 +62,12 @@ export const TheaterView = ({ onClose }: TheaterViewProps) => {
   const globalAudio = useAudioOptional();
 
   const streak = profile?.current_streak || 0;
-  const videoUrl = profile?.mind_movie_url;
+   const mindMovieUrl = profile?.mind_movie_url;
+   
+   // Determine which video to play based on source
+   const videoUrl = videoSource === "episode" && selectedEpisode?.movie_url 
+     ? selectedEpisode.movie_url 
+     : mindMovieUrl;
 
   // Force stop all media on close
   const stopAllMedia = useCallback(() => {
@@ -274,6 +288,26 @@ export const TheaterView = ({ onClose }: TheaterViewProps) => {
           </div>
 
           <div className="flex items-center gap-2 sm:gap-4">
+             {/* Episode Movie Selector */}
+             <EpisodeMovieSelector
+               currentSource={videoSource}
+               currentEpisodeId={selectedEpisode?.id}
+               onSelectMindMovie={() => {
+                 setVideoSource("mind-movie");
+                 setSelectedEpisode(null);
+               }}
+               onSelectEpisode={(episode) => {
+                 if (episode.movie_url) {
+                   setVideoSource("episode");
+                   setSelectedEpisode({
+                     id: episode.id,
+                     title: episode.title,
+                     movie_url: episode.movie_url,
+                   });
+                 }
+               }}
+             />
+             
             <div className="flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-1.5 sm:py-2 rounded-lg bg-gradient-to-r from-amber-soft/20 to-cinematic-red/20 border border-amber-soft/30">
               <Flame
                 className={cn(

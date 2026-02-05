@@ -263,12 +263,12 @@ export function EpisodeCard({
       </div>
 
       {/* Actions (when expanded) */}
-      {expanded && episode.status !== "abandoned" && (
+       {expanded && (
         <div 
           className="flex items-center gap-2 mt-4 pt-3 border-t border-border flex-wrap"
           onClick={(e) => e.stopPropagation()}
         >
-          {episode.status === "active" && (
+           {episode.status === "active" && (
             <Button
               size="sm"
               className="bg-green-600 hover:bg-green-700"
@@ -338,7 +338,7 @@ export function EpisodeCard({
             <EpisodeMoviePreview scriptId={episode.mind_movie_script_id} variant="button" />
           )}
 
-          {episode.status !== "completed" && (
+           {episode.status !== "completed" && episode.status !== "abandoned" && (
             <Button
               size="sm"
               variant="outline"
@@ -364,6 +364,7 @@ export function EpisodeCard({
             variant="ghost"
             className="text-red-400 hover:text-red-400 hover:bg-red-500/10 ml-auto"
             onClick={handleDelete}
+             disabled={loading}
           >
             <Trash2 className="w-4 h-4" />
           </Button>

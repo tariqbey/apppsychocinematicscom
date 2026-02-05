@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+ import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { Zap, Plus, ArrowLeft, Film, Clapperboard, Sparkles } from "lucide-react";
+ import { Zap, Plus, ArrowLeft, Film, Clapperboard, Sparkles, Target, Music, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Header } from "@/components/layout/Header";
 import { useEpisodes, Episode } from "@/hooks/useEpisodes";
@@ -14,6 +14,39 @@ import { ActiveEpisodeBanner } from "@/components/episodes/ActiveEpisodeBanner";
 import { MindMovieScriptWizard } from "@/components/mind-movie/MindMovieScriptWizard";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EpisodeCharacterTransformation } from "@/components/episodes/EpisodeTransformationCard";
+ import { EpisodeDetailView } from "@/components/episodes/EpisodeDetailView";
+ import { EpisodeCharacterDashboard } from "@/components/dashboard/EpisodeCharacterDashboard";
+ import { ChallengeCard } from "@/components/challenges/ChallengeCard";
+ import { supabase } from "@/integrations/supabase/client";
+ import { Card } from "@/components/ui/card";
+ import { ScrollArea } from "@/components/ui/scroll-area";
+
+ interface AdversityChallenge {
+   id: string;
+   user_id: string;
+   scenario_type: string;
+   target_trait: string;
+   situation_description: string;
+   emotional_trigger: string;
+   challenge_date: string;
+   completed: boolean;
+   response_type: string | null;
+   feeling: string | null;
+   part_challenged: string | null;
+   did_cut: boolean | null;
+   cut_notes: string | null;
+   insight_gained: string | null;
+   action_taken: string | null;
+   at_peace: boolean | null;
+   trait_xp_earned: number | null;
+   created_at: string;
+   storyboard_scenes?: unknown;
+   storyboard_reference_photo?: string | null;
+   storyboard_created_at?: string | null;
+   visualization_script?: string | null;
+   ideal_response?: string | null;
+   affirmation?: string | null;
+ }
 
 export default function Episodes() {
   const navigate = useNavigate();
@@ -28,6 +61,40 @@ export default function Episodes() {
   // Mind Movie Wizard state
   const [movieWizardEpisode, setMovieWizardEpisode] = useState<Episode | null>(null);
   const [characterAnalysis, setCharacterAnalysis] = useState<EpisodeCharacterTransformation | null>(null);
+   
+   // Detail View state
+   const [detailViewEpisode, setDetailViewEpisode] = useState<Episode | null>(null);
+   
+   // Challenges state
+   const [challenges, setChallenges] = useState<AdversityChallenge[]>([]);
+   const [loadingChallenges, setLoadingChallenges] = useState(false);
+   
+   const fetchChallenges = useCallback(async () => {
+     if (!user) return;
+     
+     setLoadingChallenges(true);
+     try {
+       const { data, error } = await supabase
+         .from("adversity_challenges")
+         .select("*")
+         .eq("user_id", user.id)
+         .order("created_at", { ascending: false })
+         .limit(10);
+ 
+       if (error) throw error;
+       setChallenges(data || []);
+     } catch (error) {
+       console.error("Error fetching challenges:", error);
+     } finally {
+       setLoadingChallenges(false);
+     }
+   }, [user]);
+   
+   useEffect(() => {
+     if (user) {
+       fetchChallenges();
+     }
+   }, [user, fetchChallenges]);
   
   const chiefAim = {
     what: profile?.chief_aim_what || "",
@@ -186,9 +253,18 @@ export default function Episodes() {
               <Clapperboard className="w-4 h-4" />
               Timeline
             </TabsTrigger>
+             <TabsTrigger value="challenges" className="gap-2">
+               <Target className="w-4 h-4" />
+               Challenges
+             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="episodes" className="space-y-8">
+           <TabsContent value="episodes" className="space-y-6">
+             {/* Episode Character Dashboard - Show for active episode */}
+             {activeEpisode?.character_transformation && (
+               <EpisodeCharacterDashboard episode={activeEpisode} />
+             )}
+             
             {loading ? (
               <div className="glass-card p-12 text-center">
                 <Sparkles className="w-10 h-10 text-gold animate-pulse mx-auto mb-4" />
@@ -292,6 +368,56 @@ export default function Episodes() {
           <TabsContent value="timeline">
             <EpisodeTimeline episodes={episodes} />
           </TabsContent>
+           
+           <TabsContent value="challenges" className="space-y-6">
+             <div className="glass-card p-6 border border-border">
+               <div className="flex items-center gap-4 mb-6">
+                 <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500/20 to-cyan-600/20 flex items-center justify-center">
+                   <Target className="w-6 h-6 text-blue-500" />
+                 </div>
+                 <div>
+                   <h2 className="text-xl font-display">Challenges & Adversity Training</h2>
+                   <p className="text-sm text-muted-foreground">
+                     Train your character through scenario-based emotional adversity
+                   </p>
+                 </div>
+                 <Button
+                   variant="outline"
+                   size="sm"
+                   className="ml-auto"
+                   onClick={() => navigate("/challenges")}
+                 >
+                   View All Challenges
+                 </Button>
+               </div>
+               
+               {loadingChallenges ? (
+                 <div className="flex items-center justify-center py-8">
+                   <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                 </div>
+               ) : challenges.length === 0 ? (
+                 <Card className="p-6 text-center">
+                   <Target className="w-10 h-10 text-muted-foreground/50 mx-auto mb-3" />
+                   <p className="text-muted-foreground mb-4">No challenges yet</p>
+                   <Button variant="gold" onClick={() => navigate("/challenges")}>
+                     Generate Challenge
+                   </Button>
+                 </Card>
+               ) : (
+                 <ScrollArea className="h-[400px]">
+                   <div className="space-y-3">
+                     {challenges.slice(0, 5).map((challenge) => (
+                       <ChallengeCard
+                         key={challenge.id}
+                         challenge={challenge}
+                         onComplete={fetchChallenges}
+                       />
+                     ))}
+                   </div>
+                 </ScrollArea>
+               )}
+             </div>
+           </TabsContent>
         </Tabs>
       </main>
 
