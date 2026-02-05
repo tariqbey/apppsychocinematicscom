@@ -269,6 +269,17 @@ export function DirectorAIAgent({ isOpen, onClose, chiefAim }: DirectorAIAgentPr
     }
   }, [isOpen, stopListening]);
 
+  // Body scroll lock while overlay is open
+  useEffect(() => {
+    if (isOpen) {
+      const originalOverflow = document.body.style.overflow;
+      document.body.style.overflow = "hidden";
+      return () => {
+        document.body.style.overflow = originalOverflow;
+      };
+    }
+  }, [isOpen]);
+
   const speakText = async (text: string) => {
     // Capture the current request ID to detect if stop was called
     const currentRequestId = ++ttsRequestIdRef.current;
@@ -743,17 +754,6 @@ export function DirectorAIAgent({ isOpen, onClose, chiefAim }: DirectorAIAgentPr
       </div>
     );
   }
-
-  // Body scroll lock while overlay is open
-  useEffect(() => {
-    if (isOpen) {
-      const originalOverflow = document.body.style.overflow;
-      document.body.style.overflow = "hidden";
-      return () => {
-        document.body.style.overflow = originalOverflow;
-      };
-    }
-  }, [isOpen]);
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col h-[100dvh] w-full overflow-hidden">
