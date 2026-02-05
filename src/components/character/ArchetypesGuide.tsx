@@ -1,8 +1,9 @@
  import { ARCHETYPES, Archetype } from "./archetypes";
  import { cn } from "@/lib/utils";
  import { useState } from "react";
- import { ChevronDown, ChevronUp, User2, Sparkles, AlertTriangle, Zap, Sun, Moon } from "lucide-react";
+import { ChevronDown, ChevronUp, User2, Sparkles, AlertTriangle, Zap, Sun, Moon, List } from "lucide-react";
  import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
  
  interface ArchetypeCardProps {
    archetype: Archetype;
@@ -164,6 +165,55 @@
          </p>
        </div>
  
+      {/* Quick Reference Key - All Archetypes Summary */}
+      <div className="glass-card p-5 sm:p-6 cinematic-border">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-cyan-500/30 to-blue-500/20 flex items-center justify-center">
+            <List className="w-5 h-5 text-cyan-400" />
+          </div>
+          <div>
+            <h3 className="text-lg font-display tracking-wide">All Archetypes at a Glance</h3>
+            <p className="text-xs text-muted-foreground">Quick reference key for the 11 Director types</p>
+          </div>
+        </div>
+        <Separator className="mb-4 bg-border/50" />
+        <div className="grid gap-2">
+          {ARCHETYPES.map((archetype, index) => (
+            <div 
+              key={archetype.id}
+              className="flex items-start gap-3 p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors cursor-pointer"
+              onClick={() => setExpandedId(expandedId === archetype.id ? null : archetype.id)}
+            >
+              <div className="w-7 h-7 rounded-md bg-gold/20 flex items-center justify-center shrink-0">
+                <span className="text-xs font-bold text-gold">{index + 1}</span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="font-medium text-foreground">{archetype.name}</span>
+                  <span className="text-xs text-muted-foreground">•</span>
+                  <span className="text-xs text-muted-foreground italic">"{archetype.tagline}"</span>
+                </div>
+                <div className="flex items-center gap-3 mt-1 text-xs">
+                  <span className="flex items-center gap-1">
+                    <Sun className="w-3 h-3 text-emerald-400" />
+                    <span className="text-emerald-400">{archetype.lightShadow.light}</span>
+                  </span>
+                  <span className="text-muted-foreground/50">|</span>
+                  <span className="flex items-center gap-1">
+                    <Moon className="w-3 h-3 text-red-400" />
+                    <span className="text-red-400">{archetype.lightShadow.shadow}</span>
+                  </span>
+                </div>
+              </div>
+              <ChevronDown className={cn(
+                "w-4 h-4 text-muted-foreground shrink-0 transition-transform",
+                expandedId === archetype.id && "rotate-180"
+              )} />
+            </div>
+          ))}
+        </div>
+      </div>
+
        {/* Archetypes List */}
        <div className="space-y-3">
          {ARCHETYPES.map((archetype) => (
