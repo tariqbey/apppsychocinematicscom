@@ -78,7 +78,32 @@ export function ChiefAimCountdown({ byWhen, whatSummary, className }: ChiefAimCo
     return () => clearInterval(interval);
   }, [targetDate]);
 
-  if (!targetDate || !timeRemaining) {
+  // Show fallback if byWhen is missing or invalid
+  if (!byWhen || !byWhen.trim()) {
+    if (import.meta.env.DEV) {
+      console.log("[ChiefAimCountdown] Not rendering: byWhen is empty");
+    }
+    return null;
+  }
+
+  if (!targetDate) {
+    if (import.meta.env.DEV) {
+      console.log("[ChiefAimCountdown] Could not parse byWhen:", byWhen);
+    }
+    // Show a helpful fallback instead of disappearing
+    return (
+      <div className={cn("rounded-2xl border border-gold/30 bg-card/60 p-4 text-center", className)}>
+        <p className="text-sm text-muted-foreground">
+          📅 Your deadline date couldn't be parsed: <span className="text-gold">"{byWhen}"</span>
+        </p>
+        <p className="text-xs text-muted-foreground mt-1">
+          Try a format like "January 1, 2027" or "2027-01-01"
+        </p>
+      </div>
+    );
+  }
+
+  if (!timeRemaining) {
     return null;
   }
 
