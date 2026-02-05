@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Header } from "@/components/layout/Header";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { CharacterCentral } from "@/components/character/CharacterCentral";
 import { CharacterScorecard } from "@/components/character/CharacterScorecard";
 import { CharacterWeeklySummary } from "@/components/character/CharacterWeeklySummary";
@@ -43,10 +44,10 @@ const Character = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background spotlight film-grain">
+    <div className="min-h-screen bg-background spotlight film-grain overflow-auto">
       <Header />
 
-      <main className="container mx-auto px-4 pt-28 sm:pt-32 pb-32">
+      <main className="container mx-auto px-4 pt-28 sm:pt-32 pb-32 overflow-visible">
         <div className="max-w-4xl mx-auto space-y-6">
           {/* Back Button & Header - positioned to avoid logo overlap */}
           <div className="flex items-center gap-3 sm:gap-4 mb-6 sm:mb-8">
