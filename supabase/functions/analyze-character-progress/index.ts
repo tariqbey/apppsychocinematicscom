@@ -1,11 +1,144 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { NAPOLEON_HILL_17_LAWS, getLawForSituation } from '../_shared/success-principles-kb.ts';
+import { NAPOLEON_HILL_17_LAWS } from '../_shared/success-principles-kb.ts';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
+
+// Metu Neter Archetypes - mapping to Tree of Life spheres
+const METU_NETER_ARCHETYPES: Record<string, { 
+  name: string; 
+  sphere: number; 
+  deity: string; 
+  law: string;
+  role: string;
+  directorsNote: string;
+}> = {
+  blank_canvas: {
+    name: "The Blank Canvas",
+    sphere: 0,
+    deity: "Amen (The Concealed/The Unconditioned)",
+    law: "Potential. The realization that the essential self is unconditioned energy.",
+    role: "The source of infinite possibility. The ability to 'zero out' and detach from the drama.",
+    directorsNote: "I am not the movie. I am the silence behind the sound."
+  },
+  auteur: {
+    name: "The Auteur",
+    sphere: 1,
+    deity: "Ausar (The Indwelling Intelligence)",
+    law: "Oneness. The recognition that all parts of the production are integral parts of a single Whole.",
+    role: "The visionary who holds the 'True Self' and sees unity in diversity.",
+    directorsNote: "I don't take sides. I see the whole picture."
+  },
+  oracle: {
+    name: "The Oracle",
+    sphere: 2,
+    deity: "Tehuti (Wisdom/Measurement)",
+    law: "Wisdom. The ability to quell mental noise to receive intuitive guidance.",
+    role: "The master planner who calculates and possesses the blueprint.",
+    directorsNote: "Show me the proof. If the math doesn't work, the scene doesn't work."
+  },
+  system_builder: {
+    name: "The System Builder",
+    sphere: 3,
+    deity: "Seker (Structure/Cycles/Life Force)",
+    law: "Structure. The imposition of discipline, cycles, and limitations to build the container for power.",
+    role: "The force that builds the set and establishes the schedule.",
+    directorsNote: "Stick to the schedule. No structure, no power."
+  },
+  law_keeper: {
+    name: "The Law Keeper",
+    sphere: 4,
+    deity: "Maat (Law/Truth/Abundance)",
+    law: "Balance. The understanding of the interdependence of all things.",
+    role: "The judge who ensures the script follows the 'Divine Law'.",
+    directorsNote: "Is it balanced? Does it serve the whole production, or just one actor?"
+  },
+  sentinel: {
+    name: "The Sentinel",
+    sphere: 5,
+    deity: "Herukhuti (Divine Justice/Defense)",
+    law: "Justice. The analytical separator. It protects the righteous and enforces consequences.",
+    role: "The warrior who clears the path and protects the Director's vision.",
+    directorsNote: "I cut the scenes that don't belong. I protect the vision at all costs."
+  },
+  sovereign_will: {
+    name: "The Sovereign Will",
+    sphere: 6,
+    deity: "Heru (The Will/Freedom)",
+    law: "The Will. The freedom to ignore emotional impulses to follow the higher law.",
+    role: "The central protagonist who commands through authority and will.",
+    directorsNote: "I don't react to the noise. I command the action."
+  },
+  creative_muse: {
+    name: "The Creative Muse",
+    sphere: 7,
+    deity: "Het-Heru (Imagination/Joy)",
+    law: "Creative Imagination. The gestation of the will through joy, pleasure, and visualization.",
+    role: "The artistic force that uses beauty and visuals to fuel the production.",
+    directorsNote: "If you can't visualize it, you can't film it. Make it beautiful."
+  },
+  analyst: {
+    name: "The Analyst",
+    sphere: 8,
+    deity: "Sebek (Logic/Communication)",
+    law: "Verbal Logic. Defining, naming, and communicating information.",
+    role: "The editor and diplomat who manages the files and technical details.",
+    directorsNote: "Let's define the terms. Let's look at the technical specs."
+  },
+  deep_memory: {
+    name: "The Deep Memory",
+    sphere: 9,
+    deity: "Auset (Devotion/Receptivity)",
+    law: "Receptivity. The subconscious memory and the power of trance/hypnosis.",
+    role: "The vessel that holds the programming and nurtures the vision.",
+    directorsNote: "I hold the vision in the dark until it is ready for the light."
+  },
+  anchor: {
+    name: "The Anchor",
+    sphere: 10,
+    deity: "Geb (Earth/Physics)",
+    law: "Verification. The physical body and resources. The check-and-balance of spiritual work.",
+    role: "The reality check that ensures the Divine Plan works on set.",
+    directorsNote: "It's not real until it's on film. Let's see the physical results."
+  }
+};
+
+// Legacy ID mapping for backward compatibility
+const LEGACY_ARCHETYPE_MAP: Record<string, string> = {
+  // Original mystical names
+  "still_center": "blank_canvas",
+  "sovereign": "auteur",
+  "truth_keeper": "sentinel",
+  "sacred_judge": "law_keeper",
+  "master_builder": "system_builder",
+  "divine_analyst": "oracle",
+  "alchemist": "creative_muse",
+  "protector": "anchor",
+  "harmonizer": "deep_memory",
+  "wayfinder": "sovereign_will",
+  "weaver": "analyst",
+  // Previous cinematic names
+  "concerned_observer": "blank_canvas",
+  "showrunner": "auteur",
+  "lead_editor": "sentinel",
+  "studio_executive": "law_keeper",
+  "screenwriter": "system_builder",
+  "script_doctor": "oracle",
+  "method_actor": "creative_muse",
+  "stunt_coordinator": "anchor",
+  "ensemble_director": "deep_memory",
+  "location_scout": "sovereign_will",
+  "distributor": "analyst"
+};
+
+function resolveArchetypeId(id: string | undefined): string {
+  if (!id) return "blank_canvas";
+  if (METU_NETER_ARCHETYPES[id]) return id;
+  return LEGACY_ARCHETYPE_MAP[id] || "blank_canvas";
+}
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -70,6 +203,11 @@ serve(async (req) => {
 
     const recentMoods = journals?.map(j => j.mood).filter(Boolean) || [];
     const transformationCheckins = checkins?.filter(c => c.chose_transformation).length || 0;
+
+    // Get user's current archetype and resolve to Metu Neter system
+    const rawArchetype = characterProfile?.[0]?.archetype;
+    const resolvedArchetypeId = resolveArchetypeId(rawArchetype);
+    const currentArchetype = METU_NETER_ARCHETYPES[resolvedArchetypeId];
 
     // Identify relevant Napoleon Hill Laws based on user's current situation
     const identifiedLaws: Array<{ lawNumber: number; name: string; application: string; quote: string }> = [];
@@ -138,17 +276,27 @@ serve(async (req) => {
       `LAW #${law.lawNumber} (${law.name}): ${law.application}\n   Quote: "${law.quote}"`
     ).join('\n\n');
 
+    // Build Metu Neter archetype context
+    const archetypeContext = currentArchetype 
+      ? `CURRENT ARCHETYPE: ${currentArchetype.name} (Sphere ${currentArchetype.sphere})
+Deity/Principle: ${currentArchetype.deity}
+The Law: ${currentArchetype.law}
+Role: ${currentArchetype.role}
+Director's Note: "${currentArchetype.directorsNote}"`
+      : 'No archetype determined yet.';
+
     const systemPrompt = `You are the Director AI, a no-BS character transformation coach for Psycho-Cinematics™. 
 You analyze user data and provide direct, actionable insights about their character development.
-You integrate Napoleon Hill's 17 Laws of Success into your coaching, referencing specific laws that apply to the user's current situation.
+You integrate both the Metu Neter (Kemetic Tree of Life) principles AND Napoleon Hill's 17 Laws of Success into your coaching.
 
-Speak in a supportive but challenging tone. Use film/director metaphors naturally.
+Speak in a supportive but challenging tone. Use film/director metaphors naturally. Reference their archetype's sphere and law when relevant.
 Be specific and reference their actual data. No generic self-help fluff.
 
 The user's name is ${context.userName}.
 Their Chief Aim is: "${context.chiefAim}"
-Their archetype is: ${context.archetype}
 Current streak: ${context.currentStreak} days
+
+${archetypeContext}
 
 PERFORMANCE METRICS:
 - Task completion rate: ${context.metrics.taskCompletionRate}%
@@ -165,21 +313,25 @@ RECENT CHALLENGES:
 ${JSON.stringify(context.recentChallenges, null, 2)}
 
 NAPOLEON HILL'S LAWS RELEVANT TO THIS USER:
-${napoleonHillGuidance}
+${napoleonHillGuidance || 'Use your judgment to identify relevant laws.'}
 
-When providing your analysis, ALWAYS reference at least 2-3 specific Napoleon Hill Laws that apply to their situation. Use the law number, name, and explain how it applies to their current data.`;
+When providing your analysis:
+1. ALWAYS reference their Metu Neter archetype sphere and how it relates to their current challenges
+2. Reference at least 2-3 specific Napoleon Hill Laws that apply to their situation
+3. Connect the Kemetic principles (their archetype's law) with practical transformation guidance`;
 
     const userPrompt = `Provide a comprehensive character analysis with these sections:
 
 1. OVERALL ASSESSMENT (2-3 sentences on where they are in their transformation)
 2. STRENGTHS SPOTLIGHT (2-3 specific things they're doing well, with data)
-3. GROWTH EDGES (2-3 areas needing attention, be direct - reference Napoleon Hill Laws that apply)
+3. GROWTH EDGES (2-3 areas needing attention, be direct - reference their archetype's shadow potential and Napoleon Hill Laws)
 4. PATTERN RECOGNITION (any behavioral patterns you notice from the data)
-5. NAPOLEON HILL PRESCRIPTION (2-3 specific Napoleon Hill Laws they should focus on, with law number, name, and practical application)
-6. DIRECTOR'S NOTE (a powerful, personalized message to motivate them - include a relevant Napoleon Hill quote)
-7. NEXT SCENE (1 specific action they should take TODAY based on the most relevant law)
+5. ARCHETYPE ALIGNMENT (how well they are embodying their Metu Neter archetype sphere, and what aspect of their archetype they should develop)
+6. NAPOLEON HILL PRESCRIPTION (2-3 specific Napoleon Hill Laws they should focus on, with law number, name, and practical application)
+7. DIRECTOR'S NOTE (a powerful, personalized message to motivate them - include their archetype's Director's Note or a relevant Napoleon Hill quote)
+8. NEXT SCENE (1 specific action they should take TODAY based on their archetype's law)
 
-Return as JSON with keys: assessment, strengths (array), growthEdges (array), patterns (array), napoleonHillPrescription (array of objects with lawNumber, lawName, application), directorsNote, nextScene`;
+Return as JSON with keys: assessment, strengths (array), growthEdges (array), patterns (array), archetypeAlignment, napoleonHillPrescription (array of objects with lawNumber, lawName, application), directorsNote, nextScene`;
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
@@ -222,6 +374,7 @@ Return as JSON with keys: assessment, strengths (array), growthEdges (array), pa
                   items: { type: "string" },
                   description: "Behavioral patterns noticed"
                 },
+                archetypeAlignment: { type: "string", description: "Assessment of how well they embody their Metu Neter archetype" },
                 napoleonHillPrescription: {
                   type: "array",
                   items: {
@@ -239,7 +392,7 @@ Return as JSON with keys: assessment, strengths (array), growthEdges (array), pa
                 nextScene: { type: "string", description: "One specific action for today based on the most relevant law" },
                 overallScore: { type: "number", description: "Overall character score 0-100" }
               },
-              required: ["assessment", "strengths", "growthEdges", "patterns", "napoleonHillPrescription", "directorsNote", "nextScene", "overallScore"]
+              required: ["assessment", "strengths", "growthEdges", "patterns", "archetypeAlignment", "napoleonHillPrescription", "directorsNote", "nextScene", "overallScore"]
             }
           }
         }],
@@ -266,6 +419,15 @@ Return as JSON with keys: assessment, strengths (array), growthEdges (array), pa
       analysis,
       metrics: context.metrics,
       napoleonHillLaws: identifiedLaws,
+      archetype: currentArchetype ? {
+        id: resolvedArchetypeId,
+        name: currentArchetype.name,
+        sphere: currentArchetype.sphere,
+        deity: currentArchetype.deity,
+        law: currentArchetype.law,
+        role: currentArchetype.role,
+        directorsNote: currentArchetype.directorsNote
+      } : null,
       chiefAimSnapshot: {
         what: profile?.chief_aim_what,
         byWhen: profile?.chief_aim_by_when,

@@ -29,6 +29,7 @@ import {
   X,
   Music
 } from "lucide-react";
+import { Circle } from "lucide-react";
 import { format } from "date-fns";
 
 interface NapoleonHillLaw {
@@ -42,6 +43,7 @@ interface CharacterAnalysis {
   strengths: string[];
   growthEdges: string[];
   patterns: string[];
+  archetypeAlignment?: string;
   napoleonHillPrescription?: NapoleonHillLaw[];
   directorsNote: string;
   nextScene: string;
@@ -68,6 +70,15 @@ interface AnalysisData {
     plan: string;
   };
   generatedAt: string;
+  archetype?: {
+    id: string;
+    name: string;
+    sphere: number;
+    deity: string;
+    law: string;
+    role: string;
+    directorsNote: string;
+  } | null;
 }
 
 interface SavedAnalysis {
@@ -656,6 +667,47 @@ export function AICharacterAnalysis() {
                   </div>
                 </CardContent>
               </Card>
+
+              {/* Archetype Alignment - Metu Neter Section */}
+              {(data.archetype || data.analysis.archetypeAlignment) && (
+                <Card className="bg-gradient-to-br from-amber-500/10 via-background to-gold/5 border-amber-500/30">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="flex items-center gap-2 text-base">
+                      <Circle className="w-5 h-5 text-amber-500" />
+                      Archetype Alignment
+                      {data.archetype && (
+                        <Badge className="ml-2 bg-amber-500/20 text-amber-400 border-amber-500/30">
+                          Sphere {data.archetype.sphere}
+                        </Badge>
+                      )}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    {data.archetype && (
+                      <div className="p-4 rounded-lg bg-gradient-to-r from-amber-500/10 to-gold/10 border border-amber-500/20">
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="font-bold text-amber-400">{data.archetype.name}</span>
+                        </div>
+                        <p className="text-xs text-muted-foreground mb-2">
+                          <span className="font-semibold text-amber-400/80">Deity:</span> {data.archetype.deity}
+                        </p>
+                        <p className="text-sm mb-2">
+                          <span className="font-semibold text-gold">The Law:</span> {data.archetype.law}
+                        </p>
+                        <p className="text-xs text-muted-foreground italic border-l-2 border-amber-500/30 pl-2">
+                          "{data.archetype.directorsNote}"
+                        </p>
+                      </div>
+                    )}
+                    {data.analysis.archetypeAlignment && (
+                      <div className="p-3 rounded-lg bg-card/50 border border-border">
+                        <h5 className="text-sm font-semibold text-gold mb-1">Your Alignment Assessment</h5>
+                        <p className="text-sm text-muted-foreground">{data.analysis.archetypeAlignment}</p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
 
               {/* Napoleon Hill Prescription - Most Relevant First */}
               {data.napoleonHillLaws && data.napoleonHillLaws.length > 0 && (
