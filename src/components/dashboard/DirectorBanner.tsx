@@ -1,5 +1,5 @@
-import { useState, useRef, useEffect, useMemo } from "react";
-import { Camera, Sparkles, Upload, Loader2, User, Film, Wand2, Target, Zap } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
+import { Camera, Sparkles, Upload, Loader2, User, Film, Wand2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -7,32 +7,13 @@ import { useUserProfile } from "@/hooks/useUserProfile";
 import { useMindMovies } from "@/hooks/useMindMovies";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { differenceInDays, differenceInHours, differenceInMinutes, parse, isValid } from "date-fns";
 
 interface DirectorBannerProps {
   onOpenAIStudio?: () => void;
   className?: string;
-  chiefAimByWhen?: string;
-  chiefAimSummary?: string;
 }
 
-function parseFlexibleDate(dateStr: string): Date | null {
-  if (!dateStr) return null;
-  const formats = [
-    "MMMM d, yyyy", "MMMM dd, yyyy", "MMM d, yyyy", "MMM dd, yyyy",
-    "yyyy-MM-dd", "MM/dd/yyyy", "M/d/yyyy",
-  ];
-  for (const format of formats) {
-    try {
-      const parsed = parse(dateStr, format, new Date());
-      if (isValid(parsed)) return parsed;
-    } catch { /* continue */ }
-  }
-  const fallback = new Date(dateStr);
-  return isValid(fallback) ? fallback : null;
-}
-
-export function DirectorBanner({ onOpenAIStudio, className, chiefAimByWhen, chiefAimSummary }: DirectorBannerProps) {
+export function DirectorBanner({ onOpenAIStudio, className }: DirectorBannerProps) {
   const { user } = useAuth();
   const { profile, updateProfile } = useUserProfile();
   const { activeMovie, fetchAllMovies } = useMindMovies();
@@ -42,27 +23,6 @@ export function DirectorBanner({ onOpenAIStudio, className, chiefAimByWhen, chie
   const [generatingAI, setGeneratingAI] = useState<"avatar" | "cover" | null>(null);
   const coverInputRef = useRef<HTMLInputElement>(null);
   const avatarInputRef = useRef<HTMLInputElement>(null);
-
-  // Countdown logic
-  const targetDate = useMemo(() => chiefAimByWhen ? parseFlexibleDate(chiefAimByWhen) : null, [chiefAimByWhen]);
-  const [timeRemaining, setTimeRemaining] = useState<{ days: number; hours: number; minutes: number; isPast: boolean } | null>(null);
-
-  useEffect(() => {
-    if (!targetDate) { setTimeRemaining(null); return; }
-    const updateTime = () => {
-      const now = new Date();
-      const isPast = targetDate < now;
-      setTimeRemaining({
-        days: Math.abs(differenceInDays(targetDate, now)),
-        hours: Math.abs(differenceInHours(targetDate, now)) % 24,
-        minutes: Math.abs(differenceInMinutes(targetDate, now)) % 60,
-        isPast,
-      });
-    };
-    updateTime();
-    const interval = setInterval(updateTime, 60000);
-    return () => clearInterval(interval);
-  }, [targetDate]);
 
   // Load images on mount - cover now persisted in database
   useEffect(() => {
@@ -166,7 +126,7 @@ export function DirectorBanner({ onOpenAIStudio, className, chiefAimByWhen, chie
   return (
     <div className={cn("relative overflow-hidden rounded-2xl", className)}>
       {/* Cover Image / Banner */}
-      <div className="relative h-44 sm:h-48 md:h-56 lg:h-64 overflow-hidden group">
+      <div className="relative h-32 sm:h-40 md:h-48 overflow-hidden group">
         {/* Animated background gradient when no cover */}
         {!coverUrl ? (
           <div className="absolute inset-0 bg-gradient-to-br from-background via-card to-gold/10 overflow-hidden">
@@ -197,51 +157,8 @@ export function DirectorBanner({ onOpenAIStudio, className, chiefAimByWhen, chie
           />
         )}
 
-        {/* Gradient overlay for text readability - stronger on mobile */}
-        <div className="absolute inset-0 bg-gradient-to-t from-background via-background/70 to-background/30" />
-        <div className="absolute inset-0 bg-gradient-to-r from-background/60 via-transparent to-background/60" />
-
-        {/* Countdown Overlay - positioned at top on mobile to avoid text overlap */}
-        {timeRemaining && (
-          <div className="absolute top-2 sm:top-auto sm:inset-0 left-0 right-0 sm:flex sm:items-center sm:justify-center z-10 px-2">
-            <div className="text-center bg-black/40 sm:bg-transparent backdrop-blur-sm sm:backdrop-blur-none rounded-lg px-3 py-2 sm:p-0">
-              <div className="flex items-center justify-center gap-1.5 sm:gap-2 mb-1 sm:mb-2">
-                <Target className="w-3 h-3 sm:w-5 sm:h-5 text-gold" />
-                <span className="text-[10px] sm:text-sm font-medium text-gold uppercase tracking-wider">
-                  Final Scene Countdown
-                </span>
-                <Zap className="w-2.5 h-2.5 sm:w-4 sm:h-4 text-gold animate-pulse" />
-              </div>
-              <div className="flex items-center justify-center gap-1.5 sm:gap-4">
-                <div className="text-center">
-                  <div className="text-xl sm:text-4xl md:text-5xl font-display tracking-wider tabular-nums text-gold" style={{ textShadow: '0 0 20px rgba(212, 175, 55, 0.5)' }}>
-                    {timeRemaining.days}
-                  </div>
-                  <div className="text-[8px] sm:text-xs text-muted-foreground uppercase tracking-wider">Days</div>
-                </div>
-                <div className="text-base sm:text-2xl text-gold/50 font-light">:</div>
-                <div className="text-center">
-                  <div className="text-xl sm:text-4xl md:text-5xl font-display tracking-wider tabular-nums text-gold" style={{ textShadow: '0 0 20px rgba(212, 175, 55, 0.5)' }}>
-                    {timeRemaining.hours.toString().padStart(2, '0')}
-                  </div>
-                  <div className="text-[8px] sm:text-xs text-muted-foreground uppercase tracking-wider">Hours</div>
-                </div>
-                <div className="text-base sm:text-2xl text-gold/50 font-light">:</div>
-                <div className="text-center">
-                  <div className="text-xl sm:text-4xl md:text-5xl font-display tracking-wider tabular-nums text-gold" style={{ textShadow: '0 0 20px rgba(212, 175, 55, 0.5)' }}>
-                    {timeRemaining.minutes.toString().padStart(2, '0')}
-                  </div>
-                  <div className="text-[8px] sm:text-xs text-muted-foreground uppercase tracking-wider">Min</div>
-                </div>
-              </div>
-              {chiefAimSummary && (
-                <p className="mt-1 sm:mt-2 text-[10px] sm:text-sm text-white/80 max-w-md mx-auto line-clamp-1 drop-shadow-md">
-                  "{chiefAimSummary}"
-                </p>
-              )}
-            </div>
-          </div>
-        )}
+        {/* Gradient overlay for text readability */}
+        <div className="absolute inset-0 bg-gradient-to-t from-background via-background/60 to-transparent" />
 
         {/* Cover upload/generate buttons - show on hover */}
         <div className="absolute top-3 right-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
@@ -288,12 +205,12 @@ export function DirectorBanner({ onOpenAIStudio, className, chiefAimByWhen, chie
       </div>
 
       {/* Profile Section - Overlapping avatar */}
-      <div className="relative px-3 sm:px-6 pb-4 -mt-8 sm:-mt-14">
+      <div className="relative px-3 sm:px-6 pb-4 -mt-8 sm:-mt-12">
         <div className="flex items-end gap-3 sm:gap-4">
           {/* Avatar */}
           <div className="relative group/avatar flex-shrink-0">
             <div className={cn(
-              "w-16 h-16 sm:w-24 sm:h-24 rounded-xl sm:rounded-2xl border-3 sm:border-4 border-background overflow-hidden shadow-xl",
+              "w-16 h-16 sm:w-20 sm:h-20 rounded-xl sm:rounded-2xl border-3 sm:border-4 border-background overflow-hidden shadow-xl",
               "bg-gradient-to-br from-gold/30 to-purple-500/30"
             )}>
               {avatarUrl ? (
@@ -304,7 +221,7 @@ export function DirectorBanner({ onOpenAIStudio, className, chiefAimByWhen, chie
                 />
               ) : (
                 <div className="w-full h-full flex items-center justify-center">
-                  <User className="w-8 h-8 sm:w-12 sm:h-12 text-gold/60" />
+                  <User className="w-8 h-8 sm:w-10 sm:h-10 text-gold/60" />
                 </div>
               )}
             </div>

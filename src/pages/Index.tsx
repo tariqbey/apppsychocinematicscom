@@ -40,6 +40,7 @@ import { TestimonialSubmissionDialog } from "@/components/testimonials/Testimoni
 import { EnableNotificationsBanner } from "@/components/notifications/EnableNotificationsBanner";
 import { DirectorBanner } from "@/components/dashboard/DirectorBanner";
 import { MovieStudioModule } from "@/components/dashboard/MovieStudioModule";
+import { ChiefAimCountdown } from "@/components/dashboard/ChiefAimCountdown";
 
 
 // Custom module icons
@@ -314,17 +315,24 @@ const Index = () => {
       {/* Main Content */}
       <main className="container mx-auto px-3 sm:px-4 pt-20 sm:pt-24 pb-28 sm:pb-32 overflow-x-hidden w-full">
         <div className="max-w-4xl mx-auto space-y-4 sm:space-y-6">
-          {/* Director Banner - Welcome image with countdown overlay */}
+          {/* Director Banner - Welcome section */}
           <DirectorBanner 
             onOpenAIStudio={() => {
               setEditBayInitialPrompt(undefined);
               setEditBaySceneContext(undefined);
               setShowEditBay(true);
             }}
-            chiefAimByWhen={chiefAim.byWhen || undefined}
-            chiefAimSummary={chiefAim.what ? chiefAim.what.slice(0, 100) : undefined}
             className="animate-fade-in"
           />
+
+          {/* Chief Aim Countdown - Fire animated module below banner */}
+          {chiefAim.byWhen && (
+            <ChiefAimCountdown
+              byWhen={chiefAim.byWhen}
+              whatSummary={chiefAim.what ? chiefAim.what.slice(0, 100) : undefined}
+              className="animate-fade-in"
+            />
+          )}
 
           {/* Push Notifications Banner - Reminds users to enable */}
           <EnableNotificationsBanner className="animate-slide-up" />
