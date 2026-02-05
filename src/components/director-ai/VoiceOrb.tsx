@@ -1,5 +1,6 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface VoiceOrbProps {
   state: "idle" | "listening" | "speaking" | "processing";
@@ -11,10 +12,22 @@ export function VoiceOrb({ state, audioLevel = 0, className }: VoiceOrbProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animationRef = useRef<number>();
   const phaseRef = useRef(0);
+  const lastFrameTimeRef = useRef(0);
+  const isMobile = useIsMobile();
 
   // Avoid re-creating the animation loop on every render (mobile performance)
   const stateRef = useRef<VoiceOrbProps["state"]>(state);
   const levelRef = useRef<number>(audioLevel);
+
+  // Check for reduced motion preference
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+    setPrefersReducedMotion(mq.matches);
+    const handler = (e: MediaQueryListEvent) => setPrefersReducedMotion(e.matches);
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
 
   useEffect(() => {
     stateRef.current = state;
@@ -31,8 +44,13 @@ export function VoiceOrb({ state, audioLevel = 0, className }: VoiceOrbProps) {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    const size = 280;
-    const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+    // Responsive size: smaller on mobile for better performance
+    const size = isMobile ? 200 : 280;
+    const dpr = Math.max(1, Math.min(isMobile ? 1.5 : 2, window.devicePixelRatio || 1));
+    
+    // Target FPS: 30 on mobile, 60 on desktop
+    const targetFPS = isMobile ? 30 : 60;
+    const frameInterval = 1000 / targetFPS;
 
     canvas.width = Math.round(size * dpr);
     canvas.height = Math.round(size * dpr);
@@ -42,9 +60,40 @@ export function VoiceOrb({ state, audioLevel = 0, className }: VoiceOrbProps) {
 
     const centerX = size / 2;
     const centerY = size / 2;
-    const baseRadius = 80;
+    const baseRadius = isMobile ? 60 : 80;
 
-    const animate = () => {
+    // Static render for reduced motion
+    const renderStatic = () => {
+      ctx.clearRect(0, 0, size, size);
+      
+      // Simple static orb
+      const orbGradient = ctx.createRadialGradient(
+        centerX - 15, centerY - 15, 0,
+        centerX, centerY, baseRadius
+      );
+      orbGradient.addColorStop(0, "hsl(43, 70%, 55%)");
+      orbGradient.addColorStop(0.5, "hsl(43, 74%, 42%)");
+      orbGradient.addColorStop(1, "hsl(35, 70%, 30%)");
+      
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, baseRadius, 0, Math.PI * 2);
+      ctx.fillStyle = orbGradient;
+      ctx.fill();
+    };
+
+    if (prefersReducedMotion) {
+      renderStatic();
+      return;
+    }
+
+    const animate = (timestamp: number) => {
+      // Frame rate limiting for mobile performance
+      const elapsed = timestamp - lastFrameTimeRef.current;
+      if (elapsed < frameInterval) {
+        animationRef.current = requestAnimationFrame(animate);
+        return;
+      }
+      lastFrameTimeRef.current = timestamp - (elapsed % frameInterval);
       const currentState = stateRef.current;
       const currentAudioLevel = levelRef.current;
 
@@ -167,21 +216,24 @@ export function VoiceOrb({ state, audioLevel = 0, className }: VoiceOrbProps) {
       animationRef.current = requestAnimationFrame(animate);
     };
 
-    animate();
+    animationRef.current = requestAnimationFrame(animate);
 
     return () => {
       if (animationRef.current) {
         cancelAnimationFrame(animationRef.current);
       }
     };
-  }, []);
+  }, [isMobile, prefersReducedMotion]);
+
+  // Dynamic size class
+  const sizeClass = isMobile ? "w-[200px] h-[200px]" : "w-[280px] h-[280px]";
 
   return (
     <div className={cn("relative", className)}>
       <canvas
         ref={canvasRef}
-        className="w-[280px] h-[280px]"
-        style={{ filter: "drop-shadow(0 0 30px hsla(43, 74%, 49%, 0.3))" }}
+        className={sizeClass}
+        style={{ filter: isMobile ? "drop-shadow(0 0 20px hsla(43, 74%, 49%, 0.2))" : "drop-shadow(0 0 30px hsla(43, 74%, 49%, 0.3))" }}
       />
 
       {/* State indicator */}

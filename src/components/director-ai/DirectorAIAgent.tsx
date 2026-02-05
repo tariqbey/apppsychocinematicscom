@@ -629,10 +629,7 @@ export function DirectorAIAgent({ isOpen, onClose, chiefAim }: DirectorAIAgentPr
         await speakText(fullResponse);
       } else {
         setOrbState("idle");
-        // Resume listening if no TTS
-        setTimeout(() => {
-          setVoiceEnabled(true);
-        }, 300);
+        // DO NOT auto-resume voice - user must manually tap mic
       }
     } catch (error: any) {
       if (error?.name === "AbortError") {
@@ -642,12 +639,7 @@ export function DirectorAIAgent({ isOpen, onClose, chiefAim }: DirectorAIAgentPr
         toast.error("Failed to get response. Please try again.");
       }
       setOrbState("idle");
-      // Resume listening on error (unless aborted)
-      if (error?.name !== "AbortError") {
-        setTimeout(() => {
-          setVoiceEnabled(true);
-        }, 300);
-      }
+      // DO NOT auto-resume voice on error - user must manually tap mic
     } finally {
       setIsLoading(false);
       abortControllerRef.current = null;
@@ -752,6 +744,17 @@ export function DirectorAIAgent({ isOpen, onClose, chiefAim }: DirectorAIAgentPr
     );
   }
 
+  // Body scroll lock while overlay is open
+  useEffect(() => {
+    if (isOpen) {
+      const originalOverflow = document.body.style.overflow;
+      document.body.style.overflow = "hidden";
+      return () => {
+        document.body.style.overflow = originalOverflow;
+      };
+    }
+  }, [isOpen]);
+
   return (
     <div className="fixed inset-0 z-50 flex flex-col h-[100dvh] w-full overflow-hidden">
       {/* Backdrop */}
@@ -765,9 +768,9 @@ export function DirectorAIAgent({ isOpen, onClose, chiefAim }: DirectorAIAgentPr
         <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[400px] sm:w-[600px] h-[400px] sm:h-[600px] bg-gradient-radial from-gold/10 via-transparent to-transparent rounded-full blur-3xl" />
       </div>
 
-      {/* Main container - scrollable on mobile */}
-      <div className="relative z-10 w-full h-full flex flex-col overflow-y-auto overflow-x-hidden overscroll-contain pb-[calc(env(safe-area-inset-bottom)+16px)]">
-        {/* Header controls - sticky on mobile */}
+      {/* 3-row grid layout: Header / Scrollable Content / Footer */}
+      <div className="relative z-10 w-full h-full grid grid-rows-[auto_1fr_auto] overflow-hidden">
+        {/* ROW 1: Header controls - fixed at top */}
         <div className="sticky top-0 z-20 flex items-center justify-between px-3 pb-3 pt-[calc(env(safe-area-inset-top)+12px)] sm:px-4 sm:pb-4 sm:pt-[calc(env(safe-area-inset-top)+16px)] bg-gradient-to-b from-black/80 to-transparent">
           {/* Settings on the left */}
           <DirectorAISettings
@@ -799,20 +802,20 @@ export function DirectorAIAgent({ isOpen, onClose, chiefAim }: DirectorAIAgentPr
           </div>
         </div>
 
-        {/* Content area - centers on desktop, scrolls on mobile */}
-        <div className="flex-1 flex flex-col items-center justify-start sm:justify-center px-4 pb-6 pt-2 sm:pt-0">
+        {/* ROW 2: Scrollable content area */}
+        <div className="flex-1 flex flex-col items-center overflow-y-auto overflow-x-hidden overscroll-contain px-4 py-4 sm:py-6">
           {/* Title */}
-          <div className="text-center mb-4 sm:mb-8">
-            <h1 className="font-display text-2xl sm:text-4xl md:text-5xl text-gold tracking-wider mb-1 sm:mb-2">
+          <div className="text-center mb-4 sm:mb-6 flex-shrink-0">
+            <h1 className="font-display text-xl sm:text-3xl md:text-4xl text-gold tracking-wider mb-1">
               THE DIRECTOR AI
             </h1>
-            <p className="text-muted-foreground text-xs sm:text-sm tracking-widest uppercase">
+            <p className="text-muted-foreground text-[10px] sm:text-xs tracking-widest uppercase">
               Your Psycho-Cinematics Coach
             </p>
           </div>
 
-          {/* Voice Orb - smaller on mobile */}
-          <div className="mb-4 sm:mb-6 transform scale-75 sm:scale-100">
+          {/* Voice Orb - responsive size via prop */}
+          <div className="mb-3 sm:mb-6 flex-shrink-0">
             <VoiceOrb 
               state={orbState} 
               audioLevel={orbState === "listening" ? voiceInputLevel : audioLevel}
@@ -821,21 +824,21 @@ export function DirectorAIAgent({ isOpen, onClose, chiefAim }: DirectorAIAgentPr
 
           {/* Voice Waveform - shows when listening */}
           {isListening && orbState === "listening" && (
-            <div className="flex flex-col items-center gap-1 sm:gap-2 mb-4 sm:mb-6">
+            <div className="flex flex-col items-center gap-1 mb-3 sm:mb-4 flex-shrink-0">
               <VoiceWaveform 
                 audioLevel={voiceInputLevel} 
                 isActive={voiceInputLevel > 0.1}
                 barCount={9}
-                className="h-8 sm:h-10"
+                className="h-6 sm:h-10"
               />
-              <p className="text-gold/80 text-[10px] sm:text-xs tracking-widest uppercase">
+              <p className="text-gold/80 text-[10px] tracking-widest uppercase">
                 {voiceInputLevel > 0.15 ? "Hearing you..." : "Listening..."}
               </p>
             </div>
           )}
 
-          {/* Transcript - constrained height on mobile */}
-          <div className="w-full max-w-xl mb-4 sm:mb-8">
+          {/* Transcript - scrollable area */}
+          <div className="w-full max-w-xl flex-1 min-h-0">
             <AgentTranscript 
               messages={messages}
               currentResponse={currentResponse}
@@ -844,21 +847,24 @@ export function DirectorAIAgent({ isOpen, onClose, chiefAim }: DirectorAIAgentPr
 
           {/* Live transcript while speaking */}
           {transcript && isListening && (
-            <div className="w-full max-w-xl mb-3 sm:mb-4 px-3 sm:px-4 py-2 sm:py-3 bg-card/40 rounded-lg border border-gold/20">
-              <p className="text-foreground/80 italic text-sm sm:text-base">"{transcript}"</p>
+            <div className="w-full max-w-xl mt-3 px-3 py-2 bg-card/40 rounded-lg border border-gold/20 flex-shrink-0">
+              <p className="text-foreground/80 italic text-sm">"{transcript}"</p>
             </div>
           )}
+        </div>
 
-          {/* Input area */}
-          <div className="w-full max-w-xl space-y-3 sm:space-y-4">
-            <div className="flex items-center gap-2 sm:gap-3">
+        {/* ROW 3: Fixed footer with input + buttons */}
+        <div className="flex-shrink-0 w-full bg-gradient-to-t from-black via-black/95 to-transparent px-4 pt-3 pb-[calc(env(safe-area-inset-bottom)+12px)] sm:pb-6">
+          <div className="w-full max-w-xl mx-auto space-y-2 sm:space-y-3">
+            {/* Input row */}
+            <div className="flex items-center gap-2">
               <div className="flex-1 relative">
                 <Input
                   value={inputText}
                   onChange={(e) => setInputText(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && handleSend()}
                   placeholder={isListening ? "Listening... or type here" : "Type your message..."}
-                  className="bg-card/60 border-border/50 h-11 sm:h-12 pr-11 sm:pr-12 text-foreground placeholder:text-muted-foreground text-sm sm:text-base"
+                  className="bg-card/60 border-border/50 h-11 pr-11 text-foreground placeholder:text-muted-foreground text-sm"
                   disabled={isLoading}
                 />
                 <Button
@@ -866,56 +872,46 @@ export function DirectorAIAgent({ isOpen, onClose, chiefAim }: DirectorAIAgentPr
                   size="icon"
                   onClick={handleSend}
                   disabled={!inputText.trim() || isLoading}
-                  className="absolute right-1 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-gold h-9 w-9 sm:h-10 sm:w-10"
+                  className="absolute right-1 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-gold h-9 w-9"
                 >
-                  <Send className="w-4 h-4 sm:w-5 sm:h-5" />
+                  <Send className="w-4 h-4" />
                 </Button>
               </div>
 
-              {/* Voice button - larger touch target on mobile */}
-              {isSupported && (
-                <Button
-                  variant={voiceEnabled || isListening ? "default" : "outline"}
-                  size="icon"
-                  onClick={handleVoiceToggle}
-                  disabled={isLoading || orbState === "speaking"}
-                  className={(voiceEnabled || isListening)
-                    ? "w-11 h-11 sm:w-12 sm:h-12 bg-gold text-black hover:bg-gold/90 flex-shrink-0" 
-                    : "w-11 h-11 sm:w-12 sm:h-12 border-border/50 hover:border-gold hover:text-gold flex-shrink-0"
-                  }
-                >
-                  {(voiceEnabled || isListening) ? <Mic className="w-5 h-5" /> : <MicOff className="w-5 h-5" />}
-                </Button>
-              )}
+              {/* Voice button - always show but disable if not supported */}
+              <Button
+                variant={voiceEnabled || isListening ? "default" : "outline"}
+                size="icon"
+                onClick={handleVoiceToggle}
+                disabled={isLoading || orbState === "speaking" || !isSupported}
+                className={(voiceEnabled || isListening)
+                  ? "w-11 h-11 bg-gold text-black hover:bg-gold/90 flex-shrink-0" 
+                  : "w-11 h-11 border-border/50 hover:border-gold hover:text-gold flex-shrink-0"
+                }
+                title={!isSupported ? "Voice not supported on this browser" : "Toggle voice input"}
+              >
+                {(voiceEnabled || isListening) ? <Mic className="w-5 h-5" /> : <MicOff className="w-5 h-5" />}
+              </Button>
             </div>
 
-            {/* Action buttons - stack on mobile */}
-            <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-4">
-              {/* STOP & EXIT Button - always visible, stops everything and closes */}
+            {/* Action buttons row */}
+            <div className="flex items-center justify-center gap-2 flex-wrap">
+              {/* STOP & EXIT Button */}
               <Button
                 variant="outline"
                 onClick={() => {
-                  // AGGRESSIVE STOP: Kill everything synchronously
                   stopConversation();
-                  
-                  // Also force-kill any audio contexts that might be playing
-                  try {
-                    const allAudio = document.getElementsByTagName('audio');
-                    for (let i = 0; i < allAudio.length; i++) {
-                      allAudio[i].pause();
-                      allAudio[i].src = '';
-                    }
-                  } catch (e) {
-                    console.warn('[DirectorAI] Error in force stop:', e);
+                  // Stop only our audio ref - not all document audio
+                  if (audioRef.current) {
+                    audioRef.current.pause();
+                    audioRef.current.src = "";
                   }
-                  
-                  // Close immediately
                   onClose();
                 }}
-                className="border-2 border-red-500/70 bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 font-bold px-4 sm:px-6 h-10 sm:h-auto text-sm sm:text-base"
+                className="border-2 border-red-500/70 bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 font-bold px-3 h-9 text-xs sm:text-sm sm:px-4 sm:h-10"
               >
-                <Square className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2 fill-current" />
-                STOP & EXIT
+                <Square className="w-3.5 h-3.5 mr-1.5 fill-current" />
+                STOP
               </Button>
 
               {/* KUT! Button */}
@@ -923,9 +919,9 @@ export function DirectorAIAgent({ isOpen, onClose, chiefAim }: DirectorAIAgentPr
                 variant="destructive"
                 onClick={handleKut}
                 disabled={isLoading}
-                className="bg-cinematic-red hover:bg-cinematic-red/90 text-white font-bold px-4 sm:px-6 h-10 sm:h-auto text-sm sm:text-base"
+                className="bg-cinematic-red hover:bg-cinematic-red/90 text-white font-bold px-3 h-9 text-xs sm:text-sm sm:px-4 sm:h-10"
               >
-                <Zap className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" />
+                <Zap className="w-3.5 h-3.5 mr-1.5" />
                 KUT!
               </Button>
 
@@ -937,28 +933,18 @@ export function DirectorAIAgent({ isOpen, onClose, chiefAim }: DirectorAIAgentPr
                   setTtsEnabled(!ttsEnabled);
                   if (ttsEnabled) stopSpeaking();
                 }}
-                className="text-muted-foreground hover:text-foreground h-10 sm:h-auto text-sm"
+                className="text-muted-foreground hover:text-foreground h-9 text-xs sm:text-sm px-2 sm:px-3"
               >
                 {ttsEnabled ? (
-                  <Volume2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" />
+                  <Volume2 className="w-3.5 h-3.5 mr-1" />
                 ) : (
-                  <VolumeX className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" />
+                  <VolumeX className="w-3.5 h-3.5 mr-1" />
                 )}
-                Voice {ttsEnabled ? "On" : "Off"}
+                {ttsEnabled ? "On" : "Off"}
               </Button>
             </div>
           </div>
         </div>
-
-        {/* Floating close button for mobile - easy thumb access */}
-        <Button
-          variant="default"
-          size="lg"
-          onClick={onClose}
-          className="fixed bottom-[calc(env(safe-area-inset-bottom)+1.5rem)] right-4 z-50 h-14 w-14 rounded-full bg-gold/90 hover:bg-gold text-black shadow-lg shadow-gold/30 sm:hidden"
-        >
-          <X className="w-7 h-7" />
-        </Button>
       </div>
 
       {/* Hidden audio element */}
