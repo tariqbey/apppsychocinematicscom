@@ -130,14 +130,14 @@ export function EpisodeDetailView({
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 relative pb-20 sm:pb-6">
       {/* Header */}
-      <div className="flex items-start gap-4">
+      <div className="flex items-start gap-3 sm:gap-4">
         <Button
           variant="ghost"
           size="icon"
           onClick={onBack}
-          className="shrink-0 mt-1"
+          className="shrink-0 mt-1 hidden sm:flex"
         >
           <ArrowLeft className="w-5 h-5" />
         </Button>
@@ -221,41 +221,35 @@ export function EpisodeDetailView({
         {movieUrl ? (
           <div className="space-y-3">
             {/* Movie Preview */}
-            <div className="aspect-video rounded-lg overflow-hidden bg-black/50 relative group">
+            <div className="aspect-video rounded-lg overflow-hidden bg-black/50 relative group cursor-pointer" onClick={handleWatchMovie}>
               <video
                 src={movieUrl}
                 className="w-full h-full object-cover"
                 muted
+                playsInline
+                poster={movieUrl.replace('.mp4', '_thumb.jpg')}
               />
-              <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                <Button
-                  onClick={handleWatchMovie}
-                  className="bg-amber-500 hover:bg-amber-600"
-                >
-                  <Play className="w-5 h-5 mr-2" />
-                  Watch Movie
-                </Button>
+              <div className="absolute inset-0 bg-black/40 flex items-center justify-center group-hover:bg-black/60 transition-colors">
+                <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-amber-500/90 flex items-center justify-center shadow-lg shadow-amber-500/30 group-hover:scale-110 transition-transform">
+                  <Play className="w-7 h-7 sm:w-8 sm:h-8 text-black ml-1" />
+                </div>
               </div>
             </div>
             
             <div className="flex gap-2">
               <Button
-                variant="outline"
-                size="sm"
                 onClick={handleWatchMovie}
-                className="flex-1"
+                className="flex-1 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700"
               >
                 <Play className="w-4 h-4 mr-2" />
-                Watch
+                Play Movie
               </Button>
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => setShowUploadModal(true)}
-                className="flex-1"
               >
-                <Upload className="w-4 h-4 mr-2" />
-                Replace
+                <Upload className="w-4 h-4" />
               </Button>
             </div>
           </div>
@@ -354,6 +348,16 @@ export function EpisodeDetailView({
         onClose={() => setShowUploadModal(false)}
         onSuccess={handleMovieUploadSuccess}
       />
+
+      {/* Floating back button for mobile - easy thumb access */}
+      <Button
+        variant="default"
+        size="lg"
+        onClick={onBack}
+        className="fixed bottom-6 left-4 z-50 h-14 w-14 rounded-full bg-gold/90 hover:bg-gold text-black shadow-lg shadow-gold/30 sm:hidden"
+      >
+        <ArrowLeft className="w-7 h-7" />
+      </Button>
     </div>
   );
 }

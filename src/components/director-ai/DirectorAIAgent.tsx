@@ -755,7 +755,7 @@ export function DirectorAIAgent({ isOpen, onClose, chiefAim }: DirectorAIAgentPr
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
+    <div className="fixed inset-0 z-50 flex flex-col">
       {/* Backdrop */}
       <div 
         className="absolute inset-0 bg-black/95 backdrop-blur-sm"
@@ -764,13 +764,13 @@ export function DirectorAIAgent({ isOpen, onClose, chiefAim }: DirectorAIAgentPr
       
       {/* Spotlight effect */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-gradient-radial from-gold/10 via-transparent to-transparent rounded-full blur-3xl" />
+        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[400px] sm:w-[600px] h-[400px] sm:h-[600px] bg-gradient-radial from-gold/10 via-transparent to-transparent rounded-full blur-3xl" />
       </div>
 
-      {/* Main container */}
-      <div className="relative z-10 w-full h-full flex flex-col items-center justify-center p-6">
-        {/* Header controls */}
-        <div className="absolute top-4 left-4 right-4 flex items-center justify-between">
+      {/* Main container - scrollable on mobile */}
+      <div className="relative z-10 w-full h-full flex flex-col overflow-y-auto">
+        {/* Header controls - sticky on mobile */}
+        <div className="sticky top-0 z-20 flex items-center justify-between p-3 sm:p-4 bg-gradient-to-b from-black/80 to-transparent">
           {/* Settings on the left */}
           <DirectorAISettings
             selectedVoice={selectedVoice}
@@ -786,171 +786,185 @@ export function DirectorAIAgent({ isOpen, onClose, chiefAim }: DirectorAIAgentPr
               variant="ghost"
               size="icon"
               onClick={() => setIsMinimized(true)}
-              className="text-muted-foreground hover:text-foreground"
+              className="text-muted-foreground hover:text-foreground h-9 w-9 sm:h-10 sm:w-10"
             >
-              <Minimize2 className="w-5 h-5" />
+              <Minimize2 className="w-4 h-4 sm:w-5 sm:h-5" />
             </Button>
             <Button
               variant="ghost"
               size="icon"
               onClick={onClose}
-              className="text-muted-foreground hover:text-foreground"
+              className="text-muted-foreground hover:text-foreground h-9 w-9 sm:h-10 sm:w-10"
             >
-              <X className="w-5 h-5" />
+              <X className="w-4 h-4 sm:w-5 sm:h-5" />
             </Button>
           </div>
         </div>
 
-        {/* Title */}
-        <div className="text-center mb-8">
-          <h1 className="font-display text-4xl md:text-5xl text-gold tracking-wider mb-2">
-            THE DIRECTOR AI
-          </h1>
-          <p className="text-muted-foreground text-sm tracking-widest uppercase">
-            Your Psycho-Cinematics Coach
-          </p>
-        </div>
-
-        {/* Voice Orb */}
-        <div className="mb-6">
-          <VoiceOrb 
-            state={orbState} 
-            audioLevel={orbState === "listening" ? voiceInputLevel : audioLevel}
-          />
-        </div>
-
-        {/* Voice Waveform - shows when listening */}
-        {isListening && orbState === "listening" && (
-          <div className="flex flex-col items-center gap-2 mb-6">
-            <VoiceWaveform 
-              audioLevel={voiceInputLevel} 
-              isActive={voiceInputLevel > 0.1}
-              barCount={9}
-              className="h-10"
-            />
-            <p className="text-gold/80 text-xs tracking-widest uppercase">
-              {voiceInputLevel > 0.15 ? "Hearing you..." : "Listening..."}
+        {/* Content area - centers on desktop, scrolls on mobile */}
+        <div className="flex-1 flex flex-col items-center justify-start sm:justify-center px-4 pb-6 pt-2 sm:pt-0">
+          {/* Title */}
+          <div className="text-center mb-4 sm:mb-8">
+            <h1 className="font-display text-2xl sm:text-4xl md:text-5xl text-gold tracking-wider mb-1 sm:mb-2">
+              THE DIRECTOR AI
+            </h1>
+            <p className="text-muted-foreground text-xs sm:text-sm tracking-widest uppercase">
+              Your Psycho-Cinematics Coach
             </p>
           </div>
-        )}
 
-        {/* Transcript */}
-        <AgentTranscript 
-          messages={messages}
-          currentResponse={currentResponse}
-          className="mb-8"
-        />
-
-        {/* Live transcript while speaking */}
-        {transcript && isListening && (
-          <div className="w-full max-w-xl mb-4 px-4 py-3 bg-card/40 rounded-lg border border-gold/20">
-            <p className="text-foreground/80 italic">"{transcript}"</p>
+          {/* Voice Orb - smaller on mobile */}
+          <div className="mb-4 sm:mb-6 transform scale-75 sm:scale-100">
+            <VoiceOrb 
+              state={orbState} 
+              audioLevel={orbState === "listening" ? voiceInputLevel : audioLevel}
+            />
           </div>
-        )}
 
-        {/* Input area */}
-        <div className="w-full max-w-xl space-y-4">
-          <div className="flex items-center gap-3">
-            <div className="flex-1 relative">
-              <Input
-                value={inputText}
-                onChange={(e) => setInputText(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleSend()}
-                placeholder={isListening ? "Listening... or type here" : "Type your message..."}
-                className="bg-card/60 border-border/50 h-12 pr-12 text-foreground placeholder:text-muted-foreground"
-                disabled={isLoading}
+          {/* Voice Waveform - shows when listening */}
+          {isListening && orbState === "listening" && (
+            <div className="flex flex-col items-center gap-1 sm:gap-2 mb-4 sm:mb-6">
+              <VoiceWaveform 
+                audioLevel={voiceInputLevel} 
+                isActive={voiceInputLevel > 0.1}
+                barCount={9}
+                className="h-8 sm:h-10"
               />
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={handleSend}
-                disabled={!inputText.trim() || isLoading}
-                className="absolute right-1 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-gold"
-              >
-                <Send className="w-5 h-5" />
-              </Button>
+              <p className="text-gold/80 text-[10px] sm:text-xs tracking-widest uppercase">
+                {voiceInputLevel > 0.15 ? "Hearing you..." : "Listening..."}
+              </p>
+            </div>
+          )}
+
+          {/* Transcript - constrained height on mobile */}
+          <div className="w-full max-w-xl mb-4 sm:mb-8">
+            <AgentTranscript 
+              messages={messages}
+              currentResponse={currentResponse}
+            />
+          </div>
+
+          {/* Live transcript while speaking */}
+          {transcript && isListening && (
+            <div className="w-full max-w-xl mb-3 sm:mb-4 px-3 sm:px-4 py-2 sm:py-3 bg-card/40 rounded-lg border border-gold/20">
+              <p className="text-foreground/80 italic text-sm sm:text-base">"{transcript}"</p>
+            </div>
+          )}
+
+          {/* Input area */}
+          <div className="w-full max-w-xl space-y-3 sm:space-y-4">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="flex-1 relative">
+                <Input
+                  value={inputText}
+                  onChange={(e) => setInputText(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleSend()}
+                  placeholder={isListening ? "Listening... or type here" : "Type your message..."}
+                  className="bg-card/60 border-border/50 h-11 sm:h-12 pr-11 sm:pr-12 text-foreground placeholder:text-muted-foreground text-sm sm:text-base"
+                  disabled={isLoading}
+                />
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleSend}
+                  disabled={!inputText.trim() || isLoading}
+                  className="absolute right-1 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-gold h-9 w-9 sm:h-10 sm:w-10"
+                >
+                  <Send className="w-4 h-4 sm:w-5 sm:h-5" />
+                </Button>
+              </div>
+
+              {/* Voice button - larger touch target on mobile */}
+              {isSupported && (
+                <Button
+                  variant={voiceEnabled || isListening ? "default" : "outline"}
+                  size="icon"
+                  onClick={handleVoiceToggle}
+                  disabled={isLoading || orbState === "speaking"}
+                  className={(voiceEnabled || isListening)
+                    ? "w-11 h-11 sm:w-12 sm:h-12 bg-gold text-black hover:bg-gold/90 flex-shrink-0" 
+                    : "w-11 h-11 sm:w-12 sm:h-12 border-border/50 hover:border-gold hover:text-gold flex-shrink-0"
+                  }
+                >
+                  {(voiceEnabled || isListening) ? <Mic className="w-5 h-5" /> : <MicOff className="w-5 h-5" />}
+                </Button>
+              )}
             </div>
 
-            {/* Voice button */}
-            {isSupported && (
+            {/* Action buttons - stack on mobile */}
+            <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-4">
+              {/* STOP & EXIT Button - always visible, stops everything and closes */}
               <Button
-                variant={voiceEnabled || isListening ? "default" : "outline"}
-                size="icon"
-                onClick={handleVoiceToggle}
-                disabled={isLoading || orbState === "speaking"}
-                className={(voiceEnabled || isListening)
-                  ? "w-12 h-12 bg-gold text-black hover:bg-gold/90" 
-                  : "w-12 h-12 border-border/50 hover:border-gold hover:text-gold"
-                }
-              >
-                {(voiceEnabled || isListening) ? <Mic className="w-5 h-5" /> : <MicOff className="w-5 h-5" />}
-              </Button>
-            )}
-          </div>
-
-          {/* Action buttons */}
-          <div className="flex items-center justify-center gap-4">
-            {/* STOP & EXIT Button - always visible, stops everything and closes */}
-            <Button
-              variant="outline"
-              onClick={() => {
-                // AGGRESSIVE STOP: Kill everything synchronously
-                stopConversation();
-                
-                // Also force-kill any audio contexts that might be playing
-                try {
-                  const allAudio = document.getElementsByTagName('audio');
-                  for (let i = 0; i < allAudio.length; i++) {
-                    allAudio[i].pause();
-                    allAudio[i].src = '';
+                variant="outline"
+                onClick={() => {
+                  // AGGRESSIVE STOP: Kill everything synchronously
+                  stopConversation();
+                  
+                  // Also force-kill any audio contexts that might be playing
+                  try {
+                    const allAudio = document.getElementsByTagName('audio');
+                    for (let i = 0; i < allAudio.length; i++) {
+                      allAudio[i].pause();
+                      allAudio[i].src = '';
+                    }
+                  } catch (e) {
+                    console.warn('[DirectorAI] Error in force stop:', e);
                   }
-                } catch (e) {
-                  console.warn('[DirectorAI] Error in force stop:', e);
-                }
-                
-                // Close immediately
-                onClose();
-              }}
-              className="border-2 border-red-500/70 bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 font-bold px-6"
-            >
-              <Square className="w-4 h-4 mr-2 fill-current" />
-              STOP & EXIT
-            </Button>
+                  
+                  // Close immediately
+                  onClose();
+                }}
+                className="border-2 border-red-500/70 bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 font-bold px-4 sm:px-6 h-10 sm:h-auto text-sm sm:text-base"
+              >
+                <Square className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2 fill-current" />
+                STOP & EXIT
+              </Button>
 
-            {/* KUT! Button */}
-            <Button
-              variant="destructive"
-              onClick={handleKut}
-              disabled={isLoading}
-              className="bg-cinematic-red hover:bg-cinematic-red/90 text-white font-bold px-6"
-            >
-              <Zap className="w-4 h-4 mr-2" />
-              KUT!
-            </Button>
+              {/* KUT! Button */}
+              <Button
+                variant="destructive"
+                onClick={handleKut}
+                disabled={isLoading}
+                className="bg-cinematic-red hover:bg-cinematic-red/90 text-white font-bold px-4 sm:px-6 h-10 sm:h-auto text-sm sm:text-base"
+              >
+                <Zap className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" />
+                KUT!
+              </Button>
 
-            {/* TTS Toggle */}
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                setTtsEnabled(!ttsEnabled);
-                if (ttsEnabled) stopSpeaking();
-              }}
-              className="text-muted-foreground hover:text-foreground"
-            >
-              {ttsEnabled ? (
-                <Volume2 className="w-4 h-4 mr-2" />
-              ) : (
-                <VolumeX className="w-4 h-4 mr-2" />
-              )}
-              Voice {ttsEnabled ? "On" : "Off"}
-            </Button>
+              {/* TTS Toggle */}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setTtsEnabled(!ttsEnabled);
+                  if (ttsEnabled) stopSpeaking();
+                }}
+                className="text-muted-foreground hover:text-foreground h-10 sm:h-auto text-sm"
+              >
+                {ttsEnabled ? (
+                  <Volume2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" />
+                ) : (
+                  <VolumeX className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" />
+                )}
+                Voice {ttsEnabled ? "On" : "Off"}
+              </Button>
+            </div>
           </div>
         </div>
 
-        {/* Hidden audio element */}
-        <audio ref={audioRef} className="hidden" />
+        {/* Floating close button for mobile - easy thumb access */}
+        <Button
+          variant="default"
+          size="lg"
+          onClick={onClose}
+          className="fixed bottom-6 right-4 z-50 h-14 w-14 rounded-full bg-gold/90 hover:bg-gold text-black shadow-lg shadow-gold/30 sm:hidden"
+        >
+          <X className="w-7 h-7" />
+        </Button>
       </div>
+
+      {/* Hidden audio element */}
+      <audio ref={audioRef} className="hidden" />
     </div>
   );
 }
