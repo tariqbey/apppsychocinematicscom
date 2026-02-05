@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { Header } from "@/components/layout/Header";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { CharacterCentral } from "@/components/character/CharacterCentral";
 import { CharacterScorecard } from "@/components/character/CharacterScorecard";
 import { CharacterWeeklySummary } from "@/components/character/CharacterWeeklySummary";
@@ -14,18 +13,21 @@ import { CharacterCreator } from "@/components/character/CharacterCreator";
 import { AICharacterAnalysis } from "@/components/character/AICharacterAnalysis";
 import { AnimatedCharacterCharts } from "@/components/character/AnimatedCharacterCharts";
 import { ArchetypesGuide } from "@/components/character/ArchetypesGuide";
+import { NapoleonHillSelfAnalysis } from "@/components/character/NapoleonHillSelfAnalysis";
 import { useAuth } from "@/hooks/useAuth";
 import { useCycleTracking } from "@/hooks/useCycleTracking";
-import { Loader2, ArrowLeft, User2, Target, TrendingUp, Brain, Calendar, GitBranch, RotateCcw, UserPlus, Sparkles, BarChart3, BookOpen } from "lucide-react";
+import { Loader2, ArrowLeft, User2, Target, TrendingUp, Brain, Calendar, GitBranch, RotateCcw, UserPlus, Sparkles, BarChart3, BookOpen, ClipboardList } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useNavigate } from "react-router-dom";
+import { Archetype } from "@/components/character/archetypes";
 
 const Character = () => {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
   const { refetch } = useCycleTracking();
   const [showCycleReview, setShowCycleReview] = useState(false);
+  const [showHillAnalysis, setShowHillAnalysis] = useState(false);
 
   if (authLoading) {
     return (
@@ -71,10 +73,15 @@ const Character = () => {
 
           {/* Tabs Navigation */}
           <Tabs defaultValue="analytics" className="w-full">
-            <TabsList className="grid w-full grid-cols-5 sm:grid-cols-9 mb-6 h-auto">
+            <TabsList className="grid w-full grid-cols-5 sm:grid-cols-10 mb-6 h-auto">
               <TabsTrigger value="analytics" className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 py-2">
                 <BarChart3 className="w-4 h-4" />
                 <span className="text-xs sm:text-sm">Analytics</span>
+              </TabsTrigger>
+              <TabsTrigger value="self-analysis" className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 py-2">
+                <ClipboardList className="w-4 h-4" />
+                <span className="text-xs sm:text-sm hidden sm:inline">Self-Analysis</span>
+                <span className="text-xs sm:hidden">Analysis</span>
               </TabsTrigger>
               <TabsTrigger value="guide" className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 py-2">
                 <BookOpen className="w-4 h-4" />
@@ -116,6 +123,33 @@ const Character = () => {
             <TabsContent value="analytics" className="space-y-6">
               <AnimatedCharacterCharts />
               <CharacterWeeklySummary />
+            </TabsContent>
+
+            <TabsContent value="self-analysis" className="space-y-6">
+              <div className="glass-card p-6 space-y-4">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-gold/20 to-amber-500/20 flex items-center justify-center">
+                    <ClipboardList className="w-5 h-5 text-gold" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-display text-gold">Napoleon Hill Self-Analysis</h2>
+                    <p className="text-sm text-muted-foreground">Rate yourself on the 17 Laws of Success</p>
+                  </div>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  This comprehensive self-analysis is based on Napoleon Hill's 17 Laws of Success. 
+                  Rate yourself honestly on each law to discover your Director archetype and identify 
+                  areas for growth in your transformation journey.
+                </p>
+                <Button 
+                  variant="gold" 
+                  onClick={() => setShowHillAnalysis(true)} 
+                  className="w-full gap-2"
+                >
+                  <BookOpen className="h-4 w-4" />
+                  Begin Self-Analysis
+                </Button>
+              </div>
             </TabsContent>
 
             <TabsContent value="guide" className="space-y-6">
@@ -190,6 +224,17 @@ const Character = () => {
           setShowCycleReview(false);
         }}
       />
+
+      {/* Napoleon Hill Self-Analysis Modal */}
+      {showHillAnalysis && (
+        <NapoleonHillSelfAnalysis
+          onComplete={(archetype: Archetype, scores: Record<string, number>, lawScores: Record<number, number>) => {
+            setShowHillAnalysis(false);
+            // The component handles saving to DB internally
+          }}
+          onClose={() => setShowHillAnalysis(false)}
+        />
+      )}
     </div>
   );
 };
