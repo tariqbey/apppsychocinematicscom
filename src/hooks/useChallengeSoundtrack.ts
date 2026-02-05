@@ -95,25 +95,24 @@ export function useChallengeSoundtrack() {
       // Deduct credits using AI type
       await deductCredits('ai');
 
-      // Build the context for lyrics generation
-      const { data, error } = await supabase.functions.invoke('generate-challenge-lyrics', {
-        body: {
-          challenge: {
-            situationDescription: params.situationDescription,
-            targetTrait: params.targetTrait,
-            emotionalTrigger: params.emotionalTrigger,
-            scenarioType: params.scenarioType,
-            visualizationScript: params.visualizationScript,
-          },
-          archetype: archetype ? {
-            name: archetype.name,
-            superpower: archetype.superpower,
-            superpowerDescription: archetype.superpowerDescription,
-            shadow: archetype.shadow,
-            shadowDescription: archetype.shadowDescription,
-            lightShadow: archetype.lightShadow,
-            directorsNote: archetype.directorsNote,
-          } : null,
+ // Build the context for lyrics generation
+       const { data, error } = await supabase.functions.invoke('generate-challenge-lyrics', {
+         body: {
+           challenge: {
+             situationDescription: params.situationDescription,
+             targetTrait: params.targetTrait,
+             emotionalTrigger: params.emotionalTrigger,
+             scenarioType: params.scenarioType,
+             visualizationScript: params.visualizationScript,
+           },
+           archetype: archetype ? {
+             name: archetype.name,
+             sphere: archetype.sphere,
+             deity: archetype.deity,
+             law: archetype.law,
+             role: archetype.role,
+             directorsNote: archetype.directorsNote,
+           } : null,
           chiefAim: chiefAim ? {
             what: chiefAim.chief_aim_what,
             byWhen: chiefAim.chief_aim_by_when,

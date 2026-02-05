@@ -60,10 +60,15 @@ export function CharacterEvolution({ inline = false }: CharacterEvolutionProps) 
     return archetype?.name || id;
   };
 
-  const getArchetypeSuperpower = (id: string) => {
-    const archetype = getArchetypeByIdWithLegacy(id);
-    return archetype?.superpower || "";
-  };
+ const getArchetypeDeity = (id: string) => {
+     const archetype = getArchetypeByIdWithLegacy(id);
+     return archetype?.deity || "";
+   };
+ 
+   const getArchetypeSphere = (id: string) => {
+     const archetype = getArchetypeByIdWithLegacy(id);
+     return archetype?.sphere ?? 0;
+   };
 
   const getTopThreeArchetypes = (scores: Record<string, number>) => {
     return Object.entries(scores)
@@ -188,12 +193,17 @@ export function CharacterEvolution({ inline = false }: CharacterEvolutionProps) 
                             </Badge>
                           )}
                         </div>
-                        <CardTitle className="text-xl text-gold">
-                          {getArchetypeName(snapshot.archetype)}
-                        </CardTitle>
-                        <p className="text-sm text-muted-foreground italic">
-                          {getArchetypeSuperpower(snapshot.archetype)}
-                        </p>
+ <div className="flex items-center gap-2">
+                           <CardTitle className="text-xl text-gold">
+                             {getArchetypeName(snapshot.archetype)}
+                           </CardTitle>
+                           <Badge className="bg-gold/20 text-gold border-gold/30 text-xs">
+                             Sphere {getArchetypeSphere(snapshot.archetype)}
+                           </Badge>
+                         </div>
+                         <p className="text-sm text-muted-foreground italic">
+                           {getArchetypeDeity(snapshot.archetype)}
+                         </p>
                       </div>
 
                       {shift && (
@@ -213,19 +223,14 @@ export function CharacterEvolution({ inline = false }: CharacterEvolutionProps) 
                   </CardHeader>
 
                   <CardContent>
-                    {/* Light/Shadow */}
-                    {getArchetypeByIdWithLegacy(snapshot.archetype) && (
-                      <div className="flex gap-4 mb-4 text-sm">
-                        <div className="flex items-center gap-2">
-                          <span className="text-green-400">Light:</span>
-                          <span className="text-muted-foreground">{getArchetypeByIdWithLegacy(snapshot.archetype)?.lightShadow.light}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-red-400">Shadow:</span>
-                          <span className="text-muted-foreground">{getArchetypeByIdWithLegacy(snapshot.archetype)?.lightShadow.shadow}</span>
-                        </div>
-                      </div>
-                    )}
+ {/* Director's Note */}
+                     {getArchetypeByIdWithLegacy(snapshot.archetype) && (
+                       <div className="p-3 rounded-lg bg-purple-500/10 border border-purple-500/20 mb-4">
+                         <p className="text-sm text-muted-foreground italic">
+                           "{getArchetypeByIdWithLegacy(snapshot.archetype)?.directorsNote}"
+                         </p>
+                       </div>
+                     )}
 
                     {/* Top 3 Scores */}
                     <div className="space-y-2">

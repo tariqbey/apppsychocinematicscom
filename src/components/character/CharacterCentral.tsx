@@ -1,15 +1,15 @@
-import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/useAuth";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { User, Sparkles, RefreshCw, Loader2, Crown, Sun, Moon } from "lucide-react";
-import { CharacterSurvey } from "./CharacterSurvey";
-import { ArchetypeResult } from "./ArchetypeResult";
+ import { useState, useEffect } from "react";
+ import { supabase } from "@/integrations/supabase/client";
+ import { useAuth } from "@/hooks/useAuth";
+ import { Button } from "@/components/ui/button";
+ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+ import { Badge } from "@/components/ui/badge";
+ import { User, Sparkles, RefreshCw, Loader2, Crown, Circle } from "lucide-react";
+ import { CharacterSurvey } from "./CharacterSurvey";
+ import { ArchetypeResult } from "./ArchetypeResult";
  import { Archetype, getArchetypeByIdWithLegacy, ARCHETYPES } from "./archetypes";
-import { useToast } from "@/hooks/use-toast";
-import { InfoTooltip } from "@/components/ui/info-tooltip";
+ import { useToast } from "@/hooks/use-toast";
+ import { InfoTooltip } from "@/components/ui/info-tooltip";
 
 interface CharacterProfile {
   archetype: string;
@@ -108,20 +108,10 @@ export function CharacterCentral() {
     setShowResult(true);
   };
 
-  const toggleLightShadow = async () => {
-    if (!user || !profile) return;
-
-    const newState = profile.light_shadow_state === "light" ? "shadow" : "light";
-    
-    const { error } = await supabase
-      .from("character_profiles")
-      .update({ light_shadow_state: newState })
-      .eq("user_id", user.id);
-
-    if (!error) {
-      setProfile(prev => prev ? { ...prev, light_shadow_state: newState } : null);
-    }
-  };
+ // Toggle light/shadow state - kept for legacy support but simplified
+   const toggleLightShadow = async () => {
+     // No-op for new Metu Neter system, kept for legacy DB records
+   };
 
   if (isLoading) {
     return (
@@ -205,40 +195,22 @@ export function CharacterCentral() {
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* Archetype Display */}
-          <div 
-            className="p-4 rounded-lg bg-gradient-to-br from-gold/10 to-amber-500/5 border border-gold/20 cursor-pointer hover:border-gold/40 transition-all"
-            onClick={() => setShowResult(true)}
-          >
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-xl font-display text-gold">{currentArchetype.name}</h3>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  toggleLightShadow();
-                }}
-                className="flex items-center gap-1.5 px-2 py-1 rounded-full text-xs bg-muted/50 hover:bg-muted transition-colors"
-              >
-                {profile.light_shadow_state === "light" ? (
-                  <>
-                    <Sun className="h-3 w-3 text-amber-500" />
-                    <span className="text-amber-500">{currentArchetype.lightShadow.light}</span>
-                  </>
-                ) : (
-                  <>
-                    <Moon className="h-3 w-3 text-slate-400" />
-                    <span className="text-slate-400">{currentArchetype.lightShadow.shadow}</span>
-                  </>
-                )}
-              </button>
-            </div>
-            <p className="text-sm text-muted-foreground italic mb-3">
-              {currentArchetype.superpower}
-            </p>
-            <Badge variant="secondary" className="bg-gold/10 text-gold/80 text-xs">
-              {currentArchetype.lightShadow.light}
-            </Badge>
-          </div>
+ {/* Archetype Display */}
+           <div 
+             className="p-4 rounded-lg bg-gradient-to-br from-gold/10 to-amber-500/5 border border-gold/20 cursor-pointer hover:border-gold/40 transition-all"
+             onClick={() => setShowResult(true)}
+           >
+             <div className="flex items-center justify-between mb-2">
+               <h3 className="text-xl font-display text-gold">{currentArchetype.name}</h3>
+               <Badge className="bg-gold/20 text-gold border-gold/30 text-xs">
+                 Sphere {currentArchetype.sphere}
+               </Badge>
+             </div>
+             <p className="text-xs text-muted-foreground mb-2">{currentArchetype.deity}</p>
+             <p className="text-sm text-muted-foreground italic">
+               "{currentArchetype.directorsNote}"
+             </p>
+           </div>
 
           <p className="text-xs text-muted-foreground text-center">
             Tap to view full archetype details

@@ -190,20 +190,18 @@ export function CharacterTransformationCoach({
         plan: profileData.chief_aim_plan
       });
 
-      // Call AI to generate the transformation analysis
-      const { data, error } = await supabase.functions.invoke("analyze-character-transformation", {
-        body: {
-          archetype: {
-            id: archetype.id,
-            name: archetype.name,
-            superpower: archetype.superpower,
-            superpowerDescription: archetype.superpowerDescription,
-            shadow: archetype.shadow,
-            shadowDescription: archetype.shadowDescription,
-            lightShadow: archetype.lightShadow,
-            directorsNote: archetype.directorsNote,
-            cinematicDefinition: archetype.cinematicDefinition
-          },
+ // Call AI to generate the transformation analysis
+       const { data, error } = await supabase.functions.invoke("analyze-character-transformation", {
+         body: {
+           archetype: {
+             id: archetype.id,
+             name: archetype.name,
+             sphere: archetype.sphere,
+             deity: archetype.deity,
+             law: archetype.law,
+             role: archetype.role,
+             directorsNote: archetype.directorsNote
+           },
           archetypeScores: scores,
           chiefAim: {
             what: profileData.chief_aim_what,
