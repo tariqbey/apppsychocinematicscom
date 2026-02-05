@@ -1,6 +1,5 @@
 import { useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
-import { ScrollArea } from "@/components/ui/scroll-area";
 
 export interface TranscriptMessage {
   id: string;
@@ -18,12 +17,6 @@ interface AgentTranscriptProps {
 export function AgentTranscript({ messages, currentResponse, className }: AgentTranscriptProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
-  }, [messages, currentResponse]);
-
   const allMessages = [...messages];
   if (currentResponse) {
     allMessages.push({
@@ -33,14 +26,25 @@ export function AgentTranscript({ messages, currentResponse, className }: AgentT
     });
   }
 
-  // Only show last few messages for cleaner UI
-  const visibleMessages = allMessages.slice(-4);
+  // Show more history (mobile users need context), but keep it bounded.
+  const visibleMessages = allMessages.slice(-20);
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+
+    // Let DOM paint first (prevents jumpiness on mobile keyboards)
+    const raf = requestAnimationFrame(() => {
+      el.scrollTop = el.scrollHeight;
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [visibleMessages.length, currentResponse]);
 
   return (
-    <div className={cn("w-full max-w-2xl mx-auto", className)}>
-      <ScrollArea 
-        ref={scrollRef as any}
-        className="h-[180px] px-4"
+    <div className={cn("w-full h-full min-h-0", className)}>
+      <div
+        ref={scrollRef}
+        className="h-full min-h-0 overflow-y-auto overscroll-contain px-4"
       >
         <div className="space-y-4 py-2">
           {visibleMessages.length === 0 ? (
@@ -55,7 +59,7 @@ export function AgentTranscript({ messages, currentResponse, className }: AgentT
                   "rounded-lg px-4 py-3 transition-all animate-fade-in",
                   message.role === "assistant"
                     ? "bg-card/60 border border-gold/20 text-foreground"
-                    : "bg-muted/40 border border-border text-muted-foreground ml-8"
+                    : "bg-muted/40 border border-border text-muted-foreground ml-8",
                 )}
               >
                 {message.role === "assistant" && (
@@ -78,7 +82,8 @@ export function AgentTranscript({ messages, currentResponse, className }: AgentT
             ))
           )}
         </div>
-      </ScrollArea>
+      </div>
     </div>
   );
 }
+
