@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, Target, Sparkles, AlertTriangle, ArrowRight, Crown, Swords, Shield, X, Film, Clapperboard, Download, Check, RefreshCw, Calendar, Bell, RotateCcw } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { Archetype, ARCHETYPES } from "./archetypes";
+ import { Archetype, ARCHETYPES, getArchetypeByIdWithLegacy } from "./archetypes";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
@@ -114,7 +114,7 @@ export function CharacterTransformationCoach({
         if (profileData) {
           // Only set archetype/scores from DB if not provided as props
           if (!archetypeProp) {
-            const foundArchetype = ARCHETYPES.find(a => a.id === profileData.archetype);
+            const foundArchetype = getArchetypeByIdWithLegacy(profileData.archetype);
             if (foundArchetype) {
               setArchetype(foundArchetype);
               setScores(profileData.archetype_score as Record<string, number> || {});
@@ -196,11 +196,13 @@ export function CharacterTransformationCoach({
           archetype: {
             id: archetype.id,
             name: archetype.name,
-            strengths: archetype.strengths,
-            weaknesses: archetype.weaknesses,
+            superpower: archetype.superpower,
+            superpowerDescription: archetype.superpowerDescription,
+            shadow: archetype.shadow,
+            shadowDescription: archetype.shadowDescription,
             lightShadow: archetype.lightShadow,
-            storyFuel: archetype.storyFuel,
-            conflictPattern: archetype.conflictPattern
+            directorsNote: archetype.directorsNote,
+            cinematicDefinition: archetype.cinematicDefinition
           },
           archetypeScores: scores,
           chiefAim: {

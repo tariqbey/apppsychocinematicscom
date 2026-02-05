@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { useProductionCredits } from './useProductionCredits';
 import { toast } from 'sonner';
-import { ARCHETYPES, getArchetypeById } from '@/components/character/archetypes';
+ import { getArchetypeByIdWithLegacy } from '@/components/character/archetypes';
 
 export interface ChallengeSoundtrack {
   id: string;
@@ -53,7 +53,7 @@ export function useChallengeSoundtrack() {
       .maybeSingle();
     
     if (data?.archetype) {
-      return getArchetypeById(data.archetype);
+      return getArchetypeByIdWithLegacy(data.archetype);
     }
     return null;
   }, [user]);
@@ -107,10 +107,12 @@ export function useChallengeSoundtrack() {
           },
           archetype: archetype ? {
             name: archetype.name,
-            tagline: archetype.tagline,
-            strengths: archetype.strengths,
-            weaknesses: archetype.weaknesses,
+            superpower: archetype.superpower,
+            superpowerDescription: archetype.superpowerDescription,
+            shadow: archetype.shadow,
+            shadowDescription: archetype.shadowDescription,
             lightShadow: archetype.lightShadow,
+            directorsNote: archetype.directorsNote,
           } : null,
           chiefAim: chiefAim ? {
             what: chiefAim.chief_aim_what,

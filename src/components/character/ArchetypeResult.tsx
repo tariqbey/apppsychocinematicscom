@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Sparkles, Shield, AlertTriangle, Target, X, Crown, Zap, Sun, Moon, Swords } from "lucide-react";
+ import { Target, X, Crown, Zap, Sun, Moon, Swords, Film, Quote } from "lucide-react";
 import { Archetype, ARCHETYPES } from "./archetypes";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { CharacterTransformationCoach } from "./CharacterTransformationCoach";
@@ -61,9 +61,12 @@ export function ArchetypeResult({ archetype, scores, onClose, onRetake }: Archet
                   <CardTitle className="text-4xl font-display tracking-wide text-gold-gradient">
                     {archetype.name}
                   </CardTitle>
-                  <p className="text-lg text-muted-foreground italic mt-2">
-                    "{archetype.tagline}"
-                  </p>
+              <div className="mt-4 p-3 rounded-lg bg-muted/30 border border-gold/20">
+                <p className="text-sm text-muted-foreground italic">
+                  <Quote className="inline w-3 h-3 mr-1 text-gold" />
+                  {archetype.directorsNote}
+                </p>
+              </div>
                 </div>
               </CardHeader>
 
@@ -86,56 +89,31 @@ export function ArchetypeResult({ archetype, scores, onClose, onRetake }: Archet
                   </div>
                 </div>
 
-                {/* Strengths */}
+                {/* Superpower */}
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
-                    <Sparkles className="h-4 w-4 text-green-500" />
-                    <h4 className="font-medium">Strengths</h4>
+                    <Zap className="h-4 w-4 text-emerald-500" />
+                    <h4 className="font-medium">Superpower: {archetype.superpower}</h4>
                   </div>
-                  <div className="flex flex-wrap gap-2">
-                    {archetype.strengths.map((strength, i) => (
-                      <Badge key={i} variant="secondary" className="bg-green-500/10 text-green-500 border-green-500/20">
-                        {strength}
-                      </Badge>
-                    ))}
-                  </div>
+                  <p className="text-sm text-muted-foreground">{archetype.superpowerDescription}</p>
                 </div>
 
-                {/* Weaknesses */}
+                {/* Shadow (The Bad Take) */}
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
-                    <AlertTriangle className="h-4 w-4 text-amber-500" />
-                    <h4 className="font-medium">Growth Areas</h4>
+                    <Moon className="h-4 w-4 text-red-400" />
+                    <h4 className="font-medium">The Bad Take: {archetype.shadow}</h4>
                   </div>
-                  <div className="flex flex-wrap gap-2">
-                    {archetype.weaknesses.map((weakness, i) => (
-                      <Badge key={i} variant="secondary" className="bg-amber-500/10 text-amber-500 border-amber-500/20">
-                        {weakness}
-                      </Badge>
-                    ))}
-                  </div>
+                  <p className="text-sm text-muted-foreground">{archetype.shadowDescription}</p>
                 </div>
 
-                {/* Story Fuel */}
-                <div className="p-4 rounded-lg bg-primary/5 border border-primary/20">
+                {/* Cinematic Definition */}
+                <div className="p-4 rounded-lg bg-gold/5 border border-gold/20">
                   <div className="flex items-center gap-2 mb-2">
-                    <Target className="h-4 w-4 text-primary" />
-                    <h4 className="font-medium text-primary">Your Story Fuel</h4>
+                    <Film className="h-4 w-4 text-gold" />
+                    <h4 className="font-medium text-gold">Cinematic Definition</h4>
                   </div>
-                  <p className="text-sm text-muted-foreground">{archetype.storyFuel}</p>
-                </div>
-
-                {/* Social Correspondence */}
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <Shield className="h-4 w-4 text-blue-500" />
-                    <h4 className="font-medium">Where You Thrive</h4>
-                  </div>
-                  <ul className="text-sm text-muted-foreground space-y-1">
-                    {archetype.socialCorrespondence.map((role, i) => (
-                      <li key={i}>• {role}</li>
-                    ))}
-                  </ul>
+                  <p className="text-sm text-muted-foreground">{archetype.cinematicDefinition}</p>
                 </div>
               </CardContent>
             </Card>
@@ -177,39 +155,6 @@ export function ArchetypeResult({ archetype, scores, onClose, onRetake }: Archet
                     </div>
                   </div>
                 ))}
-              </CardContent>
-            </Card>
-
-            {/* Character Signature */}
-            <Card className="glass-card cinematic-border">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-lg font-display tracking-wide">
-                  Your Character Signature
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="p-3 rounded-lg bg-muted/30">
-                    <p className="text-xs text-muted-foreground mb-1">Dialogue Style</p>
-                    <p className="text-sm">{archetype.signature.dialogueStyle}</p>
-                  </div>
-                  <div className="p-3 rounded-lg bg-muted/30">
-                    <p className="text-xs text-muted-foreground mb-1">Physical Presence</p>
-                    <p className="text-sm">{archetype.signature.physicalPresence}</p>
-                  </div>
-                  <div className="p-3 rounded-lg bg-muted/30">
-                    <p className="text-xs text-muted-foreground mb-1">Moral Temptation</p>
-                    <p className="text-sm">{archetype.signature.moralTemptation}</p>
-                  </div>
-                  <div className="p-3 rounded-lg bg-muted/30">
-                    <p className="text-xs text-muted-foreground mb-1">Break Point</p>
-                    <p className="text-sm">{archetype.signature.breakPoint}</p>
-                  </div>
-                </div>
-                <div className="p-4 rounded-lg bg-gold/10 border border-gold/20">
-                  <p className="text-xs text-gold mb-1">Your Redemption Arc</p>
-                  <p className="text-sm font-medium">{archetype.signature.redemptionBeat}</p>
-                </div>
               </CardContent>
             </Card>
 
