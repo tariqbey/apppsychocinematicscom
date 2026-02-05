@@ -4,8 +4,9 @@
  import { Button } from "@/components/ui/button";
  import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
  import { Badge } from "@/components/ui/badge";
- import { User, Sparkles, RefreshCw, Loader2, Crown, Circle } from "lucide-react";
+ import { User, Sparkles, RefreshCw, Loader2, Crown, Circle, BookOpen } from "lucide-react";
  import { CharacterSurvey } from "./CharacterSurvey";
+ import { NapoleonHillSelfAnalysis } from "./NapoleonHillSelfAnalysis";
  import { ArchetypeResult } from "./ArchetypeResult";
  import { Archetype, getArchetypeByIdWithLegacy, ARCHETYPES } from "./archetypes";
  import { useToast } from "@/hooks/use-toast";
@@ -24,6 +25,7 @@ export function CharacterCentral() {
   const [profile, setProfile] = useState<CharacterProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [showSurvey, setShowSurvey] = useState(false);
+   const [showHillAnalysis, setShowHillAnalysis] = useState(false);
   const [showResult, setShowResult] = useState(false);
   const [currentArchetype, setCurrentArchetype] = useState<Archetype | null>(null);
   const [currentScores, setCurrentScores] = useState<Record<string, number>>({});
@@ -63,6 +65,57 @@ export function CharacterCentral() {
     setIsLoading(false);
   };
 
+   const handleHillAnalysisComplete = async (
+     archetype: Archetype,
+     scores: Record<string, number>,
+     lawScores: Record<number, number>
+   ) => {
+     if (!user) return;
+ 
+     setCurrentArchetype(archetype);
+     setCurrentScores(scores);
+ 
+     // Convert law scores to responses format for storage
+     const responses: Record<string, string> = {};
+     Object.entries(lawScores).forEach(([lawNum, score]) => {
+       responses[`law_${lawNum}`] = `${score}%`;
+     });
+ 
+     // Save to database
+     const { error } = await supabase
+       .from("character_profiles")
+       .upsert({
+         user_id: user.id,
+         archetype: archetype.id,
+         archetype_score: scores,
+         survey_responses: responses,
+         light_shadow_state: "light"
+       });
+ 
+     if (error) {
+       toast({
+         title: "Error saving profile",
+         description: "Please try again",
+         variant: "destructive"
+       });
+       console.error("Error saving character profile:", error);
+     } else {
+       setProfile({
+         archetype: archetype.id,
+         archetype_score: scores,
+         survey_responses: responses,
+         light_shadow_state: "light"
+       });
+       toast({
+         title: "Character Profile Saved!",
+         description: `You are The ${archetype.name}`,
+       });
+     }
+ 
+     setShowHillAnalysis(false);
+     setShowResult(true);
+   };
+ 
   const handleSurveyComplete = async (
     archetype: Archetype,
     scores: Record<string, number>,
@@ -148,10 +201,19 @@ export function CharacterCentral() {
             <p className="text-sm text-muted-foreground">
               Take a quick survey to discover your character archetype. The AI will use this to provide personalized coaching aligned with your natural strengths.
             </p>
-            <Button variant="gold" onClick={() => setShowSurvey(true)} className="w-full gap-2">
+             <div className="grid gap-3">
+               <Button variant="gold" onClick={() => setShowHillAnalysis(true)} className="w-full gap-2">
+                 <BookOpen className="h-4 w-4" />
+                 Napoleon Hill Self-Analysis
+               </Button>
+               <Button variant="outline" onClick={() => setShowSurvey(true)} className="w-full gap-2 border-gold/30 text-gold hover:bg-gold/10">
               <Sparkles className="h-4 w-4" />
-              Start Character Survey
+                 Quick Archetype Survey
             </Button>
+             </div>
+             <p className="text-xs text-muted-foreground text-center">
+               The Napoleon Hill Self-Analysis rates you on the 17 Laws of Success
+             </p>
           </CardContent>
         </Card>
 
@@ -161,6 +223,13 @@ export function CharacterCentral() {
             onClose={() => setShowSurvey(false)}
           />
         )}
+         
+         {showHillAnalysis && (
+           <NapoleonHillSelfAnalysis
+             onComplete={handleHillAnalysisComplete}
+             onClose={() => setShowHillAnalysis(false)}
+           />
+         )}
       </>
     );
   }
@@ -186,7 +255,7 @@ export function CharacterCentral() {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => setShowSurvey(true)}
+               onClick={() => setShowHillAnalysis(true)}
               className="gap-1 text-muted-foreground hover:text-primary"
             >
               <RefreshCw className="h-3.5 w-3.5" />
@@ -225,6 +294,13 @@ export function CharacterCentral() {
           onClose={() => setShowSurvey(false)}
         />
       )}
+ 
+       {showHillAnalysis && (
+         <NapoleonHillSelfAnalysis
+           onComplete={handleHillAnalysisComplete}
+           onClose={() => setShowHillAnalysis(false)}
+         />
+       )}
 
       {/* Result Modal */}
       {showResult && currentArchetype && (
