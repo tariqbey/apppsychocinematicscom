@@ -9,7 +9,6 @@ import { StreakBanner } from "@/components/dashboard/StreakBanner";
 import { CutResetModal } from "@/components/dashboard/CutResetModal";
 import { TheaterView } from "@/components/theater/TheaterView";
 import { EditBay } from "@/components/studio/EditBay";
-import { DirectorAIAgent } from "@/components/director-ai/DirectorAIAgent";
 import { DailyScorecard } from "@/components/scorecard/DailyScorecard";
 import { ChiefAimWizard } from "@/components/chief-aim/ChiefAimWizard";
 import { ChiefAimAdjustDialog } from "@/components/chief-aim/ChiefAimAdjustDialog";
@@ -69,7 +68,6 @@ const Index = () => {
   });
   const [showEditBay, setShowEditBay] = useState(false);
   const [showScorecard, setShowScorecard] = useState(false);
-  const [showAIChat, setShowAIChat] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showChiefAimWizard, setShowChiefAimWizard] = useState(false);
   const [showChiefAimAdjust, setShowChiefAimAdjust] = useState(false);
@@ -780,46 +778,34 @@ const Index = () => {
         }}
       />
 
-      {/* Director AI Agent */}
-      <>
-        {/* AI Agent Trigger Button - Always show label */}
-        {!showAIChat && (
-          <button
-            onClick={() => setShowAIChat(true)}
-            className="fixed bottom-6 right-6 z-40 flex items-center gap-3 group"
-          >
-            {/* Permanent Label */}
-            <div className="bg-card/95 backdrop-blur-sm border border-gold/30 px-4 py-2 rounded-lg shadow-lg">
-              <span className="text-sm font-semibold text-gold whitespace-nowrap">Director AI</span>
-              <p className="text-xs text-muted-foreground">Your AI Coach</p>
-            </div>
-            
-            {/* Animated Orb Button */}
-            <div className="relative">
-              {/* Outer glow rings */}
-              <div className="absolute inset-0 rounded-full bg-gradient-to-br from-gold/40 to-amber-600/40 blur-xl animate-pulse" />
-              <div className="absolute -inset-2 rounded-full border border-gold/20 animate-[spin_8s_linear_infinite]" />
-              <div className="absolute -inset-4 rounded-full border border-gold/10 animate-[spin_12s_linear_infinite_reverse]" />
-              
-              {/* Main button */}
-              <div className="relative w-16 h-16 rounded-full bg-gradient-to-br from-gold via-amber-500 to-amber-600 shadow-[0_0_30px_rgba(212,175,55,0.5)] flex items-center justify-center transition-all duration-300 group-hover:scale-110 group-hover:shadow-[0_0_50px_rgba(212,175,55,0.7)]">
-                {/* Inner highlight */}
-                <div className="absolute inset-1 rounded-full bg-gradient-to-br from-white/30 to-transparent" />
-                
-                {/* Icon */}
-                <Bot className="w-7 h-7 text-black relative z-10 group-hover:scale-110 transition-transform" />
-              </div>
-            </div>
-          </button>
-        )}
+      {/* Director AI Button - Navigates to dedicated page */}
+      <button
+        onClick={() => navigate("/director-ai")}
+        className="fixed bottom-6 right-6 z-40 flex items-center gap-3 group"
+      >
+        {/* Permanent Label */}
+        <div className="bg-card/95 backdrop-blur-sm border border-gold/30 px-4 py-2 rounded-lg shadow-lg">
+          <span className="text-sm font-semibold text-gold whitespace-nowrap">Director AI</span>
+          <p className="text-xs text-muted-foreground">Your AI Coach</p>
+        </div>
         
-        <DirectorAIAgent
-          isOpen={showAIChat}
-          onClose={() => setShowAIChat(false)}
-          chiefAim={chiefAim}
-          userId={user.id}
-        />
-      </>
+        {/* Animated Orb Button */}
+        <div className="relative">
+          {/* Outer glow rings */}
+          <div className="absolute inset-0 rounded-full bg-gradient-to-br from-gold/40 to-amber-600/40 blur-xl animate-pulse" />
+          <div className="absolute -inset-2 rounded-full border border-gold/20 animate-[spin_8s_linear_infinite]" />
+          <div className="absolute -inset-4 rounded-full border border-gold/10 animate-[spin_12s_linear_infinite_reverse]" />
+          
+          {/* Main button */}
+          <div className="relative w-16 h-16 rounded-full bg-gradient-to-br from-gold via-amber-500 to-amber-600 shadow-[0_0_30px_rgba(212,175,55,0.5)] flex items-center justify-center transition-all duration-300 group-hover:scale-110 group-hover:shadow-[0_0_50px_rgba(212,175,55,0.7)]">
+            {/* Inner highlight */}
+            <div className="absolute inset-1 rounded-full bg-gradient-to-br from-white/30 to-transparent" />
+            
+            {/* Icon */}
+            <Bot className="w-7 h-7 text-black relative z-10 group-hover:scale-110 transition-transform" />
+          </div>
+        </div>
+      </button>
 
       {/* Director's Journal */}
       <DirectorsJournal
