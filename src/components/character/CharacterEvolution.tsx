@@ -4,7 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, TrendingUp, Calendar, ArrowRight, Sparkles } from "lucide-react";
-import { ARCHETYPES, getArchetypeById } from "./archetypes";
+ import { ARCHETYPES, getArchetypeByIdWithLegacy } from "./archetypes";
 import { format } from "date-fns";
 
 interface CharacterSnapshot {
@@ -56,13 +56,13 @@ export function CharacterEvolution({ inline = false }: CharacterEvolutionProps) 
   };
 
   const getArchetypeName = (id: string) => {
-    const archetype = getArchetypeById(id);
+    const archetype = getArchetypeByIdWithLegacy(id);
     return archetype?.name || id;
   };
 
-  const getArchetypeTagline = (id: string) => {
-    const archetype = getArchetypeById(id);
-    return archetype?.tagline || "";
+  const getArchetypeSuperpower = (id: string) => {
+    const archetype = getArchetypeByIdWithLegacy(id);
+    return archetype?.superpower || "";
   };
 
   const getTopThreeArchetypes = (scores: Record<string, number>) => {
@@ -155,7 +155,7 @@ export function CharacterEvolution({ inline = false }: CharacterEvolutionProps) 
 
         <div className="space-y-6">
           {snapshots.map((snapshot, index) => {
-            const archetype = getArchetypeById(snapshot.archetype);
+            const archetype = getArchetypeByIdWithLegacy(snapshot.archetype);
             const topThree = getTopThreeArchetypes(snapshot.archetypeScore);
             const shift = index > 0 ? calculateShift(snapshots[index - 1], snapshot) : null;
             const isLatest = index === snapshots.length - 1;
@@ -192,7 +192,7 @@ export function CharacterEvolution({ inline = false }: CharacterEvolutionProps) 
                           {getArchetypeName(snapshot.archetype)}
                         </CardTitle>
                         <p className="text-sm text-muted-foreground italic">
-                          "{getArchetypeTagline(snapshot.archetype)}"
+                          {getArchetypeSuperpower(snapshot.archetype)}
                         </p>
                       </div>
 
@@ -214,15 +214,15 @@ export function CharacterEvolution({ inline = false }: CharacterEvolutionProps) 
 
                   <CardContent>
                     {/* Light/Shadow */}
-                    {archetype && (
+                    {getArchetypeByIdWithLegacy(snapshot.archetype) && (
                       <div className="flex gap-4 mb-4 text-sm">
                         <div className="flex items-center gap-2">
                           <span className="text-green-400">Light:</span>
-                          <span className="text-muted-foreground">{archetype.lightShadow.light}</span>
+                          <span className="text-muted-foreground">{getArchetypeByIdWithLegacy(snapshot.archetype)?.lightShadow.light}</span>
                         </div>
                         <div className="flex items-center gap-2">
                           <span className="text-red-400">Shadow:</span>
-                          <span className="text-muted-foreground">{archetype.lightShadow.shadow}</span>
+                          <span className="text-muted-foreground">{getArchetypeByIdWithLegacy(snapshot.archetype)?.lightShadow.shadow}</span>
                         </div>
                       </div>
                     )}

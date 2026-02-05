@@ -1,7 +1,7 @@
  import { ARCHETYPES, Archetype } from "./archetypes";
  import { cn } from "@/lib/utils";
  import { useState } from "react";
-import { ChevronDown, ChevronUp, User2, Sparkles, AlertTriangle, Zap, Sun, Moon, List } from "lucide-react";
+ import { ChevronDown, User2, Zap, Sun, Moon, List, Film, Quote } from "lucide-react";
  import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -9,102 +9,42 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 function ArchetypeFullDetails({ archetype }: { archetype: Archetype }) {
    return (
     <div className="pt-3 space-y-4 animate-accordion-down">
+      {/* Cinematic Definition */}
+      <div className="p-3 rounded-lg bg-gold/10 border border-gold/30">
+        <div className="flex items-center gap-2 mb-1">
+          <Film className="w-4 h-4 text-gold" />
+          <span className="text-xs font-medium text-gold uppercase tracking-wider">Cinematic Definition</span>
+        </div>
+        <p className="text-sm text-foreground">{archetype.cinematicDefinition}</p>
+      </div>
+
       {/* Light/Shadow */}
       <div className="grid grid-cols-2 gap-3">
-        <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/30">
+        <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
           <div className="flex items-center gap-2 mb-1">
             <Sun className="w-4 h-4 text-emerald-400" />
-            <span className="text-xs font-medium text-emerald-400 uppercase tracking-wider">Light</span>
+            <span className="text-xs font-medium text-emerald-400 uppercase tracking-wider">Superpower</span>
            </div>
-          <p className="text-sm text-foreground">{archetype.lightShadow.light}</p>
+          <p className="text-sm font-medium text-foreground mb-1">{archetype.superpower}</p>
+          <p className="text-xs text-muted-foreground">{archetype.superpowerDescription}</p>
          </div>
-        <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/30">
+        <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20">
           <div className="flex items-center gap-2 mb-1">
             <Moon className="w-4 h-4 text-red-400" />
-            <span className="text-xs font-medium text-red-400 uppercase tracking-wider">Shadow</span>
+            <span className="text-xs font-medium text-red-400 uppercase tracking-wider">Bad Take</span>
           </div>
-          <p className="text-sm text-foreground">{archetype.lightShadow.shadow}</p>
+          <p className="text-sm font-medium text-foreground mb-1">{archetype.shadow}</p>
+          <p className="text-xs text-muted-foreground">{archetype.shadowDescription}</p>
          </div>
       </div>
  
-      {/* Social Roles */}
-      <div>
-        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">Common Roles</p>
-        <div className="flex flex-wrap gap-1.5">
-          {archetype.socialCorrespondence.map((role, i) => (
-            <span key={i} className="text-xs px-2 py-1 rounded-full bg-muted/50 text-muted-foreground">
-              {role}
-            </span>
-          ))}
-        </div>
-      </div>
- 
-      {/* Strengths & Weaknesses */}
-      <div className="grid sm:grid-cols-2 gap-3">
-        <div>
-          <div className="flex items-center gap-2 mb-2">
-            <Sparkles className="w-4 h-4 text-gold" />
-            <p className="text-xs font-medium text-gold uppercase tracking-wider">Strengths</p>
-          </div>
-          <ul className="text-sm text-muted-foreground space-y-1">
-            {archetype.strengths.map((s, i) => (
-              <li key={i} className="flex items-center gap-2">
-                <span className="w-1 h-1 rounded-full bg-gold" />
-                {s}
-              </li>
-            ))}
-          </ul>
-        </div>
-        <div>
-          <div className="flex items-center gap-2 mb-2">
-            <AlertTriangle className="w-4 h-4 text-amber-500" />
-            <p className="text-xs font-medium text-amber-500 uppercase tracking-wider">Weaknesses</p>
-          </div>
-          <ul className="text-sm text-muted-foreground space-y-1">
-            {archetype.weaknesses.map((w, i) => (
-              <li key={i} className="flex items-center gap-2">
-                <span className="w-1 h-1 rounded-full bg-amber-500" />
-                {w}
-              </li>
-            ))}
-          </ul>
-        </div>
-      </div>
-
-      {/* Story Fuel & Conflict */}
+      {/* Director's Note */}
       <div className="p-3 rounded-lg bg-purple-500/10 border border-purple-500/30">
         <div className="flex items-center gap-2 mb-2">
-          <Zap className="w-4 h-4 text-purple-400" />
-          <p className="text-xs font-medium text-purple-400 uppercase tracking-wider">Story Fuel</p>
+          <Quote className="w-4 h-4 text-purple-400" />
+          <p className="text-xs font-medium text-purple-400 uppercase tracking-wider">Director's Note</p>
         </div>
-        <p className="text-sm text-foreground">{archetype.storyFuel}</p>
-      </div>
-
-      {/* Signature Traits */}
-      <div className="space-y-2">
-        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Character Signature</p>
-        <div className="grid gap-2 text-sm">
-           <div>
-            <span className="text-muted-foreground">Dialogue Style:</span>
-            <p className="text-foreground">{archetype.signature.dialogueStyle}</p>
-           </div>
-          <div>
-            <span className="text-muted-foreground">Physical Presence:</span>
-            <p className="text-foreground">{archetype.signature.physicalPresence}</p>
-           </div>
-          <div>
-            <span className="text-muted-foreground">Moral Temptation:</span>
-            <p className="text-foreground">{archetype.signature.moralTemptation}</p>
-           </div>
-          <div>
-            <span className="text-muted-foreground">Break Point:</span>
-            <p className="text-foreground">{archetype.signature.breakPoint}</p>
-          </div>
-          <div>
-            <span className="text-muted-foreground">Redemption Beat:</span>
-            <p className="text-foreground">{archetype.signature.redemptionBeat}</p>
-           </div>
-         </div>
+        <p className="text-sm text-foreground italic">"{archetype.directorsNote}"</p>
       </div>
      </div>
    );
@@ -163,11 +103,8 @@ function ArchetypeFullDetails({ archetype }: { archetype: Archetype }) {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-medium text-foreground">{archetype.name}</span>
-                      <Badge variant="outline" className="text-[10px] border-border/50 px-1.5 py-0">
-                        {archetype.id.replace(/_/g, " ")}
-                      </Badge>
                     </div>
-                    <p className="text-xs text-muted-foreground italic mt-0.5">"{archetype.tagline}"</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">{archetype.superpower}</p>
                     <div className="flex items-center gap-3 mt-1 text-xs">
                       <span className="flex items-center gap-1">
                         <Sun className="w-3 h-3 text-emerald-400" />
@@ -199,48 +136,34 @@ function ArchetypeFullDetails({ archetype }: { archetype: Archetype }) {
          <h3 className="text-lg font-display tracking-wide">Understanding the Profile Elements</h3>
          <div className="grid sm:grid-cols-2 gap-4 text-sm">
            <div className="space-y-3">
+              <div className="flex items-start gap-3">
+                <Film className="w-4 h-4 text-gold mt-0.5 shrink-0" />
+                <div>
+                  <p className="font-medium text-gold">Cinematic Definition</p>
+                  <p className="text-muted-foreground text-xs">The archetype's role in film production—derived from Rabiger, Snyder, and Psycho-Cinematics™.</p>
+                </div>
+              </div>
              <div className="flex items-start gap-3">
                <Sun className="w-4 h-4 text-emerald-400 mt-0.5 shrink-0" />
                <div>
-                 <p className="font-medium text-emerald-400">Light Expression</p>
-                 <p className="text-muted-foreground text-xs">The archetype at its highest potential—the gift you bring when operating from wholeness.</p>
+                  <p className="font-medium text-emerald-400">Superpower</p>
+                  <p className="text-muted-foreground text-xs">The archetype's unique ability when operating at full potential.</p>
                </div>
              </div>
              <div className="flex items-start gap-3">
                <Moon className="w-4 h-4 text-red-400 mt-0.5 shrink-0" />
                <div>
-                 <p className="font-medium text-red-400">Shadow Expression</p>
-                 <p className="text-muted-foreground text-xs">The distorted version that emerges under stress, fear, or unconscious patterns.</p>
-               </div>
-             </div>
-             <div className="flex items-start gap-3">
-               <Zap className="w-4 h-4 text-purple-400 mt-0.5 shrink-0" />
-               <div>
-                 <p className="font-medium text-purple-400">Story Fuel</p>
-                 <p className="text-muted-foreground text-xs">The central dramatic question that drives this archetype's transformation journey.</p>
+                  <p className="font-medium text-red-400">The Bad Take</p>
+                  <p className="text-muted-foreground text-xs">The shadow expression that emerges under stress—your pattern to interrupt.</p>
                </div>
              </div>
            </div>
            <div className="space-y-3">
              <div className="flex items-start gap-3">
-               <Sparkles className="w-4 h-4 text-gold mt-0.5 shrink-0" />
+                <Quote className="w-4 h-4 text-purple-400 mt-0.5 shrink-0" />
                <div>
-                 <p className="font-medium text-gold">Strengths</p>
-                 <p className="text-muted-foreground text-xs">Natural gifts and capabilities that come easily to this archetype.</p>
-               </div>
-             </div>
-             <div className="flex items-start gap-3">
-               <AlertTriangle className="w-4 h-4 text-amber-500 mt-0.5 shrink-0" />
-               <div>
-                 <p className="font-medium text-amber-500">Weaknesses</p>
-                 <p className="text-muted-foreground text-xs">Blind spots and tendencies that require conscious attention and growth.</p>
-               </div>
-             </div>
-             <div className="flex items-start gap-3">
-               <User2 className="w-4 h-4 text-cyan-400 mt-0.5 shrink-0" />
-               <div>
-                 <p className="font-medium text-cyan-400">Character Signature</p>
-                 <p className="text-muted-foreground text-xs">How this archetype speaks, moves, is tempted, breaks, and finds redemption.</p>
+                  <p className="font-medium text-purple-400">Director's Note</p>
+                  <p className="text-muted-foreground text-xs">A coaching insight to help you recognize and overcome this archetype's challenge.</p>
                </div>
              </div>
            </div>

@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { User, Sparkles, RefreshCw, Loader2, Crown, Sun, Moon } from "lucide-react";
 import { CharacterSurvey } from "./CharacterSurvey";
 import { ArchetypeResult } from "./ArchetypeResult";
-import { Archetype, getArchetypeById, ARCHETYPES } from "./archetypes";
+ import { Archetype, getArchetypeByIdWithLegacy, ARCHETYPES } from "./archetypes";
 import { useToast } from "@/hooks/use-toast";
 import { InfoTooltip } from "@/components/ui/info-tooltip";
 
@@ -53,7 +53,7 @@ export function CharacterCentral() {
         survey_responses: data.survey_responses as Record<string, string>,
         light_shadow_state: data.light_shadow_state || "light"
       });
-      const arch = getArchetypeById(data.archetype);
+      const arch = getArchetypeByIdWithLegacy(data.archetype);
       if (arch) {
         setCurrentArchetype(arch);
         setCurrentScores(data.archetype_score as Record<string, number>);
@@ -233,15 +233,11 @@ export function CharacterCentral() {
               </button>
             </div>
             <p className="text-sm text-muted-foreground italic mb-3">
-              "{currentArchetype.tagline}"
+              {currentArchetype.superpower}
             </p>
-            <div className="flex flex-wrap gap-1.5">
-              {currentArchetype.strengths.slice(0, 3).map((strength, i) => (
-                <Badge key={i} variant="secondary" className="bg-gold/10 text-gold/80 text-xs">
-                  {strength}
-                </Badge>
-              ))}
-            </div>
+            <Badge variant="secondary" className="bg-gold/10 text-gold/80 text-xs">
+              {currentArchetype.lightShadow.light}
+            </Badge>
           </div>
 
           <p className="text-xs text-muted-foreground text-center">

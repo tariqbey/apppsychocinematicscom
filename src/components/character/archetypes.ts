@@ -1,266 +1,168 @@
-export interface Archetype {
-  id: string;
-  name: string;
-  tagline: string;
-  socialCorrespondence: string[];
-  strengths: string[];
-  weaknesses: string[];
-  storyFuel: string;
-  conflictPattern: string;
-  lightShadow: { light: string; shadow: string };
-  signature: {
-    dialogueStyle: string;
-    physicalPresence: string;
-    moralTemptation: string;
-    breakPoint: string;
-    redemptionBeat: string;
-  };
-}
-
-export const ARCHETYPES: Archetype[] = [
-  {
-    id: "still_center",
-    name: "The Still Center",
-    tagline: "I can hold everybody… except myself.",
-    socialCorrespondence: [
-      "ER/trauma nurse, paramedic, therapist, mediator, crisis negotiator",
-      "Monastic leader, veteran mentor, hospice worker",
-      "COO-type 'stability operator,' air-traffic controller, incident commander"
-    ],
-    strengths: ["Calm aura", "Emotional containment", "Sees through panic", "Stabilizes groups"],
-    weaknesses: ["Emotionally hard to access", "Avoids vulnerability", "Can delay confronting personal pain"],
-    storyFuel: "Everyone confides in them—until they finally crack.",
-    conflictPattern: "I can hold everybody… except myself.",
-    lightShadow: { light: "Healer", shadow: "Avoidant ghost" },
-    signature: {
-      dialogueStyle: "Measured, calm, reassuring with underlying depth",
-      physicalPresence: "Grounded, unhurried movements, steady eye contact",
-      moralTemptation: "Using calm as a wall to avoid their own healing",
-      breakPoint: "When the weight of everyone else's pain breaks through",
-      redemptionBeat: "Finally allowing themselves to be held by others"
-    }
-  },
-  {
-    id: "sovereign",
-    name: "The Sovereign",
-    tagline: "If I don't control it, it'll collapse.",
-    socialCorrespondence: [
-      "Mayor/governor, military commander, CEO/founder, union leader",
-      "Judge (administrative), principal, head coach, lead detective"
-    ],
-    strengths: ["Decisive", "Protective", "Mission-first", "Inspires loyalty", "Takes responsibility"],
-    weaknesses: ["Control issues", "Pride", "Authoritarian reflex", "Struggles with equals"],
-    storyFuel: "Must learn the difference between command and domination.",
-    conflictPattern: "If I don't control it, it'll collapse.",
-    lightShadow: { light: "Protector-leader", shadow: "Tyrant" },
-    signature: {
-      dialogueStyle: "Commanding, direct, with authority",
-      physicalPresence: "Dominant posture, purposeful stride",
-      moralTemptation: "Believing the ends justify authoritarian means",
-      breakPoint: "When their control destroys what they were protecting",
-      redemptionBeat: "Learning to trust and empower others"
-    }
-  },
-  {
-    id: "truth_keeper",
-    name: "The Truth-Keeper",
-    tagline: "If I soften it, I'm lying.",
-    socialCorrespondence: [
-      "Investigative journalist, prosecutor, whistleblower, auditor, compliance officer",
-      "Scientist, fact-checker, detective, ethicist, philosopher",
-      "Documentarian, courtroom strategist"
-    ],
-    strengths: ["Sees lies", "Clean logic", "Fearless speech", "Exposes rot"],
-    weaknesses: ["Bluntness", "Isolation", "Righteousness", "Can become joyless"],
-    storyFuel: "Truth costs them relationships, safety, status—do they still speak?",
-    conflictPattern: "If I soften it, I'm lying.",
-    lightShadow: { light: "Liberator", shadow: "Destroyer-by-truth" },
-    signature: {
-      dialogueStyle: "Precise, uncompromising, fact-driven",
-      physicalPresence: "Intense gaze, still when listening, sharp when speaking",
-      moralTemptation: "Using truth as a weapon rather than a light",
-      breakPoint: "When their truth destroys an innocent",
-      redemptionBeat: "Learning compassion without compromising integrity"
-    }
-  },
-  {
-    id: "sacred_judge",
-    name: "The Sacred Judge",
-    tagline: "Someone must pay—or nothing means anything.",
-    socialCorrespondence: [
-      "Judge, mediator, HR head, ombudsman, ethics board chair",
-      "Community organizer, restorative justice facilitator",
-      "Contract lawyer, arbitrator, policy architect"
-    ],
-    strengths: ["Fairness", "Boundaries", "Consequences", "Restores right measure"],
-    weaknesses: ["Punitive streak", "Perfectionism", "Scorekeeping", "Can freeze in moral complexity"],
-    storyFuel: "Learns mercy without abandoning accountability.",
-    conflictPattern: "Someone must pay—or nothing means anything.",
-    lightShadow: { light: "Restorer", shadow: "Executioner" },
-    signature: {
-      dialogueStyle: "Balanced, measured, weighing each word",
-      physicalPresence: "Dignified bearing, formal posture",
-      moralTemptation: "Becoming the punisher rather than the healer",
-      breakPoint: "When they must judge someone they love",
-      redemptionBeat: "Choosing restoration over retribution"
-    }
-  },
-  {
-    id: "master_builder",
-    name: "The Master Builder",
-    tagline: "Feelings don't matter—results do.",
-    socialCorrespondence: [
-      "Architect, engineer, contractor, project manager, operations lead",
-      "Systems designer, logistics chief, planner, supply chain strategist",
-      "Accountant, product manager, 'fixer' who makes chaos functional"
-    ],
-    strengths: ["Structure", "Discipline", "Execution", "Long-term plans", "Practicality"],
-    weaknesses: ["Workaholic", "Rigid", "Undervalues emotion/art", "Can be controlling"],
-    storyFuel: "Their 'perfect system' breaks when the human heart enters.",
-    conflictPattern: "Feelings don't matter—results do.",
-    lightShadow: { light: "Stabilizer", shadow: "Cage-maker" },
-    signature: {
-      dialogueStyle: "Efficient, solution-oriented, minimal words",
-      physicalPresence: "Organized, precise movements, always doing something",
-      moralTemptation: "Sacrificing relationships for results",
-      breakPoint: "When their system fails someone they care about",
-      redemptionBeat: "Building something that serves hearts, not just minds"
-    }
-  },
-  {
-    id: "divine_analyst",
-    name: "The Divine Analyst",
-    tagline: "I can explain everything—except why I'm stuck.",
-    socialCorrespondence: [
-      "Strategist, intelligence analyst, behavioral profiler, counselor",
-      "Lawyer (argumentation), teacher, speechwriter, negotiator",
-      "UX researcher, data scientist, technical lead"
-    ],
-    strengths: ["Pattern recognition", "Precise language", "Planning", "Teaches others"],
-    weaknesses: ["Analysis paralysis", "Coldness", "Can weaponize intelligence"],
-    storyFuel: "Knows the answer but can't take the leap.",
-    conflictPattern: "I can explain everything—except why I'm stuck.",
-    lightShadow: { light: "Wise strategist", shadow: "Cold manipulator" },
-    signature: {
-      dialogueStyle: "Analytical, questioning, sees multiple angles",
-      physicalPresence: "Thoughtful, observing, often in their head",
-      moralTemptation: "Using insight to manipulate rather than serve",
-      breakPoint: "When analysis cannot solve an emotional truth",
-      redemptionBeat: "Making a leap of faith despite uncertainty"
-    }
-  },
-  {
-    id: "alchemist",
-    name: "The Alchemist",
-    tagline: "If it's not extreme, it's not real.",
-    socialCorrespondence: [
-      "Recovery sponsor, trauma therapist, ex-con turned mentor",
-      "Firefighter, combat vet, crisis responder",
-      "Artist who channels pain, underground healer, transformation coach"
-    ],
-    strengths: ["Resilience", "Depth", "Fearless shadow-facing", "Rebirth energy"],
-    weaknesses: ["Intensity addiction", "Self-sabotage", "Scorched-earth decisions", "Secrets"],
-    storyFuel: "They can save others—but will they stop burning themselves?",
-    conflictPattern: "If it's not extreme, it's not real.",
-    lightShadow: { light: "Rebuilder", shadow: "Self-immolator" },
-    signature: {
-      dialogueStyle: "Raw, honest, cuts through pretense",
-      physicalPresence: "Scarred, intense, magnetic presence",
-      moralTemptation: "Believing they must suffer to be authentic",
-      breakPoint: "When their intensity hurts someone they're saving",
-      redemptionBeat: "Finding peace without losing their fire"
-    }
-  },
-  {
-    id: "protector",
-    name: "The Protector",
-    tagline: "I'd rather be feared than harmed.",
-    socialCorrespondence: [
-      "Security chief, bodyguard, soldier, martial arts instructor",
-      "Child advocate, protective parent figure, rescue worker",
-      "Cybersecurity, investigator, emergency planner"
-    ],
-    strengths: ["Courage", "Boundaries", "Decisive defense", "High vigilance"],
-    weaknesses: ["Paranoia", "Aggression", "Mistrust", "Overreacts to threats"],
-    storyFuel: "Must learn that not every shadow is an enemy.",
-    conflictPattern: "I'd rather be feared than harmed.",
-    lightShadow: { light: "Guardian", shadow: "Paranoid aggressor" },
-    signature: {
-      dialogueStyle: "Alert, protective, threat-assessing",
-      physicalPresence: "Ready stance, scanning surroundings, physically capable",
-      moralTemptation: "Becoming the very threat they protect against",
-      breakPoint: "When protection becomes imprisonment",
-      redemptionBeat: "Learning to protect through trust, not control"
-    }
-  },
-  {
-    id: "harmonizer",
-    name: "The Harmonizer",
-    tagline: "If I keep everyone happy, we'll be safe.",
-    socialCorrespondence: [
-      "Diplomat, social worker, event producer, community leader",
-      "Musician, designer, PR lead, brand storyteller",
-      "Couples counselor, hospitality manager, culture builder"
-    ],
-    strengths: ["Warmth", "Charm", "Cohesion", "Morale", "Beauty-making"],
-    weaknesses: ["Conflict avoidance", "People-pleasing", "Hidden resentment", "Manipulation-by-niceness"],
-    storyFuel: "The peacemaker finally draws a line—and shocks everyone.",
-    conflictPattern: "If I keep everyone happy, we'll be safe.",
-    lightShadow: { light: "Unifier", shadow: "Appeaser" },
-    signature: {
-      dialogueStyle: "Warm, inclusive, smoothing tensions",
-      physicalPresence: "Open body language, approachable, connects with touch",
-      moralTemptation: "Sacrificing truth for temporary peace",
-      breakPoint: "When peace requires them to abandon themselves",
-      redemptionBeat: "Speaking their truth even if it disrupts harmony"
-    }
-  },
-  {
-    id: "wayfinder",
-    name: "The Wayfinder",
-    tagline: "If I commit, I might miss my real destiny.",
-    socialCorrespondence: [
-      "Explorer, guide, strategist, visionary founder",
-      "Pastor/chaplain, philosopher, life coach, political reformer",
-      "Scout leader, investigative traveler, 'maps the future' analyst"
-    ],
-    strengths: ["Vision", "Meaning", "Moral compass", "Inspires direction"],
-    weaknesses: ["Idealism", "Restlessness", "Commitment issues", "Neglects mundane needs"],
-    storyFuel: "Forced to choose one path and burn the alternatives.",
-    conflictPattern: "If I commit, I might miss my real destiny.",
-    lightShadow: { light: "Visionary", shadow: "Runaway idealist" },
-    signature: {
-      dialogueStyle: "Inspiring, future-focused, questions assumptions",
-      physicalPresence: "Restless energy, always looking ahead, lean and mobile",
-      moralTemptation: "Abandoning the present for an imagined future",
-      breakPoint: "When running means abandoning someone who needs them",
-      redemptionBeat: "Committing fully to one path with conviction"
-    }
-  },
-  {
-    id: "weaver",
-    name: "The Weaver",
-    tagline: "If they leave me, I disappear.",
-    socialCorrespondence: [
-      "Campaign manager, community organizer, producer, talent manager",
-      "Network builder, recruiter, partnership exec, fundraiser",
-      "Gang/crew leader (light or dark version), movement architect"
-    ],
-    strengths: ["Alliance-making", "Social intelligence", "Mobilizes groups", "Unifies factions"],
-    weaknesses: ["Image management", "Manipulation", "Dependency on attention", "Politics addiction"],
-    storyFuel: "Can gather a crowd—can they gather a true tribe?",
-    conflictPattern: "If they leave me, I disappear.",
-    lightShadow: { light: "Movement builder", shadow: "Social puppeteer" },
-    signature: {
-      dialogueStyle: "Connecting, persuasive, remembers everyone's story",
-      physicalPresence: "Magnetic, works the room, always networking",
-      moralTemptation: "Using connections for power rather than purpose",
-      breakPoint: "When their network turns against them",
-      redemptionBeat: "Building genuine community, not just followers"
-    }
-  }
-];
+ export interface Archetype {
+   id: string;
+   name: string;
+   cinematicDefinition: string;
+   superpower: string;
+   superpowerDescription: string;
+   shadow: string;
+   shadowDescription: string;
+   directorsNote: string;
+   lightShadow: { light: string; shadow: string };
+ }
+ 
+ export const ARCHETYPES: Archetype[] = [
+   {
+     id: "concerned_observer",
+     name: "The Concerned Observer",
+     cinematicDefinition: "Derived from Michael Rabiger's concept of the 'Concerned Observer'—the weightless spirit that watches events with empathy but does not intercede.",
+     superpower: "High-Fidelity Perception",
+     superpowerDescription: "They see the 'Mise-en-scène' clearly without emotional distortion. They hold the space for the cast.",
+     shadow: "The Passive Spectator",
+     shadowDescription: "They watch the dailies of their life without ever yelling 'Action.' They suffer from 'Analysis Paralysis' or becoming a voyeur of their own existence.",
+     directorsNote: "You capture the perfect shot, but you refuse to release the shutter.",
+     lightShadow: { light: "High-Fidelity Perception", shadow: "Passive Spectator" }
+   },
+   {
+     id: "showrunner",
+     name: "The Showrunner",
+     cinematicDefinition: "The person with ultimate creative and management authority who ensures the 'Bible' of the show is followed.",
+     superpower: "Total Production Control",
+     superpowerDescription: "They instinctively understand the 'Superobjective' of the entire production. They ensure the crew and cast are aligned.",
+     shadow: "The Micromanager",
+     shadowDescription: "They stifle the actors' spontaneity. They try to control every light and prop, leading to 'Sensory Overload' and production burnout.",
+     directorsNote: "You are running the set, but you forgot to let the actors breathe.",
+     lightShadow: { light: "Total Production Control", shadow: "Micromanager" }
+   },
+   {
+     id: "lead_editor",
+     name: "The Lead Editor",
+     cinematicDefinition: "The architect of the 'Final Cut.' They ruthlessly remove scenes that do not serve the story.",
+     superpower: "The K-U-T",
+     superpowerDescription: "They possess the ability to 'cut out destructive frames' and spot inconsistency immediately. They value narrative flow over sentimentality.",
+     shadow: "The Butcher",
+     shadowDescription: "They cut so aggressively that the movie loses its soul. They focus on the flaws in the footage rather than the potential of the scene.",
+     directorsNote: "You cut the truth, but you left the emotion on the floor.",
+     lightShadow: { light: "The K-U-T", shadow: "The Butcher" }
+   },
+   {
+     id: "studio_executive",
+     name: "The Studio Executive",
+     cinematicDefinition: "The 'Greenlight' authority. They hold the purse strings and demand that the movie be profitable and meet the 'embedded values' of the studio.",
+     superpower: "High Standards",
+     superpowerDescription: "They ensure the 'Production Value' is elite. They refuse to accept B-movie effort for an A-list life.",
+     shadow: "The Killjoy",
+     shadowDescription: "They cancel the project before it starts because the budget (emotional risk) looks too high. They judge the 'dailies' too harshly before post-production is finished.",
+     directorsNote: "You are judging the rough cut like it's the premiere.",
+     lightShadow: { light: "High Standards", shadow: "The Killjoy" }
+   },
+   {
+     id: "screenwriter",
+     name: "The Screenwriter",
+     cinematicDefinition: "The architect of the 'Paradigm.' They understand structure, plot points, and the linear progression of the story.",
+     superpower: "The Blueprint",
+     superpowerDescription: "They create the 'Three-Act Structure' that makes success inevitable. They value logic and cause-and-effect.",
+     shadow: "The Formulaic Hack",
+     shadowDescription: "They become obsessed with the 'formula' rather than the 'form'. They create rigid scripts that allow no room for improvisation or the 'magic if'.",
+     directorsNote: "You wrote a perfect script, but there's no life in the dialogue.",
+     lightShadow: { light: "The Blueprint", shadow: "Formulaic Hack" }
+   },
+   {
+     id: "script_doctor",
+     name: "The Script Doctor",
+     cinematicDefinition: "The expert brought in to fix a broken story. They diagnose 'plot holes' and 'character inconsistencies'.",
+     superpower: "Diagnostic Logic",
+     superpowerDescription: "They can look at a life that isn't working and immediately identify the 'Inciting Incident' that caused the problem.",
+     shadow: "The Critic",
+     shadowDescription: "They can explain why the movie is bad, but they cannot create a good one. They are stuck in 'intellectualizing' the role rather than living it.",
+     directorsNote: "You can analyze the scene, but can you play it?",
+     lightShadow: { light: "Diagnostic Logic", shadow: "The Critic" }
+   },
+   {
+     id: "method_actor",
+     name: "The Method Actor",
+     cinematicDefinition: "The performer who uses 'Emotional Memory' to completely transform into the character. They don't act; they are.",
+     superpower: "Identity Shifting",
+     superpowerDescription: "They can completely overwrite their 'Old Self' with a 'New Self' through sheer intensity of belief.",
+     shadow: "Lost in Character",
+     shadowDescription: "They lose their 'Grounding' and cannot separate the role from reality. They risk emotional burnout from high-intensity performance without a 'KUT!' mechanism.",
+     directorsNote: "You're deep in the role, but you forgot who you are when the camera stops.",
+     lightShadow: { light: "Identity Shifting", shadow: "Lost in Character" }
+   },
+   {
+     id: "stunt_coordinator",
+     name: "The Stunt Coordinator",
+     cinematicDefinition: "The expert who manages high-risk sequences. They ensure 'Safety' while executing dangerous maneuvers.",
+     superpower: "Risk Mitigation",
+     superpowerDescription: "They anticipate danger before it happens. They protect the 'Lead Actor' (the self) from physical and emotional harm.",
+     shadow: "The Paranoiac",
+     shadowDescription: "They refuse to let the actor perform the stunt because it 'might' go wrong. They pad the set so much that the movie becomes boring and safe.",
+     directorsNote: "You padded the walls so well that we can't hear the dialogue.",
+     lightShadow: { light: "Risk Mitigation", shadow: "The Paranoiac" }
+   },
+   {
+     id: "ensemble_director",
+     name: "The Ensemble Director",
+     cinematicDefinition: "The director who specializes in 'Casting' and 'Chemistry.' They focus on the interplay between the supporting cast.",
+     superpower: "Chemistry Management",
+     superpowerDescription: "They ensure the 'Supporting Cast' supports the Lead. They create a 'Safe Set' policy where everyone thrives.",
+     shadow: "The People Pleaser",
+     shadowDescription: "They refuse to fire a 'Supporting Actor' who is sabotaging the production because they want everyone to get along. They let the extras crowd the frame.",
+     directorsNote: "You're keeping the extras happy at the expense of the star.",
+     lightShadow: { light: "Chemistry Management", shadow: "People Pleaser" }
+   },
+   {
+     id: "location_scout",
+     name: "The Location Scout",
+     cinematicDefinition: "The visionary who goes out before production to find the perfect world for the story to take place.",
+     superpower: "Visionary Exploration",
+     superpowerDescription: "They find 'New Worlds' and possibilities that others cannot see. They are always looking at the horizon/future acts.",
+     shadow: "The Escapist",
+     shadowDescription: "They are always scouting the next movie and never actually shooting the current one. They prefer the dream of the location to the reality of the set.",
+     directorsNote: "Stop scouting. Start filming.",
+     lightShadow: { light: "Visionary Exploration", shadow: "The Escapist" }
+   },
+   {
+     id: "distributor",
+     name: "The Distributor",
+     cinematicDefinition: "The force that connects the movie to the audience. They understand 'Marketability' and 'Genre'.",
+     superpower: "Connection",
+     superpowerDescription: "They know how to 'Pitch' the vision to the world. They weave the personal story into the collective narrative (The Hive Mind).",
+     shadow: "The Sellout",
+     shadowDescription: "They edit the movie just to please the audience (social approval) rather than honoring the Director's vision. They lose their 'Artistic Identity' for likes and views.",
+     directorsNote: "You sold the tickets, but you lost the movie.",
+     lightShadow: { light: "Connection", shadow: "The Sellout" }
+   }
+ ];
 
 export function getArchetypeById(id: string): Archetype | undefined {
   return ARCHETYPES.find(a => a.id === id);
 }
+ 
+ // Legacy ID mapping for backward compatibility with existing database records
+ export const LEGACY_ID_MAP: Record<string, string> = {
+   "still_center": "concerned_observer",
+   "sovereign": "showrunner",
+   "truth_keeper": "lead_editor",
+   "sacred_judge": "studio_executive",
+   "master_builder": "screenwriter",
+   "divine_analyst": "script_doctor",
+   "alchemist": "method_actor",
+   "protector": "stunt_coordinator",
+   "harmonizer": "ensemble_director",
+   "wayfinder": "location_scout",
+   "weaver": "distributor"
+ };
+ 
+ export function getArchetypeByIdWithLegacy(id: string): Archetype | undefined {
+   // First try direct lookup
+   let archetype = ARCHETYPES.find(a => a.id === id);
+   if (archetype) return archetype;
+   
+   // Try legacy mapping
+   const newId = LEGACY_ID_MAP[id];
+   if (newId) {
+     return ARCHETYPES.find(a => a.id === newId);
+   }
+   
+   return undefined;
+ }
