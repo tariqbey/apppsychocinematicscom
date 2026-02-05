@@ -249,11 +249,6 @@ export function DirectorAIAgent({ isOpen, onClose, chiefAim }: DirectorAIAgentPr
       if (ttsEnabled) {
         // Defer TTS to allow UI to render first
         setTimeout(() => speakText(welcomeMessage), 100);
-      } else if (isSupported) {
-        // If TTS is off, start listening after a short delay
-        setTimeout(() => {
-          setVoiceEnabled(true);
-        }, 500);
       }
     }
   }, [isOpen, isReady, messages.length, ttsEnabled, contextLoading, coachingContext, isSupported]);
@@ -360,7 +355,7 @@ export function DirectorAIAgent({ isOpen, onClose, chiefAim }: DirectorAIAgentPr
       audio.onended = () => {
         // Don't do anything if stop was requested
         if (stopRequestedRef.current) return;
-        
+
         if (audioLevelIntervalRef.current) {
           clearInterval(audioLevelIntervalRef.current);
           audioLevelIntervalRef.current = null;
@@ -371,21 +366,12 @@ export function DirectorAIAgent({ isOpen, onClose, chiefAim }: DirectorAIAgentPr
           URL.revokeObjectURL(audioUrlRef.current);
           audioUrlRef.current = null;
         }
-        
-        // Resume listening after TTS finishes (only if not stopped)
-        if (!stopRequestedRef.current) {
-          setTimeout(() => {
-            if (!stopRequestedRef.current) {
-              setVoiceEnabled(true);
-            }
-          }, 300);
-        }
       };
-      
+
       audio.onerror = () => {
         // Don't do anything if stop was requested
         if (stopRequestedRef.current) return;
-        
+
         if (audioLevelIntervalRef.current) {
           clearInterval(audioLevelIntervalRef.current);
           audioLevelIntervalRef.current = null;
@@ -395,14 +381,6 @@ export function DirectorAIAgent({ isOpen, onClose, chiefAim }: DirectorAIAgentPr
         if (audioUrlRef.current) {
           URL.revokeObjectURL(audioUrlRef.current);
           audioUrlRef.current = null;
-        }
-        // Resume listening even if TTS failed (only if not stopped)
-        if (!stopRequestedRef.current) {
-          setTimeout(() => {
-            if (!stopRequestedRef.current) {
-              setVoiceEnabled(true);
-            }
-          }, 300);
         }
       };
       
@@ -421,14 +399,6 @@ export function DirectorAIAgent({ isOpen, onClose, chiefAim }: DirectorAIAgentPr
         console.error("TTS error:", error);
       }
       setOrbState("idle");
-      // Resume listening on error (unless aborted or stopped)
-      if (error?.name !== "AbortError" && !stopRequestedRef.current) {
-        setTimeout(() => {
-          if (!stopRequestedRef.current) {
-            setVoiceEnabled(true);
-          }
-        }, 300);
-      }
     } finally {
       ttsAbortControllerRef.current = null;
     }
@@ -783,22 +753,22 @@ export function DirectorAIAgent({ isOpen, onClose, chiefAim }: DirectorAIAgentPr
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col">
+    <div className="fixed inset-0 z-50 flex flex-col h-[100dvh] w-full overflow-hidden">
       {/* Backdrop */}
-      <div 
+      <div
         className="absolute inset-0 bg-black/95 backdrop-blur-sm"
         onClick={onClose}
       />
-      
+
       {/* Spotlight effect */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[400px] sm:w-[600px] h-[400px] sm:h-[600px] bg-gradient-radial from-gold/10 via-transparent to-transparent rounded-full blur-3xl" />
       </div>
 
       {/* Main container - scrollable on mobile */}
-      <div className="relative z-10 w-full h-full flex flex-col overflow-y-auto">
+      <div className="relative z-10 w-full h-full flex flex-col overflow-y-auto overflow-x-hidden overscroll-contain pb-[calc(env(safe-area-inset-bottom)+16px)]">
         {/* Header controls - sticky on mobile */}
-        <div className="sticky top-0 z-20 flex items-center justify-between p-3 sm:p-4 bg-gradient-to-b from-black/80 to-transparent">
+        <div className="sticky top-0 z-20 flex items-center justify-between px-3 pb-3 pt-[calc(env(safe-area-inset-top)+12px)] sm:px-4 sm:pb-4 sm:pt-[calc(env(safe-area-inset-top)+16px)] bg-gradient-to-b from-black/80 to-transparent">
           {/* Settings on the left */}
           <DirectorAISettings
             selectedVoice={selectedVoice}
@@ -985,7 +955,7 @@ export function DirectorAIAgent({ isOpen, onClose, chiefAim }: DirectorAIAgentPr
           variant="default"
           size="lg"
           onClick={onClose}
-          className="fixed bottom-6 right-4 z-50 h-14 w-14 rounded-full bg-gold/90 hover:bg-gold text-black shadow-lg shadow-gold/30 sm:hidden"
+          className="fixed bottom-[calc(env(safe-area-inset-bottom)+1.5rem)] right-4 z-50 h-14 w-14 rounded-full bg-gold/90 hover:bg-gold text-black shadow-lg shadow-gold/30 sm:hidden"
         >
           <X className="w-7 h-7" />
         </Button>
