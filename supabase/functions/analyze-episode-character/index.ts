@@ -44,10 +44,49 @@ serve(async (req) => {
       );
     }
 
+    // Fetch comprehensive Napoleon Hill self-analysis data
+    const { data: characterProfile } = await supabaseClient
+      .from("character_profiles")
+      .select("napoleon_hill_law_scores, napoleon_hill_strengths, napoleon_hill_weaknesses, napoleon_hill_analysis_date")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .single();
+
+    const lawScores = characterProfile?.napoleon_hill_law_scores || {};
+    const strengths = characterProfile?.napoleon_hill_strengths || [];
+    const weaknesses = characterProfile?.napoleon_hill_weaknesses || [];
+
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
+
+    // Build Napoleon Hill context for the AI
+    const napoleonHillContext = Object.keys(lawScores as Record<string, number>).length > 0 ? `
+## NAPOLEON HILL SELF-ANALYSIS RESULTS
+
+**Law of Success Scores (User's Self-Assessment):**
+${Object.entries(lawScores as Record<string, number>).map(([lawNum, score]) => {
+  const lawNames: Record<string, string> = {
+    "1": "The Master Mind", "2": "A Definite Chief Aim", "3": "Self-Confidence",
+    "4": "The Habit of Saving", "5": "Initiative and Leadership", "6": "Imagination",
+    "7": "Enthusiasm", "8": "Self-Control", "9": "Doing More Than Paid For",
+    "10": "A Pleasing Personality", "11": "Accurate Thinking", "12": "Concentration",
+    "13": "Cooperation", "14": "Profiting by Failure", "15": "Tolerance",
+    "16": "Practicing the Golden Rule", "17": "The Universal Law"
+  };
+  return `- Law ${lawNum} (${lawNames[lawNum]}): ${score}%`;
+}).join('\n')}
+
+**IDENTIFIED STRENGTHS (Top Laws):**
+${(strengths as string[]).length > 0 ? (strengths as string[]).map((s: string) => `- ${s}`).join('\n') : 'Not yet analyzed'}
+
+**AREAS FOR GROWTH (Weakest Laws):**
+${(weaknesses as string[]).length > 0 ? (weaknesses as string[]).map((w: string) => `- ${w}`).join('\n') : 'Not yet analyzed'}
+
+CRITICAL: Use these law scores to identify SPECIFIC character gaps. The episode character must directly address the user's weakest laws while leveraging their strongest laws.
+` : '';
 
     const systemPrompt = `You are the Transformation Architect for the Psycho-Cinematics™ system.
 
@@ -67,13 +106,13 @@ They cannot succeed through cleverness alone - they must activate their Definite
 - Their plan: ${chiefAim.plan || "Not specified"}
 
 **CURRENT ARCHETYPE:** ${archetype || "Not determined"}
-
+${napoleonHillContext}
 **EPISODE OBJECTIVE (The Sprint Goal):**
 ${episodeObjective}
 
 ## TRANSFORMATION ANALYSIS REQUIRED
 
-Generate a deep character transformation profile for THIS specific episode.`;
+Generate a deep character transformation profile for THIS specific episode. Pay special attention to the Napoleon Hill law scores - the character transformation should directly target the user's weak laws while building on their strengths.`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
