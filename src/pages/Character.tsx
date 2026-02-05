@@ -52,13 +52,17 @@ const Character = () => {
     // Save to database
     const { error } = await supabase
       .from("character_profiles")
-      .upsert({
-        user_id: user.id,
-        archetype: archetype.id,
-        archetype_score: scores,
-        survey_responses: responses,
-        light_shadow_state: "light"
-      });
+      .upsert(
+        {
+          user_id: user.id,
+          archetype: archetype.id,
+          archetype_score: scores,
+          survey_responses: responses,
+          light_shadow_state: "light",
+          updated_at: new Date().toISOString()
+        },
+        { onConflict: "user_id" }
+      );
 
     if (error) {
       toast({
