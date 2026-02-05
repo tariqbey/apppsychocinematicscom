@@ -14,6 +14,7 @@ import { AICharacterAnalysis } from "@/components/character/AICharacterAnalysis"
 import { AnimatedCharacterCharts } from "@/components/character/AnimatedCharacterCharts";
 import { ArchetypesGuide } from "@/components/character/ArchetypesGuide";
 import { NapoleonHillSelfAnalysis } from "@/components/character/NapoleonHillSelfAnalysis";
+import { ArchetypeResult } from "@/components/character/ArchetypeResult";
 import { useAuth } from "@/hooks/useAuth";
 import { useCycleTracking } from "@/hooks/useCycleTracking";
 import { Loader2, ArrowLeft, User2, Target, TrendingUp, Brain, Calendar, GitBranch, RotateCcw, UserPlus, Sparkles, BarChart3, BookOpen, ClipboardList } from "lucide-react";
@@ -21,13 +22,65 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useNavigate } from "react-router-dom";
 import { Archetype } from "@/components/character/archetypes";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 const Character = () => {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
   const { refetch } = useCycleTracking();
+  const { toast } = useToast();
   const [showCycleReview, setShowCycleReview] = useState(false);
   const [showHillAnalysis, setShowHillAnalysis] = useState(false);
+  const [showResult, setShowResult] = useState(false);
+  const [resultArchetype, setResultArchetype] = useState<Archetype | null>(null);
+  const [resultScores, setResultScores] = useState<Record<string, number>>({});
+
+  const handleHillAnalysisComplete = async (
+    archetype: Archetype,
+    scores: Record<string, number>,
+    lawScores: Record<number, number>
+  ) => {
+    if (!user) return;
+
+    // Convert law scores to responses format for storage
+    const responses: Record<string, string> = {};
+    Object.entries(lawScores).forEach(([lawNum, score]) => {
+      responses[`law_${lawNum}`] = `${score}%`;
+    });
+
+    // Save to database
+    const { error } = await supabase
+      .from("character_profiles")
+      .upsert({
+        user_id: user.id,
+        archetype: archetype.id,
+        archetype_score: scores,
+        survey_responses: responses,
+        light_shadow_state: "light"
+      });
+
+    if (error) {
+      toast({
+        title: "Error saving profile",
+        description: "Please try again",
+        variant: "destructive"
+      });
+      console.error("Error saving character profile:", error);
+    } else {
+      toast({
+        title: "Character Profile Saved!",
+        description: `You are The ${archetype.name}`,
+      });
+      
+      // Store results for display
+      setResultArchetype(archetype);
+      setResultScores(scores);
+      setShowResult(true);
+    }
+
+    setShowHillAnalysis(false);
+  };
 
   if (authLoading) {
     return (
@@ -228,11 +281,21 @@ const Character = () => {
       {/* Napoleon Hill Self-Analysis Modal */}
       {showHillAnalysis && (
         <NapoleonHillSelfAnalysis
-          onComplete={(archetype: Archetype, scores: Record<string, number>, lawScores: Record<number, number>) => {
-            setShowHillAnalysis(false);
-            // The component handles saving to DB internally
-          }}
+          onComplete={handleHillAnalysisComplete}
           onClose={() => setShowHillAnalysis(false)}
+        />
+      )}
+
+      {/* Archetype Result Modal */}
+      {showResult && resultArchetype && (
+        <ArchetypeResult
+          archetype={resultArchetype}
+          scores={resultScores}
+          onClose={() => setShowResult(false)}
+          onRetake={() => {
+            setShowResult(false);
+            setShowHillAnalysis(true);
+          }}
         />
       )}
     </div>
