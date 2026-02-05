@@ -1,131 +1,225 @@
 
-Goal
-- Make Mind Movie playback complete reliably without kicking you out mid-way.
-- Ensure audio cannot continue “off-screen” after The Theater closes.
-- Prevent “two tracks at once” when re-opening The Theater.
-- Improve full-screen/rotation experience (bigger video on landscape), especially in the installed app mode.
 
-What I believe is happening (based on code + your description)
-1) The Theater UI closes/reset (you see the dashboard again), but the Mind Movie’s audio keeps playing. This implies the underlying <video> pipeline is not being fully stopped when the Theater unmounts/resets (this can happen on mobile browsers/PWA when video is in a special playback state).
-2) The cutoff is consistent at the same point, which strongly suggests a deterministic playback failure (Range/stream issue, codec/keyframe issue, or a player recovery path that reloads in a bad state). When it fails, the UI ends up back on the dashboard while the audio continues.
-3) The app has multiple audio/video systems (global audio context + various “new Audio()” elements + video playback). The Theater currently only attempts to stop the global audio context, and even that check is conditional (only stops if globalAudio.isPlaying is true at mount time). This can let overlaps slip through.
+# Comprehensive Episodes Enhancement & Home Page Declutter Plan
 
-Phase 1 — Stop runaway audio/video immediately (hard safety)
-A) Add a “hard stop” path when Theater closes or unmounts
-- Update src/components/theater/TheaterView.tsx:
-  - Replace the current onClose usage with an internal closeTheater() that:
-    1) Pauses the MindMoviePlayer video element via playerRef.current?.pause()
-    2) Clears the underlying <video> source to force-stop audio on mobile:
-       - video.removeAttribute("src")
-       - video.load()
-    3) Exits widescreen mode if active (so no fixed overlay remains)
-    4) Stops any global audio (call stopAudio unconditionally, not only when isPlaying is true)
-    5) Then calls the passed onClose() (which flips showTheater false)
-  - Add a cleanup useEffect(() => () => closeTheater()) pattern that runs on unmount, but without re-calling onClose (so it doesn’t cause loops). This ensures if Theater disappears for any reason, audio cannot keep running.
+This plan addresses multiple interconnected requests to enhance the Episodes module, simplify the Home page, and add new features.
 
-B) Add a “hard stop” in the player itself
-- Update src/components/theater/MindMoviePlayer.tsx:
-  - On component unmount, explicitly:
-    - pause()
-    - remove src / set src to ""
-    - load()
-    - revoke any active Blob URL
-    - abort any in-flight smooth-download fetch (AbortController)
-  - This guarantees: if React removes the player, the browser media pipeline is forced to stop.
+---
 
-Expected outcome after Phase 1
-- Even if the Theater UI unexpectedly closes/reset, the movie audio will not continue in the background.
-- Re-opening the Theater will not result in two overlapping movie playbacks.
+## Overview
 
-Phase 2 — Identify why Theater is “closing” mid-play (instrumentation + protection)
-C) Add precise logging to pinpoint the trigger
-- Update src/pages/Index.tsx and src/components/theater/TheaterView.tsx:
-  - Log when showTheater flips true/false
-  - Log when TheaterView unmounts
-  - Log closeTheater() calls with a reason label:
-    - “user_clicked_x”
-    - “user_clicked_start_my_day”
-    - “unmount_cleanup”
-    - “pagehide/visibilitychange”
-- Update src/components/theater/MindMoviePlayer.tsx:
-  - Log key events with timestamps and currentTime/duration:
-    - stalled, waiting, error, pause, ended (including “premature ended” branch)
-  - This will show us whether the cutoff aligns with a particular event sequence (e.g., stalled → pause → ended → reload).
+The changes fall into 4 main categories:
 
-D) Add a defensive “don’t lose the Theater” guard (optional, but likely helpful)
-- If we determine Index is remounting or showTheater is being reset indirectly:
-  - Persist “theater_open=true” and “theater_opened_at” in sessionStorage when opened.
-  - On Index mount, if theater_open=true and it’s recent (e.g., within last 10 minutes), automatically reopen Theater.
-- This prevents the “I got kicked out and must restart” experience even if something external resets state.
+1. **Theater View Enhancement** - Add episode movie playback option alongside Mind Movie
+2. **Episodes Module Enhancements** - Consolidate episode-related features, add delete capability, upload bypass
+3. **Home Page Declutter** - Create "Psycho Cinematic Movie Studio" module, move features, add countdown clock
+4. **Episode Script-to-Song Conversion** - Add ability to convert episode objectives to rap/songs
 
-Phase 3 — Fix the consistent cutoff (playback reliability)
-E) Make smooth playback truly stable (no mid-play source swaps)
-Right now, smooth playback can download in the background and then swap sources, which can be risky on mobile.
-- Update MindMoviePlayer smooth mode rules:
-  1) If smooth playback is enabled, do not switch src while the video is already playing.
-  2) Prefer “download fully first, then play from Blob URL” as a single stable pipeline for the entire session.
-  3) If the file is too large, do not attempt a full in-memory download; instead, stay in streaming mode and show a clear “This movie is too large for smooth mode on this device” message.
+---
 
-F) Enable smooth playback for Theater on Android too
-- Update TheaterView to pass enableSmoothPlayback={true} to MindMoviePlayer.
-- Keep an upper size cap and/or a “cancel download → stream” option so it doesn’t break large movies.
+## Section 1: Theater View - Episode Movies
 
-G) Improve streaming fallback recovery (when smooth mode can’t be used)
-- If we detect a long stall (e.g., waiting/stalled for > N seconds or currentTime not advancing), attempt a controlled recovery:
-  - save currentTime
-  - video.load()
-  - seek back to savedTime - small offset (e.g., -0.5s)
-  - resume play
-- This is more user-friendly than silently failing or “ending early”.
+**Location:** `src/components/theater/TheaterView.tsx`
 
-Phase 4 — Better “bigger video on rotation” experience
-H) Allow landscape rotation in the installed app mode
-- Your PWA manifest currently sets orientation: 'portrait' in vite.config.ts, which can block/limit rotation behavior in installed mode.
-- Change manifest orientation from 'portrait' to 'any' (or remove the field), so rotating the phone can naturally expand the Theater.
+### Changes:
+- Add a selector/toggle to switch between "Mind Movie" and "Episode Movies"
+- Fetch user's active episode(s) with linked movies
+- Allow watching individual episode movies from the Theater
+- Create "Episode Playlist" mode to cycle through all episode movies
 
-I) Make Theater sizing more “cinema first”
-- Update Theater layout to ensure the player uses the maximum usable viewport height on mobile:
-  - Use dynamic viewport units (100dvh) and ensure no parent container constrains height.
-  - Keep the MindMoviePlayer “widescreen overlay” as an explicit mode for maximum immersion.
+```text
++--------------------------------------------------+
+|  THE THEATER                                      |
+|  +------------+  +--------------------+           |
+|  | Mind Movie |  | Episode Movies [v] |           |
+|  +------------+  +--------------------+           |
+|                                                   |
+|     [  Video Player Area  ]                       |
+|                                                   |
+|  Episode: "Launch MVP"    3/5 movies              |
++--------------------------------------------------+
+```
 
-Files involved (planned edits)
-- src/components/theater/TheaterView.tsx
-  - Unconditional globalAudio stop on mount
-  - closeTheater() that force-stops video audio
-  - Unmount cleanup to prevent runaway playback
-  - Optional logging for close reasons
-- src/components/theater/MindMoviePlayer.tsx
-  - Strong unmount cleanup (pause + clear src + abort download + revoke blob)
-  - Safer smooth playback rules (no mid-play src switching)
-  - Stall recovery improvements
-  - Additional debug logs
-- src/pages/Index.tsx
-  - Optional state persistence/reopen logic for theater
-  - Debug logs for showTheater transitions
-- vite.config.ts
-  - PWA manifest orientation: change from 'portrait' to 'any' (rotation support)
+---
 
-How we will validate (acceptance checks)
-1) Start Mind Movie → let it reach the previous “cutoff point”
-   - Theater must stay open.
-   - Video must continue past that point.
-2) If a failure still occurs, Theater may close, but:
-   - Audio must stop immediately (no off-screen audio).
-3) Close Theater manually (X)
-   - Audio stops immediately; no lingering playback.
-4) Re-open Theater
-   - No double audio; only one movie audio stream.
-5) Rotate device in installed mode
-   - The Theater video should expand properly in landscape.
+## Section 2: Episodes Module Consolidation
 
-Fallback if the cutoff persists even after player hardening
-- Add an in-app “Optimize my Mind Movie for mobile” flow:
-  - Encourage re-upload with “Optimize for iPhone playback” enabled (already present).
-  - If needed, add clearer guidance to export in H.264 + AAC MP4 (baseline/main profile) to ensure universal stability.
+### 2.1 Move Episode Character Dashboard to Episodes
 
-Notes / risk management
-- “Zero buffering forever” isn’t physically guaranteed for very large videos over unstable networks, but we can guarantee:
-  - No mid-play UI kickouts
-  - No runaway audio
-  - Smooth-mode that pre-downloads first for small/medium videos to eliminate mid-play buffering
-  - Better recovery for streaming mode when smooth-mode isn’t feasible
+**From:** `src/pages/Index.tsx` (lines 565-568)  
+**To:** `src/components/episodes/EpisodeDetailView.tsx`
+
+- Remove `EpisodeCharacterDashboard` rendering from Index.tsx
+- Add it to the EpisodeDetailView for comprehensive episode management
+
+### 2.2 Move Challenges & Adversity into Episodes
+
+**Current:** Standalone page at `/challenges` with ModuleCard on Index.tsx  
+**New:** Accessed through Episodes as a tab or section
+
+Changes to `src/pages/Episodes.tsx`:
+- Add a new tab: "Challenges" alongside "All Episodes" and "Timeline"
+- Embed the Challenges components within Episodes
+
+### 2.3 Enable Episode Deletion for All Episodes
+
+**File:** `src/components/episodes/EpisodeCard.tsx`
+
+Currently, the delete button is only shown when expanded and episode status is not "abandoned". Update to:
+- Always show delete button for all episode statuses (active, completed, paused, abandoned)
+- Add confirmation dialog for safety
+
+### 2.4 Direct Movie Upload Option in Production Dashboard
+
+**File:** `src/components/episodes/EpisodeProductionDashboard.tsx`
+
+Add "Upload My Movie" button at the top of the production workflow:
+- Bypasses the Script > Visuals > Edit > Animate > Export flow
+- Directly uploads and links a video file to the episode
+- Marks production as complete once uploaded
+
+```text
+Production Steps:
+[ Upload My Movie - Skip Production ]  <-- NEW
+      |
+1. Episode Created ✓
+2. Mind Movie Script
+3. Generate Visuals
+4. Edit & Animate
+5. Export & Watch
+```
+
+---
+
+## Section 3: Home Page Declutter
+
+### 3.1 Create "Psycho Cinematic Movie Studio" Module
+
+**File:** `src/pages/Index.tsx`
+
+Bundle these existing modules under one unified entry point:
+
+| Current Separate Cards | New Location |
+|------------------------|--------------|
+| The Edit Bay | Inside Studio |
+| Mind Movie Vault | Inside Studio |
+| Soundtrack Studio | Inside Studio |
+| Storyboard | Inside Studio |
+
+Create new component: `src/components/dashboard/MovieStudioModule.tsx`
+- Single card on home page: "Psycho Cinematic Movie Studio"
+- When clicked, opens a panel/modal with 4 sub-modules organized logically
+
+**Logical Organization (User Flow):**
+1. **Storyboard** - Plan your vision (first step)
+2. **The Edit Bay** - Generate images & videos (creation)
+3. **Soundtrack Studio** - Add music (enhancement)
+4. **Mind Movie Vault** - Store & manage (organization)
+
+### 3.2 Hide Definite Chief Aim Script Section
+
+**Current:** Full `DefiniteChiefAimCard` with all 4 sections displayed prominently
+**New:** Move the detailed script into a collapsible/modal view
+
+- Keep a minimal "Definite Chief Aim" summary card on the home page
+- Add "View Full Script" button that opens the detailed view
+- Move detailed script content (What I Want, By When, Exchange, Plan) into a modal or dedicated page
+
+### 3.3 Make Script Review Section Clickable
+
+When user clicks on the Script Review ritual item in `DailyRitualChecklist`, it should:
+- Open the full Definite Chief Aim script view (the one we're hiding above)
+- Allow reading the full script and marking the ritual complete
+
+### 3.4 Add Definite Chief Aim Countdown Clock
+
+**File:** `src/pages/Index.tsx` or new component
+
+Add a prominent countdown clock to the "BY WHEN" date from the user's Chief Aim:
+
+```text
++------------------------------------------+
+|  ⭐ FINAL SCENE COUNTDOWN               |
+|                                          |
+|   127 DAYS  :  14 HRS  :  32 MIN        |
+|   ═══════════════════════════════════   |
+|   Until December 31, 2026               |
+|                                          |
+|   "Launch to 100K Subscribers"          |
++------------------------------------------+
+```
+
+New component: `src/components/dashboard/ChiefAimCountdown.tsx`
+- Calculate days/hours/minutes until `profile.chief_aim_by_when`
+- Show motivational text with the goal summary
+- Animate on home page for visual impact
+
+---
+
+## Section 4: Episode Script-to-Song Conversion
+
+### 4.1 Add "Convert to Song" for Episode Objectives
+
+**Location:** Add to `EpisodeDetailView.tsx` and/or `EpisodeRitualSection.tsx`
+
+Similar to how the Definite Chief Aim can be converted to a rap/song:
+- Add button: "Create Episode Anthem"
+- Pass episode objective/title to Soundtrack Studio
+- Store the generated song URL on the episode or as a linked track
+
+```text
+Episode: "Launch MVP Sprint"
+Objective: "Ship the core product to 100 beta testers..."
+
+[ Create Episode Anthem 🎵 ]  <-- NEW
+```
+
+Implementation:
+- Navigate to `/soundtrack?fromEpisode=true`
+- Pass episode context via sessionStorage (similar to chief aim flow)
+- Return and link the song to the episode
+
+---
+
+## Files to Create
+
+| File | Purpose |
+|------|---------|
+| `src/components/dashboard/MovieStudioModule.tsx` | New consolidated studio entry point |
+| `src/components/dashboard/ChiefAimCountdown.tsx` | Countdown clock component |
+| `src/components/theater/EpisodeMovieSelector.tsx` | Episode movie selection in Theater |
+
+---
+
+## Files to Modify
+
+| File | Changes |
+|------|---------|
+| `src/pages/Index.tsx` | Remove individual studio cards, add MovieStudioModule, add countdown, remove EpisodeCharacterDashboard |
+| `src/components/theater/TheaterView.tsx` | Add episode movie playback toggle/selector |
+| `src/components/episodes/EpisodeDetailView.tsx` | Add EpisodeCharacterDashboard, add song conversion button |
+| `src/components/episodes/EpisodeCard.tsx` | Enable delete for all statuses |
+| `src/components/episodes/EpisodeProductionDashboard.tsx` | Add "Upload My Movie" bypass option |
+| `src/pages/Episodes.tsx` | Add Challenges tab, integrate challenge components |
+| `src/components/dashboard/DefiniteChiefAimCard.tsx` | Simplify to summary view, add modal for full script |
+| `src/components/dashboard/DailyRitualChecklist.tsx` | Make Script Review clickable to open full script |
+
+---
+
+## Technical Notes
+
+### Episode Movies in Theater
+- Query `episodes` table joined with `mind_movie_scripts` to get movie URLs
+- Support both single-episode view and playlist mode
+- Track viewing progress per episode (similar to main Mind Movie)
+
+### Countdown Clock
+- Parse `profile.chief_aim_by_when` (format: "December 31, 2026" or similar)
+- Use `date-fns` for calculations
+- Update every minute for accuracy
+
+### Movie Studio Module
+- Use a Dialog/Sheet component for the sub-module selection
+- Maintain current navigation patterns (e.g., Soundtrack navigates to `/soundtrack`)
+- Keep individual components unchanged, just reorganize entry points
+
