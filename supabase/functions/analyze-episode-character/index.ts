@@ -44,15 +44,18 @@ serve(async (req) => {
       );
     }
 
-    // Fetch comprehensive Napoleon Hill self-analysis data
+    // Fetch character profile including archetype and survey responses
     const { data: characterProfile } = await supabaseClient
       .from("character_profiles")
-      .select("napoleon_hill_law_scores, napoleon_hill_strengths, napoleon_hill_weaknesses, napoleon_hill_analysis_date")
+      .select("archetype, archetype_score, survey_responses, napoleon_hill_law_scores, napoleon_hill_strengths, napoleon_hill_weaknesses, napoleon_hill_analysis_date")
       .eq("user_id", user.id)
       .order("created_at", { ascending: false })
       .limit(1)
       .single();
 
+    const userArchetype = characterProfile?.archetype || archetype || "Unknown";
+    const archetypeScores = characterProfile?.archetype_score || {};
+    const surveyResponses = characterProfile?.survey_responses || {};
     const lawScores = characterProfile?.napoleon_hill_law_scores || {};
     const strengths = characterProfile?.napoleon_hill_strengths || [];
     const weaknesses = characterProfile?.napoleon_hill_weaknesses || [];
@@ -62,9 +65,25 @@ serve(async (req) => {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
-    // Build Napoleon Hill context for the AI
+    // Build archetype context from 28-question survey
+    const archetypeContext = Object.keys(archetypeScores as Record<string, number>).length > 0 ? `
+## CHARACTER ARCHETYPE ANALYSIS (Metu Neter Survey)
+
+**Primary Archetype:** ${userArchetype}
+
+**Archetype Influence Scores:**
+${Object.entries(archetypeScores as Record<string, number>)
+  .sort((a, b) => (b[1] as number) - (a[1] as number))
+  .slice(0, 5)
+  .map(([id, score]) => `- ${id}: ${score} points`)
+  .join('\n')}
+
+CRITICAL: Use the primary archetype to understand the user's natural tendencies, strengths, and shadow patterns. The episode character must work WITH their archetype while addressing its shadow expressions.
+` : '';
+
+    // Build Napoleon Hill context for the AI (legacy support for users who have taken the 17-law analysis)
     const napoleonHillContext = Object.keys(lawScores as Record<string, number>).length > 0 ? `
-## NAPOLEON HILL SELF-ANALYSIS RESULTS
+## NAPOLEON HILL SELF-ANALYSIS RESULTS (Legacy)
 
 **Law of Success Scores (User's Self-Assessment):**
 ${Object.entries(lawScores as Record<string, number>).map(([lawNum, score]) => {
@@ -105,14 +124,15 @@ They cannot succeed through cleverness alone - they must activate their Definite
 - What they give in exchange: ${chiefAim.exchange || "Not specified"}
 - Their plan: ${chiefAim.plan || "Not specified"}
 
-**CURRENT ARCHETYPE:** ${archetype || "Not determined"}
+**CURRENT ARCHETYPE:** ${userArchetype}
+${archetypeContext}
 ${napoleonHillContext}
 **EPISODE OBJECTIVE (The Sprint Goal):**
 ${episodeObjective}
 
 ## TRANSFORMATION ANALYSIS REQUIRED
 
-Generate a deep character transformation profile for THIS specific episode. Pay special attention to the Napoleon Hill law scores - the character transformation should directly target the user's weak laws while building on their strengths.`;
+Generate a deep character transformation profile for THIS specific episode. Use the archetype analysis to understand the user's natural patterns and shadow expressions. The character transformation should work WITH their archetype while addressing growth areas.`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
