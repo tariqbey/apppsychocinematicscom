@@ -16,16 +16,16 @@ const METU_NETER_ARCHETYPES: Record<string, {
   role: string;
   directorsNote: string;
 }> = {
-  blank_canvas: {
-    name: "The Blank Canvas",
+  witness: {
+    name: "The Witness",
     sphere: 0,
     deity: "Amen (The Concealed/The Unconditioned)",
     law: "Potential. The realization that the essential self is unconditioned energy.",
     role: "The source of infinite possibility. The ability to 'zero out' and detach from the drama.",
     directorsNote: "I am not the movie. I am the silence behind the sound."
   },
-  auteur: {
-    name: "The Auteur",
+  resurrector: {
+    name: "The Resurrector",
     sphere: 1,
     deity: "Ausar (The Indwelling Intelligence)",
     law: "Oneness. The recognition that all parts of the production are integral parts of a single Whole.",
@@ -40,64 +40,64 @@ const METU_NETER_ARCHETYPES: Record<string, {
     role: "The master planner who calculates and possesses the blueprint.",
     directorsNote: "Show me the proof. If the math doesn't work, the scene doesn't work."
   },
-  system_builder: {
-    name: "The System Builder",
+  architect: {
+    name: "The Architect",
     sphere: 3,
     deity: "Seker (Structure/Cycles/Life Force)",
     law: "Structure. The imposition of discipline, cycles, and limitations to build the container for power.",
     role: "The force that builds the set and establishes the schedule.",
     directorsNote: "Stick to the schedule. No structure, no power."
   },
-  law_keeper: {
-    name: "The Law Keeper",
+  arbiter: {
+    name: "The Arbiter",
     sphere: 4,
     deity: "Maat (Law/Truth/Abundance)",
     law: "Balance. The understanding of the interdependence of all things.",
     role: "The judge who ensures the script follows the 'Divine Law'.",
     directorsNote: "Is it balanced? Does it serve the whole production, or just one actor?"
   },
-  sentinel: {
-    name: "The Sentinel",
+  guardian: {
+    name: "The Guardian",
     sphere: 5,
     deity: "Herukhuti (Divine Justice/Defense)",
     law: "Justice. The analytical separator. It protects the righteous and enforces consequences.",
     role: "The warrior who clears the path and protects the Director's vision.",
     directorsNote: "I cut the scenes that don't belong. I protect the vision at all costs."
   },
-  sovereign_will: {
-    name: "The Sovereign Will",
+  commander: {
+    name: "The Commander",
     sphere: 6,
     deity: "Heru (The Will/Freedom)",
     law: "The Will. The freedom to ignore emotional impulses to follow the higher law.",
     role: "The central protagonist who commands through authority and will.",
     directorsNote: "I don't react to the noise. I command the action."
   },
-  creative_muse: {
-    name: "The Creative Muse",
+  alchemist: {
+    name: "The Alchemist",
     sphere: 7,
     deity: "Het-Heru (Imagination/Joy)",
     law: "Creative Imagination. The gestation of the will through joy, pleasure, and visualization.",
     role: "The artistic force that uses beauty and visuals to fuel the production.",
     directorsNote: "If you can't visualize it, you can't film it. Make it beautiful."
   },
-  analyst: {
-    name: "The Analyst",
+  strategist: {
+    name: "The Strategist",
     sphere: 8,
     deity: "Sebek (Logic/Communication)",
     law: "Verbal Logic. Defining, naming, and communicating information.",
     role: "The editor and diplomat who manages the files and technical details.",
     directorsNote: "Let's define the terms. Let's look at the technical specs."
   },
-  deep_memory: {
-    name: "The Deep Memory",
+  vessel: {
+    name: "The Vessel",
     sphere: 9,
     deity: "Auset (Devotion/Receptivity)",
     law: "Receptivity. The subconscious memory and the power of trance/hypnosis.",
     role: "The vessel that holds the programming and nurtures the vision.",
     directorsNote: "I hold the vision in the dark until it is ready for the light."
   },
-  anchor: {
-    name: "The Anchor",
+  materializer: {
+    name: "The Materializer",
     sphere: 10,
     deity: "Geb (Earth/Physics)",
     law: "Verification. The physical body and resources. The check-and-balance of spiritual work.",
@@ -109,35 +109,46 @@ const METU_NETER_ARCHETYPES: Record<string, {
 // Legacy ID mapping for backward compatibility
 const LEGACY_ARCHETYPE_MAP: Record<string, string> = {
   // Original mystical names
-  "still_center": "blank_canvas",
-  "sovereign": "auteur",
-  "truth_keeper": "sentinel",
-  "sacred_judge": "law_keeper",
-  "master_builder": "system_builder",
+  "still_center": "witness",
+  "sovereign": "resurrector",
+  "truth_keeper": "guardian",
+  "sacred_judge": "arbiter",
+  "master_builder": "architect",
   "divine_analyst": "oracle",
-  "alchemist": "creative_muse",
-  "protector": "anchor",
-  "harmonizer": "deep_memory",
-  "wayfinder": "sovereign_will",
-  "weaver": "analyst",
+  "alchemist": "alchemist",
+  "protector": "materializer",
+  "harmonizer": "vessel",
+  "wayfinder": "commander",
+  "weaver": "strategist",
   // Previous cinematic names
-  "concerned_observer": "blank_canvas",
-  "showrunner": "auteur",
-  "lead_editor": "sentinel",
-  "studio_executive": "law_keeper",
-  "screenwriter": "system_builder",
+  "concerned_observer": "witness",
+  "showrunner": "resurrector",
+  "lead_editor": "guardian",
+  "studio_executive": "arbiter",
+  "screenwriter": "architect",
   "script_doctor": "oracle",
-  "method_actor": "creative_muse",
-  "stunt_coordinator": "anchor",
-  "ensemble_director": "deep_memory",
-  "location_scout": "sovereign_will",
-  "distributor": "analyst"
+  "method_actor": "alchemist",
+  "stunt_coordinator": "materializer",
+  "ensemble_director": "vessel",
+  "location_scout": "commander",
+  "distributor": "strategist",
+  // Previous Metu Neter names
+  "blank_canvas": "witness",
+  "auteur": "resurrector",
+  "system_builder": "architect",
+  "law_keeper": "arbiter",
+  "sentinel": "guardian",
+  "sovereign_will": "commander",
+  "creative_muse": "alchemist",
+  "analyst": "strategist",
+  "deep_memory": "vessel",
+  "anchor": "materializer"
 };
 
 function resolveArchetypeId(id: string | undefined): string {
-  if (!id) return "blank_canvas";
+  if (!id) return "witness";
   if (METU_NETER_ARCHETYPES[id]) return id;
-  return LEGACY_ARCHETYPE_MAP[id] || "blank_canvas";
+  return LEGACY_ARCHETYPE_MAP[id] || "witness";
 }
 
 serve(async (req) => {
@@ -386,7 +397,10 @@ Return as JSON with keys: assessment, strengths (array), growthEdges (array), pa
                   items: { type: "string" },
                   description: "Behavioral patterns noticed"
                 },
-                archetypeAlignment: { type: "string", description: "Assessment of how well they embody their Metu Neter archetype" },
+                archetypeAlignment: { 
+                  type: "string", 
+                  description: "Assessment of how well they embody their Metu Neter archetype" 
+                },
                 napoleonHillPrescription: {
                   type: "array",
                   items: {
@@ -395,68 +409,69 @@ Return as JSON with keys: assessment, strengths (array), growthEdges (array), pa
                       lawNumber: { type: "number" },
                       lawName: { type: "string" },
                       application: { type: "string" }
-                    },
-                    required: ["lawNumber", "lawName", "application"]
+                    }
                   },
                   description: "2-3 Napoleon Hill Laws to focus on"
                 },
-                directorsNote: { type: "string", description: "Motivational personalized message with Napoleon Hill quote" },
-                nextScene: { type: "string", description: "One specific action for today based on the most relevant law" },
-                overallScore: { type: "number", description: "Overall character score 0-100" }
+                directorsNote: { type: "string", description: "Powerful personalized message" },
+                nextScene: { type: "string", description: "One specific action for today" }
               },
-              required: ["assessment", "strengths", "growthEdges", "patterns", "archetypeAlignment", "napoleonHillPrescription", "directorsNote", "nextScene", "overallScore"]
+              required: ["assessment", "strengths", "growthEdges", "patterns", "archetypeAlignment", "napoleonHillPrescription", "directorsNote", "nextScene"]
             }
           }
         }],
         tool_choice: { type: "function", function: { name: "create_analysis" } }
-      })
+      }),
     });
 
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error("AI gateway error:", errorText);
-      throw new Error("Failed to generate analysis");
+      throw new Error(`AI API error: ${response.status}`);
     }
 
-    const aiData = await response.json();
-    const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0];
+    const aiResult = await response.json();
     
-    if (!toolCall?.function?.arguments) {
-      throw new Error("No analysis generated");
+    // Extract the function call result
+    let analysis;
+    if (aiResult.choices?.[0]?.message?.tool_calls?.[0]?.function?.arguments) {
+      analysis = JSON.parse(aiResult.choices[0].message.tool_calls[0].function.arguments);
+    } else if (aiResult.choices?.[0]?.message?.content) {
+      // Fallback to content parsing
+      const content = aiResult.choices[0].message.content;
+      const jsonMatch = content.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        analysis = JSON.parse(jsonMatch[0]);
+      }
     }
 
-    const analysis = JSON.parse(toolCall.function.arguments);
+    if (!analysis) {
+      throw new Error("Failed to parse AI response");
+    }
 
     return new Response(JSON.stringify({
+      success: true,
       analysis,
       metrics: context.metrics,
-      napoleonHillLaws: identifiedLaws,
       archetype: currentArchetype ? {
         id: resolvedArchetypeId,
         name: currentArchetype.name,
         sphere: currentArchetype.sphere,
         deity: currentArchetype.deity,
         law: currentArchetype.law,
-        role: currentArchetype.role,
         directorsNote: currentArchetype.directorsNote
       } : null,
-      chiefAimSnapshot: {
-        what: profile?.chief_aim_what,
-        byWhen: profile?.chief_aim_by_when,
-        exchange: profile?.chief_aim_exchange,
-        plan: profile?.chief_aim_plan
-      },
-      generatedAt: new Date().toISOString()
+      napoleonHillLaws: identifiedLaws.slice(0, 4)
     }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" }
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("Error in analyze-character-progress:", error);
-    const errorMessage = error instanceof Error ? error.message : "Unknown error";
-    return new Response(
-      JSON.stringify({ error: errorMessage }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    const errorMessage = error instanceof Error ? error.message : 'Internal server error';
+    return new Response(JSON.stringify({ 
+      error: errorMessage 
+    }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
   }
 });

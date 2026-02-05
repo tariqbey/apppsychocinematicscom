@@ -162,7 +162,7 @@ const tutorialSections: TutorialSection[] = [
       }
     ],
     tips: [
-      "The 11 spheres range from Amen (Sphere 0 - The Witness) to Geb (Sphere 10 - The Builder)",
+      "The 11 spheres range from Amen (Sphere 0 - The Witness) to Geb (Sphere 10 - The Materializer)",
       "Create your Hero Character BEFORE generating Mind Movies for consistent identity",
       "Shadow answers reveal your biggest growth opportunities — don't avoid them",
       "Your hero images appear in all AI-generated scenes featuring you",
@@ -584,7 +584,7 @@ const faqs = [
   },
   {
     question: "What are the 11 Metu Neter Archetypes?",
-    answer: "The 11 archetypes are based on the Spheres and Laws of the Metu Neter (Paut Neteru/Tree of Life). Each sphere represents a divine Kemetic principle: Sphere 0 (Amen - The Witness), Sphere 1 (Ausar - The Sovereign), Sphere 2 (Tehuti - The Master Mind), Sphere 3 (Seker - The Alchemist), Sphere 4 (Maat - The Divine Analyst), Sphere 5 (Herukhuti - The Sacred Judge), Sphere 6 (Heru - The Hero), Sphere 7 (Het-Heru - The Harmonizer), Sphere 8 (Sebek - The Strategist), Sphere 9 (Auset - The Nurturer), and Sphere 10 (Geb - The Builder)."
+    answer: "The 11 archetypes are based on the Spheres and Laws of the Metu Neter (Paut Neteru/Tree of Life). Each sphere represents a divine Kemetic principle: Sphere 0 (Amen - The Witness), Sphere 1 (Ausar - The Resurrector), Sphere 2 (Tehuti - The Oracle), Sphere 3 (Seker - The Architect), Sphere 4 (Maat - The Arbiter), Sphere 5 (Herukhuti - The Guardian), Sphere 6 (Heru - The Commander), Sphere 7 (Het-Heru - The Alchemist), Sphere 8 (Sebek - The Strategist), Sphere 9 (Auset - The Vessel), and Sphere 10 (Geb - The Materializer)."
   },
   {
     question: "What is the Episode System?",
@@ -1031,16 +1031,16 @@ const DirectorsGuide = () => {
                       <div className="space-y-3">
                         {[
                           { sphere: 0, name: "The Witness", deity: "Amen", law: "Law of Divine Consciousness" },
-                          { sphere: 1, name: "The Sovereign", deity: "Ausar", law: "Law of Divine Selfhood" },
-                          { sphere: 2, name: "The Master Mind", deity: "Tehuti", law: "Law of Divine Wisdom" },
-                          { sphere: 3, name: "The Alchemist", deity: "Seker", law: "Law of Divine Transformation" },
-                          { sphere: 4, name: "The Divine Analyst", deity: "Maat", law: "Law of Divine Truth" },
-                          { sphere: 5, name: "The Sacred Judge", deity: "Herukhuti", law: "Law of Divine Justice" },
-                          { sphere: 6, name: "The Hero", deity: "Heru", law: "Law of Divine Will" },
-                          { sphere: 7, name: "The Harmonizer", deity: "Het-Heru", law: "Law of Divine Love" },
+                          { sphere: 1, name: "The Resurrector", deity: "Ausar", law: "Law of Divine Selfhood" },
+                          { sphere: 2, name: "The Oracle", deity: "Tehuti", law: "Law of Divine Wisdom" },
+                          { sphere: 3, name: "The Architect", deity: "Seker", law: "Law of Divine Transformation" },
+                          { sphere: 4, name: "The Arbiter", deity: "Maat", law: "Law of Divine Truth" },
+                          { sphere: 5, name: "The Guardian", deity: "Herukhuti", law: "Law of Divine Justice" },
+                          { sphere: 6, name: "The Commander", deity: "Heru", law: "Law of Divine Will" },
+                          { sphere: 7, name: "The Alchemist", deity: "Het-Heru", law: "Law of Divine Love" },
                           { sphere: 8, name: "The Strategist", deity: "Sebek", law: "Law of Divine Intelligence" },
-                          { sphere: 9, name: "The Nurturer", deity: "Auset", law: "Law of Divine Devotion" },
-                          { sphere: 10, name: "The Builder", deity: "Geb", law: "Law of Divine Materialization" }
+                          { sphere: 9, name: "The Vessel", deity: "Auset", law: "Law of Divine Devotion" },
+                          { sphere: 10, name: "The Materializer", deity: "Geb", law: "Law of Divine Materialization" }
                         ].map((item) => (
                           <div key={item.sphere} className="p-3 rounded-lg bg-muted/30 border border-border/50">
                             <div className="flex items-center gap-3">
