@@ -4,140 +4,108 @@
 import { ChevronDown, ChevronUp, User2, Sparkles, AlertTriangle, Zap, Sun, Moon, List } from "lucide-react";
  import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
  
- interface ArchetypeCardProps {
-   archetype: Archetype;
-   isExpanded: boolean;
-   onToggle: () => void;
- }
- 
- function ArchetypeCard({ archetype, isExpanded, onToggle }: ArchetypeCardProps) {
+function ArchetypeFullDetails({ archetype }: { archetype: Archetype }) {
    return (
-     <div className="glass-card cinematic-border overflow-hidden transition-all duration-300">
-       {/* Header - Always Visible */}
-       <button
-         onClick={onToggle}
-         className="w-full p-4 sm:p-5 text-left flex items-start gap-4 hover:bg-white/5 transition-colors"
-       >
-         <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-gold/30 to-amber-500/20 flex items-center justify-center shrink-0">
-           <User2 className="w-6 h-6 text-gold" />
-         </div>
-         <div className="flex-1 min-w-0">
-           <div className="flex items-center gap-2 flex-wrap mb-1">
-             <h3 className="text-lg font-display tracking-wide text-gold">{archetype.name}</h3>
-             <Badge variant="outline" className="text-xs border-border/50">
-               {archetype.id.replace(/_/g, " ")}
-             </Badge>
+    <div className="pt-3 space-y-4 animate-accordion-down">
+      {/* Light/Shadow */}
+      <div className="grid grid-cols-2 gap-3">
+        <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/30">
+          <div className="flex items-center gap-2 mb-1">
+            <Sun className="w-4 h-4 text-emerald-400" />
+            <span className="text-xs font-medium text-emerald-400 uppercase tracking-wider">Light</span>
            </div>
-           <p className="text-sm text-muted-foreground italic">"{archetype.tagline}"</p>
+          <p className="text-sm text-foreground">{archetype.lightShadow.light}</p>
          </div>
-         <div className="shrink-0 text-muted-foreground">
-           {isExpanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+        <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/30">
+          <div className="flex items-center gap-2 mb-1">
+            <Moon className="w-4 h-4 text-red-400" />
+            <span className="text-xs font-medium text-red-400 uppercase tracking-wider">Shadow</span>
+          </div>
+          <p className="text-sm text-foreground">{archetype.lightShadow.shadow}</p>
          </div>
-       </button>
+      </div>
  
-       {/* Expanded Content */}
-       {isExpanded && (
-         <div className="px-4 sm:px-5 pb-5 space-y-4 animate-fade-in border-t border-border/30 pt-4">
-           {/* Light/Shadow */}
-           <div className="grid grid-cols-2 gap-3">
-             <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/30">
-               <div className="flex items-center gap-2 mb-1">
-                 <Sun className="w-4 h-4 text-emerald-400" />
-                 <span className="text-xs font-medium text-emerald-400 uppercase tracking-wider">Light</span>
-               </div>
-               <p className="text-sm text-foreground">{archetype.lightShadow.light}</p>
-             </div>
-             <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/30">
-               <div className="flex items-center gap-2 mb-1">
-                 <Moon className="w-4 h-4 text-red-400" />
-                 <span className="text-xs font-medium text-red-400 uppercase tracking-wider">Shadow</span>
-               </div>
-               <p className="text-sm text-foreground">{archetype.lightShadow.shadow}</p>
-             </div>
-           </div>
+      {/* Social Roles */}
+      <div>
+        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">Common Roles</p>
+        <div className="flex flex-wrap gap-1.5">
+          {archetype.socialCorrespondence.map((role, i) => (
+            <span key={i} className="text-xs px-2 py-1 rounded-full bg-muted/50 text-muted-foreground">
+              {role}
+            </span>
+          ))}
+        </div>
+      </div>
  
-           {/* Social Roles */}
+      {/* Strengths & Weaknesses */}
+      <div className="grid sm:grid-cols-2 gap-3">
+        <div>
+          <div className="flex items-center gap-2 mb-2">
+            <Sparkles className="w-4 h-4 text-gold" />
+            <p className="text-xs font-medium text-gold uppercase tracking-wider">Strengths</p>
+          </div>
+          <ul className="text-sm text-muted-foreground space-y-1">
+            {archetype.strengths.map((s, i) => (
+              <li key={i} className="flex items-center gap-2">
+                <span className="w-1 h-1 rounded-full bg-gold" />
+                {s}
+              </li>
+            ))}
+          </ul>
+        </div>
+        <div>
+          <div className="flex items-center gap-2 mb-2">
+            <AlertTriangle className="w-4 h-4 text-amber-500" />
+            <p className="text-xs font-medium text-amber-500 uppercase tracking-wider">Weaknesses</p>
+          </div>
+          <ul className="text-sm text-muted-foreground space-y-1">
+            {archetype.weaknesses.map((w, i) => (
+              <li key={i} className="flex items-center gap-2">
+                <span className="w-1 h-1 rounded-full bg-amber-500" />
+                {w}
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+
+      {/* Story Fuel & Conflict */}
+      <div className="p-3 rounded-lg bg-purple-500/10 border border-purple-500/30">
+        <div className="flex items-center gap-2 mb-2">
+          <Zap className="w-4 h-4 text-purple-400" />
+          <p className="text-xs font-medium text-purple-400 uppercase tracking-wider">Story Fuel</p>
+        </div>
+        <p className="text-sm text-foreground">{archetype.storyFuel}</p>
+      </div>
+
+      {/* Signature Traits */}
+      <div className="space-y-2">
+        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Character Signature</p>
+        <div className="grid gap-2 text-sm">
            <div>
-             <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">Common Roles</p>
-             <div className="flex flex-wrap gap-1.5">
-               {archetype.socialCorrespondence.map((role, i) => (
-                 <span key={i} className="text-xs px-2 py-1 rounded-full bg-muted/50 text-muted-foreground">
-                   {role}
-                 </span>
-               ))}
-             </div>
+            <span className="text-muted-foreground">Dialogue Style:</span>
+            <p className="text-foreground">{archetype.signature.dialogueStyle}</p>
            </div>
- 
-           {/* Strengths & Weaknesses */}
-           <div className="grid sm:grid-cols-2 gap-3">
-             <div>
-               <div className="flex items-center gap-2 mb-2">
-                 <Sparkles className="w-4 h-4 text-gold" />
-                 <p className="text-xs font-medium text-gold uppercase tracking-wider">Strengths</p>
-               </div>
-               <ul className="text-sm text-muted-foreground space-y-1">
-                 {archetype.strengths.map((s, i) => (
-                   <li key={i} className="flex items-center gap-2">
-                     <span className="w-1 h-1 rounded-full bg-gold" />
-                     {s}
-                   </li>
-                 ))}
-               </ul>
-             </div>
-             <div>
-               <div className="flex items-center gap-2 mb-2">
-                 <AlertTriangle className="w-4 h-4 text-amber-500" />
-                 <p className="text-xs font-medium text-amber-500 uppercase tracking-wider">Weaknesses</p>
-               </div>
-               <ul className="text-sm text-muted-foreground space-y-1">
-                 {archetype.weaknesses.map((w, i) => (
-                   <li key={i} className="flex items-center gap-2">
-                     <span className="w-1 h-1 rounded-full bg-amber-500" />
-                     {w}
-                   </li>
-                 ))}
-               </ul>
-             </div>
+          <div>
+            <span className="text-muted-foreground">Physical Presence:</span>
+            <p className="text-foreground">{archetype.signature.physicalPresence}</p>
            </div>
- 
-           {/* Story Fuel & Conflict */}
-           <div className="p-3 rounded-lg bg-purple-500/10 border border-purple-500/30">
-             <div className="flex items-center gap-2 mb-2">
-               <Zap className="w-4 h-4 text-purple-400" />
-               <p className="text-xs font-medium text-purple-400 uppercase tracking-wider">Story Fuel</p>
-             </div>
-             <p className="text-sm text-foreground">{archetype.storyFuel}</p>
+          <div>
+            <span className="text-muted-foreground">Moral Temptation:</span>
+            <p className="text-foreground">{archetype.signature.moralTemptation}</p>
            </div>
- 
-           {/* Signature Traits */}
-           <div className="space-y-2">
-             <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Character Signature</p>
-             <div className="grid gap-2 text-sm">
-               <div className="flex gap-2">
-                 <span className="text-muted-foreground shrink-0 w-28">Dialogue:</span>
-                 <span className="text-foreground">{archetype.signature.dialogueStyle}</span>
-               </div>
-               <div className="flex gap-2">
-                 <span className="text-muted-foreground shrink-0 w-28">Presence:</span>
-                 <span className="text-foreground">{archetype.signature.physicalPresence}</span>
-               </div>
-               <div className="flex gap-2">
-                 <span className="text-muted-foreground shrink-0 w-28">Temptation:</span>
-                 <span className="text-foreground">{archetype.signature.moralTemptation}</span>
-               </div>
-               <div className="flex gap-2">
-                 <span className="text-muted-foreground shrink-0 w-28">Break Point:</span>
-                 <span className="text-foreground">{archetype.signature.breakPoint}</span>
-               </div>
-               <div className="flex gap-2">
-                 <span className="text-muted-foreground shrink-0 w-28">Redemption:</span>
-                 <span className="text-foreground">{archetype.signature.redemptionBeat}</span>
-               </div>
-             </div>
+          <div>
+            <span className="text-muted-foreground">Break Point:</span>
+            <p className="text-foreground">{archetype.signature.breakPoint}</p>
+          </div>
+          <div>
+            <span className="text-muted-foreground">Redemption Beat:</span>
+            <p className="text-foreground">{archetype.signature.redemptionBeat}</p>
            </div>
          </div>
-       )}
+      </div>
      </div>
    );
  }
@@ -165,67 +133,67 @@ import { Separator } from "@/components/ui/separator";
          </p>
        </div>
  
-      {/* Quick Reference Key - All Archetypes Summary */}
+      {/* All Archetypes - Full Details on Expand */}
       <div className="glass-card p-5 sm:p-6 cinematic-border">
         <div className="flex items-center gap-3 mb-4">
           <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-cyan-500/30 to-blue-500/20 flex items-center justify-center">
             <List className="w-5 h-5 text-cyan-400" />
           </div>
           <div>
-            <h3 className="text-lg font-display tracking-wide">All Archetypes at a Glance</h3>
-            <p className="text-xs text-muted-foreground">Quick reference key for the 11 Director types</p>
+            <h3 className="text-lg font-display tracking-wide">The 11 Director Archetypes</h3>
+            <p className="text-xs text-muted-foreground">Tap any archetype to see full details</p>
           </div>
         </div>
         <Separator className="mb-4 bg-border/50" />
         <div className="grid gap-2">
           {ARCHETYPES.map((archetype, index) => (
-            <div 
+            <Collapsible
               key={archetype.id}
-              className="flex items-start gap-3 p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors cursor-pointer"
-              onClick={() => setExpandedId(expandedId === archetype.id ? null : archetype.id)}
+              open={expandedId === archetype.id}
+              onOpenChange={() => setExpandedId(expandedId === archetype.id ? null : archetype.id)}
             >
-              <div className="w-7 h-7 rounded-md bg-gold/20 flex items-center justify-center shrink-0">
-                <span className="text-xs font-bold text-gold">{index + 1}</span>
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="font-medium text-foreground">{archetype.name}</span>
-                  <span className="text-xs text-muted-foreground">•</span>
-                  <span className="text-xs text-muted-foreground italic">"{archetype.tagline}"</span>
+              <CollapsibleTrigger asChild>
+                <div className={cn(
+                  "flex items-start gap-3 p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors cursor-pointer",
+                  expandedId === archetype.id && "bg-muted/50 border border-gold/30"
+                )}>
+                  <div className="w-7 h-7 rounded-md bg-gold/20 flex items-center justify-center shrink-0">
+                    <span className="text-xs font-bold text-gold">{index + 1}</span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-medium text-foreground">{archetype.name}</span>
+                      <Badge variant="outline" className="text-[10px] border-border/50 px-1.5 py-0">
+                        {archetype.id.replace(/_/g, " ")}
+                      </Badge>
+                    </div>
+                    <p className="text-xs text-muted-foreground italic mt-0.5">"{archetype.tagline}"</p>
+                    <div className="flex items-center gap-3 mt-1 text-xs">
+                      <span className="flex items-center gap-1">
+                        <Sun className="w-3 h-3 text-emerald-400" />
+                        <span className="text-emerald-400">{archetype.lightShadow.light}</span>
+                      </span>
+                      <span className="text-muted-foreground/50">|</span>
+                      <span className="flex items-center gap-1">
+                        <Moon className="w-3 h-3 text-red-400" />
+                        <span className="text-red-400">{archetype.lightShadow.shadow}</span>
+                      </span>
+                    </div>
+                  </div>
+                  <ChevronDown className={cn(
+                    "w-4 h-4 text-muted-foreground shrink-0 transition-transform mt-1",
+                    expandedId === archetype.id && "rotate-180"
+                  )} />
                 </div>
-                <div className="flex items-center gap-3 mt-1 text-xs">
-                  <span className="flex items-center gap-1">
-                    <Sun className="w-3 h-3 text-emerald-400" />
-                    <span className="text-emerald-400">{archetype.lightShadow.light}</span>
-                  </span>
-                  <span className="text-muted-foreground/50">|</span>
-                  <span className="flex items-center gap-1">
-                    <Moon className="w-3 h-3 text-red-400" />
-                    <span className="text-red-400">{archetype.lightShadow.shadow}</span>
-                  </span>
-                </div>
-              </div>
-              <ChevronDown className={cn(
-                "w-4 h-4 text-muted-foreground shrink-0 transition-transform",
-                expandedId === archetype.id && "rotate-180"
-              )} />
-            </div>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="px-3 pb-3">
+                <ArchetypeFullDetails archetype={archetype} />
+              </CollapsibleContent>
+            </Collapsible>
           ))}
         </div>
       </div>
 
-       {/* Archetypes List */}
-       <div className="space-y-3">
-         {ARCHETYPES.map((archetype) => (
-           <ArchetypeCard
-             key={archetype.id}
-             archetype={archetype}
-             isExpanded={expandedId === archetype.id}
-             onToggle={() => setExpandedId(expandedId === archetype.id ? null : archetype.id)}
-           />
-         ))}
-       </div>
- 
        {/* Legend/Key */}
        <div className="glass-card p-5 sm:p-6 cinematic-border space-y-4">
          <h3 className="text-lg font-display tracking-wide">Understanding the Profile Elements</h3>
