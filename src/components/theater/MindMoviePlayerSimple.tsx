@@ -1,25 +1,24 @@
 import {
   forwardRef,
-  useEffect,
   useImperativeHandle,
-  useMemo,
   useRef,
-  useState,
+  useEffect,
+  useCallback,
 } from "react";
 import { cn } from "@/lib/utils";
 
 /**
- * MindMoviePlayerSimple - ULTRA MINIMAL VERSION
+ * MindMoviePlayerSimple - ULTRA STABLE VERSION
  * 
- * This is the most basic possible video player to avoid iOS PWA crashes.
- * It does NOTHING except:
- * 1. Render a native <video> element
- * 2. Cleanup on unmount
- * 3. Fire onComplete when video ends
+ * Designed to survive iOS PWA expand + rotate without crashing.
+ * Uses ONLY native HTML5 video with minimal React interference.
  * 
- * NO custom controls, NO orientation listeners, NO fullscreen logic,
- * NO timeupdate handlers, NO seeking handlers.
- * Let the browser handle EVERYTHING.
+ * Key stability features:
+ * - No orientation listeners
+ * - No resize observers
+ * - No timeupdate handlers (only ended event)
+ * - Deferred cleanup to avoid React StrictMode issues
+ * - Direct storage URLs in standalone mode (no proxy)
  */
 
 export interface MindMoviePlayerProps {
@@ -41,10 +40,28 @@ export interface MindMoviePlayerHandle {
   getVideoElement: () => HTMLVideoElement | null;
 }
 
+// Detect iOS and standalone mode once at module level
+const getDeviceInfo = () => {
+  if (typeof navigator === "undefined" || typeof window === "undefined") {
+    return { isIOS: false, isStandalone: false };
+  }
+  
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+    (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  
+  const mql = window.matchMedia?.("(display-mode: standalone)");
+  const legacyIOSStandalone = (navigator as any)?.standalone === true;
+  const isStandalone = Boolean(mql?.matches || legacyIOSStandalone);
+  
+  return { isIOS, isStandalone };
+};
+
 export const MindMoviePlayer = forwardRef<MindMoviePlayerHandle, MindMoviePlayerProps>(
   (
     {
       src,
+      disableSeeking = false,
+      restartOnInterrupt = false,
       onComplete,
       onError,
       className,
@@ -53,6 +70,28 @@ export const MindMoviePlayer = forwardRef<MindMoviePlayerHandle, MindMoviePlayer
   ) => {
     const videoRef = useRef<HTMLVideoElement>(null);
     const completedRef = useRef(false);
+    const mountedRef = useRef(true);
+    const lastPlayPositionRef = useRef(0);
+
+    // Get device info
+    const { isIOS, isStandalone } = getDeviceInfo();
+
+    // Build video source URL
+    const videoSrc = (() => {
+      if (!src) return "";
+      // In standalone mode, always use direct URL to avoid WebKit crashes
+      if (isStandalone) return src;
+      // Non-iOS doesn't need proxy
+      if (!isIOS) return src;
+      // Already proxied
+      if (src.includes("/functions/v1/video-proxy")) return src;
+      // Only proxy storage URLs
+      if (!src.includes("/storage/v1/object/")) return src;
+      
+      const baseUrl = import.meta.env.VITE_SUPABASE_URL;
+      if (!baseUrl) return src;
+      return `${baseUrl}/functions/v1/video-proxy?url=${encodeURIComponent(src)}`;
+    })();
 
     // Expose minimal API
     useImperativeHandle(ref, () => ({
@@ -75,48 +114,111 @@ export const MindMoviePlayer = forwardRef<MindMoviePlayerHandle, MindMoviePlayer
       getVideoElement: () => videoRef.current,
     }));
 
-    // iOS detection - only for proxy decision
-    const isIOS = useMemo(() => {
-      if (typeof navigator === "undefined") return false;
-      return (
-        /iPad|iPhone|iPod/.test(navigator.userAgent) ||
-        (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)
-      );
-    }, []);
-
-    // iOS PWA/standalone has unique fullscreen+rotation behavior.
-    // We detect it for proxy decisions.
-    const isStandalone = useMemo(() => {
-      if (typeof window === "undefined") return false;
-      const mql = window.matchMedia?.("(display-mode: standalone)");
-      const legacyIOSStandalone = (navigator as any)?.standalone === true;
-      return Boolean(mql?.matches || legacyIOSStandalone);
-    }, []);
-
-    // Proxy storage URLs on iOS Safari browser (NOT in standalone/PWA mode)
-    // In standalone mode, bypass proxy entirely to avoid WebKit crashes
-    const videoSrc = useMemo(() => {
-      if (!src) return "";
-      // Always use direct URL in standalone mode - proxy causes crashes
-      if (isStandalone) return src;
-      // Non-iOS devices don't need proxy
-      if (!isIOS) return src;
-      // Already proxied
-      if (src.includes("/functions/v1/video-proxy")) return src;
-      // Only proxy Supabase storage URLs
-      if (!src.includes("/storage/v1/object/")) return src;
+    // Handle video ended
+    const handleEnded = useCallback(() => {
+      if (!mountedRef.current || completedRef.current) return;
       
-      const baseUrl = import.meta.env.VITE_SUPABASE_URL;
-      if (!baseUrl) return src;
-      return `${baseUrl}/functions/v1/video-proxy?url=${encodeURIComponent(src)}`;
-    }, [src, isIOS, isStandalone]);
-
-    // Simple cleanup on unmount
-    useEffect(() => {
       const video = videoRef.current;
+      if (!video) return;
       
+      // Validate this is a real end (within 2 seconds of duration)
+      const duration = video.duration || 0;
+      const currentTime = video.currentTime || 0;
+      if (duration > 0 && Math.abs(duration - currentTime) > 2) {
+        console.log('[MindMoviePlayer] Ignoring premature ended event');
+        return;
+      }
+      
+      completedRef.current = true;
+      onComplete?.(Math.floor(duration));
+    }, [onComplete]);
+
+    // Handle video error
+    const handleError = useCallback(() => {
+      if (!mountedRef.current) return;
+      const video = videoRef.current;
+      const errorMsg = video?.error?.message || "Video playback error";
+      console.error('[MindMoviePlayer] Error:', video?.error?.code, errorMsg);
+      onError?.(errorMsg);
+    }, [onError]);
+
+    // Handle pause for restart-on-interrupt
+    const handlePause = useCallback(() => {
+      if (!mountedRef.current || !restartOnInterrupt) return;
+      const video = videoRef.current;
+      if (!video || completedRef.current) return;
+      
+      // Store position when paused
+      lastPlayPositionRef.current = video.currentTime;
+    }, [restartOnInterrupt]);
+
+    // Handle play after pause (restart from beginning if interrupted)
+    const handlePlay = useCallback(() => {
+      if (!mountedRef.current || !restartOnInterrupt) return;
+      const video = videoRef.current;
+      if (!video || completedRef.current) return;
+      
+      // If video was playing and got interrupted (position changed), restart
+      if (lastPlayPositionRef.current > 0 && video.currentTime > 0.5) {
+        video.currentTime = 0;
+        lastPlayPositionRef.current = 0;
+      }
+    }, [restartOnInterrupt]);
+
+    // Handle seeking prevention
+    const handleSeeking = useCallback(() => {
+      if (!mountedRef.current || !disableSeeking) return;
+      const video = videoRef.current;
+      if (!video) return;
+      
+      // Allow seeking near current position (within 2 seconds)
+      const diff = Math.abs(video.currentTime - lastPlayPositionRef.current);
+      if (diff > 2) {
+        video.currentTime = lastPlayPositionRef.current;
+      }
+    }, [disableSeeking]);
+
+    // Track time for seeking prevention
+    const handleTimeUpdate = useCallback(() => {
+      if (!mountedRef.current) return;
+      const video = videoRef.current;
+      if (video && !video.paused) {
+        lastPlayPositionRef.current = video.currentTime;
+      }
+    }, []);
+
+    // Setup and cleanup
+    useEffect(() => {
+      mountedRef.current = true;
+      completedRef.current = false;
+      lastPlayPositionRef.current = 0;
+      
+      const video = videoRef.current;
+      if (!video) return;
+
+      // Add event listeners
+      video.addEventListener("ended", handleEnded);
+      video.addEventListener("error", handleError);
+      video.addEventListener("pause", handlePause);
+      video.addEventListener("play", handlePlay);
+      
+      if (disableSeeking) {
+        video.addEventListener("seeking", handleSeeking);
+        video.addEventListener("timeupdate", handleTimeUpdate);
+      }
+
       return () => {
-        if (video) {
+        mountedRef.current = false;
+        
+        video.removeEventListener("ended", handleEnded);
+        video.removeEventListener("error", handleError);
+        video.removeEventListener("pause", handlePause);
+        video.removeEventListener("play", handlePlay);
+        video.removeEventListener("seeking", handleSeeking);
+        video.removeEventListener("timeupdate", handleTimeUpdate);
+        
+        // Deferred cleanup to survive React StrictMode
+        setTimeout(() => {
           try {
             video.pause();
             video.removeAttribute('src');
@@ -124,53 +226,21 @@ export const MindMoviePlayer = forwardRef<MindMoviePlayerHandle, MindMoviePlayer
           } catch {
             // Ignore cleanup errors
           }
-        }
+        }, 100);
       };
-    }, []);
-
-    // Event listeners for video lifecycle
-    useEffect(() => {
-      const video = videoRef.current;
-      if (!video) return;
-
-      completedRef.current = false;
-
-      const handleEnded = () => {
-        if (completedRef.current) return;
-        completedRef.current = true;
-        onComplete?.(Math.floor(video.duration || 0));
-      };
-
-      const handleError = () => {
-        const errorMsg = video.error?.message || "Video playback error";
-        console.error('[MindMoviePlayer] Error:', video.error?.code, errorMsg);
-        onError?.(errorMsg);
-      };
-
-      const handleCanPlay = () => {
-        // Video ready to play
-      };
-
-      video.addEventListener("ended", handleEnded);
-      video.addEventListener("error", handleError);
-      video.addEventListener("canplay", handleCanPlay);
-
-      return () => {
-        video.removeEventListener("ended", handleEnded);
-        video.removeEventListener("error", handleError);
-        video.removeEventListener("canplay", handleCanPlay);
-      };
-    }, [videoSrc, onComplete, onError]);
+    }, [videoSrc, handleEnded, handleError, handlePause, handlePlay, handleSeeking, handleTimeUpdate, disableSeeking]);
 
     return (
       <div className={cn("relative w-full h-full bg-black", className)}>
         <video
           ref={videoRef}
           src={videoSrc}
-          className="w-full h-full object-contain"
+          className="theater-video w-full h-full object-contain"
           controls
           playsInline
           preload="metadata"
+          // iOS-specific attributes for stability
+          webkit-playsinline="true"
         />
       </div>
     );

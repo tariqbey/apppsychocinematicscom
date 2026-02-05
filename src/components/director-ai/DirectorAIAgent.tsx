@@ -114,6 +114,7 @@ export function DirectorAIAgent({ isOpen, onClose, chiefAim }: DirectorAIAgentPr
   const [isMinimized, setIsMinimized] = useState(false);
   const [hasInitialized, setHasInitialized] = useState(false);
   const [voiceEnabled, setVoiceEnabled] = useState(false);
+  const [isReady, setIsReady] = useState(false); // Defer initialization to prevent freeze
   
   // Voice and personality settings
   const [selectedVoice, setSelectedVoice] = useState<VoiceOption>(loadSavedVoice);
@@ -142,6 +143,20 @@ export function DirectorAIAgent({ isOpen, onClose, chiefAim }: DirectorAIAgentPr
   const ttsAbortControllerRef = useRef<AbortController | null>(null);
   const ttsRequestIdRef = useRef(0);
   const stopRequestedRef = useRef(false);
+  
+  // Defer component initialization to prevent UI freeze on mobile
+  useEffect(() => {
+    if (isOpen && !isReady) {
+      // Use requestAnimationFrame to defer heavy initialization
+      const frame = requestAnimationFrame(() => {
+        setTimeout(() => setIsReady(true), 50);
+      });
+      return () => cancelAnimationFrame(frame);
+    }
+    if (!isOpen) {
+      setIsReady(false);
+    }
+  }, [isOpen, isReady]);
   
   // Get full coaching context
   const { context: coachingContext, loading: contextLoading } = useCoachingContext();
@@ -215,9 +230,9 @@ export function DirectorAIAgent({ isOpen, onClose, chiefAim }: DirectorAIAgentPr
     }
   }, [isOpen]);
 
-  // Generate proactive greeting on open
+  // Generate proactive greeting on open - only after isReady to prevent freeze
   useEffect(() => {
-    if (isOpen && !hasGreeted.current && messages.length === 0 && !contextLoading) {
+    if (isOpen && isReady && !hasGreeted.current && messages.length === 0 && !contextLoading) {
       hasGreeted.current = true;
       setHasInitialized(true);
       
@@ -232,7 +247,8 @@ export function DirectorAIAgent({ isOpen, onClose, chiefAim }: DirectorAIAgentPr
       setMessages([welcomeMsg]);
       
       if (ttsEnabled) {
-        speakText(welcomeMessage);
+        // Defer TTS to allow UI to render first
+        setTimeout(() => speakText(welcomeMessage), 100);
       } else if (isSupported) {
         // If TTS is off, start listening after a short delay
         setTimeout(() => {
@@ -240,7 +256,7 @@ export function DirectorAIAgent({ isOpen, onClose, chiefAim }: DirectorAIAgentPr
         }, 500);
       }
     }
-  }, [isOpen, messages.length, ttsEnabled, contextLoading, coachingContext, isSupported]);
+  }, [isOpen, isReady, messages.length, ttsEnabled, contextLoading, coachingContext, isSupported]);
 
   // Reset on close
   useEffect(() => {
@@ -740,6 +756,18 @@ export function DirectorAIAgent({ isOpen, onClose, chiefAim }: DirectorAIAgentPr
   };
 
   if (!isOpen) return null;
+
+  // Show loading state while initializing to prevent freeze
+  if (!isReady) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/95">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-16 h-16 rounded-full bg-gradient-to-br from-gold to-amber-600 animate-pulse" />
+          <p className="text-gold/80 text-sm tracking-widest uppercase">Initializing...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (isMinimized) {
     return (
