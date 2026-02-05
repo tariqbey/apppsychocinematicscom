@@ -14,8 +14,8 @@ export interface Archetype {
 
 export const ARCHETYPES: Archetype[] = [
   {
-    id: "blank_canvas",
-    name: "The Blank Canvas",
+    id: "witness",
+    name: "The Witness",
     sphere: 0,
     deity: "Amen (The Concealed/The Unconditioned)",
     law: "Potential. The realization that the essential self is unconditioned energy, meaning you are not your script, your role, or your past history. You are the silence before the film starts.",
@@ -27,8 +27,8 @@ export const ARCHETYPES: Archetype[] = [
     storyFuel: "The conflict between remaining in peaceful emptiness versus being called to create something meaningful in the world."
   },
   {
-    id: "auteur",
-    name: "The Auteur",
+    id: "resurrector",
+    name: "The Resurrector",
     sphere: 1,
     deity: "Ausar (The Indwelling Intelligence)",
     law: "Oneness. The recognition that all parts of the production (life) are integral parts of a single Whole. It is the ability to see unity in diversity.",
@@ -53,8 +53,8 @@ export const ARCHETYPES: Archetype[] = [
     storyFuel: "The tension between trusting inner knowing versus external evidence, and the responsibility of seeing what others cannot."
   },
   {
-    id: "system_builder",
-    name: "The System Builder",
+    id: "architect",
+    name: "The Architect",
     sphere: 3,
     deity: "Seker (Structure/Cycles/Life Force)",
     law: "Structure. The imposition of discipline, cycles, and limitations to build the container for power. This sphere is often associated with the 'death' of the old to make way for the new.",
@@ -66,8 +66,8 @@ export const ARCHETYPES: Archetype[] = [
     storyFuel: "The necessity of letting something die to build something greater, and the tension between structure and spontaneity."
   },
   {
-    id: "law_keeper",
-    name: "The Law Keeper",
+    id: "arbiter",
+    name: "The Arbiter",
     sphere: 4,
     deity: "Maat (Law/Truth/Abundance)",
     law: "Balance. The understanding of the interdependence of all things. Giving and sharing creates abundance. It is the 'optimistic' view that sees the whole.",
@@ -79,8 +79,8 @@ export const ARCHETYPES: Archetype[] = [
     storyFuel: "The challenge of maintaining balance when forces pull toward extremes, and the weight of being the one who must judge fairly."
   },
   {
-    id: "sentinel",
-    name: "The Sentinel",
+    id: "guardian",
+    name: "The Guardian",
     sphere: 5,
     deity: "Herukhuti (Divine Justice/Defense)",
     law: "Justice. The analytical separator. It protects the righteous and enforces consequences. It represents immediate action and the 'immune system' of the narrative.",
@@ -92,8 +92,8 @@ export const ARCHETYPES: Archetype[] = [
     storyFuel: "The warrior's dilemma: when to fight and when to show mercy, and the price of being the one who must make the hard cuts."
   },
   {
-    id: "sovereign_will",
-    name: "The Sovereign Will",
+    id: "commander",
+    name: "The Commander",
     sphere: 6,
     deity: "Heru (The Will/Freedom)",
     law: "The Will. The freedom to ignore emotional impulses to follow the higher law. It is the victory of the higher self over the lower instincts.",
@@ -105,8 +105,8 @@ export const ARCHETYPES: Archetype[] = [
     storyFuel: "The eternal battle between higher and lower nature, and the lonely path of the one who must rule themselves before they can lead others."
   },
   {
-    id: "creative_muse",
-    name: "The Creative Muse",
+    id: "alchemist",
+    name: "The Alchemist",
     sphere: 7,
     deity: "Het-Heru (Imagination/Joy)",
     law: "Creative Imagination. The gestation of the will through joy, pleasure, and visualization. It uses imagery to 'program' the life force.",
@@ -118,8 +118,8 @@ export const ARCHETYPES: Archetype[] = [
     storyFuel: "The tension between imagination and execution, and the danger of getting lost in beautiful visions while neglecting reality."
   },
   {
-    id: "analyst",
-    name: "The Analyst",
+    id: "strategist",
+    name: "The Strategist",
     sphere: 8,
     deity: "Sebek (Logic/Communication)",
     law: "Verbal Logic. Defining, naming, and communicating information. Separating things by their external differences/form.",
@@ -131,8 +131,8 @@ export const ARCHETYPES: Archetype[] = [
     storyFuel: "The temptation to use communication skills for manipulation versus service, and the challenge of remaining truthful while being strategic."
   },
   {
-    id: "deep_memory",
-    name: "The Deep Memory",
+    id: "vessel",
+    name: "The Vessel",
     sphere: 9,
     deity: "Auset (Devotion/Receptivity)",
     law: "Receptivity. The subconscious memory and the power of trance/hypnosis. It is the foundation that receives the seed of the Will.",
@@ -144,8 +144,8 @@ export const ARCHETYPES: Archetype[] = [
     storyFuel: "The sacrifice of holding space for something greater than yourself, and the challenge of maintaining identity while being a vessel for others."
   },
   {
-    id: "anchor",
-    name: "The Anchor",
+    id: "materializer",
+    name: "The Materializer",
     sphere: 10,
     deity: "Geb (Earth/Physics)",
     law: "Verification. The physical body and resources. The check-and-balance of spiritual work in the physical realm.",
@@ -163,32 +163,43 @@ export function getArchetypeById(id: string): Archetype | undefined {
 }
 
 // Legacy ID mapping for backward compatibility with existing database records
-// Maps original mystical IDs → cinematic IDs → current Metu Neter IDs
+// Maps original mystical IDs → cinematic IDs → previous IDs → current IDs
 export const LEGACY_ID_MAP: Record<string, string> = {
-  // Original mystical names
-  "still_center": "blank_canvas",
-  "sovereign": "auteur",
-  "truth_keeper": "sentinel",
-  "sacred_judge": "law_keeper",
-  "master_builder": "system_builder",
+  // Original mystical names → current
+  "still_center": "witness",
+  "sovereign": "resurrector",
+  "truth_keeper": "guardian",
+  "sacred_judge": "arbiter",
+  "master_builder": "architect",
   "divine_analyst": "oracle",
-  "alchemist": "creative_muse",
-  "protector": "anchor",
-  "harmonizer": "deep_memory",
-  "wayfinder": "sovereign_will",
-  "weaver": "analyst",
-  // Previous cinematic names
-  "concerned_observer": "blank_canvas",
-  "showrunner": "auteur",
-  "lead_editor": "sentinel",
-  "studio_executive": "law_keeper",
-  "screenwriter": "system_builder",
+  "alchemist": "alchemist",
+  "protector": "materializer",
+  "harmonizer": "vessel",
+  "wayfinder": "commander",
+  "weaver": "strategist",
+  // Previous cinematic names → current
+  "concerned_observer": "witness",
+  "showrunner": "resurrector",
+  "lead_editor": "guardian",
+  "studio_executive": "arbiter",
+  "screenwriter": "architect",
   "script_doctor": "oracle",
-  "method_actor": "creative_muse",
-  "stunt_coordinator": "anchor",
-  "ensemble_director": "deep_memory",
-  "location_scout": "sovereign_will",
-  "distributor": "analyst"
+  "method_actor": "alchemist",
+  "stunt_coordinator": "materializer",
+  "ensemble_director": "vessel",
+  "location_scout": "commander",
+  "distributor": "strategist",
+  // Previous Metu Neter names → current
+  "blank_canvas": "witness",
+  "auteur": "resurrector",
+  "system_builder": "architect",
+  "law_keeper": "arbiter",
+  "sentinel": "guardian",
+  "sovereign_will": "commander",
+  "creative_muse": "alchemist",
+  "analyst": "strategist",
+  "deep_memory": "vessel",
+  "anchor": "materializer"
 };
 
 export function getArchetypeByIdWithLegacy(id: string): Archetype | undefined {
