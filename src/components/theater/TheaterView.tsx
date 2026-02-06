@@ -130,25 +130,8 @@ export const TheaterView = ({ onClose }: TheaterViewProps) => {
 
   const isIOSStandalone = isIOS && isStandalone;
 
-  // iOS Safari is extremely sensitive to Range/206 correctness. Route through
-  // our Range-safe proxy on iOS to prevent stalls/crashes.
-  const playbackSrc = useMemo(() => {
-    if (!videoUrl) return null;
-    if (!isIOS) return videoUrl;
-
-    // IMPORTANT (iOS Installed App / standalone):
-    // We prefer the direct storage URL here because we've seen WebKit hard-crash
-    // on play when streaming via a proxy in standalone mode.
-    if (isStandalone) return videoUrl;
-    // Already proxied?
-    if (videoUrl.includes("/functions/v1/video-proxy")) return videoUrl;
-    // Only proxy storage URLs
-    if (!videoUrl.includes("/storage/v1/object/")) return videoUrl;
-
-    const baseUrl = import.meta.env.VITE_SUPABASE_URL;
-    if (!baseUrl) return videoUrl;
-    return `${baseUrl}/functions/v1/video-proxy?url=${encodeURIComponent(videoUrl)}`;
-  }, [videoUrl, isIOS, isStandalone]);
+   // Use direct URL - MindMoviePlayer handles playback natively
+   const playbackSrc = videoUrl || null;
 
   // Load today's tasks
   const loadTodaysTasks = useCallback(async () => {

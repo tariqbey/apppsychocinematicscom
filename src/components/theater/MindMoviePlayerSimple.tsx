@@ -40,21 +40,7 @@ export interface MindMoviePlayerHandle {
   getVideoElement: () => HTMLVideoElement | null;
 }
 
-// Detect iOS and standalone mode once at module level
-const getDeviceInfo = () => {
-  if (typeof navigator === "undefined" || typeof window === "undefined") {
-    return { isIOS: false, isStandalone: false };
-  }
-  
-  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
-    (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
-  
-  const mql = window.matchMedia?.("(display-mode: standalone)");
-  const legacyIOSStandalone = (navigator as any)?.standalone === true;
-  const isStandalone = Boolean(mql?.matches || legacyIOSStandalone);
-  
-  return { isIOS, isStandalone };
-};
+// (Device detection removed — proxy routing eliminated for stability)
 
 export const MindMoviePlayer = forwardRef<MindMoviePlayerHandle, MindMoviePlayerProps>(
   (
@@ -73,25 +59,8 @@ export const MindMoviePlayer = forwardRef<MindMoviePlayerHandle, MindMoviePlayer
     const mountedRef = useRef(true);
     const lastPlayPositionRef = useRef(0);
 
-    // Get device info
-    const { isIOS, isStandalone } = getDeviceInfo();
-
-    // Build video source URL
-    const videoSrc = (() => {
-      if (!src) return "";
-      // In standalone mode, always use direct URL to avoid WebKit crashes
-      if (isStandalone) return src;
-      // Non-iOS doesn't need proxy
-      if (!isIOS) return src;
-      // Already proxied
-      if (src.includes("/functions/v1/video-proxy")) return src;
-      // Only proxy storage URLs
-      if (!src.includes("/storage/v1/object/")) return src;
-      
-      const baseUrl = import.meta.env.VITE_SUPABASE_URL;
-      if (!baseUrl) return src;
-      return `${baseUrl}/functions/v1/video-proxy?url=${encodeURIComponent(src)}`;
-    })();
+    // Use direct URL for maximum compatibility
+    const videoSrc = src || "";
 
     // Expose minimal API
     useImperativeHandle(ref, () => ({
