@@ -40,6 +40,7 @@ import { EnableNotificationsBanner } from "@/components/notifications/EnableNoti
 import { DirectorBanner } from "@/components/dashboard/DirectorBanner";
 import { MovieStudioModule } from "@/components/dashboard/MovieStudioModule";
 import { ChiefAimCountdown } from "@/components/dashboard/ChiefAimCountdown";
+import { DashboardEpisodeTracker } from "@/components/dashboard/DashboardEpisodeTracker";
 
 
 // Custom module icons
@@ -576,17 +577,22 @@ const Index = () => {
             animationIndex={8}
           />
 
-           {/* ========== 10. EPISODES MODULE (Consolidated Challenges) ========== */}
-           <ModuleCard
-             onClick={() => navigate("/episodes")}
-             icon={<Zap className="w-7 h-7 text-amber-500" />}
-             title="Episodes & Challenges"
-             description="Tactical sprints • Active episodes • Adversity training • XP rewards"
-             actionText="View Episodes"
-             colorScheme="amber"
-             tooltip="Create and manage episodes (short-term sprints), track active episodes, and train through adversity challenges."
-             animationIndex={9}
-          />
+           {/* ========== 10. EPISODES - Collapsible tracker with tasks ========== */}
+           <DashboardEpisodeTracker />
+
+           {/* Fallback: if no active episode, show a simple module card to navigate */}
+           {!activeEpisode && (
+             <ModuleCard
+               onClick={() => navigate("/episodes")}
+               icon={<Zap className="w-7 h-7 text-amber-500" />}
+               title="Episodes & Challenges"
+               description="Tactical sprints • Active episodes • Adversity training • XP rewards"
+               actionText="View Episodes"
+               colorScheme="amber"
+               tooltip="Create and manage episodes (short-term sprints), track active episodes, and train through adversity challenges."
+               animationIndex={9}
+             />
+           )}
 
           {/* ========== 11. KUT / RESET ========== */}
           <ModuleCard
