@@ -174,7 +174,7 @@ export const useVoiceInput = (options: UseVoiceInputOptions = {}) => {
     }
 
     const recognition = new SpeechRecognition();
-    recognition.continuous = continuous;
+    recognition.continuous = continuous && !isIOS();
     recognition.interimResults = true;
     recognition.lang = language;
 
@@ -373,7 +373,12 @@ export const useVoiceInput = (options: UseVoiceInputOptions = {}) => {
       }
     }
     
-    startAudioAnalysis();
+    // iOS Safari can be finicky when multiple microphone consumers are active.
+    // Audio analysis is only used for UI metering, so we disable it on iOS to
+    // avoid competing with SpeechRecognition for mic access.
+    if (!isIOS()) {
+      startAudioAnalysis();
+    }
     
     // Longer delay on mobile/iOS to ensure audio context is ready
     const delayMs = isIOS() ? 400 : isMobile() ? 200 : 0;

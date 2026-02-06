@@ -10,6 +10,7 @@ import { useVoiceInput } from "@/hooks/useVoiceInput";
 import { DirectorAISettings, VOICE_OPTIONS, PERSONALITY_PRESETS, VoiceOption, PersonalityPreset } from "@/components/director-ai/DirectorAISettings";
 import { JarvisOrb } from "@/components/director-ai/JarvisOrb";
 import { AgentTranscript, TranscriptMessage } from "@/components/director-ai/AgentTranscript";
+import { readOpenAITextStream } from "@/lib/sse";
 import { toast } from "sonner";
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/director-ai`;
@@ -360,6 +361,12 @@ export default function DirectorAI() {
       const { data: sessionData } = await supabase.auth.getSession();
       const token = sessionData?.session?.access_token;
 
+      if (!token) {
+        toast.error("Session expired — please sign in again.");
+        setOrbState("idle");
+        return;
+      }
+
       const allMessages = [...messages, userMsg].map((m) => ({
         role: m.role,
         content: m.content,
@@ -416,36 +423,15 @@ export default function DirectorAI() {
         throw new Error("Chat request failed");
       }
 
-      const reader = response.body?.getReader();
-      if (!reader) throw new Error("No reader");
-
-      const decoder = new TextDecoder();
       let fullResponse = "";
-      let buffer = "";
 
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split("\n");
-        buffer = lines.pop() || "";
-
-        for (const line of lines) {
-          if (!line.startsWith("data: ")) continue;
-          const data = line.slice(6).trim();
-          if (data === "[DONE]") continue;
-
-          try {
-            const parsed = JSON.parse(data);
-            const content = parsed.choices?.[0]?.delta?.content;
-            if (content) {
-              fullResponse += content;
-              setCurrentResponse(fullResponse);
-            }
-          } catch {}
-        }
-      }
+      await readOpenAITextStream({
+        response,
+        onDelta: (chunk) => {
+          fullResponse += chunk;
+          setCurrentResponse(fullResponse);
+        },
+      });
 
       const assistantMsg: TranscriptMessage = {
         id: crypto.randomUUID(),
