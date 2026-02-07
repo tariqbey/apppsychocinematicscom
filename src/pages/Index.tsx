@@ -314,7 +314,7 @@ const Index = () => {
       {/* Main Content */}
       <main className="container mx-auto px-3 sm:px-4 pt-[calc(env(safe-area-inset-top)+5rem)] sm:pt-[calc(env(safe-area-inset-top)+6rem)] pb-28 sm:pb-32 overflow-x-hidden w-full">
         <div className="max-w-4xl mx-auto space-y-4 sm:space-y-6">
-          {/* Director Banner - Welcome section */}
+          {/* ========== 1. DIRECTOR BANNER ========== */}
           <DirectorBanner 
             onOpenAIStudio={() => {
               setEditBayInitialPrompt(undefined);
@@ -324,7 +324,7 @@ const Index = () => {
             className="animate-fade-in"
           />
 
-          {/* Chief Aim Countdown - Fire animated module below banner */}
+          {/* ========== 2. ANIMATED FIRE COUNTDOWN ========== */}
           {chiefAim.byWhen && (
             <ChiefAimCountdown
               byWhen={chiefAim.byWhen}
@@ -333,26 +333,7 @@ const Index = () => {
             />
           )}
 
-          {/* Push Notifications Banner - Reminds users to enable */}
-          <EnableNotificationsBanner className="animate-slide-up" />
-
-          {/* Production Status - Animated */}
-          <div className="animate-fade-in" style={{ animationDelay: "0.1s" }}>
-            <ProductionStatus currentAct={currentAct} dayNumber={dayNumber} />
-          </div>
-
-          {/* Streak Banner - Right after Production Status */}
-          <div className="animate-slide-up" style={{ animationDelay: "0.15s" }}>
-            <StreakBanner 
-              streak={currentStreak} 
-              bestStreak={bestStreak} 
-              lastActiveDate={lastActivityDate} 
-              daysInactive={daysInactive}
-              onKutReset={() => setShowCutReset(true)} 
-            />
-          </div>
-
-          {/* ========== DAILY RITUAL - FRONT AND CENTER ========== */}
+          {/* ========== 3. DAILY RITUAL CHECKLIST ========== */}
           <DailyRitualChecklist
             onTheaterClick={() => setShowTheater(true)}
             onScorecardClick={() => setShowScorecard(true)}
@@ -397,7 +378,7 @@ const Index = () => {
              }}
           />
 
-          {/* ========== CHIEF AIM ANTHEM (Standalone Card) ========== */}
+          {/* ========== 4. CHIEF AIM ANTHEM ========== */}
           <ChiefAimAnthemCard
             chiefAimSongUrl={profile?.chief_aim_song_url}
             chiefAimContext={chiefAim}
@@ -435,7 +416,71 @@ const Index = () => {
             className="animate-fade-in"
           />
 
-          {/* ========== 1. DEFINITE CHIEF AIM CREATOR MODULE ========== */}
+          {/* ========== 5. DIRECTOR RADIO ========== */}
+          <DirectorRadioCard />
+
+          {/* ========== 6. THE SCORE ========== */}
+          <ModuleCard
+            onClick={() => navigate("/score")}
+            icon={<Music className="w-7 h-7 text-gold" />}
+            title="The Score"
+            description="Your personal music library • Create playlists • Stream your tracks anywhere"
+            actionText="Open Score"
+            colorScheme="gold"
+            tooltip="Your personal music player. Organize tracks into playlists and stream your transformation soundtrack."
+            animationIndex={3}
+          />
+
+          {/* ========== 7. DIRECTOR'S JOURNAL ========== */}
+          <ModuleCard
+            onClick={() => setShowJournal(true)}
+            iconImage={iconJournal}
+            icon={null}
+            title="Director's Journal"
+            description="Record your journey • AI insights & accountability tracking"
+            actionText="Open Journal"
+            colorScheme="purple"
+            tooltip="Record your experiences, breakthroughs, and challenges. Get AI-powered feedback on your progress and accountability reports to track your transformation journey."
+            animationIndex={4}
+          />
+
+          {/* ========== 8. EPISODES - Tracker with tasks ========== */}
+          <DashboardEpisodeTracker />
+          {!activeEpisode && (
+            <ModuleCard
+              onClick={() => navigate("/episodes")}
+              icon={<Zap className="w-7 h-7 text-amber-500" />}
+              title="Episodes & Challenges"
+              description="Tactical sprints • Active episodes • Adversity training • XP rewards"
+              actionText="View Episodes"
+              colorScheme="amber"
+              tooltip="Create and manage episodes (short-term sprints), track active episodes, and train through adversity challenges."
+              animationIndex={5}
+            />
+          )}
+
+          {/* ========== BELOW: SECONDARY MODULES ========== */}
+
+          {/* Push Notifications Banner */}
+          <EnableNotificationsBanner className="animate-slide-up" />
+
+          {/* Production Status */}
+          <div className="animate-fade-in">
+            <ProductionStatus currentAct={currentAct} dayNumber={dayNumber} />
+          </div>
+
+          {/* Streak Banner */}
+          <div className="animate-slide-up">
+            <StreakBanner 
+              streak={currentStreak} 
+              bestStreak={bestStreak} 
+              lastActiveDate={lastActivityDate} 
+              daysInactive={daysInactive}
+              onKutReset={() => setShowCutReset(true)} 
+            />
+          </div>
+
+          {/* DEFINITE CHIEF AIM CREATOR */}
           <button
             onClick={() => setShowChiefAimWizard(true)}
             className={`w-full glass-card p-5 sm:p-6 cinematic-border group transition-all duration-500 text-left relative overflow-hidden animate-fade-in ${
@@ -447,33 +492,24 @@ const Index = () => {
               boxShadow: chiefAimComplete 
                 ? '0 0 20px rgba(16, 185, 129, 0.1)' 
                 : '0 0 25px rgba(212, 175, 55, 0.15), inset 0 0 40px rgba(212, 175, 55, 0.05)',
-              animationDelay: '0.1s',
             }}
           >
-            {/* Holographic scan lines */}
             <div className="absolute inset-0 opacity-20">
               <div className="absolute inset-0 bg-[linear-gradient(transparent_50%,rgba(212,175,55,0.03)_50%)] bg-[length:100%_4px]" />
             </div>
-            
-            {/* Animated glow border */}
             <div className={`absolute inset-0 rounded-lg transition-opacity duration-500 ${
               chiefAimComplete ? 'opacity-0' : 'opacity-100'
             }`} style={{
               background: 'linear-gradient(90deg, transparent, rgba(212,175,55,0.2), transparent)',
               animation: 'shimmer 2s ease-in-out infinite',
             }} />
-
-            {/* Animated background */}
             <div className={`absolute inset-0 transition-opacity duration-500 ${
               chiefAimComplete 
                 ? 'bg-gradient-to-r from-emerald-500/5 via-transparent to-emerald-500/5 opacity-0 group-hover:opacity-100' 
                 : 'bg-gradient-to-r from-gold/5 via-transparent to-gold/5 opacity-50 group-hover:opacity-100'
             }`} />
-            
-            {/* Floating particles */}
             <Sparkles className="absolute top-3 right-8 w-3 h-3 text-gold/40 animate-pulse" />
             <Sparkles className="absolute bottom-4 right-16 w-2 h-2 text-gold/30 animate-pulse" style={{ animationDelay: '0.5s' }} />
-            
             <div className="flex items-center gap-3 sm:gap-4 relative z-10">
               <div className={`w-12 h-12 sm:w-14 sm:h-14 rounded-xl flex items-center justify-center transition-all duration-300 overflow-hidden ${
                 chiefAimComplete 
@@ -511,22 +547,7 @@ const Index = () => {
             </div>
           </button>
 
-          {/* ========== DIRECTOR RADIO (Under Anthem) ========== */}
-          <DirectorRadioCard />
-
-          {/* ========== THE SCORE (Under Radio) ========== */}
-          <ModuleCard
-            onClick={() => navigate("/score")}
-            icon={<Music className="w-7 h-7 text-gold" />}
-            title="The Score"
-            description="Your personal music library • Create playlists • Stream your tracks anywhere"
-            actionText="Open Score"
-            colorScheme="gold"
-            tooltip="Your personal music player. Organize tracks into playlists and stream your transformation soundtrack."
-            animationIndex={3}
-          />
-
-          {/* ========== 2. CHARACTER BUILDER ========== */}
+          {/* CHARACTER BUILDER */}
           <ModuleCard
             onClick={() => navigate("/character")}
             iconImage={iconCharacter}
@@ -536,22 +557,22 @@ const Index = () => {
             actionText="Build Character"
             colorScheme="cyan"
             tooltip="Discover your Director archetype, define required character traits, and track daily alignment. Build the identity needed to achieve your Chief Aim."
-            animationIndex={1}
+            animationIndex={6}
           />
 
-           {/* ========== 3. PSYCHO CINEMATIC MOVIE STUDIO (Consolidated) ========== */}
-           <MovieStudioModule
-             onOpenEditBay={() => {
-               setEditBayInitialPrompt(undefined);
-               setEditBaySceneContext(undefined);
-               setShowEditBay(true);
-             }}
-             onOpenMovieVault={() => setShowMovieVault(true)}
-             onOpenStoryboard={() => setShowStoryboardWizard(true)}
-             className="animate-fade-in"
+          {/* MOVIE STUDIO */}
+          <MovieStudioModule
+            onOpenEditBay={() => {
+              setEditBayInitialPrompt(undefined);
+              setEditBaySceneContext(undefined);
+              setShowEditBay(true);
+            }}
+            onOpenMovieVault={() => setShowMovieVault(true)}
+            onOpenStoryboard={() => setShowStoryboardWizard(true)}
+            className="animate-fade-in"
           />
 
-          {/* ========== 8. ACTION EXECUTION ========== */}
+          {/* ACTION EXECUTION */}
           <ModuleCard
             onClick={() => navigate("/actions")}
             iconImage={iconActions}
@@ -564,37 +585,7 @@ const Index = () => {
             animationIndex={7}
           />
 
-          {/* ========== 9. DIRECTOR'S JOURNAL ========== */}
-          <ModuleCard
-            onClick={() => setShowJournal(true)}
-            iconImage={iconJournal}
-            icon={null}
-            title="Director's Journal"
-            description="Record your journey • AI insights & accountability tracking"
-            actionText="Open Journal"
-            colorScheme="purple"
-            tooltip="Record your experiences, breakthroughs, and challenges. Get AI-powered feedback on your progress and accountability reports to track your transformation journey."
-            animationIndex={8}
-          />
-
-           {/* ========== 10. EPISODES - Collapsible tracker with tasks ========== */}
-           <DashboardEpisodeTracker />
-
-           {/* Fallback: if no active episode, show a simple module card to navigate */}
-           {!activeEpisode && (
-             <ModuleCard
-               onClick={() => navigate("/episodes")}
-               icon={<Zap className="w-7 h-7 text-amber-500" />}
-               title="Episodes & Challenges"
-               description="Tactical sprints • Active episodes • Adversity training • XP rewards"
-               actionText="View Episodes"
-               colorScheme="amber"
-               tooltip="Create and manage episodes (short-term sprints), track active episodes, and train through adversity challenges."
-               animationIndex={9}
-             />
-           )}
-
-          {/* ========== 11. KUT / RESET ========== */}
+          {/* KUT / RESET */}
           <ModuleCard
             onClick={() => setShowCutReset(true)}
             icon={<XCircle className="w-7 h-7 text-red-500" />}
@@ -603,13 +594,13 @@ const Index = () => {
             actionText="KUT Now"
             colorScheme="red"
             tooltip="When old patterns show up, use the KUT technique to reset your nervous system and return to your Director's Chair."
-            animationIndex={10}
+            animationIndex={8}
           />
 
-          {/* ========== 12. FEATURED ARTIST/DIRECTOR BANNER ========== */}
+          {/* FEATURED ARTIST BANNER */}
           <FeaturedArtistBanner />
 
-          {/* ========== 14. SHARE YOUR STORY ========== */}
+          {/* SHARE YOUR STORY */}
           <ModuleCard
             onClick={() => setShowTestimonialDialog(true)}
             icon={<MessageSquareHeart className="w-7 h-7 text-emerald-400" />}
@@ -617,7 +608,7 @@ const Index = () => {
             description="Record a testimonial • Inspire other directors • Get featured on the landing page"
             actionText="Share"
             colorScheme="emerald"
-             animationIndex={11}
+            animationIndex={9}
           />
         </div>
       </main>
