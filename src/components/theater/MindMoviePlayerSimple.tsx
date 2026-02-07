@@ -9,13 +9,13 @@ import { cn } from "@/lib/utils";
 import { Loader2, Play } from "lucide-react";
 
 /**
- * MindMoviePlayerSimple – iOS-STABLE VERSION (v2)
+ * MindMoviePlayerSimple – iOS-STABLE VERSION (v3)
  *
- * Key stability features:
- * - No crossOrigin attribute (prevents iOS CORS failures on public storage URLs)
- * - Stable useEffect via callback refs (no handler functions in dependency array)
- * - Deferred cleanup to avoid React StrictMode issues
- * - Auto-retry for transient iOS decode/network errors
+ * Stability features:
+ * - NO crossOrigin attribute (prevents iOS CORS failures on public storage URLs)
+ * - Stable useEffect via callback refs (no handler functions in dep array)
+ * - Deferred cleanup to avoid React StrictMode double-mount issues
+ * - Auto-retry (2x) for transient iOS decode/network errors
  * - Tap-to-play fallback for autoplay-blocked scenarios
  */
 
