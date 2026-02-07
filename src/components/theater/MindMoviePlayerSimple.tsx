@@ -186,8 +186,12 @@ export const MindMoviePlayer = forwardRef<MindMoviePlayerHandle, MindMoviePlayer
         video.removeEventListener("seeking", handleSeeking);
         video.removeEventListener("timeupdate", handleTimeUpdate);
         
-        // Deferred cleanup to survive React StrictMode
+        // Only do hard cleanup if component is truly unmounting
+        // (mountedRef stays false). This prevents React StrictMode
+        // from destroying the source after an immediate remount.
+        const capturedMountedRef = mountedRef;
         setTimeout(() => {
+          if (capturedMountedRef.current) return; // Remounted — do nothing
           try {
             video.pause();
             video.removeAttribute('src');
@@ -195,7 +199,7 @@ export const MindMoviePlayer = forwardRef<MindMoviePlayerHandle, MindMoviePlayer
           } catch {
             // Ignore cleanup errors
           }
-        }, 100);
+        }, 150);
       };
     }, [videoSrc, handleEnded, handleError, handlePause, handlePlay, handleSeeking, handleTimeUpdate, disableSeeking]);
 
