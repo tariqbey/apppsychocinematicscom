@@ -325,13 +325,11 @@ const Index = () => {
           />
 
           {/* ========== 2. ANIMATED FIRE COUNTDOWN ========== */}
-          {chiefAim.byWhen && (
-            <ChiefAimCountdown
-              byWhen={chiefAim.byWhen}
-              whatSummary={chiefAim.what ? chiefAim.what.slice(0, 100) : undefined}
-              className="animate-fade-in"
-            />
-          )}
+          <ChiefAimCountdown
+            byWhen={chiefAim.byWhen}
+            whatSummary={chiefAim.what ? chiefAim.what.slice(0, 100) : undefined}
+            className="animate-fade-in"
+          />
 
           {/* ========== 3. DAILY RITUAL CHECKLIST ========== */}
           <DailyRitualChecklist
