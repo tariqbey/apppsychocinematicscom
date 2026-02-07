@@ -4,8 +4,10 @@ import {
   useRef,
   useEffect,
   useCallback,
+  useState,
 } from "react";
 import { cn } from "@/lib/utils";
+import { Loader2, Play } from "lucide-react";
 
 /**
  * MindMoviePlayerSimple - ULTRA STABLE VERSION
@@ -52,12 +54,15 @@ export const MindMoviePlayer = forwardRef<MindMoviePlayerHandle, MindMoviePlayer
       onError,
       className,
     },
-    ref
+     ref
   ) => {
     const videoRef = useRef<HTMLVideoElement>(null);
     const completedRef = useRef(false);
     const mountedRef = useRef(true);
     const lastPlayPositionRef = useRef(0);
+    const [needsTap, setNeedsTap] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
+    const retryCountRef = useRef(0);
 
     // Use direct URL for maximum compatibility
     const videoSrc = src || "";
@@ -67,8 +72,10 @@ export const MindMoviePlayer = forwardRef<MindMoviePlayerHandle, MindMoviePlayer
       play: async () => {
         try {
           await videoRef.current?.play();
+          setNeedsTap(false);
         } catch {
-          // Ignore autoplay errors
+          // iOS often blocks autoplay — show tap-to-play
+          setNeedsTap(true);
         }
       },
       pause: () => videoRef.current?.pause(),
@@ -77,7 +84,7 @@ export const MindMoviePlayer = forwardRef<MindMoviePlayerHandle, MindMoviePlayer
         if (v) {
           completedRef.current = false;
           v.currentTime = 0;
-          v.play().catch(() => {});
+          v.play().catch(() => setNeedsTap(true));
         }
       },
       getVideoElement: () => videoRef.current,
@@ -102,12 +109,27 @@ export const MindMoviePlayer = forwardRef<MindMoviePlayerHandle, MindMoviePlayer
       onComplete?.(Math.floor(duration));
     }, [onComplete]);
 
-    // Handle video error
+    // Handle video error with iOS retry
     const handleError = useCallback(() => {
       if (!mountedRef.current) return;
       const video = videoRef.current;
+      const code = video?.error?.code;
       const errorMsg = video?.error?.message || "Video playback error";
-      console.error('[MindMoviePlayer] Error:', video?.error?.code, errorMsg);
+      console.error('[MindMoviePlayer] Error:', code, errorMsg);
+      
+      // iOS often throws transient MEDIA_ERR_DECODE (3) or MEDIA_ERR_NETWORK (2)
+      // Retry up to 2 times by reloading the source
+      if (retryCountRef.current < 2 && (code === 2 || code === 3)) {
+        retryCountRef.current += 1;
+        console.log(`[MindMoviePlayer] Retry ${retryCountRef.current}/2`);
+        setTimeout(() => {
+          if (!mountedRef.current || !video) return;
+          video.load();
+        }, 500);
+        return;
+      }
+      
+      setIsLoading(false);
       onError?.(errorMsg);
     }, [onError]);
 
@@ -126,6 +148,8 @@ export const MindMoviePlayer = forwardRef<MindMoviePlayerHandle, MindMoviePlayer
       if (!mountedRef.current || !restartOnInterrupt) return;
       const video = videoRef.current;
       if (!video || completedRef.current) return;
+      
+      setNeedsTap(false);
       
       // If video was playing and got interrupted (position changed), restart
       if (lastPlayPositionRef.current > 0 && video.currentTime > 0.5) {
@@ -156,11 +180,31 @@ export const MindMoviePlayer = forwardRef<MindMoviePlayerHandle, MindMoviePlayer
       }
     }, []);
 
+    const handleCanPlay = useCallback(() => {
+      setIsLoading(false);
+      retryCountRef.current = 0;
+    }, []);
+
+    // Tap-to-play for iOS
+    const handleTapToPlay = useCallback(() => {
+      const video = videoRef.current;
+      if (video) {
+        video.play().then(() => {
+          setNeedsTap(false);
+        }).catch(() => {
+          // Still blocked — keep tap overlay
+        });
+      }
+    }, []);
+
     // Setup and cleanup
     useEffect(() => {
       mountedRef.current = true;
       completedRef.current = false;
       lastPlayPositionRef.current = 0;
+      retryCountRef.current = 0;
+      setIsLoading(true);
+      setNeedsTap(false);
       
       const video = videoRef.current;
       if (!video) return;
@@ -170,6 +214,7 @@ export const MindMoviePlayer = forwardRef<MindMoviePlayerHandle, MindMoviePlayer
       video.addEventListener("error", handleError);
       video.addEventListener("pause", handlePause);
       video.addEventListener("play", handlePlay);
+      video.addEventListener("canplay", handleCanPlay);
       
       if (disableSeeking) {
         video.addEventListener("seeking", handleSeeking);
@@ -183,15 +228,14 @@ export const MindMoviePlayer = forwardRef<MindMoviePlayerHandle, MindMoviePlayer
         video.removeEventListener("error", handleError);
         video.removeEventListener("pause", handlePause);
         video.removeEventListener("play", handlePlay);
+        video.removeEventListener("canplay", handleCanPlay);
         video.removeEventListener("seeking", handleSeeking);
         video.removeEventListener("timeupdate", handleTimeUpdate);
         
-        // Only do hard cleanup if component is truly unmounting
-        // (mountedRef stays false). This prevents React StrictMode
-        // from destroying the source after an immediate remount.
-        const capturedMountedRef = mountedRef;
+        // Deferred cleanup — skip if StrictMode remounted us
+        const ref = mountedRef;
         setTimeout(() => {
-          if (capturedMountedRef.current) return; // Remounted — do nothing
+          if (ref.current) return;
           try {
             video.pause();
             video.removeAttribute('src');
@@ -201,7 +245,7 @@ export const MindMoviePlayer = forwardRef<MindMoviePlayerHandle, MindMoviePlayer
           }
         }, 150);
       };
-    }, [videoSrc, handleEnded, handleError, handlePause, handlePlay, handleSeeking, handleTimeUpdate, disableSeeking]);
+    }, [videoSrc, handleEnded, handleError, handlePause, handlePlay, handleSeeking, handleTimeUpdate, handleCanPlay, disableSeeking]);
 
     return (
       <div className={cn("relative w-full h-full bg-black", className)}>
@@ -211,10 +255,29 @@ export const MindMoviePlayer = forwardRef<MindMoviePlayerHandle, MindMoviePlayer
           className="theater-video w-full h-full object-contain"
           controls
           playsInline
-          preload="metadata"
-          // iOS-specific attributes for stability
-          webkit-playsinline="true"
+          preload="auto"
+          crossOrigin="anonymous"
         />
+        
+        {/* Loading indicator */}
+        {isLoading && videoSrc && (
+          <div className="absolute inset-0 flex items-center justify-center bg-black/60 pointer-events-none">
+            <Loader2 className="w-10 h-10 text-gold animate-spin" />
+          </div>
+        )}
+        
+        {/* iOS tap-to-play overlay */}
+        {needsTap && (
+          <button
+            onClick={handleTapToPlay}
+            className="absolute inset-0 flex items-center justify-center bg-black/50 z-10 cursor-pointer"
+            aria-label="Tap to play"
+          >
+            <div className="w-20 h-20 rounded-full bg-gold/90 flex items-center justify-center shadow-lg">
+              <Play className="w-10 h-10 text-black ml-1" />
+            </div>
+          </button>
+        )}
       </div>
     );
   }
