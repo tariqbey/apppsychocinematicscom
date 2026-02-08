@@ -1,35 +1,55 @@
 
 
-## Fix Video Player for iOS
+## Rebuild Video Player for iOS Stability
 
-### Root Cause
+### Problem
 
-The video player has **two critical bugs** preventing playback on iOS:
+The video player crashes on iOS when rotating to landscape because:
 
-1. **`crossOrigin="anonymous"` kills iOS video loading** - Your videos are served from public Supabase storage URLs (e.g., `https://gawcojyqqfskewuxxqhm.supabase.co/storage/v1/object/public/mind-movies/...`). Setting `crossOrigin="anonymous"` on the `<video>` tag forces iOS Safari to make a CORS preflight request. Supabase public storage doesn't always return the CORS headers iOS expects, so Safari **silently refuses to load the video**. Since these are same-origin public URLs that don't need CORS, this attribute must be removed.
+1. **CSS compositor crash**: The video container in TheaterView uses `rounded-lg`, `overflow-hidden`, and `aspect-video` CSS. When iOS Safari rotates, it triggers a full GPU compositor recalculation on the video layer. Clipping a hardware-decoded video surface with border-radius causes WebKit to crash.
 
-2. **Unstable `useEffect` dependency array causes infinite re-renders** - The effect that sets up video event listeners depends on all the `useCallback` handlers (`handleEnded`, `handleError`, etc.). On every render cycle, these callbacks can be recreated if their own dependencies shift, which causes the effect to tear down and re-run -- destroying the video source mid-load. On desktop this is fast enough to recover; on iOS it causes the video to never finish loading.
+2. **Cleanup kills the video mid-rotation**: The orientation change triggers React re-renders. The `useEffect` cleanup runs `video.removeAttribute("src"); video.load()` which destroys the active decoder pipeline. Even with the 150ms delay, this races against iOS's orientation animation.
 
-### Fix (2 changes in 1 file)
+3. **TheaterView unmount cleanup is too aggressive**: The parent `TheaterView` also queries `document.querySelectorAll('video.theater-video')` on unmount and force-destroys all video elements, which can fire during rotation-triggered re-renders.
 
-**File: `src/components/theater/MindMoviePlayerSimple.tsx`**
+### Solution: Complete Player Rebuild
 
-1. **Remove `crossOrigin="anonymous"`** from the `<video>` tag. Public storage URLs don't need it, and it's the primary cause of iOS load failure.
+Replace the current player with an ultra-minimal implementation that avoids all known iOS crash triggers.
 
-2. **Stabilize the `useEffect`** by removing callback functions from the dependency array. Instead, use refs for the callbacks so the effect only re-runs when `videoSrc` or `disableSeeking` changes -- not on every render. This prevents the video element from being torn down and rebuilt while it's trying to buffer.
+**File: `src/components/theater/MindMoviePlayerSimple.tsx`** - Full rewrite
+
+Key changes:
+- **No cleanup that destroys the source**: Remove `video.removeAttribute("src"); video.load()` from the effect cleanup entirely. Let the browser garbage-collect the element naturally when the component unmounts. This prevents the orientation-change crash.
+- **Orientation-aware guard**: Add a `ResizeObserver` or `orientationchange` listener that pauses event processing during rotation, preventing state thrash.
+- **No CSS clipping on the video element**: The `<video>` tag itself gets zero border-radius and no overflow clipping. The parent container can style around it.
+- **`webkit-playsinline` attribute**: Explicitly add the legacy WebKit attribute alongside `playsInline` for older iOS versions.
+- **Simplified retry**: Keep the 2-attempt retry for network/decode errors but with a longer 1-second delay to give iOS more recovery time.
+
+**File: `src/components/theater/TheaterView.tsx`** - Container fixes
+
+Key changes:
+- Remove `overflow-hidden` and `rounded-lg` from the video container div for ALL devices (not just iOS standalone). These CSS properties are the primary crash trigger.
+- Remove the aggressive unmount cleanup that queries and destroys all `video.theater-video` elements from the DOM. Replace with a simple `playerRef.current?.pause()`.
+- Remove `video.removeAttribute("src"); video.load()` from `stopAllMedia` -- just pause instead.
 
 ### Technical Detail
 
 ```text
-Before (broken on iOS):
-  <video crossOrigin="anonymous" ... />
-  useEffect(() => { ... }, [videoSrc, handleEnded, handleError, handlePause, handlePlay, ...])
+Player changes (MindMoviePlayerSimple.tsx):
+  - Remove deferred cleanup (removeAttribute src + load)
+  - Add webkit-playsinline attribute
+  - Keep stable refs pattern (already correct)
+  - Keep auto-retry with longer delay (1s instead of 500ms)
+  - Remove theater-video className (stops TheaterView DOM query from targeting it)
 
-After (stable):
-  <video ... />  (no crossOrigin)
-  useEffect(() => { ... }, [videoSrc, disableSeeking])
-  // callbacks accessed via stable refs
+Container changes (TheaterView.tsx):
+  - Video container: remove overflow-hidden and border-radius
+  - stopAllMedia: just video.pause(), no source destruction
+  - Unmount cleanup: just pause, no DOM querySelectorAll destruction
 ```
 
-This fix applies to all surfaces using the player: Theater Mode, Movie Preview Modal, and Episode Movie Preview -- since they all import from the same component.
+### Files Modified
+
+1. `src/components/theater/MindMoviePlayerSimple.tsx` -- Rebuilt player with no aggressive cleanup
+2. `src/components/theater/TheaterView.tsx` -- Safe container CSS and cleanup
 
