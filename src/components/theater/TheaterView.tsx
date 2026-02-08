@@ -69,21 +69,13 @@ export const TheaterView = ({ onClose }: TheaterViewProps) => {
      ? selectedEpisode.movie_url 
      : mindMovieUrl;
 
-  // Force stop all media on close
+  // Force stop all media on close — safe pause only, no source destruction
   const stopAllMedia = useCallback(() => {
-    // Stop the player
-    const video = playerRef.current?.getVideoElement?.();
-    if (video) {
-      try {
-        video.pause();
-        video.removeAttribute("src");
-        video.load();
-      } catch {
-        // Ignore
-      }
+    try {
+      playerRef.current?.pause();
+    } catch {
+      // Ignore
     }
-    
-    // Stop global audio
     globalAudio?.stopAudio();
   }, [globalAudio]);
 
@@ -96,21 +88,6 @@ export const TheaterView = ({ onClose }: TheaterViewProps) => {
   // Stop background audio when Theater opens
   useEffect(() => {
     globalAudio?.stopAudio();
-    
-    return () => {
-      // Find and stop any orphaned video elements on true unmount
-      const videos = document.querySelectorAll('video.theater-video');
-      videos.forEach((v) => {
-        try {
-          const video = v as HTMLVideoElement;
-          video.pause();
-          video.removeAttribute('src');
-          video.load();
-        } catch {
-          // Ignore
-        }
-      });
-    };
   }, [globalAudio]);
 
   const isIOS = useMemo(() => {
@@ -336,12 +313,7 @@ export const TheaterView = ({ onClose }: TheaterViewProps) => {
           )}
         >
           <div
-            className={cn(
-              "theater-player w-full h-full sm:h-auto sm:max-w-5xl sm:aspect-video bg-card border border-border relative",
-              isIOSStandalone
-                ? "rounded-none border-0 overflow-visible"
-                : "rounded-lg sm:rounded-xl overflow-hidden"
-            )}
+            className="theater-player w-full h-full sm:h-auto sm:max-w-5xl sm:aspect-video bg-card border border-border relative"
           >
             {playbackSrc ? (
               <>

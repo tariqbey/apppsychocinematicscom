@@ -9,14 +9,16 @@ import { cn } from "@/lib/utils";
 import { Loader2, Play } from "lucide-react";
 
 /**
- * MindMoviePlayerSimple – iOS-STABLE VERSION (v3)
+ * MindMoviePlayerSimple – iOS-STABLE REBUILD (v4)
  *
- * Stability features:
- * - NO crossOrigin attribute (prevents iOS CORS failures on public storage URLs)
- * - Stable useEffect via callback refs (no handler functions in dep array)
- * - Deferred cleanup to avoid React StrictMode double-mount issues
- * - Auto-retry (2x) for transient iOS decode/network errors
- * - Tap-to-play fallback for autoplay-blocked scenarios
+ * Key stability principles:
+ * - NO crossOrigin (prevents Safari CORS blocks)
+ * - NO aggressive cleanup (no removeAttribute src / load on unmount)
+ * - NO border-radius or overflow clipping on video element
+ * - webkit-playsinline for legacy iOS
+ * - Orientation-change guard to ignore events during rotation
+ * - Stable refs for all callbacks
+ * - Auto-retry with 1s delay for transient errors
  */
 
 export interface MindMoviePlayerProps {
@@ -55,10 +57,11 @@ export const MindMoviePlayer = forwardRef<MindMoviePlayerHandle, MindMoviePlayer
     const mountedRef = useRef(true);
     const lastPlayPositionRef = useRef(0);
     const retryCountRef = useRef(0);
+    const rotatingRef = useRef(false);
     const [needsTap, setNeedsTap] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
 
-    // Store callbacks in refs so the effect never re-runs due to prop changes
+    // Stable callback refs
     const onCompleteRef = useRef(onComplete);
     const onErrorRef = useRef(onError);
     const restartOnInterruptRef = useRef(restartOnInterrupt);
@@ -71,7 +74,6 @@ export const MindMoviePlayer = forwardRef<MindMoviePlayerHandle, MindMoviePlayer
 
     const videoSrc = src || "";
 
-    // Expose minimal API
     useImperativeHandle(ref, () => ({
       play: async () => {
         try {
@@ -93,7 +95,6 @@ export const MindMoviePlayer = forwardRef<MindMoviePlayerHandle, MindMoviePlayer
       getVideoElement: () => videoRef.current,
     }));
 
-    // Tap-to-play for iOS
     const handleTapToPlay = () => {
       const video = videoRef.current;
       if (video) {
@@ -101,7 +102,31 @@ export const MindMoviePlayer = forwardRef<MindMoviePlayerHandle, MindMoviePlayer
       }
     };
 
-    // Single stable effect — only re-runs when src or disableSeeking changes
+    // Orientation-change guard: ignore video events during rotation
+    useEffect(() => {
+      let timer: ReturnType<typeof setTimeout>;
+
+      const onOrientationChange = () => {
+        rotatingRef.current = true;
+        clearTimeout(timer);
+        // Give iOS 800ms to settle after rotation
+        timer = setTimeout(() => {
+          rotatingRef.current = false;
+        }, 800);
+      };
+
+      window.addEventListener("orientationchange", onOrientationChange);
+      // Also listen for resize as a fallback
+      window.addEventListener("resize", onOrientationChange);
+
+      return () => {
+        clearTimeout(timer);
+        window.removeEventListener("orientationchange", onOrientationChange);
+        window.removeEventListener("resize", onOrientationChange);
+      };
+    }, []);
+
+    // Main video setup effect
     useEffect(() => {
       mountedRef.current = true;
       completedRef.current = false;
@@ -114,7 +139,7 @@ export const MindMoviePlayer = forwardRef<MindMoviePlayerHandle, MindMoviePlayer
       if (!video || !videoSrc) return;
 
       const onEnded = () => {
-        if (!mountedRef.current || completedRef.current) return;
+        if (!mountedRef.current || completedRef.current || rotatingRef.current) return;
         const duration = video.duration || 0;
         const currentTime = video.currentTime || 0;
         if (duration > 0 && Math.abs(duration - currentTime) > 2) return;
@@ -123,7 +148,7 @@ export const MindMoviePlayer = forwardRef<MindMoviePlayerHandle, MindMoviePlayer
       };
 
       const onErrorEvt = () => {
-        if (!mountedRef.current) return;
+        if (!mountedRef.current || rotatingRef.current) return;
         const code = video.error?.code;
         const msg = video.error?.message || "Video playback error";
         console.error("[MindMoviePlayer] Error:", code, msg);
@@ -134,7 +159,7 @@ export const MindMoviePlayer = forwardRef<MindMoviePlayerHandle, MindMoviePlayer
           setTimeout(() => {
             if (!mountedRef.current) return;
             video.load();
-          }, 500);
+          }, 1000);
           return;
         }
         setIsLoading(false);
@@ -142,12 +167,12 @@ export const MindMoviePlayer = forwardRef<MindMoviePlayerHandle, MindMoviePlayer
       };
 
       const onPause = () => {
-        if (!mountedRef.current || !restartOnInterruptRef.current || completedRef.current) return;
+        if (!mountedRef.current || rotatingRef.current || !restartOnInterruptRef.current || completedRef.current) return;
         lastPlayPositionRef.current = video.currentTime;
       };
 
       const onPlay = () => {
-        if (!mountedRef.current) return;
+        if (!mountedRef.current || rotatingRef.current) return;
         setNeedsTap(false);
         if (!restartOnInterruptRef.current || completedRef.current) return;
         if (lastPlayPositionRef.current > 0 && video.currentTime > 0.5) {
@@ -162,7 +187,7 @@ export const MindMoviePlayer = forwardRef<MindMoviePlayerHandle, MindMoviePlayer
       };
 
       const onSeeking = () => {
-        if (!mountedRef.current || !disableSeekingRef.current) return;
+        if (!mountedRef.current || rotatingRef.current || !disableSeekingRef.current) return;
         const diff = Math.abs(video.currentTime - lastPlayPositionRef.current);
         if (diff > 2) {
           video.currentTime = lastPlayPositionRef.current;
@@ -198,29 +223,28 @@ export const MindMoviePlayer = forwardRef<MindMoviePlayerHandle, MindMoviePlayer
         video.removeEventListener("seeking", onSeeking);
         video.removeEventListener("timeupdate", onTimeUpdate);
 
-        // Deferred cleanup to survive StrictMode double-mount
-        const ref = mountedRef;
-        setTimeout(() => {
-          if (ref.current) return;
-          try {
-            video.pause();
-            video.removeAttribute("src");
-            video.load();
-          } catch {
-            // ignore
-          }
-        }, 150);
+        // SAFE cleanup: just pause. Do NOT destroy the source.
+        // Let the browser garbage-collect naturally on unmount.
+        try {
+          video.pause();
+        } catch {
+          // ignore
+        }
       };
     }, [videoSrc, disableSeeking]);
 
     return (
       <div className={cn("relative w-full h-full bg-black", className)}>
+        {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
         <video
           ref={videoRef}
           src={videoSrc}
-          className="theater-video w-full h-full object-contain"
+          className="w-full h-full object-contain"
+          style={{ borderRadius: 0 }}
           controls
           playsInline
+          // @ts-ignore – legacy iOS attribute
+          webkit-playsinline=""
           preload="auto"
         />
 
