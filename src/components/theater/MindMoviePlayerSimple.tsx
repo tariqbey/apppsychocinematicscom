@@ -4,21 +4,19 @@ import {
   useRef,
   useEffect,
   useState,
+  useMemo,
 } from "react";
 import { cn } from "@/lib/utils";
 import { Loader2, Play } from "lucide-react";
 
 /**
- * MindMoviePlayerSimple – iOS-STABLE REBUILD (v4)
+ * MindMoviePlayerSimple – iOS NATIVE HANDOFF (v5)
  *
- * Key stability principles:
- * - NO crossOrigin (prevents Safari CORS blocks)
- * - NO aggressive cleanup (no removeAttribute src / load on unmount)
- * - NO border-radius or overflow clipping on video element
- * - webkit-playsinline for legacy iOS
- * - Orientation-change guard to ignore events during rotation
- * - Stable refs for all callbacks
- * - Auto-retry with 1s delay for transient errors
+ * On iOS: removes playsInline so tapping play opens Safari's native
+ * fullscreen player. This avoids all GPU compositor crashes during
+ * rotation. Events (ended, error, etc.) still fire on the <video> element.
+ *
+ * On desktop/Android: unchanged inline player with controls.
  */
 
 export interface MindMoviePlayerProps {
@@ -57,7 +55,6 @@ export const MindMoviePlayer = forwardRef<MindMoviePlayerHandle, MindMoviePlayer
     const mountedRef = useRef(true);
     const lastPlayPositionRef = useRef(0);
     const retryCountRef = useRef(0);
-    const rotatingRef = useRef(false);
     const [needsTap, setNeedsTap] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
 
@@ -74,14 +71,38 @@ export const MindMoviePlayer = forwardRef<MindMoviePlayerHandle, MindMoviePlayer
 
     const videoSrc = src || "";
 
+    const isIOS = useMemo(() => {
+      if (typeof navigator === "undefined") return false;
+      return (
+        /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+        (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)
+      );
+    }, []);
+
+    /**
+     * On iOS, trigger native fullscreen playback.
+     * webkitEnterFullscreen() hands off to Safari's native player
+     * which handles rotation, hardware decoding, and fullscreen perfectly.
+     */
+    const playWithNativeHandoff = async (video: HTMLVideoElement) => {
+      try {
+        // On iOS, use the native fullscreen player
+        if (isIOS && (video as any).webkitEnterFullscreen) {
+          await video.play();
+          (video as any).webkitEnterFullscreen();
+        } else {
+          await video.play();
+        }
+        setNeedsTap(false);
+      } catch {
+        setNeedsTap(true);
+      }
+    };
+
     useImperativeHandle(ref, () => ({
       play: async () => {
-        try {
-          await videoRef.current?.play();
-          setNeedsTap(false);
-        } catch {
-          setNeedsTap(true);
-        }
+        const video = videoRef.current;
+        if (video) await playWithNativeHandoff(video);
       },
       pause: () => videoRef.current?.pause(),
       restart: () => {
@@ -89,7 +110,7 @@ export const MindMoviePlayer = forwardRef<MindMoviePlayerHandle, MindMoviePlayer
         if (v) {
           completedRef.current = false;
           v.currentTime = 0;
-          v.play().catch(() => setNeedsTap(true));
+          playWithNativeHandoff(v);
         }
       },
       getVideoElement: () => videoRef.current,
@@ -98,33 +119,9 @@ export const MindMoviePlayer = forwardRef<MindMoviePlayerHandle, MindMoviePlayer
     const handleTapToPlay = () => {
       const video = videoRef.current;
       if (video) {
-        video.play().then(() => setNeedsTap(false)).catch(() => {});
+        playWithNativeHandoff(video);
       }
     };
-
-    // Orientation-change guard: ignore video events during rotation
-    useEffect(() => {
-      let timer: ReturnType<typeof setTimeout>;
-
-      const onOrientationChange = () => {
-        rotatingRef.current = true;
-        clearTimeout(timer);
-        // Give iOS 800ms to settle after rotation
-        timer = setTimeout(() => {
-          rotatingRef.current = false;
-        }, 800);
-      };
-
-      window.addEventListener("orientationchange", onOrientationChange);
-      // Also listen for resize as a fallback
-      window.addEventListener("resize", onOrientationChange);
-
-      return () => {
-        clearTimeout(timer);
-        window.removeEventListener("orientationchange", onOrientationChange);
-        window.removeEventListener("resize", onOrientationChange);
-      };
-    }, []);
 
     // Main video setup effect
     useEffect(() => {
@@ -139,7 +136,7 @@ export const MindMoviePlayer = forwardRef<MindMoviePlayerHandle, MindMoviePlayer
       if (!video || !videoSrc) return;
 
       const onEnded = () => {
-        if (!mountedRef.current || completedRef.current || rotatingRef.current) return;
+        if (!mountedRef.current || completedRef.current) return;
         const duration = video.duration || 0;
         const currentTime = video.currentTime || 0;
         if (duration > 0 && Math.abs(duration - currentTime) > 2) return;
@@ -148,7 +145,7 @@ export const MindMoviePlayer = forwardRef<MindMoviePlayerHandle, MindMoviePlayer
       };
 
       const onErrorEvt = () => {
-        if (!mountedRef.current || rotatingRef.current) return;
+        if (!mountedRef.current) return;
         const code = video.error?.code;
         const msg = video.error?.message || "Video playback error";
         console.error("[MindMoviePlayer] Error:", code, msg);
@@ -167,12 +164,12 @@ export const MindMoviePlayer = forwardRef<MindMoviePlayerHandle, MindMoviePlayer
       };
 
       const onPause = () => {
-        if (!mountedRef.current || rotatingRef.current || !restartOnInterruptRef.current || completedRef.current) return;
+        if (!mountedRef.current || !restartOnInterruptRef.current || completedRef.current) return;
         lastPlayPositionRef.current = video.currentTime;
       };
 
       const onPlay = () => {
-        if (!mountedRef.current || rotatingRef.current) return;
+        if (!mountedRef.current) return;
         setNeedsTap(false);
         if (!restartOnInterruptRef.current || completedRef.current) return;
         if (lastPlayPositionRef.current > 0 && video.currentTime > 0.5) {
@@ -187,7 +184,7 @@ export const MindMoviePlayer = forwardRef<MindMoviePlayerHandle, MindMoviePlayer
       };
 
       const onSeeking = () => {
-        if (!mountedRef.current || rotatingRef.current || !disableSeekingRef.current) return;
+        if (!mountedRef.current || !disableSeekingRef.current) return;
         const diff = Math.abs(video.currentTime - lastPlayPositionRef.current);
         if (diff > 2) {
           video.currentTime = lastPlayPositionRef.current;
@@ -224,7 +221,6 @@ export const MindMoviePlayer = forwardRef<MindMoviePlayerHandle, MindMoviePlayer
         video.removeEventListener("timeupdate", onTimeUpdate);
 
         // SAFE cleanup: just pause. Do NOT destroy the source.
-        // Let the browser garbage-collect naturally on unmount.
         try {
           video.pause();
         } catch {
@@ -242,9 +238,11 @@ export const MindMoviePlayer = forwardRef<MindMoviePlayerHandle, MindMoviePlayer
           className="w-full h-full object-contain"
           style={{ borderRadius: 0 }}
           controls
-          playsInline
-          // @ts-ignore – legacy iOS attribute
-          webkit-playsinline=""
+          // On iOS: omit playsInline so native player can take over for fullscreen
+          // On desktop/Android: keep playsInline for inline playback
+          {...(!isIOS && { playsInline: true })}
+          // @ts-ignore – legacy iOS attribute (only needed for non-iOS fallback)
+          {...(!isIOS && { "webkit-playsinline": "" })}
           preload="auto"
         />
 

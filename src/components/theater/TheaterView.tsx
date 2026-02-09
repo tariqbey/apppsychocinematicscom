@@ -306,11 +306,7 @@ export const TheaterView = ({ onClose }: TheaterViewProps) => {
 
         {/* Video Player Area */}
         <div
-          className={cn(
-            "flex-1 flex items-center justify-center p-2 sm:p-4 md:p-8 relative",
-            // iOS PWA can crash when video is clipped (rounded + overflow-hidden) during fullscreen/rotation
-            isIOSStandalone ? "overflow-visible" : "overflow-hidden"
-          )}
+          className="flex-1 flex items-center justify-center p-2 sm:p-4 md:p-8 relative overflow-visible"
         >
           <div
             className="theater-player w-full h-full sm:h-auto sm:max-w-5xl sm:aspect-video bg-card border border-border relative"
