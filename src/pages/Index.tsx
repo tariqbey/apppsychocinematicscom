@@ -41,6 +41,7 @@ import { DirectorBanner } from "@/components/dashboard/DirectorBanner";
 import { MovieStudioModule } from "@/components/dashboard/MovieStudioModule";
 import { ChiefAimCountdown } from "@/components/dashboard/ChiefAimCountdown";
 import { DashboardEpisodeTracker } from "@/components/dashboard/DashboardEpisodeTracker";
+import { DefiniteChiefAimCard } from "@/components/dashboard/DefiniteChiefAimCard";
 
 
 // Custom module icons
@@ -331,6 +332,17 @@ const Index = () => {
             className="animate-fade-in"
           />
 
+          {/* ========== 2b. STREAK BANNER (hot/cold) ========== */}
+          <div className="animate-slide-up">
+            <StreakBanner 
+              streak={currentStreak} 
+              bestStreak={bestStreak} 
+              lastActiveDate={lastActivityDate} 
+              daysInactive={daysInactive}
+              onKutReset={() => setShowCutReset(true)} 
+            />
+          </div>
+
           {/* ========== 3. DAILY RITUAL CHECKLIST ========== */}
           <DailyRitualChecklist
             onTheaterClick={() => setShowTheater(true)}
@@ -467,83 +479,44 @@ const Index = () => {
             <ProductionStatus currentAct={currentAct} dayNumber={dayNumber} />
           </div>
 
-          {/* Streak Banner */}
-          <div className="animate-slide-up">
-            <StreakBanner 
-              streak={currentStreak} 
-              bestStreak={bestStreak} 
-              lastActiveDate={lastActivityDate} 
-              daysInactive={daysInactive}
-              onKutReset={() => setShowCutReset(true)} 
+          {/* DEFINITE CHIEF AIM - Shown inline */}
+          <div className="animate-fade-in">
+            <DefiniteChiefAimCard
+              aim={chiefAim}
+              onEdit={() => setShowChiefAimWizard(true)}
+              onAdjust={() => setShowChiefAimAdjust(true)}
+              chiefAimSongUrl={profile?.chief_aim_song_url}
+              onSongListened={async () => {
+                if (!user) return;
+                const today = new Date().toISOString().split('T')[0];
+                const { data: existing } = await supabase
+                  .from("daily_rituals")
+                  .select("id, chief_aim_listened")
+                  .eq("user_id", user.id)
+                  .eq("ritual_date", today)
+                  .maybeSingle();
+                if (existing) {
+                  if (!existing.chief_aim_listened) {
+                    await supabase
+                      .from("daily_rituals")
+                      .update({ script_review: true, chief_aim_listened: true })
+                      .eq("user_id", user.id)
+                      .eq("ritual_date", today);
+                  }
+                } else {
+                  await supabase
+                    .from("daily_rituals")
+                    .insert({
+                      user_id: user.id,
+                      ritual_date: today,
+                      script_review: true,
+                      chief_aim_listened: true,
+                    });
+                }
+                toast.success("Chief Aim ritual complete! 🎵");
+              }}
             />
           </div>
-
-          {/* DEFINITE CHIEF AIM CREATOR */}
-          <button
-            onClick={() => setShowChiefAimWizard(true)}
-            className={`w-full glass-card p-5 sm:p-6 cinematic-border group transition-all duration-500 text-left relative overflow-hidden animate-fade-in ${
-              chiefAimComplete 
-                ? "hover:border-emerald-500/50" 
-                : "border-gold/50 hover:border-gold ring-2 ring-gold/20"
-            }`}
-            style={{ 
-              boxShadow: chiefAimComplete 
-                ? '0 0 20px rgba(16, 185, 129, 0.1)' 
-                : '0 0 25px rgba(212, 175, 55, 0.15), inset 0 0 40px rgba(212, 175, 55, 0.05)',
-            }}
-          >
-            <div className="absolute inset-0 opacity-20">
-              <div className="absolute inset-0 bg-[linear-gradient(transparent_50%,rgba(212,175,55,0.03)_50%)] bg-[length:100%_4px]" />
-            </div>
-            <div className={`absolute inset-0 rounded-lg transition-opacity duration-500 ${
-              chiefAimComplete ? 'opacity-0' : 'opacity-100'
-            }`} style={{
-              background: 'linear-gradient(90deg, transparent, rgba(212,175,55,0.2), transparent)',
-              animation: 'shimmer 2s ease-in-out infinite',
-            }} />
-            <div className={`absolute inset-0 transition-opacity duration-500 ${
-              chiefAimComplete 
-                ? 'bg-gradient-to-r from-emerald-500/5 via-transparent to-emerald-500/5 opacity-0 group-hover:opacity-100' 
-                : 'bg-gradient-to-r from-gold/5 via-transparent to-gold/5 opacity-50 group-hover:opacity-100'
-            }`} />
-            <Sparkles className="absolute top-3 right-8 w-3 h-3 text-gold/40 animate-pulse" />
-            <Sparkles className="absolute bottom-4 right-16 w-2 h-2 text-gold/30 animate-pulse" style={{ animationDelay: '0.5s' }} />
-            <div className="flex items-center gap-3 sm:gap-4 relative z-10">
-              <div className={`w-12 h-12 sm:w-14 sm:h-14 rounded-xl flex items-center justify-center transition-all duration-300 overflow-hidden ${
-                chiefAimComplete 
-                  ? "bg-gradient-to-br from-emerald-500/20 to-green-600/20 group-hover:from-emerald-500/30 group-hover:to-green-600/30 group-hover:scale-110" 
-                  : "bg-gradient-to-br from-gold/30 to-amber-500/30 animate-pulse group-hover:scale-110"
-              }`} style={{
-                boxShadow: chiefAimComplete ? undefined : '0 0 20px rgba(212,175,55,0.3)',
-              }}>
-                <img src={iconChiefAim} alt="" className="w-8 h-8 sm:w-10 sm:h-10 object-contain" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-1 flex-wrap">
-                  <h3 className={`text-lg sm:text-xl font-display tracking-wide transition-colors ${
-                    chiefAimComplete ? "group-hover:text-emerald-400" : "text-gold group-hover:text-gold"
-                  }`}>
-                    {chiefAimComplete ? "Definite Chief Aim" : "⭐ Start Here"}
-                  </h3>
-                  <Sparkles className={`w-4 h-4 ${chiefAimComplete ? "text-emerald-400/60" : "text-gold/60 animate-pulse"}`} />
-                  <InfoTooltip content="Your Definite Chief Aim is THE FOUNDATION of everything. It's a crystal-clear statement of your burning desire, deadline, exchange, and plan. This becomes the script for your entire transformation journey." />
-                </div>
-                <p className="text-xs sm:text-sm text-muted-foreground truncate">
-                  {chiefAimComplete 
-                    ? "Your transformation script is set • Click to refine" 
-                    : "The foundation of your transformation"}
-                </p>
-              </div>
-              <div className={`hidden sm:flex items-center gap-2 text-sm transition-colors ${
-                chiefAimComplete 
-                  ? "text-muted-foreground group-hover:text-emerald-400" 
-                  : "text-gold group-hover:text-gold font-semibold"
-              }`}>
-                <span>{chiefAimComplete ? "Edit Script" : "Create Now"}</span>
-                <span className="text-lg">→</span>
-              </div>
-            </div>
-          </button>
 
           {/* CHARACTER BUILDER */}
           <ModuleCard
