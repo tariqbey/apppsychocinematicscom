@@ -425,7 +425,82 @@ export function ThreeThings({ showAnalyticsDefault = false }: ThreeThingsProps) 
     setSuggestions([]);
 
     try {
-      // Use supabase.functions.invoke which automatically handles auth
+      // Fetch rich context in parallel
+      const sevenDaysAgo = format(subDays(new Date(), 7), "yyyy-MM-dd");
+      const fourteenDaysAgo = format(subDays(new Date(), 14), "yyyy-MM-dd");
+
+      const [journalRes, excuseRes, challengeRes, scorecardRes, streakRes] = await Promise.all([
+        // Recent journal entries (last 7 days)
+        supabase
+          .from("journal_entries")
+          .select("content, mood, ai_analysis, created_at")
+          .eq("user_id", user.id)
+          .gte("created_at", sevenDaysAgo)
+          .order("created_at", { ascending: false })
+          .limit(5),
+        // Recent incomplete tasks with excuses (last 14 days)
+        supabase
+          .from("daily_tasks")
+          .select("task_text, incomplete_reason, task_date")
+          .eq("user_id", user.id)
+          .eq("is_completed", false)
+          .not("incomplete_reason", "is", null)
+          .gte("task_date", fourteenDaysAgo)
+          .order("task_date", { ascending: false })
+          .limit(20),
+        // Active adversity challenges
+        supabase
+          .from("adversity_challenges")
+          .select("target_trait, situation_description, emotional_trigger, scenario_type, ideal_response")
+          .eq("user_id", user.id)
+          .eq("completed", false)
+          .order("created_at", { ascending: false })
+          .limit(5),
+        // Recent scorecards (last 7 days)
+        supabase
+          .from("daily_scorecards")
+          .select("identity_alignment, behavior_execution, emotional_regulation, forward_progress, scorecard_date")
+          .eq("user_id", user.id)
+          .gte("scorecard_date", sevenDaysAgo)
+          .order("scorecard_date", { ascending: false })
+          .limit(7),
+        // Activity streak
+        supabase.rpc("calculate_activity_streak", { p_user_id: user.id }),
+      ]);
+
+      // Build context object
+      const context: Record<string, any> = {};
+
+      if (journalRes.data?.length) {
+        context.recentJournalEntries = journalRes.data.map(j => ({
+          date: format(new Date(j.created_at), "MMM d"),
+          content: j.content,
+          mood: j.mood,
+          aiAnalysis: j.ai_analysis,
+        }));
+      }
+
+      if (excuseRes.data?.length) {
+        context.recentExcuses = excuseRes.data;
+      }
+
+      if (challengeRes.data?.length) {
+        context.activeChallenges = challengeRes.data;
+      }
+
+      if (scorecardRes.data?.length) {
+        context.recentScorecards = scorecardRes.data;
+      }
+
+      if (streakRes.data?.length) {
+        const s = streakRes.data[0];
+        context.streakData = {
+          currentStreak: s.current_streak || 0,
+          bestStreak: s.best_streak || 0,
+          daysInactive: s.days_inactive || 0,
+        };
+      }
+
       const { data, error } = await supabase.functions.invoke("suggest-tasks", {
         body: {
           chiefAim: {
@@ -436,6 +511,7 @@ export function ThreeThings({ showAnalyticsDefault = false }: ThreeThingsProps) 
           },
           existingTasks: tasks.map(t => t.task_text),
           dayOfWeek: format(selectedDate, "EEEE"),
+          context,
         },
       });
 
