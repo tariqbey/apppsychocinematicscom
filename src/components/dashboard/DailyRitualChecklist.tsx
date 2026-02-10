@@ -10,6 +10,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { usePointsContext } from "@/contexts/PointsContext";
 import { format, startOfWeek, addDays, isToday, isSameDay } from "date-fns";
  import { ScriptReviewModal } from "./ScriptReviewModal";
+ import { EveningReviewModal } from "./EveningReviewModal";
 
 interface RitualItem {
   id: string;
@@ -73,6 +74,7 @@ export const DailyRitualChecklist = ({
   const isMobile = useIsMobile();
   const { triggerRecalculation } = usePointsContext();
    const [showScriptModal, setShowScriptModal] = useState(false);
+   const [showEveningModal, setShowEveningModal] = useState(false);
   const [rituals, setRituals] = useState<RitualItem[]>([
     {
       id: "morning",
@@ -231,12 +233,8 @@ export const DailyRitualChecklist = ({
     if (id === "morning") {
       onTheaterClick();
     } else if (id === "evening") {
-      // Evening session: First watch Mind Movie, then scorecard
-      if (onEveningMindMovieClick) {
-        onEveningMindMovieClick();
-      } else {
-        onScorecardClick();
-      }
+      setShowEveningModal(true);
+      return;
     } else if (id === "actions") {
       navigate("/actions");
     } else if (id === "journal") {
@@ -666,6 +664,25 @@ export const DailyRitualChecklist = ({
        onAdjust={onAdjustChiefAim}
        onSongListened={onSongListened}
        onRitualComplete={handleScriptRitualComplete}
+     />
+
+     {/* Evening Review Modal */}
+     <EveningReviewModal
+       open={showEveningModal}
+       onOpenChange={(open) => {
+         setShowEveningModal(open);
+         if (!open) {
+           toggleRitual("evening");
+         }
+       }}
+       onWatchMindMovie={() => {
+         if (onEveningMindMovieClick) {
+           onEveningMindMovieClick();
+         } else {
+           onTheaterClick();
+         }
+       }}
+       onOpenScorecard={onScorecardClick}
      />
      </>
   );

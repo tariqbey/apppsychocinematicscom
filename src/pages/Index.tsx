@@ -41,7 +41,7 @@ import { DirectorBanner } from "@/components/dashboard/DirectorBanner";
 import { MovieStudioModule } from "@/components/dashboard/MovieStudioModule";
 import { ChiefAimCountdown } from "@/components/dashboard/ChiefAimCountdown";
 import { DashboardEpisodeTracker } from "@/components/dashboard/DashboardEpisodeTracker";
-import { DefiniteChiefAimCard } from "@/components/dashboard/DefiniteChiefAimCard";
+// DefiniteChiefAimCard is accessed via ScriptReviewModal in DailyRitualChecklist
 
 
 // Custom module icons
@@ -479,44 +479,7 @@ const Index = () => {
             <ProductionStatus currentAct={currentAct} dayNumber={dayNumber} />
           </div>
 
-          {/* DEFINITE CHIEF AIM - Shown inline */}
-          <div className="animate-fade-in">
-            <DefiniteChiefAimCard
-              aim={chiefAim}
-              onEdit={() => setShowChiefAimWizard(true)}
-              onAdjust={() => setShowChiefAimAdjust(true)}
-              chiefAimSongUrl={profile?.chief_aim_song_url}
-              onSongListened={async () => {
-                if (!user) return;
-                const today = new Date().toISOString().split('T')[0];
-                const { data: existing } = await supabase
-                  .from("daily_rituals")
-                  .select("id, chief_aim_listened")
-                  .eq("user_id", user.id)
-                  .eq("ritual_date", today)
-                  .maybeSingle();
-                if (existing) {
-                  if (!existing.chief_aim_listened) {
-                    await supabase
-                      .from("daily_rituals")
-                      .update({ script_review: true, chief_aim_listened: true })
-                      .eq("user_id", user.id)
-                      .eq("ritual_date", today);
-                  }
-                } else {
-                  await supabase
-                    .from("daily_rituals")
-                    .insert({
-                      user_id: user.id,
-                      ritual_date: today,
-                      script_review: true,
-                      chief_aim_listened: true,
-                    });
-                }
-                toast.success("Chief Aim ritual complete! 🎵");
-              }}
-            />
-          </div>
+          {/* DEFINITE CHIEF AIM - Accessed via Script Review ritual */}
 
           {/* CHARACTER BUILDER */}
           <ModuleCard
