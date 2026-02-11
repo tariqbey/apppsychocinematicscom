@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { X, Plus, BookOpen, Sparkles, TrendingUp, Target, Loader2, ChevronDown, ChevronUp, Trash2, Bell, Save, BookMarked, FileText, Pencil } from "lucide-react";
+import { useState, useEffect, useRef, useCallback, Component, type ReactNode, type ErrorInfo } from "react";
+import { X, Plus, BookOpen, Sparkles, TrendingUp, Target, Loader2, ChevronDown, ChevronUp, Trash2, Bell, Save, BookMarked, FileText, Pencil, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
@@ -30,6 +30,56 @@ interface DirectorsJournalProps {
   onClose: () => void;
 }
 
+// Error boundary to prevent journal crashes from taking down the whole app
+class JournalErrorBoundary extends Component<
+  { children: ReactNode; onClose: () => void },
+  { hasError: boolean }
+> {
+  constructor(props: { children: ReactNode; onClose: () => void }) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError(): { hasError: boolean } {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    console.error("[DirectorsJournal] Caught error:", error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="fixed inset-0 z-50 bg-background/95 backdrop-blur-sm flex items-center justify-center animate-fade-in">
+          <div className="max-w-sm mx-auto p-6 text-center space-y-4">
+            <div className="w-16 h-16 rounded-full bg-destructive/10 flex items-center justify-center mx-auto">
+              <BookOpen className="w-8 h-8 text-destructive" />
+            </div>
+            <h3 className="text-lg font-semibold">Something went wrong</h3>
+            <p className="text-sm text-muted-foreground">
+              The journal encountered an error. Your entries are safe.
+            </p>
+            <div className="flex gap-3 justify-center">
+              <Button variant="outline" onClick={this.props.onClose}>
+                Close
+              </Button>
+              <Button
+                variant="gold"
+                onClick={() => this.setState({ hasError: false })}
+              >
+                <RefreshCw className="w-4 h-4 mr-2" />
+                Try Again
+              </Button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 export function DirectorsJournal({ isOpen, onClose }: DirectorsJournalProps) {
   const {
     entries,
@@ -55,6 +105,7 @@ export function DirectorsJournal({ isOpen, onClose }: DirectorsJournalProps) {
   const [activeTab, setActiveTab] = useState("write");
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
+  const contentRef = useRef("");
   const [selectedMood, setSelectedMood] = useState<string | null>(null);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [expandedEntry, setExpandedEntry] = useState<string | null>(null);
@@ -71,11 +122,13 @@ export function DirectorsJournal({ isOpen, onClose }: DirectorsJournalProps) {
   }, [isOpen, fetchEntries, fetchInsights]);
 
   const handleSubmit = async () => {
-    if (!content.trim()) return;
+    // Sync ref to state before submit
+    const currentContent = contentRef.current || content;
+    if (!currentContent.trim()) return;
 
     const entry = await createEntry({
       title: title.trim() || undefined,
-      content: content.trim(),
+      content: currentContent.trim(),
       mood: selectedMood || undefined,
       tags: selectedTags.length > 0 ? selectedTags : undefined,
     });
@@ -83,6 +136,7 @@ export function DirectorsJournal({ isOpen, onClose }: DirectorsJournalProps) {
     if (entry) {
       setTitle("");
       setContent("");
+      contentRef.current = "";
       setSelectedMood(null);
       setSelectedTags([]);
       setActiveTab("entries");
@@ -126,6 +180,7 @@ export function DirectorsJournal({ isOpen, onClose }: DirectorsJournalProps) {
   if (!isOpen) return null;
 
   return (
+    <JournalErrorBoundary onClose={onClose}>
     <div className="fixed inset-0 z-50 bg-background/95 backdrop-blur-sm flex flex-col animate-fade-in">
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-border pt-[env(safe-area-inset-top)]">
@@ -197,8 +252,9 @@ export function DirectorsJournal({ isOpen, onClose }: DirectorsJournalProps) {
 
                 <Textarea
                   placeholder="What's on your mind, Director? Record your experiences, breakthroughs, challenges, and insights..."
-                  value={content}
-                  onChange={(e) => setContent(e.target.value)}
+                  defaultValue={content}
+                  onChange={(e) => { contentRef.current = e.target.value; }}
+                  onBlur={(e) => setContent(e.target.value)}
                   className="min-h-[200px] resize-none"
                 />
 
@@ -471,6 +527,7 @@ export function DirectorsJournal({ isOpen, onClose }: DirectorsJournalProps) {
         </Tabs>
       </div>
     </div>
+    </JournalErrorBoundary>
   );
 }
 
