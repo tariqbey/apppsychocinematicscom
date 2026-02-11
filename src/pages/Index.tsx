@@ -738,11 +738,13 @@ const Index = () => {
         </div>
       </button>
 
-      {/* Director's Journal */}
-      <DirectorsJournal
-        isOpen={showJournal}
-        onClose={() => setShowJournal(false)}
-      />
+      {/* Director's Journal - lazy mounted to save memory on mobile */}
+      {showJournal && (
+        <DirectorsJournal
+          isOpen={showJournal}
+          onClose={() => setShowJournal(false)}
+        />
+      )}
 
       {/* Auth Modal */}
       <AuthModal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} />
