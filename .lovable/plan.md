@@ -1,55 +1,27 @@
 
 
-## New Approach: Let iOS Handle the Video Natively
+## Fix: Journal Entry Crash on Mobile
 
-### The Real Problem
+### Root Cause
 
-Every crash happens because **our custom inline player fights iOS Safari's GPU compositor** during fullscreen and rotation. No amount of CSS fixes or cleanup guards will solve this -- WebKit simply cannot handle a clipped, inline `<video>` element transitioning to landscape fullscreen without crashing the GPU process.
+The DirectorsJournal component is always mounted inside `Index.tsx` (line 742), even when closed. While it returns `null` when not open, its parent page (`Index.tsx`) keeps **all dashboard hooks and heavy components** alive underneath the journal overlay. On mobile devices (especially iOS PWA), this creates significant memory pressure. Every keystroke in the journal Textarea triggers a React re-render of the journal component, and combined with the heavyweight dashboard underneath, this can exceed the WebKit process memory limit and crash the app.
 
-### The Solution: Native Handoff on iOS
+### Fix Strategy
 
-Instead of trying to make our inline player survive rotation, we **hand the video to iOS's built-in native player** when the user wants to watch. Safari's native video player handles fullscreen, rotation, and hardware decoding perfectly -- it's what Apple built it for.
+**1. Lazy-mount the journal (Index.tsx)**
+- Change `<DirectorsJournal isOpen={showJournal} .../>` to `{showJournal && <DirectorsJournal .../>}` so it only mounts when actually open, matching how TheaterView and EditBay are already handled
+- This ensures the component fully unmounts when closed, freeing memory
 
-**How it works:**
-- On **iOS devices**: Tapping play calls `video.webkitEnterFullscreen()`, which opens the video in Safari's rock-solid native fullscreen player. The user can rotate freely, and it never crashes.
-- On **desktop/Android**: The inline player works exactly as it does now (no changes needed there).
-- The video element stays in the DOM, so our `onended` callback still fires and records the viewing completion.
+**2. Add an error boundary around the journal (new: JournalErrorBoundary)**
+- Wrap the journal in a React error boundary so that if it does crash, it catches the error gracefully instead of taking down the whole app
+- Show a "Something went wrong" card with a retry button
 
-### What Changes
-
-**File 1: `src/components/theater/MindMoviePlayerSimple.tsx`**
-- Detect iOS at mount time
-- On iOS: remove `playsInline` attribute so the native player can take over
-- Add a `webkitEnterFullscreen()` call when play is triggered on iOS
-- Keep all existing event listeners (ended, error, etc.) -- they still fire even when the native player is active
-- Remove the orientation guard (no longer needed since iOS handles rotation natively)
-
-**File 2: `src/components/theater/TheaterView.tsx`**
-- Remove the `isIOSStandalone` conditional CSS logic (no longer relevant)
-- Keep the safe `pause()` cleanup (already correct)
-
-### Technical Detail
-
-```text
-iOS flow:
-  User taps Play --> video.webkitEnterFullscreen()
-  --> iOS native player opens (handles rotation natively)
-  --> User watches, rotates freely, no crash
-  --> Video ends --> "ended" event fires on our <video> element
-  --> onComplete callback records viewing
-
-Desktop/Android flow:
-  Unchanged -- inline player with controls, works as before
-
-Key API: HTMLVideoElement.webkitEnterFullscreen()
-  - Safari-only API, perfect for this use case
-  - Hands rendering to the native video layer
-  - All DOM events (ended, error, timeupdate) still fire
-  - No CSS compositor involvement = no crash
-```
+**3. Optimize the Textarea input (DirectorsJournal.tsx)**
+- Use `useRef` for the textarea value during active typing instead of calling `setContent()` on every keystroke
+- Only sync to React state on blur or submit, reducing re-renders from potentially hundreds (while typing) to just one
+- This dramatically reduces the render load on mobile
 
 ### Files Modified
 
-1. `src/components/theater/MindMoviePlayerSimple.tsx` -- iOS native fullscreen handoff
-2. `src/components/theater/TheaterView.tsx` -- Remove iOS-specific CSS workarounds
-
+1. **`src/pages/Index.tsx`** -- Conditional render for journal (1-line change)
+2. **`src/components/journal/DirectorsJournal.tsx`** -- Optimize textarea to use ref-based input, reduce re-renders; add error boundary wrapper
