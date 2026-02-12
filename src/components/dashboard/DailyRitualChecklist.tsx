@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { Check, Sparkles, LightbulbIcon, Film, ScrollText, Rocket, Moon, Zap, BookOpen, ChevronDown } from "lucide-react";
+import { Check, LightbulbIcon, Film, ScrollText, Rocket, Moon, BookOpen, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { InfoTooltip } from "@/components/ui/info-tooltip";
 import { TutorialTipCard } from "@/components/community/TutorialTipCard";
@@ -8,7 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { usePointsContext } from "@/contexts/PointsContext";
-import { format, startOfWeek, addDays, isToday, isSameDay } from "date-fns";
+import { format, startOfWeek, addDays, isToday } from "date-fns";
 import { ScriptReviewModal } from "./ScriptReviewModal";
 import { EveningReviewModal } from "./EveningReviewModal";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -18,10 +18,10 @@ interface RitualItem {
   dbField: 'morning_screening' | 'script_review' | 'action_execution' | 'evening_review' | 'journal_entry';
   title: string;
   subtitle: string;
+  sceneNumber: string;
   icon: React.ReactNode;
   completed: boolean;
   color: string;
-  glowColor: string;
 }
 
 interface DailyRitualChecklistProps {
@@ -29,111 +29,92 @@ interface DailyRitualChecklistProps {
   onScorecardClick: () => void;
   onEveningMindMovieClick?: () => void;
   onJournalClick?: () => void;
-   onScriptReviewClick?: () => void;
-   chiefAim?: {
-     what: string;
-     byWhen: string;
-     exchange: string;
-     plan: string;
-   };
-   chiefAimSongUrl?: string | null;
-   onEditChiefAim?: () => void;
-   onAdjustChiefAim?: () => void;
-   onSongListened?: () => void;
+  onScriptReviewClick?: () => void;
+  chiefAim?: {
+    what: string;
+    byWhen: string;
+    exchange: string;
+    plan: string;
+  };
+  chiefAimSongUrl?: string | null;
+  onEditChiefAim?: () => void;
+  onAdjustChiefAim?: () => void;
+  onSongListened?: () => void;
 }
 
-// Floating particle component with enhanced animation
-const FloatingParticle = ({ delay, size = 2, color = "#D4AF37" }: { delay: number; size?: number; color?: string }) => (
-  <div
-    className="absolute rounded-full pointer-events-none"
-    style={{
-      width: size,
-      height: size,
-      left: `${Math.random() * 100}%`,
-      bottom: '0%',
-      background: color,
-      boxShadow: `0 0 6px ${color}`,
-      animation: `float-particle 3s ease-in-out infinite ${delay}s`,
-    }}
-  />
-);
-
 export const DailyRitualChecklist = ({ 
-   onTheaterClick, 
-   onScorecardClick, 
-   onEveningMindMovieClick, 
-   onJournalClick,
-   onScriptReviewClick,
-   chiefAim,
-   chiefAimSongUrl,
-   onEditChiefAim,
-   onAdjustChiefAim,
-   onSongListened,
- }: DailyRitualChecklistProps) => {
+  onTheaterClick, 
+  onScorecardClick, 
+  onEveningMindMovieClick, 
+  onJournalClick,
+  onScriptReviewClick,
+  chiefAim,
+  chiefAimSongUrl,
+  onEditChiefAim,
+  onAdjustChiefAim,
+  onSongListened,
+}: DailyRitualChecklistProps) => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   const { triggerRecalculation } = usePointsContext();
-   const [showScriptModal, setShowScriptModal] = useState(false);
-   const [showEveningModal, setShowEveningModal] = useState(false);
+  const [showScriptModal, setShowScriptModal] = useState(false);
+  const [showEveningModal, setShowEveningModal] = useState(false);
   const [rituals, setRituals] = useState<RitualItem[]>([
     {
       id: "morning",
       dbField: "morning_screening",
       title: "Morning Screening",
       subtitle: "Watch your Mind Movie",
-      icon: <Film className="w-6 h-6 sm:w-7 sm:h-7" />,
+      sceneNumber: "01",
+      icon: <Film className="w-5 h-5" />,
       completed: false,
-      color: "#D4AF37",
-      glowColor: "rgba(212, 175, 55, 0.4)",
+      color: "hsl(37 87% 57%)",
     },
     {
       id: "script",
       dbField: "script_review",
       title: "Script Review",
       subtitle: "Read your Definite Chief Aim",
-      icon: <ScrollText className="w-6 h-6 sm:w-7 sm:h-7" />,
+      sceneNumber: "02",
+      icon: <ScrollText className="w-5 h-5" />,
       completed: false,
-      color: "#22D3EE",
-      glowColor: "rgba(34, 211, 238, 0.4)",
+      color: "hsl(187 92% 53%)",
     },
     {
       id: "actions",
       dbField: "action_execution",
       title: "Action Execution",
       subtitle: "Complete 3 key tasks",
-      icon: <Rocket className="w-6 h-6 sm:w-7 sm:h-7" />,
+      sceneNumber: "03",
+      icon: <Rocket className="w-5 h-5" />,
       completed: false,
-      color: "#F59E0B",
-      glowColor: "rgba(245, 158, 11, 0.4)",
+      color: "hsl(37 87% 57%)",
     },
     {
       id: "evening",
       dbField: "evening_review",
       title: "Evening Session",
       subtitle: "Watch Mind Movie + Complete Scorecard",
-      icon: <Moon className="w-6 h-6 sm:w-7 sm:h-7" />,
+      sceneNumber: "04",
+      icon: <Moon className="w-5 h-5" />,
       completed: false,
-      color: "#A855F7",
-      glowColor: "rgba(168, 85, 247, 0.4)",
+      color: "hsl(271 81% 56%)",
     },
     {
       id: "journal",
       dbField: "journal_entry",
       title: "Journal Entry",
       subtitle: "Reflect on your day",
-      icon: <BookOpen className="w-6 h-6 sm:w-7 sm:h-7" />,
+      sceneNumber: "05",
+      icon: <BookOpen className="w-5 h-5" />,
       completed: false,
-      color: "#10B981",
-      glowColor: "rgba(16, 185, 129, 0.4)",
+      color: "hsl(160 84% 39%)",
     },
   ]);
   const [isLoading, setIsLoading] = useState(true);
   const [isVisible, setIsVisible] = useState(false);
-  const [isHovered, setIsHovered] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
-  const [hoveredRitual, setHoveredRitual] = useState<string | null>(null);
-  const [touchedRitual, setTouchedRitual] = useState<string | null>(null);
 
   // Load today's ritual state from database
   useEffect(() => {
@@ -173,14 +154,12 @@ export const DailyRitualChecklist = ({
     const newCompleted = !ritual.completed;
     const today = format(new Date(), "yyyy-MM-dd");
 
-    // Optimistic update
     setRituals(prev =>
       prev.map(r =>
         r.id === id ? { ...r, completed: newCompleted } : r
       )
     );
 
-    // Check if record exists first
     const { data: existing } = await supabase
       .from("daily_rituals")
       .select("id")
@@ -190,7 +169,6 @@ export const DailyRitualChecklist = ({
 
     let error;
     if (existing) {
-      // Update existing record
       const result = await supabase
         .from("daily_rituals")
         .update({ [ritual.dbField]: newCompleted })
@@ -198,7 +176,6 @@ export const DailyRitualChecklist = ({
         .eq("ritual_date", today);
       error = result.error;
     } else {
-      // Insert new record
       const insertData = {
         user_id: user.id,
         ritual_date: today,
@@ -215,7 +192,6 @@ export const DailyRitualChecklist = ({
     }
 
     if (error) {
-      // Revert on error
       console.error("Failed to save ritual state:", error);
       setRituals(prev =>
         prev.map(r =>
@@ -223,7 +199,6 @@ export const DailyRitualChecklist = ({
         )
       );
     } else {
-      // Trigger points recalculation on success
       triggerRecalculation();
     }
   };
@@ -243,14 +218,13 @@ export const DailyRitualChecklist = ({
       if (onJournalClick) {
         onJournalClick();
       }
-     } else if (id === "script") {
-       // Open script review modal instead of toggling
-       if (onScriptReviewClick) {
-         onScriptReviewClick();
-       } else {
-         setShowScriptModal(true);
-       }
-       return; // Don't auto-toggle, let modal handle completion
+    } else if (id === "script") {
+      if (onScriptReviewClick) {
+        onScriptReviewClick();
+      } else {
+        setShowScriptModal(true);
+      }
+      return;
     }
     toggleRitual(id);
   };
@@ -260,454 +234,240 @@ export const DailyRitualChecklist = ({
     return () => clearTimeout(timer);
   }, []);
 
-  const isRitualActive = (id: string) => hoveredRitual === id || touchedRitual === id;
-
-   const handleScriptRitualComplete = async () => {
-     if (!user) return;
-     const today = format(new Date(), "yyyy-MM-dd");
-     
-     const { data: existing } = await supabase
-       .from("daily_rituals")
-       .select("id")
-       .eq("user_id", user.id)
-       .eq("ritual_date", today)
-       .maybeSingle();
-     
-     if (existing) {
-       await supabase
-         .from("daily_rituals")
-         .update({ script_review: true })
-         .eq("user_id", user.id)
-         .eq("ritual_date", today);
-     } else {
-       await supabase
-         .from("daily_rituals")
-         .insert({
-           user_id: user.id,
-           ritual_date: today,
-           script_review: true,
-         });
-     }
-     
-     setRituals(prev =>
-       prev.map(r => r.id === "script" ? { ...r, completed: true } : r)
-     );
-     triggerRecalculation();
-   };
+  const handleScriptRitualComplete = async () => {
+    if (!user) return;
+    const today = format(new Date(), "yyyy-MM-dd");
+    
+    const { data: existing } = await supabase
+      .from("daily_rituals")
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("ritual_date", today)
+      .maybeSingle();
+    
+    if (existing) {
+      await supabase
+        .from("daily_rituals")
+        .update({ script_review: true })
+        .eq("user_id", user.id)
+        .eq("ritual_date", today);
+    } else {
+      await supabase
+        .from("daily_rituals")
+        .insert({
+          user_id: user.id,
+          ritual_date: today,
+          script_review: true,
+        });
+    }
+    
+    setRituals(prev =>
+      prev.map(r => r.id === "script" ? { ...r, completed: true } : r)
+    );
+    triggerRecalculation();
+  };
 
   return (
-     <>
+    <>
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
     <div 
-      className={`glass-card p-4 sm:p-6 cinematic-border space-y-4 relative overflow-hidden group transition-all duration-500 hover:border-gold/50 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}
-      style={{ 
-        boxShadow: isHovered 
-          ? '0 0 50px rgba(212, 175, 55, 0.25), inset 0 0 60px rgba(212, 175, 55, 0.05)'
-          : '0 0 30px rgba(212, 175, 55, 0.1), inset 0 0 50px rgba(212, 175, 55, 0.03)',
-        transition: 'all 0.5s ease',
-      }}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
+      className={cn(
+        "rounded-xl border border-border/30 bg-card overflow-hidden transition-all duration-500",
+        isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
+      )}
     >
-      {/* Holographic scan lines */}
-      <div className="absolute inset-0 opacity-20 pointer-events-none">
-        <div 
-          className="absolute inset-0 bg-[linear-gradient(transparent_50%,rgba(212,175,55,0.03)_50%)] bg-[length:100%_4px]"
-          style={{
-            animation: 'scan-line 8s linear infinite',
-          }}
-        />
-      </div>
-
-      {/* Animated border glow effect */}
-      <div 
-        className="absolute inset-0 rounded-lg pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-500"
-        style={{
-          background: 'linear-gradient(90deg, transparent, rgba(212,175,55,0.15), transparent)',
-          animation: 'holographic-shimmer 3s ease-in-out infinite',
-        }}
-      />
-
-      {/* Animated background gradient */}
-      <div className="absolute inset-0 bg-gradient-to-r from-gold/3 via-transparent to-gold/3 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-      
-      {/* Floating particles */}
-      <div className="absolute inset-0 pointer-events-none overflow-hidden">
-        <FloatingParticle delay={0} size={3} />
-        <FloatingParticle delay={0.5} size={2} />
-        <FloatingParticle delay={1} size={4} />
-        <FloatingParticle delay={1.5} size={2} />
-        <FloatingParticle delay={2} size={3} />
-      </div>
-
-      {/* Sparkle particles */}
-      <Sparkles className="absolute top-3 right-12 w-3 h-3 text-gold/40 animate-pulse pointer-events-none" />
-      <Sparkles className="absolute bottom-4 right-24 w-2 h-2 text-amber-soft/30 animate-pulse pointer-events-none" style={{ animationDelay: '0.7s' }} />
-      <Sparkles className="absolute top-8 right-6 w-2 h-2 text-gold/30 animate-pulse pointer-events-none" style={{ animationDelay: '1.3s' }} />
-
       {/* Weekly Calendar Header */}
       <WeeklyCalendarHeader />
 
-      {/* Collapsible Trigger - Daily Ritual Header */}
-      <CollapsibleTrigger asChild>
-        <button className="w-full flex items-center justify-between mb-2 relative z-10 cursor-pointer group/trigger">
-          <div className="flex items-center gap-2 sm:gap-3">
-            <div 
-              className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-gradient-to-br from-gold/30 to-gold/10 flex items-center justify-center transition-all duration-300 group-hover:scale-110"
-              style={{
-                boxShadow: isHovered ? '0 0 20px rgba(212, 175, 55, 0.4)' : '0 0 10px rgba(212, 175, 55, 0.2)',
-              }}
-            >
-              <Sparkles className="w-5 h-5 sm:w-6 sm:h-6 text-gold" />
+      {/* Clapperboard-style header */}
+      <div className="px-4 sm:px-5 pb-3">
+        <CollapsibleTrigger asChild>
+          <button className="w-full flex items-center justify-between cursor-pointer group/trigger">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-gradient-to-br from-gold/20 to-gold/5 flex items-center justify-center">
+                <Film className="w-4 h-4 sm:w-5 sm:h-5 text-gold" />
+              </div>
+              <div>
+                <h3 className="font-display text-xl sm:text-2xl tracking-wide">Daily Ritual</h3>
+                <p className="font-ui text-[10px] uppercase tracking-[0.15em] text-muted-foreground">
+                  {completedCount} of {rituals.length} scenes complete
+                </p>
+              </div>
+              <InfoTooltip content="Your daily ritual is the foundation of transformation. Complete all 5 scenes daily." />
             </div>
-            <h3 className="text-xl sm:text-2xl font-display tracking-wide">Daily Ritual</h3>
-            <InfoTooltip content="Your daily ritual is the foundation of transformation. Morning: Watch Mind Movie + Read Chief Aim. Midday: Complete 3 key tasks. Evening: Score yourself honestly on the scorecard." />
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-sm sm:text-base text-muted-foreground font-medium bg-gold/10 px-3 py-1 rounded-full border border-gold/20">
-              {completedCount}/{rituals.length}
-            </span>
-            <ChevronDown className={cn(
-              "w-5 h-5 text-gold transition-transform duration-300",
-              isOpen && "rotate-180"
-            )} />
-          </div>
-        </button>
-      </CollapsibleTrigger>
+            <div className="flex items-center gap-2">
+              <span className="font-ui text-xs text-gold bg-gold/10 px-2.5 py-1 rounded-full border border-gold/20">
+                {completedCount}/{rituals.length}
+              </span>
+              <ChevronDown className={cn(
+                "w-4 h-4 text-gold transition-transform duration-300",
+                isOpen && "rotate-180"
+              )} />
+            </div>
+          </button>
+        </CollapsibleTrigger>
 
-      {/* Progress bar - always visible */}
-      <div className="h-2 bg-secondary rounded-full overflow-hidden relative">
-        <div
-          className="h-full bg-gradient-to-r from-gold to-amber-soft transition-all duration-500 rounded-full"
-          style={{ 
-            width: `${progress}%`,
-            boxShadow: progress > 0 ? '0 0 15px rgba(212, 175, 55, 0.6)' : undefined,
-          }}
-        />
+        {/* Progress bar */}
+        <div className="h-1.5 bg-secondary/50 rounded-full overflow-hidden mt-3">
+          <div
+            className="h-full bg-gradient-to-r from-gold to-gold/80 transition-all duration-500 rounded-full"
+            style={{ 
+              width: `${progress}%`,
+              boxShadow: progress > 0 ? '0 0 10px hsl(37 87% 57% / 0.5)' : undefined,
+            }}
+          />
+        </div>
       </div>
 
-      {/* Collapsible Content - Ritual Items */}
+      {/* Collapsible Content - Scene Cards */}
       <CollapsibleContent className="transition-all duration-300 data-[state=open]:animate-accordion-down data-[state=closed]:animate-accordion-up overflow-hidden">
-        {/* Tutorial Tip - Enhanced visibility */}
-        <div className="relative mt-3">
+        {/* Tutorial Tip */}
+        <div className="px-4 sm:px-5 mt-1">
           <TutorialTipCard
             id="daily-ritual-tips"
             title="Master Your Daily Ritual"
             variant="gold"
             icon={<LightbulbIcon className="w-6 h-6" />}
             tips={[
-              "☀️ Morning Screening: Watch your Mind Movie first thing to prime your subconscious for success",
-              "📜 Script Review: Read your Definite Chief Aim aloud with emotion and conviction",
-              "🚀 Action Execution: Complete your 3 key tasks that move you toward your Chief Aim",
-              "🌙 Evening Session: Watch your Mind Movie AGAIN before bed + complete your Director Scorecard",
-              "📓 Journal Entry: Reflect on wins, lessons learned, and tomorrow's intentions",
-              "🔥 Complete ALL 5 rituals daily to build an unstoppable streak and transform your identity!",
+              "☀️ Morning Screening: Watch your Mind Movie first thing to prime your subconscious",
+              "📜 Script Review: Read your Definite Chief Aim aloud with emotion",
+              "🚀 Action Execution: Complete your 3 key tasks toward your Chief Aim",
+              "🌙 Evening Session: Watch Mind Movie again + complete your Scorecard",
+              "📓 Journal Entry: Reflect on wins, lessons, and tomorrow's intentions",
+              "🔥 Complete ALL 5 scenes daily to build an unstoppable streak!",
             ]}
           />
         </div>
 
-        {/* Ritual Buttons */}
-        <div className="space-y-3 sm:space-y-4 relative z-10 mt-3">
-          {rituals.map((ritual, index) => {
-            const isActive = isRitualActive(ritual.id) || (isMobile && isVisible);
-            
-            return (
-              <button
-                key={ritual.id}
-                onClick={() => handleRitualClick(ritual.id)}
-                onMouseEnter={() => setHoveredRitual(ritual.id)}
-                onMouseLeave={() => setHoveredRitual(null)}
-                onTouchStart={() => setTouchedRitual(ritual.id)}
-                onTouchEnd={() => setTimeout(() => setTouchedRitual(null), 200)}
-                disabled={isLoading}
-                className={cn(
-                  "w-full relative flex items-center gap-4 sm:gap-5 p-4 sm:p-5 rounded-xl transition-all duration-500 group/item text-left overflow-hidden",
-                  "border-2",
-                  ritual.completed
-                    ? "bg-gradient-to-br from-gold/15 via-gold/10 to-transparent border-gold/40"
-                    : "bg-gradient-to-br from-card/80 via-card/60 to-card/40 border-border/40 hover:border-gold/40",
-                  isLoading && "opacity-50",
-                  "hover:scale-[1.02] active:scale-[0.98]"
-                )}
-                style={{ 
-                  animationDelay: `${index * 0.1}s`,
-                  transform: isVisible ? 'translateX(0)' : 'translateX(-10px)',
-                  opacity: isVisible ? 1 : 0,
-                  transition: `all 0.4s ease ${index * 0.08}s`,
-                  boxShadow: isActive 
-                    ? `0 0 30px ${ritual.glowColor}, inset 0 1px 0 rgba(255,255,255,0.1)` 
-                    : ritual.completed 
-                      ? '0 0 20px rgba(212, 175, 55, 0.2)' 
-                      : 'none',
-                }}
-              >
-                {/* Corner accents */}
-                <div className="absolute top-0 left-0 w-6 h-6 pointer-events-none">
-                  <div className={cn(
-                    "absolute top-0 left-0 w-full h-[2px] transition-opacity duration-500",
-                    isActive ? "opacity-100" : "opacity-0"
-                  )} style={{ background: `linear-gradient(to right, transparent, ${ritual.color}, transparent)` }} />
-                  <div className={cn(
-                    "absolute top-0 left-0 h-full w-[2px] transition-opacity duration-500",
-                    isActive ? "opacity-100" : "opacity-0"
-                  )} style={{ background: `linear-gradient(to bottom, transparent, ${ritual.color}, transparent)` }} />
-                </div>
-                <div className="absolute top-0 right-0 w-6 h-6 pointer-events-none">
-                  <div className={cn(
-                    "absolute top-0 right-0 w-full h-[2px] transition-opacity duration-500",
-                    isActive ? "opacity-100" : "opacity-0"
-                  )} style={{ background: `linear-gradient(to left, transparent, ${ritual.color}, transparent)` }} />
-                  <div className={cn(
-                    "absolute top-0 right-0 h-full w-[2px] transition-opacity duration-500",
-                    isActive ? "opacity-100" : "opacity-0"
-                  )} style={{ background: `linear-gradient(to bottom, transparent, ${ritual.color}, transparent)` }} />
-                </div>
-                <div className="absolute bottom-0 left-0 w-6 h-6 pointer-events-none">
-                  <div className={cn(
-                    "absolute bottom-0 left-0 w-full h-[2px] transition-opacity duration-500",
-                    isActive ? "opacity-100" : "opacity-0"
-                  )} style={{ background: `linear-gradient(to right, transparent, ${ritual.color}, transparent)` }} />
-                  <div className={cn(
-                    "absolute bottom-0 left-0 h-full w-[2px] transition-opacity duration-500",
-                    isActive ? "opacity-100" : "opacity-0"
-                  )} style={{ background: `linear-gradient(to top, transparent, ${ritual.color}, transparent)` }} />
-                </div>
-                <div className="absolute bottom-0 right-0 w-6 h-6 pointer-events-none">
-                  <div className={cn(
-                    "absolute bottom-0 right-0 w-full h-[2px] transition-opacity duration-500",
-                    isActive ? "opacity-100" : "opacity-0"
-                  )} style={{ background: `linear-gradient(to left, transparent, ${ritual.color}, transparent)` }} />
-                  <div className={cn(
-                    "absolute bottom-0 right-0 h-full w-[2px] transition-opacity duration-500",
-                    isActive ? "opacity-100" : "opacity-0"
-                  )} style={{ background: `linear-gradient(to top, transparent, ${ritual.color}, transparent)` }} />
-                </div>
+        {/* Scene Cards */}
+        <div className="px-4 sm:px-5 pb-4 space-y-2 mt-2">
+          {rituals.map((ritual, index) => (
+            <button
+              key={ritual.id}
+              onClick={() => handleRitualClick(ritual.id)}
+              disabled={isLoading}
+              className={cn(
+                "w-full relative flex items-center gap-3 sm:gap-4 p-3 sm:p-4 rounded-lg transition-all duration-300 text-left group/scene",
+                "border",
+                ritual.completed
+                  ? "bg-gold/5 border-gold/20"
+                  : "bg-secondary/20 border-border/20 hover:border-gold/20 hover:bg-secondary/30",
+                isLoading && "opacity-50",
+                "hover:translate-y-[-1px] active:scale-[0.99]"
+              )}
+              style={{
+                opacity: isVisible ? 1 : 0,
+                transform: isVisible ? 'translateY(0)' : 'translateY(8px)',
+                transition: `all 0.3s ease ${index * 0.06}s`,
+              }}
+            >
+              {/* Scene number — clapperboard style */}
+              <div className={cn(
+                "flex-shrink-0 w-8 h-8 sm:w-9 sm:h-9 rounded-md flex items-center justify-center font-ui text-xs sm:text-sm font-bold border transition-colors",
+                ritual.completed
+                  ? "bg-gold/15 border-gold/30 text-gold"
+                  : "bg-secondary/40 border-border/30 text-muted-foreground"
+              )}>
+                {ritual.sceneNumber}
+              </div>
 
-                {/* Scanning line animation */}
-                <div className={cn(
-                  "absolute inset-0 transition-opacity duration-300 pointer-events-none overflow-hidden",
-                  isActive ? "opacity-100" : "opacity-0"
+              {/* Icon */}
+              <div className={cn(
+                "flex-shrink-0 transition-colors",
+                ritual.completed ? "text-gold" : "text-muted-foreground group-hover/scene:text-foreground"
+              )} style={{ color: ritual.completed ? undefined : undefined }}>
+                {ritual.icon}
+              </div>
+
+              {/* Title + subtitle */}
+              <div className="flex-1 min-w-0">
+                <p className={cn(
+                  "font-ui text-sm sm:text-base tracking-wide transition-colors uppercase",
+                  ritual.completed ? "text-gold" : "text-foreground"
                 )}>
-                  <div 
-                    className="absolute h-[1px] w-full"
-                    style={{
-                      background: `linear-gradient(to right, transparent, ${ritual.color}, transparent)`,
-                      animation: isActive ? 'scan-line 2s ease-in-out infinite' : 'none',
-                    }}
-                  />
-                </div>
+                  {ritual.title}
+                </p>
+                <p className="text-xs text-muted-foreground truncate">{ritual.subtitle}</p>
+              </div>
 
-                {/* Floating particles */}
-                <div className={cn(
-                  "absolute inset-0 overflow-hidden pointer-events-none transition-opacity duration-500",
-                  isActive ? "opacity-100" : "opacity-0"
-                )}>
-                  {[0, 0.5, 1, 1.5].map((delay, i) => (
-                    <FloatingParticle key={i} color={ritual.color} delay={delay} size={2} />
-                  ))}
+              {/* Completion check or arrow */}
+              {ritual.completed ? (
+                <div className="flex-shrink-0 w-7 h-7 rounded-full bg-gold/15 border border-gold/30 flex items-center justify-center">
+                  <Check className="w-4 h-4 text-gold" />
                 </div>
+              ) : (
+                <span className="flex-shrink-0 text-muted-foreground text-sm group-hover/scene:text-gold group-hover/scene:translate-x-0.5 transition-all">→</span>
+              )}
 
-                {/* Holographic shimmer */}
+              {/* SHOT ✓ stamp overlay for completed */}
+              {ritual.completed && (
+                <div 
+                  className="absolute top-1/2 right-12 sm:right-16 -translate-y-1/2 -rotate-12 pointer-events-none opacity-[0.08]"
+                >
+                  <span className="font-display text-3xl sm:text-4xl text-gold tracking-widest uppercase">
+                    Shot ✓
+                  </span>
+                </div>
+              )}
+
+              {/* Bottom amber progress line */}
+              <div className="absolute bottom-0 left-0 right-0 h-[2px] overflow-hidden rounded-b-lg">
                 <div 
                   className={cn(
-                    "absolute inset-0 transition-opacity duration-700 pointer-events-none",
-                    isActive ? "opacity-100" : "opacity-0"
+                    "h-full transition-all duration-500",
+                    ritual.completed ? "w-full" : "w-0 group-hover/scene:w-full"
                   )}
                   style={{
-                    background: `linear-gradient(
-                      105deg,
-                      transparent 40%,
-                      rgba(255,255,255,0.03) 45%,
-                      rgba(255,255,255,0.05) 50%,
-                      rgba(255,255,255,0.03) 55%,
-                      transparent 60%
-                    )`,
-                    backgroundSize: '200% 100%',
-                    animation: isActive ? 'holographic-shimmer 2s ease-in-out infinite' : 'none',
+                    background: ritual.color,
+                    opacity: ritual.completed ? 0.6 : 0.3,
                   }}
                 />
-
-                {/* Icon container with enhanced glow */}
-                <div
-                  className={cn(
-                    "w-12 h-12 sm:w-14 sm:h-14 rounded-xl flex items-center justify-center transition-all duration-500 flex-shrink-0 relative overflow-hidden",
-                    ritual.completed
-                      ? "bg-gradient-to-br from-gold to-amber-soft text-primary-foreground"
-                      : "bg-gradient-to-br from-secondary to-secondary/50 text-muted-foreground group-hover/item:text-foreground"
-                  )}
-                  style={{
-                    boxShadow: ritual.completed 
-                      ? '0 0 30px rgba(212, 175, 55, 0.5), inset 0 0 20px rgba(212, 175, 55, 0.3)' 
-                      : isActive 
-                        ? `0 0 25px ${ritual.glowColor}` 
-                        : '0 0 10px rgba(0,0,0,0.2)',
-                    transform: isActive ? 'scale(1.1)' : 'scale(1)',
-                  }}
-                >
-                  {/* Pulsing ring */}
-                  <div 
-                    className={cn(
-                      "absolute inset-0 rounded-xl transition-opacity",
-                      isActive ? "opacity-100" : "opacity-0"
-                    )}
-                    style={{
-                      border: `1px solid ${ritual.color}`,
-                      animation: isActive ? 'pulse-ring 1.5s ease-out infinite' : 'none',
-                    }}
-                  />
-
-                  {/* Inner glow */}
-                  <div 
-                    className="absolute inset-0 rounded-xl"
-                    style={{
-                      background: `radial-gradient(circle at center, ${ritual.glowColor} 0%, transparent 70%)`,
-                      opacity: isActive ? 0.6 : 0.2,
-                      transition: 'opacity 0.5s',
-                    }}
-                  />
-
-                  {/* Rotating border */}
-                  <div 
-                    className={cn(
-                      "absolute inset-[-2px] rounded-xl transition-opacity pointer-events-none",
-                      isActive ? "opacity-100" : "opacity-0"
-                    )}
-                    style={{
-                      background: `conic-gradient(from 0deg, transparent, ${ritual.color}, transparent)`,
-                      animation: isActive ? 'rotate-border 3s linear infinite' : 'none',
-                      mask: 'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)',
-                      maskComposite: 'xor',
-                      WebkitMaskComposite: 'xor',
-                      padding: '2px',
-                    }}
-                  />
-
-                  {ritual.completed ? <Check className="w-6 h-6 sm:w-7 sm:h-7 relative z-10" /> : <span className="relative z-10">{ritual.icon}</span>}
-                </div>
-
-                {/* Text content */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-0.5">
-                    <p className={cn(
-                      "font-display text-base sm:text-lg tracking-wide transition-colors truncate",
-                      ritual.completed && "text-gold",
-                      isActive && !ritual.completed && "text-foreground"
-                    )}>
-                      {ritual.title}
-                    </p>
-                    <Sparkles 
-                      className={cn(
-                        "w-4 h-4 transition-all duration-500 flex-shrink-0",
-                        isActive && "rotate-12 scale-125",
-                      )} 
-                      style={{
-                        color: ritual.color,
-                        filter: isActive ? `drop-shadow(0 0 4px ${ritual.color})` : 'none',
-                      }}
-                    />
-                    <Zap 
-                      className={cn(
-                        "w-3 h-3 transition-all duration-300 animate-pulse flex-shrink-0",
-                        isActive ? "opacity-100" : "opacity-0"
-                      )} 
-                      style={{ color: ritual.color }}
-                    />
-                  </div>
-                  <p className="text-sm sm:text-base text-muted-foreground truncate">{ritual.subtitle}</p>
-                </div>
-
-                {/* Completion indicator */}
-                {ritual.completed && (
-                  <div 
-                    className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gold/20 flex items-center justify-center flex-shrink-0 border border-gold/30"
-                    style={{
-                      animation: 'pulse-ring 2s ease-in-out infinite',
-                      boxShadow: '0 0 15px rgba(212, 175, 55, 0.4)',
-                    }}
-                  >
-                    <Check className="w-4 h-4 sm:w-5 sm:h-5 text-gold" />
-                  </div>
-                )}
-
-                {/* Action arrow for incomplete */}
-                {!ritual.completed && (
-                  <div className={cn(
-                    "hidden sm:flex items-center gap-2 text-sm transition-all duration-500 text-muted-foreground",
-                    isActive && "text-gold"
-                  )}>
-                    <span 
-                      className={cn(
-                        "text-lg transition-all duration-300",
-                        isActive && "translate-x-2 scale-125"
-                      )}
-                      style={{
-                        filter: isActive ? `drop-shadow(0 0 6px ${ritual.color})` : 'none',
-                      }}
-                    >
-                      →
-                    </span>
-                  </div>
-                )}
-
-                {/* Bottom energy bar */}
-                <div className="absolute bottom-0 left-0 right-0 h-[2px] overflow-hidden">
-                  <div 
-                    className={cn(
-                      "h-full w-0 transition-all duration-700 ease-out",
-                      isActive && "w-full"
-                    )}
-                    style={{
-                      background: `linear-gradient(to right, transparent, ${ritual.color}, transparent)`,
-                      boxShadow: `0 0 10px ${ritual.color}`,
-                    }}
-                  />
-                </div>
-              </button>
-            );
-          })}
+              </div>
+            </button>
+          ))}
         </div>
       </CollapsibleContent>
     </div>
     </Collapsible>
 
-     {/* Script Review Modal */}
-     <ScriptReviewModal
-       open={showScriptModal}
-       onOpenChange={setShowScriptModal}
-       aim={chiefAim || { what: '', byWhen: '', exchange: '', plan: '' }}
-       chiefAimSongUrl={chiefAimSongUrl}
-       onEdit={onEditChiefAim}
-       onAdjust={onAdjustChiefAim}
-       onSongListened={onSongListened}
-       onRitualComplete={handleScriptRitualComplete}
-     />
+    {/* Script Review Modal */}
+    <ScriptReviewModal
+      open={showScriptModal}
+      onOpenChange={setShowScriptModal}
+      aim={chiefAim || { what: '', byWhen: '', exchange: '', plan: '' }}
+      chiefAimSongUrl={chiefAimSongUrl}
+      onEdit={onEditChiefAim}
+      onAdjust={onAdjustChiefAim}
+      onSongListened={onSongListened}
+      onRitualComplete={handleScriptRitualComplete}
+    />
 
-     {/* Evening Review Modal */}
-     <EveningReviewModal
-       open={showEveningModal}
-       onOpenChange={(open) => {
-         setShowEveningModal(open);
-         if (!open) {
-           toggleRitual("evening");
-         }
-       }}
-       onWatchMindMovie={() => {
-         if (onEveningMindMovieClick) {
-           onEveningMindMovieClick();
-         } else {
-           onTheaterClick();
-         }
-       }}
-       onOpenScorecard={onScorecardClick}
-     />
-     </>
+    {/* Evening Review Modal */}
+    <EveningReviewModal
+      open={showEveningModal}
+      onOpenChange={(open) => {
+        setShowEveningModal(open);
+        if (!open) {
+          toggleRitual("evening");
+        }
+      }}
+      onWatchMindMovie={() => {
+        if (onEveningMindMovieClick) {
+          onEveningMindMovieClick();
+        } else {
+          onTheaterClick();
+        }
+      }}
+      onOpenScorecard={onScorecardClick}
+    />
+    </>
   );
 };
 
 // Weekly calendar header component
 function WeeklyCalendarHeader() {
   const today = new Date();
-  const weekStart = startOfWeek(today, { weekStartsOn: 0 }); // Sunday start
+  const weekStart = startOfWeek(today, { weekStartsOn: 0 });
 
   const weekDays = useMemo(() => {
     return Array.from({ length: 7 }).map((_, i) => {
@@ -722,46 +482,39 @@ function WeeklyCalendarHeader() {
   }, [weekStart]);
 
   return (
-    <div className="mb-4 relative z-10">
-      {/* Current date display */}
+    <div className="px-4 sm:px-5 pt-4 pb-3">
+      {/* Current date */}
       <div className="text-center mb-3">
-        <p className="text-lg sm:text-xl font-display text-gold">
+        <p className="font-display text-lg sm:text-xl text-gold">
           {format(today, "EEEE")}
         </p>
-        <p className="text-xs sm:text-sm text-muted-foreground">
+        <p className="font-ui text-[10px] sm:text-xs text-muted-foreground uppercase tracking-[0.15em]">
           {format(today, "MMMM d, yyyy")}
         </p>
       </div>
 
       {/* Week days row */}
-      <div className="flex items-center justify-between gap-1 px-1">
+      <div className="flex items-center justify-between gap-1">
         {weekDays.map((day) => (
           <div
             key={day.dayNum}
             className={cn(
-              "flex flex-col items-center justify-center py-2 px-1 sm:px-3 rounded-lg transition-all duration-300 flex-1",
+              "flex flex-col items-center justify-center py-1.5 px-1 sm:px-2.5 rounded-lg transition-all duration-300 flex-1",
               day.isToday
-                ? "bg-gradient-to-br from-gold/30 to-amber-soft/20 border-2 border-gold/50 shadow-lg"
-                : "bg-secondary/30 border border-border/30"
+                ? "bg-gold/10 border border-gold/30"
+                : "bg-secondary/20 border border-transparent"
             )}
-            style={{
-              boxShadow: day.isToday ? "0 0 15px rgba(212, 175, 55, 0.3)" : undefined,
-            }}
           >
-            <span
-              className={cn(
-                "text-[10px] sm:text-xs uppercase tracking-wider font-medium",
-                day.isToday ? "text-gold" : "text-muted-foreground"
-              )}
-            >
+            <span className={cn(
+              "font-ui text-[9px] sm:text-[10px] uppercase tracking-wider",
+              day.isToday ? "text-gold" : "text-muted-foreground"
+            )}>
               {day.dayName}
             </span>
-            <span
-              className={cn(
-                "text-sm sm:text-lg font-display",
-                day.isToday ? "text-gold" : "text-foreground/70"
-              )}
-            >
+            <span className={cn(
+              "font-display text-sm sm:text-base",
+              day.isToday ? "text-gold" : "text-foreground/60"
+            )}>
               {day.dayNum}
             </span>
           </div>
