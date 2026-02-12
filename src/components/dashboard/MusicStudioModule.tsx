@@ -222,48 +222,44 @@ export function MusicStudioModule({ className }: MusicStudioModuleProps) {
         onClick={() => setIsOpen(true)}
         className={cn(
           "w-full relative group text-left overflow-hidden rounded-xl border transition-all duration-400 ease-out",
-          "border-pink-400/15 hover:border-pink-400/40",
+          "border-gold/15 hover:border-gold/40",
           "active:scale-[0.98] hover:translate-y-[-2px]",
           className
         )}
         style={{
-          background: "linear-gradient(135deg, hsl(240 5% 8%) 0%, hsl(330 81% 60% / 0.04) 50%, hsl(240 5% 8%) 100%)",
+          background: "linear-gradient(135deg, hsl(var(--background)) 0%, hsl(var(--gold) / 0.04) 50%, hsl(var(--background)) 100%)",
         }}
       >
-        {/* Persistent glow */}
         <div className="absolute inset-0 pointer-events-none" style={{
-          background: "radial-gradient(ellipse at 10% 50%, hsl(330 81% 60% / 0.06) 0%, transparent 60%)",
+          background: "radial-gradient(ellipse at 10% 50%, hsl(var(--gold) / 0.06) 0%, transparent 60%)",
         }} />
-        {/* Breathing shimmer */}
         <div className="absolute inset-0 pointer-events-none" style={{
-          background: "linear-gradient(90deg, transparent 0%, hsl(330 81% 60% / 0.04) 50%, transparent 100%)",
+          background: "linear-gradient(90deg, transparent 0%, hsl(var(--gold) / 0.04) 50%, transparent 100%)",
           backgroundSize: "200% 100%",
           animation: "calendar-shimmer 5s ease-in-out infinite",
         }} />
-        {/* Top accent */}
         <div className="absolute top-0 left-0 right-0 h-[1px]" style={{
-          background: "linear-gradient(90deg, transparent, hsl(330 81% 60% / 0.4), transparent)",
+          background: "linear-gradient(90deg, transparent, hsl(var(--gold) / 0.4), transparent)",
         }} />
-        {/* Left bar */}
         <div className="absolute top-2 bottom-2 left-0 w-[2px] rounded-full" style={{
-          background: "linear-gradient(to bottom, transparent, hsl(330 81% 60% / 0.5), transparent)",
+          background: "linear-gradient(to bottom, transparent, hsl(var(--gold) / 0.5), transparent)",
         }} />
 
         <div className="relative z-10 p-5 sm:p-6 flex items-center gap-4">
-          <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl flex items-center justify-center flex-shrink-0 bg-gradient-to-br from-pink-500/25 to-pink-500/8"
-            style={{ boxShadow: "0 0 12px hsl(330 81% 60% / 0.15)" }}
+          <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl flex items-center justify-center flex-shrink-0 bg-gradient-to-br from-gold/25 to-gold/8"
+            style={{ boxShadow: "0 0 12px hsl(var(--gold) / 0.15)" }}
           >
             <img src={iconSoundtrack} alt="" className="w-7 h-7 sm:w-8 sm:h-8 object-contain" />
           </div>
           <div className="flex-1 min-w-0">
-            <h3 className="font-display text-lg sm:text-xl tracking-wide text-pink-400 group-hover:text-pink-300 transition-colors">
+            <h3 className="font-display text-lg sm:text-xl tracking-wide text-gold group-hover:text-gold-glow transition-colors">
               Music Studio
             </h3>
             <p className="font-ui text-xs text-muted-foreground line-clamp-1 opacity-70">
               Create & play your transformation soundtrack
             </p>
           </div>
-          <div className="hidden sm:flex items-center gap-1 text-xs text-muted-foreground group-hover:text-pink-400 transition-colors">
+          <div className="hidden sm:flex items-center gap-1 text-xs text-muted-foreground group-hover:text-gold transition-colors">
             <Headphones className="w-4 h-4" />
             <span>Open</span>
           </div>
@@ -271,70 +267,60 @@ export function MusicStudioModule({ className }: MusicStudioModuleProps) {
 
         <div className="absolute bottom-0 left-0 right-0 h-[2px] overflow-hidden">
           <div className="h-full w-0 group-hover:w-full transition-all duration-700 ease-out"
-            style={{ background: "hsl(330 81% 60%)", boxShadow: "0 0 8px hsl(330 81% 60% / 0.3)" }}
+            style={{ background: "hsl(var(--gold))", boxShadow: "0 0 8px hsl(var(--gold) / 0.3)" }}
           />
         </div>
       </button>
 
       {/* Music Player Dialog */}
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogContent className="max-w-lg p-0 bg-[hsl(240_5%_6%)] border-pink-500/20 overflow-hidden rounded-2xl gap-0 [&>button:last-child]:hidden">
-          {/* Header with back button */}
-          <div className="flex items-center justify-between px-4 pt-4 pb-0 relative z-20">
-            <button onClick={() => setIsOpen(false)} className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors">
+        <DialogContent className="max-w-lg p-0 bg-background border-gold/20 rounded-2xl gap-0 [&>button:last-child]:hidden max-h-[90vh] overflow-y-auto">
+          {/* Sticky header with back/close */}
+          <div className="sticky top-0 z-30 flex items-center justify-between px-4 py-3 bg-background/95 backdrop-blur-sm border-b border-border/30">
+            <button onClick={() => setIsOpen(false)} className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-gold transition-colors min-h-[44px] min-w-[44px]">
               <span className="text-lg">←</span>
               <span>Back</span>
             </button>
-            <span className="text-xs text-muted-foreground uppercase tracking-wider">Music Studio</span>
-            <button onClick={() => setIsOpen(false)} className="text-muted-foreground hover:text-foreground transition-colors">
+            <span className="text-xs text-gold/70 uppercase tracking-wider font-ui">Music Studio</span>
+            <button onClick={() => setIsOpen(false)} className="text-muted-foreground hover:text-gold transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center">
               <X className="w-5 h-5" />
             </button>
           </div>
 
           {/* Album Art / Vinyl Section */}
-          <div className="relative px-8 pt-10 pb-6 flex flex-col items-center"
+          <div className="relative px-8 pt-8 pb-6 flex flex-col items-center"
             style={{
-              background: "radial-gradient(ellipse at 50% 30%, hsl(330 81% 60% / 0.12) 0%, transparent 70%)",
+              background: "radial-gradient(ellipse at 50% 30%, hsl(var(--gold) / 0.1) 0%, transparent 70%)",
             }}
           >
             {/* Spinning vinyl */}
-            <div className="relative w-48 h-48 sm:w-56 sm:h-56 mb-6">
-              {/* Outer ring glow */}
+            <div className="relative w-40 h-40 sm:w-56 sm:h-56 mb-6">
               <div className="absolute inset-0 rounded-full" style={{
-                background: "conic-gradient(from 0deg, hsl(330 81% 60% / 0.15), hsl(37 87% 57% / 0.1), hsl(330 81% 60% / 0.15))",
+                background: "conic-gradient(from 0deg, hsl(var(--gold) / 0.15), hsl(var(--burnt-sienna) / 0.1), hsl(var(--gold) / 0.15))",
                 filter: "blur(8px)",
                 animation: isPlaying ? "spin 3s linear infinite" : "none",
               }} />
-              {/* Vinyl disc */}
               <div
                 className="absolute inset-2 rounded-full border-2 border-white/5"
                 style={{
-                  background: `
-                    radial-gradient(circle at center, hsl(330 81% 60% / 0.3) 0%, hsl(240 5% 12%) 25%, hsl(240 5% 8%) 35%, hsl(240 5% 12%) 45%, hsl(240 5% 8%) 55%, hsl(240 5% 10%) 100%)
-                  `,
+                  background: "radial-gradient(circle at center, hsl(var(--gold) / 0.25) 0%, hsl(240 5% 12%) 25%, hsl(240 5% 8%) 35%, hsl(240 5% 12%) 45%, hsl(240 5% 8%) 55%, hsl(240 5% 10%) 100%)",
                   animation: isPlaying ? "spin 3s linear infinite" : "none",
-                  boxShadow: "inset 0 0 30px rgba(0,0,0,0.5), 0 0 20px hsl(330 81% 60% / 0.1)",
+                  boxShadow: "inset 0 0 30px rgba(0,0,0,0.5), 0 0 20px hsl(var(--gold) / 0.1)",
                 }}
               >
-                {/* Center label */}
                 <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-gradient-to-br from-pink-500/40 to-gold/30 flex items-center justify-center border border-white/10">
+                  <div className="w-14 h-14 sm:w-20 sm:h-20 rounded-full bg-gradient-to-br from-gold/40 to-amber-soft/30 flex items-center justify-center border border-white/10">
                     <Music className="w-6 h-6 sm:w-8 sm:h-8 text-white/80" />
                   </div>
                 </div>
               </div>
-              {/* Grooves */}
               {[30, 40, 50, 60, 70, 80].map(r => (
                 <div key={r} className="absolute rounded-full border border-white/[0.03] pointer-events-none"
-                  style={{
-                    inset: `${(100 - r) / 2}%`,
-                    animation: isPlaying ? "spin 3s linear infinite" : "none",
-                  }}
+                  style={{ inset: `${(100 - r) / 2}%`, animation: isPlaying ? "spin 3s linear infinite" : "none" }}
                 />
               ))}
             </div>
 
-            {/* Track info */}
             <h3 className="text-lg font-display text-foreground text-center truncate w-full px-4">
               {currentTrack?.title || "No Track Selected"}
             </h3>
@@ -344,14 +330,14 @@ export function MusicStudioModule({ className }: MusicStudioModuleProps) {
           </div>
 
           {/* Progress bar */}
-          <div className="px-8 py-2">
+          <div className="px-6 sm:px-8 py-2">
             <Slider
               value={[currentTime]}
               min={0}
               max={duration || 100}
               step={0.1}
               onValueChange={(v) => handleSeekTo(v[0])}
-              className="w-full [&_[role=slider]]:bg-pink-400 [&_[role=slider]]:border-pink-400 [&_.bg-primary]:bg-pink-400"
+              className="w-full"
             />
             <div className="flex justify-between mt-1 text-xs text-muted-foreground">
               <span>{formatTime(currentTime)}</span>
@@ -360,32 +346,32 @@ export function MusicStudioModule({ className }: MusicStudioModuleProps) {
           </div>
 
           {/* Controls */}
-          <div className="px-8 pb-4 flex items-center justify-center gap-4">
+          <div className="px-6 sm:px-8 pb-4 flex items-center justify-center gap-3 sm:gap-4">
             <button onClick={() => setIsShuffle(!isShuffle)}
-              className={cn("p-2 rounded-full transition-colors", isShuffle ? "text-pink-400" : "text-muted-foreground hover:text-foreground")}
+              className={cn("p-2 rounded-full transition-colors", isShuffle ? "text-gold" : "text-muted-foreground hover:text-foreground")}
             >
               <Shuffle className="w-4 h-4" />
             </button>
-            <button onClick={playPreviousTrack} className="p-2 text-foreground hover:text-pink-400 transition-colors">
+            <button onClick={playPreviousTrack} className="p-2 text-foreground hover:text-gold transition-colors">
               <SkipBack className="w-5 h-5" />
             </button>
             <button onClick={togglePlay}
-              className="w-14 h-14 rounded-full bg-gradient-to-br from-pink-500 to-pink-600 flex items-center justify-center hover:scale-105 transition-transform shadow-[0_0_25px_hsl(330_81%_60%/0.4)]"
+              className="w-14 h-14 rounded-full bg-gradient-to-br from-gold to-amber-soft flex items-center justify-center hover:scale-105 transition-transform shadow-[0_0_25px_hsl(var(--gold)/0.4)]"
             >
-              {isPlaying ? <Pause className="w-6 h-6 text-white" /> : <Play className="w-6 h-6 text-white ml-0.5" />}
+              {isPlaying ? <Pause className="w-6 h-6 text-background" /> : <Play className="w-6 h-6 text-background ml-0.5" />}
             </button>
-            <button onClick={playNextTrack} className="p-2 text-foreground hover:text-pink-400 transition-colors">
+            <button onClick={playNextTrack} className="p-2 text-foreground hover:text-gold transition-colors">
               <SkipForward className="w-5 h-5" />
             </button>
             <button onClick={() => setIsRepeat(!isRepeat)}
-              className={cn("p-2 rounded-full transition-colors", isRepeat ? "text-pink-400" : "text-muted-foreground hover:text-foreground")}
+              className={cn("p-2 rounded-full transition-colors", isRepeat ? "text-gold" : "text-muted-foreground hover:text-foreground")}
             >
               <Repeat className="w-4 h-4" />
             </button>
           </div>
 
-          {/* Volume */}
-          <div className="px-8 pb-4 flex items-center gap-3">
+          {/* Volume - hidden on mobile for space */}
+          <div className="hidden sm:flex px-8 pb-4 items-center gap-3">
             <button onClick={() => setIsMuted(!isMuted)} className="text-muted-foreground hover:text-foreground">
               {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
             </button>
@@ -393,13 +379,13 @@ export function MusicStudioModule({ className }: MusicStudioModuleProps) {
               value={[isMuted ? 0 : volume]}
               min={0} max={1} step={0.01}
               onValueChange={(v) => { setVolume(v[0]); setIsMuted(v[0] === 0); }}
-              className="flex-1 [&_[role=slider]]:bg-pink-400 [&_[role=slider]]:border-pink-400 [&_.bg-primary]:bg-pink-400"
+              className="flex-1"
             />
           </div>
 
           {/* Track list */}
-          <div className="border-t border-white/5">
-            <div className="px-6 py-3 flex items-center justify-between">
+          <div className="border-t border-border/20">
+            <div className="px-4 sm:px-6 py-3 flex items-center justify-between">
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <ListMusic className="w-4 h-4" />
                 <span>{tracks.length} tracks</span>
@@ -407,7 +393,7 @@ export function MusicStudioModule({ className }: MusicStudioModuleProps) {
               <div className="flex items-center gap-2">
                 <label className="cursor-pointer">
                   <input type="file" accept="audio/*" multiple onChange={handleUploadTracks} className="hidden" />
-                  <div className="flex items-center gap-1 text-xs text-pink-400 hover:text-pink-300 transition-colors">
+                  <div className="flex items-center gap-1 text-xs text-gold hover:text-gold-glow transition-colors">
                     <Upload className="w-3.5 h-3.5" />
                     <span>Upload</span>
                   </div>
@@ -419,7 +405,7 @@ export function MusicStudioModule({ className }: MusicStudioModuleProps) {
                 </Button>
               </div>
             </div>
-            <ScrollArea className="max-h-48">
+            <div className="max-h-48 overflow-y-auto">
               {tracks.length === 0 ? (
                 <div className="px-6 py-8 text-center text-muted-foreground text-sm">
                   <Music className="w-8 h-8 mx-auto mb-2 opacity-30" />
@@ -434,7 +420,7 @@ export function MusicStudioModule({ className }: MusicStudioModuleProps) {
                       className={cn(
                         "w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-left transition-colors",
                         currentTrack?.id === track.id
-                          ? "bg-pink-500/10 text-pink-400"
+                          ? "bg-gold/10 text-gold"
                           : "hover:bg-white/5 text-foreground"
                       )}
                     >
@@ -442,7 +428,7 @@ export function MusicStudioModule({ className }: MusicStudioModuleProps) {
                         {currentTrack?.id === track.id && isPlaying ? (
                           <div className="flex items-end gap-[2px] h-4">
                             {[1, 2, 3].map(i => (
-                              <div key={i} className="w-[3px] bg-pink-400 rounded-full" style={{
+                              <div key={i} className="w-[3px] bg-gold rounded-full" style={{
                                 animation: `equalizer-bar 0.${4 + i}s ease-in-out infinite alternate`,
                                 height: `${8 + i * 3}px`,
                               }} />
@@ -463,52 +449,55 @@ export function MusicStudioModule({ className }: MusicStudioModuleProps) {
                   ))}
                 </div>
               )}
-            </ScrollArea>
+            </div>
           </div>
 
-          {/* Sub-modules: Director Radio, The Score, Soundtrack Studio */}
-          <div className="px-4 py-3 border-t border-white/5 space-y-2">
+          {/* Sub-modules */}
+          <div className="px-4 py-3 border-t border-border/20 space-y-2">
             <p className="text-xs text-muted-foreground uppercase tracking-wider px-2 mb-2">Music Modules</p>
             <button
               onClick={() => { setIsOpen(false); navigate("/radio"); }}
               className="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gold/5 border border-gold/10 hover:border-gold/30 transition-all group/item"
             >
-              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-gold/20 to-amber-500/10 flex items-center justify-center">
+              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-gold/20 to-amber-soft/10 flex items-center justify-center">
                 <Headphones className="w-5 h-5 text-gold" />
               </div>
               <div className="flex-1 text-left">
-                <p className="text-sm font-medium text-gold group-hover/item:text-gold">Director Radio</p>
+                <p className="text-sm font-medium text-gold">Director Radio</p>
                 <p className="text-xs text-muted-foreground">Curated stations & live broadcasts</p>
               </div>
               <span className="text-xs text-muted-foreground group-hover/item:text-gold transition-colors">→</span>
             </button>
             <button
               onClick={() => { setIsOpen(false); navigate("/score"); }}
-              className="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-amber-500/5 border border-amber-500/10 hover:border-amber-500/30 transition-all group/item"
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gold/5 border border-gold/10 hover:border-gold/30 transition-all group/item"
             >
-              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-amber-500/20 to-orange-500/10 flex items-center justify-center">
-                <ListMusic className="w-5 h-5 text-amber-400" />
+              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-gold/20 to-amber-soft/10 flex items-center justify-center">
+                <ListMusic className="w-5 h-5 text-gold" />
               </div>
               <div className="flex-1 text-left">
-                <p className="text-sm font-medium text-amber-400 group-hover/item:text-amber-300">The Score</p>
+                <p className="text-sm font-medium text-gold">The Score</p>
                 <p className="text-xs text-muted-foreground">Full music library & playlists</p>
               </div>
-              <span className="text-xs text-muted-foreground group-hover/item:text-amber-400 transition-colors">→</span>
+              <span className="text-xs text-muted-foreground group-hover/item:text-gold transition-colors">→</span>
             </button>
             <button
               onClick={() => { setIsOpen(false); navigate("/soundtrack"); }}
-              className="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-pink-500/5 border border-pink-500/10 hover:border-pink-500/30 transition-all group/item"
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gold/5 border border-gold/10 hover:border-gold/30 transition-all group/item"
             >
-              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-pink-500/20 to-rose-500/10 flex items-center justify-center">
-                <Music className="w-5 h-5 text-pink-400" />
+              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-gold/20 to-amber-soft/10 flex items-center justify-center">
+                <Music className="w-5 h-5 text-gold" />
               </div>
               <div className="flex-1 text-left">
-                <p className="text-sm font-medium text-pink-400 group-hover/item:text-pink-300">Soundtrack Studio</p>
+                <p className="text-sm font-medium text-gold">Soundtrack Studio</p>
                 <p className="text-xs text-muted-foreground">Create custom AI music & lyrics</p>
               </div>
-              <span className="text-xs text-muted-foreground group-hover/item:text-pink-400 transition-colors">→</span>
+              <span className="text-xs text-muted-foreground group-hover/item:text-gold transition-colors">→</span>
             </button>
           </div>
+
+          {/* Bottom safe area padding for mobile */}
+          <div className="h-4" />
         </DialogContent>
       </Dialog>
     </>
