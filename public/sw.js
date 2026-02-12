@@ -1,6 +1,7 @@
-// Unified Service Worker v4.0 - Handles BOTH offline audio AND push notifications
-const CACHE_NAME = 'offline-tracks-v4';
-const AUDIO_CACHE_NAME = 'audio-files-v4';
+// Unified Service Worker v5.0 - Handles BOTH offline audio AND push notifications
+// LAYOUT_VERSION: 2 — bump this comment to force SW update on layout changes
+const CACHE_NAME = 'offline-tracks-v5';
+const AUDIO_CACHE_NAME = 'audio-files-v5';
 
 // ============== PUSH NOTIFICATION HANDLING ==============
 self.addEventListener('push', function(event) {
@@ -78,8 +79,8 @@ self.addEventListener('activate', (event) => {
       caches.keys().then((cacheNames) => {
         return Promise.all(
           cacheNames.map((cacheName) => {
-            if (cacheName !== CACHE_NAME && cacheName !== AUDIO_CACHE_NAME && 
-                (cacheName.startsWith('offline-tracks') || cacheName.startsWith('score-audio'))) {
+                if (cacheName !== CACHE_NAME && cacheName !== AUDIO_CACHE_NAME && 
+                    (cacheName.startsWith('offline-tracks') || cacheName.startsWith('audio-files') || cacheName.startsWith('score-audio'))) {
               console.log('[SW v4] Deleting old cache:', cacheName);
               return caches.delete(cacheName);
             }
@@ -252,4 +253,4 @@ self.addEventListener('message', async (event) => {
   }
 });
 
-console.log('[SW v4] Unified service worker loaded - Push + Offline Audio');
+console.log('[SW v5] Unified service worker loaded - Push + Offline Audio');

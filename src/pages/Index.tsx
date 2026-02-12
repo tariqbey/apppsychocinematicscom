@@ -43,6 +43,10 @@ import { ChiefAimCountdown } from "@/components/dashboard/ChiefAimCountdown";
 import { DashboardEpisodeTracker } from "@/components/dashboard/DashboardEpisodeTracker";
 // DefiniteChiefAimCard is accessed via ScriptReviewModal in DailyRitualChecklist
 
+// Bump this version whenever the dashboard layout hierarchy changes.
+// It's used as a React key to force a full re-mount of the dashboard section.
+const LAYOUT_VERSION = 2;
+
 
 // Custom module icons
 import iconChiefAim from "@/assets/icons/icon-chief-aim.png";
@@ -313,7 +317,7 @@ const Index = () => {
       <Header />
 
       {/* Main Content */}
-      <main className="container mx-auto px-3 sm:px-4 pt-[calc(env(safe-area-inset-top)+5rem)] sm:pt-[calc(env(safe-area-inset-top)+6rem)] pb-28 sm:pb-32 overflow-x-hidden w-full">
+      <main key={`dashboard-layout-v${LAYOUT_VERSION}`} className="container mx-auto px-3 sm:px-4 pt-[calc(env(safe-area-inset-top)+5rem)] sm:pt-[calc(env(safe-area-inset-top)+6rem)] pb-28 sm:pb-32 overflow-x-hidden w-full">
         <div className="max-w-4xl mx-auto space-y-4 sm:space-y-6">
           {/* ========== 1. DIRECTOR BANNER ========== */}
           <DirectorBanner 
@@ -325,7 +329,7 @@ const Index = () => {
             className="animate-fade-in"
           />
 
-          {/* ========== 2. ANIMATED FIRE COUNTDOWN ========== */}
+          {/* ========== 2. ANIMATED FIRE COUNTDOWN (layout v2) ========== */}
           <ChiefAimCountdown
             byWhen={chiefAim.byWhen}
             whatSummary={chiefAim.what ? chiefAim.what.slice(0, 100) : undefined}
