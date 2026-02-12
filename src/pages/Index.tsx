@@ -519,7 +519,22 @@ const Index = () => {
             animationIndex={6}
           />
 
-          {/* ========== 9. KUT! RESET ========== */}
+          {/* ========== 9. MOVIE STUDIO ========== */}
+          <MovieStudioModule
+            onOpenEditBay={() => {
+              setEditBayInitialPrompt(undefined);
+              setEditBaySceneContext(undefined);
+              setShowEditBay(true);
+            }}
+            onOpenMovieVault={() => setShowMovieVault(true)}
+            onOpenStoryboard={() => setShowStoryboardWizard(true)}
+            className="animate-fade-in"
+          />
+
+          {/* ========== 10. MUSIC STUDIO (contains Director Radio + The Score) ========== */}
+          <MusicStudioModule className="animate-fade-in" />
+
+          {/* ========== 11. KUT! RESET ========== */}
           <ModuleCard
             onClick={() => setShowCutReset(true)}
             icon={<XCircle className="w-7 h-7 text-red-500" />}
@@ -531,7 +546,7 @@ const Index = () => {
             animationIndex={7}
           />
 
-          {/* ========== 10. SHARE YOUR STORY ========== */}
+          {/* ========== 12. SHARE YOUR STORY ========== */}
           <ModuleCard
             onClick={() => setShowTestimonialDialog(true)}
             icon={<MessageSquareHeart className="w-7 h-7 text-emerald-400" />}
@@ -542,9 +557,6 @@ const Index = () => {
             animationIndex={8}
           />
 
-          {/* ========== 11. MUSIC STUDIO (contains Director Radio + The Score) ========== */}
-          <MusicStudioModule className="animate-fade-in" />
-
           {/* ========== SECONDARY ========== */}
 
           {/* Push Notifications Banner */}
@@ -552,18 +564,6 @@ const Index = () => {
 
           {/* FEATURED ARTIST BANNER */}
           <FeaturedArtistBanner />
-
-          {/* MOVIE STUDIO */}
-          <MovieStudioModule
-            onOpenEditBay={() => {
-              setEditBayInitialPrompt(undefined);
-              setEditBaySceneContext(undefined);
-              setShowEditBay(true);
-            }}
-            onOpenMovieVault={() => setShowMovieVault(true)}
-            onOpenStoryboard={() => setShowStoryboardWizard(true)}
-            className="animate-fade-in"
-          />
         </div>
       </main>
 
