@@ -102,24 +102,113 @@ export const StreakBanner = ({ streak, bestStreak, lastActiveDate, daysInactive 
         <div className="absolute inset-0 bg-gradient-to-b from-sky-400/5 via-transparent to-sky-400/5 pointer-events-none" />
       )}
 
-      {/* Snowflakes for cold */}
+      {/* Dense snowfall for cold */}
       {isCold && (
-        <>
-          <Snowflake className="absolute top-1 left-[15%] w-3 h-3 text-sky-400/40 animate-snowfall-drift" style={{ animationDelay: '0s' }} />
-          <Snowflake className="absolute top-1 left-[55%] w-2 h-2 text-cyan-300/30 animate-snowfall-drift" style={{ animationDelay: '1.6s' }} />
-          <Snowflake className="absolute top-1 left-[75%] w-2.5 h-2.5 text-blue-300/30 animate-snowfall-drift" style={{ animationDelay: '2.4s' }} />
-        </>
+        <div className="absolute inset-0 pointer-events-none overflow-hidden">
+          {Array.from({ length: 18 }).map((_, i) => (
+            <Snowflake
+              key={i}
+              className="absolute text-sky-300/30"
+              style={{
+                left: `${(i * 5.8) % 100}%`,
+                top: '-8px',
+                width: `${8 + (i % 4) * 3}px`,
+                height: `${8 + (i % 4) * 3}px`,
+                animation: `streak-snowfall ${3 + (i % 3) * 1.5}s linear infinite ${i * 0.4}s`,
+                opacity: 0.15 + (i % 5) * 0.08,
+              }}
+            />
+          ))}
+          {/* Frost shimmer crystals */}
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div
+              key={`frost-${i}`}
+              className="absolute rounded-full"
+              style={{
+                width: 3,
+                height: 3,
+                left: `${10 + i * 16}%`,
+                top: `${20 + (i % 3) * 25}%`,
+                background: 'hsl(200 80% 70% / 0.3)',
+                boxShadow: '0 0 8px hsl(200 80% 70% / 0.4)',
+                animation: `streak-frost-twinkle ${2 + i * 0.5}s ease-in-out infinite ${i * 0.3}s`,
+              }}
+            />
+          ))}
+        </div>
       )}
 
-      {/* Hot embers */}
+      {/* Dense flames for hot */}
       {isHot && streak > 0 && (
-        <>
-          <div className="absolute bottom-0 left-[20%] w-1.5 h-1.5 rounded-full bg-gold/60 animate-ember-float" style={{ animationDelay: '0s' }} />
-          <div className="absolute bottom-0 left-[40%] w-1 h-1 rounded-full bg-amber-400/50 animate-ember-float" style={{ animationDelay: '0.5s' }} />
-          <div className="absolute bottom-0 left-[60%] w-1 h-1 rounded-full bg-gold/40 animate-ember-float" style={{ animationDelay: '1s' }} />
-          <div className="absolute bottom-0 left-[80%] w-1.5 h-1.5 rounded-full bg-orange-400/40 animate-ember-float" style={{ animationDelay: '1.5s' }} />
-        </>
+        <div className="absolute inset-0 pointer-events-none overflow-hidden">
+          {/* Rising embers */}
+          {Array.from({ length: 16 }).map((_, i) => (
+            <div
+              key={`ember-${i}`}
+              className="absolute rounded-full"
+              style={{
+                width: 2 + (i % 3),
+                height: 2 + (i % 3),
+                left: `${(i * 6.5) % 100}%`,
+                bottom: '-4px',
+                background: i % 3 === 0 ? 'hsl(37 87% 57%)' : i % 3 === 1 ? 'hsl(25 90% 55%)' : 'hsl(15 85% 50%)',
+                boxShadow: `0 0 6px ${i % 2 === 0 ? 'hsl(37 87% 57% / 0.6)' : 'hsl(25 90% 55% / 0.5)'}`,
+                animation: `streak-ember-rise ${2.5 + (i % 4) * 0.8}s ease-out infinite ${i * 0.25}s`,
+              }}
+            />
+          ))}
+          {/* Flame columns from bottom */}
+          {Array.from({ length: 8 }).map((_, i) => (
+            <div
+              key={`flame-${i}`}
+              className="absolute bottom-0"
+              style={{
+                left: `${5 + i * 12}%`,
+                width: '20px',
+                height: '35px',
+                background: `radial-gradient(ellipse at 50% 100%, hsl(25 90% 50% / ${0.12 + (i % 3) * 0.04}) 0%, hsl(37 87% 57% / 0.06) 40%, transparent 70%)`,
+                animation: `streak-flame-sway ${1.5 + (i % 3) * 0.5}s ease-in-out infinite ${i * 0.2}s`,
+                transformOrigin: 'bottom center',
+              }}
+            />
+          ))}
+          {/* Heat haze */}
+          <div
+            className="absolute inset-0"
+            style={{
+              background: 'linear-gradient(0deg, hsl(25 80% 50% / 0.06) 0%, transparent 40%)',
+              animation: 'streak-heat-haze 4s ease-in-out infinite',
+            }}
+          />
+        </div>
       )}
+
+      {/* Inline keyframes */}
+      <style>{`
+        @keyframes streak-snowfall {
+          0% { transform: translateY(-10px) rotate(0deg); opacity: 0; }
+          10% { opacity: 1; }
+          90% { opacity: 0.6; }
+          100% { transform: translateY(180px) rotate(360deg); opacity: 0; }
+        }
+        @keyframes streak-frost-twinkle {
+          0%, 100% { opacity: 0.2; transform: scale(0.8); }
+          50% { opacity: 0.6; transform: scale(1.3); }
+        }
+        @keyframes streak-ember-rise {
+          0% { transform: translateY(0) scale(1); opacity: 0; }
+          15% { opacity: 0.9; }
+          100% { transform: translateY(-120px) translateX(${Math.random() > 0.5 ? '' : '-'}8px) scale(0.2); opacity: 0; }
+        }
+        @keyframes streak-flame-sway {
+          0%, 100% { transform: scaleY(1) scaleX(1) rotate(-2deg); opacity: 0.7; }
+          50% { transform: scaleY(1.3) scaleX(0.8) rotate(2deg); opacity: 1; }
+        }
+        @keyframes streak-heat-haze {
+          0%, 100% { opacity: 0.4; }
+          50% { opacity: 0.8; }
+        }
+      `}</style>
 
       <div className="relative z-10 p-4 sm:p-5">
         {/* Box Office Header */}
