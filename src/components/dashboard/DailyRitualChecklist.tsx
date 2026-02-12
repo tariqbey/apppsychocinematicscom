@@ -207,7 +207,10 @@ export const DailyRitualChecklist = ({
 
   const handleRitualClick = (id: string) => {
     if (id === "morning") {
-      onTheaterClick();
+      onOpenChange?.(false);
+      setTimeout(() => onTheaterClick(), 150);
+      toggleRitual(id);
+      return;
     } else if (id === "evening") {
       setShowEveningModal(true);
       return;
