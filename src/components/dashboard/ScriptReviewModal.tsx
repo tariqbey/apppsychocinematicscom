@@ -107,7 +107,19 @@ export const ScriptReviewModal = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-[hsl(var(--parchment))] border-gold/20 text-[hsl(240_7%_10%)]">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-background border-gold/20 text-foreground [&>button:last-child]:hidden">
+        {/* Sticky back/close header */}
+        <div className="sticky top-0 z-30 flex items-center justify-between bg-background/95 backdrop-blur-sm border-b border-border/30 -mx-6 -mt-6 px-4 py-3 mb-4">
+          <button onClick={() => onOpenChange(false)} className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-gold transition-colors min-h-[44px]">
+            <span className="text-lg">←</span>
+            <span>Back</span>
+          </button>
+          <span className="text-xs text-gold/70 uppercase tracking-wider font-ui">Script Review</span>
+          <button onClick={() => onOpenChange(false)} className="text-muted-foreground hover:text-gold transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center">
+            <span className="text-lg">✕</span>
+          </button>
+        </div>
+
         <DialogHeader>
           <DialogTitle className="flex items-center gap-3">
             <div 
@@ -117,8 +129,8 @@ export const ScriptReviewModal = ({
               <Scroll className="w-5 h-5 text-gold" />
             </div>
             <div>
-              <span className="font-display text-2xl text-[hsl(240_7%_10%)]">The Script</span>
-              <p className="font-ui text-xs text-[hsl(37_8%_44%)] uppercase tracking-wider font-normal">Your Definite Chief Aim</p>
+              <span className="font-display text-2xl text-foreground">The Script</span>
+              <p className="font-ui text-xs text-muted-foreground uppercase tracking-wider font-normal">Your Definite Chief Aim</p>
             </div>
           </DialogTitle>
         </DialogHeader>
@@ -127,21 +139,21 @@ export const ScriptReviewModal = ({
           {hasAim ? (
             <>
               {/* Screenplay header */}
-              <div className="text-center border-b border-[hsl(37_8%_44%/0.2)] pb-4">
-                <p className="font-ui text-[10px] uppercase tracking-[0.3em] text-[hsl(37_8%_44%)]">
+              <div className="text-center border-b border-border/30 pb-4">
+                <p className="font-ui text-[10px] uppercase tracking-[0.3em] text-muted-foreground">
                   A Film by
                 </p>
-                <p className="font-display text-xl text-[hsl(240_7%_10%)] mt-1">
+                <p className="font-display text-xl text-foreground mt-1">
                   The Director
                 </p>
               </div>
 
               {/* Scene: What I Want */}
               <div className="space-y-1">
-                <p className="font-ui text-xs uppercase tracking-[0.2em] text-[hsl(37_8%_44%)]">
+                <p className="font-ui text-xs uppercase tracking-[0.2em] text-muted-foreground">
                   INT. MY FUTURE — THE VISION
                 </p>
-                <p className="font-script text-lg text-[hsl(240_7%_15%)] leading-relaxed">
+                <p className="font-script text-lg text-foreground leading-relaxed">
                   {aim.what}
                 </p>
               </div>
@@ -149,12 +161,12 @@ export const ScriptReviewModal = ({
               {/* Scene: By When */}
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
-                  <Calendar className="w-4 h-4 text-[hsl(14_90%_41%)]" />
-                  <p className="font-ui text-xs uppercase tracking-[0.2em] text-[hsl(37_8%_44%)]">
+                  <Calendar className="w-4 h-4 text-sienna" />
+                  <p className="font-ui text-xs uppercase tracking-[0.2em] text-muted-foreground">
                     INT. THE DEADLINE — {aim.byWhen.toUpperCase()}
                   </p>
                 </div>
-                <p className="font-script text-base text-[hsl(240_7%_15%)] pl-6">
+                <p className="font-script text-base text-foreground pl-6">
                   By this date, the transformation is complete.
                 </p>
               </div>
@@ -162,44 +174,44 @@ export const ScriptReviewModal = ({
               {/* Scene: The Exchange */}
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
-                  <ArrowRight className="w-4 h-4 text-[hsl(14_90%_41%)]" />
-                  <p className="font-ui text-xs uppercase tracking-[0.2em] text-[hsl(37_8%_44%)]">
+                  <ArrowRight className="w-4 h-4 text-sienna" />
+                  <p className="font-ui text-xs uppercase tracking-[0.2em] text-muted-foreground">
                     INT. THE EXCHANGE — WHAT I GIVE
                   </p>
                 </div>
-                <p className="font-script text-base text-[hsl(240_7%_15%)] leading-relaxed pl-6">
+                <p className="font-script text-base text-foreground leading-relaxed pl-6">
                   {aim.exchange}
                 </p>
               </div>
 
               {/* Scene: The Plan */}
-              <div className="space-y-1 p-4 rounded-lg border border-gold/20 bg-[hsl(37_87%_57%/0.05)]">
+              <div className="space-y-1 p-4 rounded-lg border border-gold/20 bg-gold/5">
                 <div className="flex items-center gap-2">
                   <Sparkles className="w-4 h-4 text-gold" />
                   <p className="font-ui text-xs uppercase tracking-[0.2em] text-gold">
                     INT. THE PLAN — ACTION SEQUENCE
                   </p>
                 </div>
-                <p className="font-script text-base text-[hsl(240_7%_15%)] leading-relaxed pl-6">
+                <p className="font-script text-base text-foreground leading-relaxed pl-6">
                   {aim.plan}
                 </p>
               </div>
 
               {/* Screenplay footer line */}
               <div className="text-center py-2">
-                <p className="font-ui text-[10px] uppercase tracking-[0.3em] text-[hsl(37_8%_44%/0.6)]">
+                <p className="font-ui text-[10px] uppercase tracking-[0.3em] text-muted-foreground/50">
                   — FADE TO BLACK —
                 </p>
               </div>
 
               {/* Chief Aim Anthem Section */}
-              <div className="p-4 sm:p-5 rounded-xl bg-[hsl(240_7%_10%)] border border-gold/20 text-foreground">
+              <div className="p-4 sm:p-5 rounded-xl bg-card border border-gold/20">
                 <div className="flex flex-col gap-3">
                   <div className="flex items-center justify-between gap-3">
                     <div className="flex items-center gap-2">
-                      <Music className="w-4 h-4 sm:w-5 sm:h-5 text-purple-400" />
+                      <Music className="w-4 h-4 sm:w-5 sm:h-5 text-gold" />
                       <div>
-                        <p className="font-ui text-xs text-purple-300 uppercase tracking-wider">Chief Aim Anthem</p>
+                        <p className="font-ui text-xs text-gold uppercase tracking-wider">Chief Aim Anthem</p>
                         <p className="text-xs text-muted-foreground">
                           {chiefAimSongUrl 
                             ? (hasListenedToday 
@@ -221,8 +233,8 @@ export const ScriptReviewModal = ({
                             className={cn(
                               "gap-2 transition-all",
                               isPlaying 
-                                ? "text-purple-400 bg-purple-500/20" 
-                                : "text-muted-foreground hover:text-purple-400 hover:bg-purple-500/10"
+                                ? "text-gold bg-gold/20" 
+                                : "text-muted-foreground hover:text-gold hover:bg-gold/10"
                             )}
                           >
                             {isPlaying ? (
@@ -252,7 +264,7 @@ export const ScriptReviewModal = ({
                           variant="default"
                           size="sm"
                           onClick={handleCreateSong}
-                          className="gap-2 bg-gradient-to-r from-purple-500 to-gold hover:from-purple-600 hover:to-amber-500"
+                          className="gap-2 bg-gradient-to-r from-gold to-amber-soft"
                         >
                           <Music className="w-4 h-4" />
                           <span>Create Song</span>
@@ -263,7 +275,7 @@ export const ScriptReviewModal = ({
                   
                   {/* Waveform Visualizer */}
                   {chiefAimSongUrl && (
-                    <div className="h-16 sm:h-20 w-full rounded-xl bg-gradient-to-br from-black/30 to-purple-900/20 overflow-hidden flex items-center justify-center px-3 border border-purple-500/20">
+                    <div className="h-16 sm:h-20 w-full rounded-xl bg-card/50 overflow-hidden flex items-center justify-center px-3 border border-gold/20">
                       <SimpleWaveformBars 
                         isPlaying={isPlaying} 
                         barCount={32}
@@ -282,7 +294,7 @@ export const ScriptReviewModal = ({
                     onOpenChange(false);
                     onEdit?.();
                   }}
-                  className="gap-2 border-[hsl(37_8%_44%/0.3)] text-[hsl(240_7%_10%)] hover:bg-gold/10"
+                  className="gap-2 border-border text-foreground hover:bg-gold/10 hover:border-gold/30"
                 >
                   <Pencil className="w-4 h-4" />
                   Edit Script
@@ -293,7 +305,7 @@ export const ScriptReviewModal = ({
                     onOpenChange(false);
                     onAdjust?.();
                   }}
-                  className="gap-2 border-[hsl(37_8%_44%/0.3)] text-[hsl(240_7%_10%)] hover:bg-gold/10"
+                  className="gap-2 border-border text-foreground hover:bg-gold/10 hover:border-gold/30"
                 >
                   <Wand2 className="w-4 h-4" />
                   Adjust with AI
@@ -309,10 +321,10 @@ export const ScriptReviewModal = ({
               </div>
             </>
           ) : (
-            <div className="p-8 rounded-xl border-2 border-dashed border-gold/30 text-center bg-[hsl(37_87%_57%/0.03)]">
+            <div className="p-8 rounded-xl border-2 border-dashed border-gold/30 text-center bg-gold/5">
               <Sparkles className="w-10 h-10 text-gold/50 mx-auto mb-4 animate-pulse" />
-              <p className="font-display text-xl text-[hsl(240_7%_10%)] mb-2">Your Definite Chief Aim is not set yet.</p>
-              <p className="font-script text-sm text-[hsl(37_8%_44%)] mb-4">Create your transformation script to unlock this ritual.</p>
+              <p className="font-display text-xl text-foreground mb-2">Your Definite Chief Aim is not set yet.</p>
+              <p className="font-script text-sm text-muted-foreground mb-4">Create your transformation script to unlock this ritual.</p>
               <Button
                 onClick={() => {
                   onOpenChange(false);
