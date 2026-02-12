@@ -22,8 +22,11 @@ export default {
     },
     extend: {
       fontFamily: {
-        display: ['"Bebas Neue"', 'sans-serif'],
-        sans: ['Inter', 'sans-serif'],
+        display: ['"Cormorant Garamond"', '"Bebas Neue"', 'serif'],
+        sans: ['Syne', 'Inter', 'sans-serif'],
+        script: ['Lora', 'serif'],
+        ui: ['Syne', 'sans-serif'],
+        bebas: ['"Bebas Neue"', 'sans-serif'],
       },
       colors: {
         border: "hsl(var(--border))",
@@ -42,6 +45,12 @@ export default {
         },
         amber: {
           soft: "hsl(var(--amber-soft))",
+        },
+        sienna: {
+          DEFAULT: "hsl(var(--burnt-sienna))",
+        },
+        parchment: {
+          DEFAULT: "hsl(var(--parchment))",
         },
         primary: {
           DEFAULT: "hsl(var(--primary))",
