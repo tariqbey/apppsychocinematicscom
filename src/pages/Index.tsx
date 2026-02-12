@@ -39,6 +39,7 @@ import { TestimonialSubmissionDialog } from "@/components/testimonials/Testimoni
 import { EnableNotificationsBanner } from "@/components/notifications/EnableNotificationsBanner";
 import { DirectorBanner } from "@/components/dashboard/DirectorBanner";
 import { MovieStudioModule } from "@/components/dashboard/MovieStudioModule";
+import { MusicStudioModule } from "@/components/dashboard/MusicStudioModule";
 import { ChiefAimCountdown } from "@/components/dashboard/ChiefAimCountdown";
 import { DashboardEpisodeTracker } from "@/components/dashboard/DashboardEpisodeTracker";
 import { WeeklyCalendarStrip } from "@/components/dashboard/WeeklyCalendarStrip";
@@ -363,7 +364,12 @@ const Index = () => {
           {/* ========== 2c. WEEKLY CALENDAR ========== */}
           <WeeklyCalendarStrip />
 
-          {/* ========== 3. DAILY RITUAL MODULE CARD ========== */}
+          {/* ========== 3. PRODUCTION STATUS ========== */}
+          <div className="animate-fade-in">
+            <ProductionStatus currentAct={currentAct} dayNumber={dayNumber} />
+          </div>
+
+          {/* ========== 4. DAILY RITUAL MODULE CARD ========== */}
           <ModuleCard
             onClick={() => setShowDailyRitual(true)}
             icon={<Film className="w-7 h-7 text-gold" />}
@@ -421,7 +427,7 @@ const Index = () => {
              }}
           />
 
-          {/* ========== 4. CHIEF AIM ANTHEM ========== */}
+          {/* ========== 5. CHIEF AIM ANTHEM (Definitive Aim) ========== */}
           <ChiefAimAnthemCard
             chiefAimSongUrl={profile?.chief_aim_song_url}
             chiefAimContext={chiefAim}
@@ -459,35 +465,7 @@ const Index = () => {
             className="animate-fade-in"
           />
 
-          {/* ========== 5. DIRECTOR RADIO ========== */}
-          <DirectorRadioCard />
-
-          {/* ========== 6. THE SCORE ========== */}
-          <ModuleCard
-            onClick={() => navigate("/score")}
-            icon={<Music className="w-7 h-7 text-gold" />}
-            title="The Score"
-            description="Your personal music library • Create playlists • Stream your tracks anywhere"
-            actionText="Open Score"
-            colorScheme="gold"
-            tooltip="Your personal music player. Organize tracks into playlists and stream your transformation soundtrack."
-            animationIndex={3}
-          />
-
-          {/* ========== 7. DIRECTOR'S JOURNAL ========== */}
-          <ModuleCard
-            onClick={() => setShowJournal(true)}
-            iconImage={iconJournal}
-            icon={null}
-            title="Director's Journal"
-            description="Record your journey • AI insights & accountability tracking"
-            actionText="Open Journal"
-            colorScheme="purple"
-            tooltip="Record your experiences, breakthroughs, and challenges. Get AI-powered feedback on your progress and accountability reports to track your transformation journey."
-            animationIndex={4}
-          />
-
-          {/* ========== 8. EPISODES - Tracker with tasks ========== */}
+          {/* ========== 6. ACTIVE EPISODE ========== */}
           <DashboardEpisodeTracker />
           {!activeEpisode && (
             <ModuleCard
@@ -498,23 +476,24 @@ const Index = () => {
               actionText="View Episodes"
               colorScheme="amber"
               tooltip="Create and manage episodes (short-term sprints), track active episodes, and train through adversity challenges."
-              animationIndex={5}
+              animationIndex={3}
             />
           )}
 
-          {/* ========== BELOW: SECONDARY MODULES ========== */}
+          {/* ========== 7. ACTION EXECUTION ========== */}
+          <ModuleCard
+            onClick={() => navigate("/actions")}
+            iconImage={iconActions}
+            icon={null}
+            title="Action Execution"
+            description="Your 3 daily priorities • Excuse tracking • Accountability analytics"
+            actionText="Open Actions"
+            colorScheme="primary"
+            tooltip="Focus on just 3 priority tasks per day that move you toward your Chief Aim. Track your excuse patterns and build accountability."
+            animationIndex={4}
+          />
 
-          {/* Push Notifications Banner */}
-          <EnableNotificationsBanner className="animate-slide-up" />
-
-          {/* Production Status */}
-          <div className="animate-fade-in">
-            <ProductionStatus currentAct={currentAct} dayNumber={dayNumber} />
-          </div>
-
-          {/* DEFINITE CHIEF AIM - Accessed via Script Review ritual */}
-
-          {/* CHARACTER BUILDER */}
+          {/* ========== 8. CHARACTER BUILDER ========== */}
           <ModuleCard
             onClick={() => navigate("/character")}
             iconImage={iconCharacter}
@@ -524,8 +503,57 @@ const Index = () => {
             actionText="Build Character"
             colorScheme="cyan"
             tooltip="Discover your Director archetype, define required character traits, and track daily alignment. Build the identity needed to achieve your Chief Aim."
+            animationIndex={5}
+          />
+
+          {/* ========== 9. KUT! RESET ========== */}
+          <ModuleCard
+            onClick={() => setShowCutReset(true)}
+            icon={<XCircle className="w-7 h-7 text-red-500" />}
+            title="KUT! Reset"
+            description="Pattern interrupt • Break old reactions • Return to character"
+            actionText="KUT Now"
+            colorScheme="red"
+            tooltip="When old patterns show up, use the KUT technique to reset your nervous system and return to your Director's Chair."
             animationIndex={6}
           />
+
+          {/* ========== 10. SHARE YOUR STORY ========== */}
+          <ModuleCard
+            onClick={() => setShowTestimonialDialog(true)}
+            icon={<MessageSquareHeart className="w-7 h-7 text-emerald-400" />}
+            title="Share Your Story"
+            description="Record a testimonial • Inspire other directors • Get featured on the landing page"
+            actionText="Share"
+            colorScheme="emerald"
+            animationIndex={7}
+          />
+
+          {/* ========== 11. MUSIC STUDIO ========== */}
+          <MusicStudioModule className="animate-fade-in" />
+
+          {/* ========== 12. DIRECTOR RADIO ========== */}
+          <DirectorRadioCard />
+
+          {/* ========== 13. THE SCORE ========== */}
+          <ModuleCard
+            onClick={() => navigate("/score")}
+            icon={<Music className="w-7 h-7 text-gold" />}
+            title="The Score"
+            description="Your personal music library • Create playlists • Stream your tracks anywhere"
+            actionText="Open Score"
+            colorScheme="gold"
+            tooltip="Your personal music player. Organize tracks into playlists and stream your transformation soundtrack."
+            animationIndex={8}
+          />
+
+          {/* ========== SECONDARY ========== */}
+
+          {/* Push Notifications Banner */}
+          <EnableNotificationsBanner className="animate-slide-up" />
+
+          {/* FEATURED ARTIST BANNER */}
+          <FeaturedArtistBanner />
 
           {/* MOVIE STUDIO */}
           <MovieStudioModule
@@ -539,42 +567,16 @@ const Index = () => {
             className="animate-fade-in"
           />
 
-          {/* ACTION EXECUTION */}
+          {/* DIRECTOR'S JOURNAL */}
           <ModuleCard
-            onClick={() => navigate("/actions")}
-            iconImage={iconActions}
+            onClick={() => setShowJournal(true)}
+            iconImage={iconJournal}
             icon={null}
-            title="Action Execution"
-            description="Your 3 daily priorities • Excuse tracking • Accountability analytics"
-            actionText="Open Actions"
-            colorScheme="primary"
-            tooltip="Focus on just 3 priority tasks per day that move you toward your Chief Aim. Track your excuse patterns and build accountability."
-            animationIndex={7}
-          />
-
-          {/* KUT / RESET */}
-          <ModuleCard
-            onClick={() => setShowCutReset(true)}
-            icon={<XCircle className="w-7 h-7 text-red-500" />}
-            title="KUT! Reset"
-            description="Pattern interrupt • Break old reactions • Return to character"
-            actionText="KUT Now"
-            colorScheme="red"
-            tooltip="When old patterns show up, use the KUT technique to reset your nervous system and return to your Director's Chair."
-            animationIndex={8}
-          />
-
-          {/* FEATURED ARTIST BANNER */}
-          <FeaturedArtistBanner />
-
-          {/* SHARE YOUR STORY */}
-          <ModuleCard
-            onClick={() => setShowTestimonialDialog(true)}
-            icon={<MessageSquareHeart className="w-7 h-7 text-emerald-400" />}
-            title="Share Your Story"
-            description="Record a testimonial • Inspire other directors • Get featured on the landing page"
-            actionText="Share"
-            colorScheme="emerald"
+            title="Director's Journal"
+            description="Record your journey • AI insights & accountability tracking"
+            actionText="Open Journal"
+            colorScheme="purple"
+            tooltip="Record your experiences, breakthroughs, and challenges. Get AI-powered feedback on your progress and accountability reports to track your transformation journey."
             animationIndex={9}
           />
         </div>
