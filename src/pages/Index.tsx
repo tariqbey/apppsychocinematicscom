@@ -41,6 +41,7 @@ import { DirectorBanner } from "@/components/dashboard/DirectorBanner";
 import { MovieStudioModule } from "@/components/dashboard/MovieStudioModule";
 import { ChiefAimCountdown } from "@/components/dashboard/ChiefAimCountdown";
 import { DashboardEpisodeTracker } from "@/components/dashboard/DashboardEpisodeTracker";
+import { WeeklyCalendarStrip } from "@/components/dashboard/WeeklyCalendarStrip";
 // DefiniteChiefAimCard is accessed via ScriptReviewModal in DailyRitualChecklist
 
 // Bump this version whenever the dashboard layout hierarchy changes.
@@ -358,6 +359,9 @@ const Index = () => {
               onKutReset={() => setShowCutReset(true)} 
             />
           </div>
+
+          {/* ========== 2c. WEEKLY CALENDAR ========== */}
+          <WeeklyCalendarStrip />
 
           {/* ========== 3. DAILY RITUAL MODULE CARD ========== */}
           <ModuleCard
