@@ -1,27 +1,33 @@
 
 
-## Fix: Journal Entry Crash on Mobile
+## Fix: Lock Down Dashboard Layout and Force PWA Cache Refresh
 
-### Root Cause
+### Problem
+The dashboard layout code (countdown, streak, rituals) is currently correct in the source code. The likely reason it appears missing on your device is the **PWA service worker caching an old version** of the app. Every time code changes are made, the PWA may serve a stale cached build that doesn't include the latest updates.
 
-The DirectorsJournal component is always mounted inside `Index.tsx` (line 742), even when closed. While it returns `null` when not open, its parent page (`Index.tsx`) keeps **all dashboard hooks and heavy components** alive underneath the journal overlay. On mobile devices (especially iOS PWA), this creates significant memory pressure. Every keystroke in the journal Textarea triggers a React re-render of the journal component, and combined with the heavyweight dashboard underneath, this can exceed the WebKit process memory limit and crash the app.
+### Solution (3 parts)
 
-### Fix Strategy
+**1. Force PWA cache bust (sw.js)**
+- Update the service worker to use a versioned cache key so old caches are automatically cleared when new builds deploy
+- This prevents the "old version still showing" problem permanently
 
-**1. Lazy-mount the journal (Index.tsx)**
-- Change `<DirectorsJournal isOpen={showJournal} .../>` to `{showJournal && <DirectorsJournal .../>}` so it only mounts when actually open, matching how TheaterView and EditBay are already handled
-- This ensures the component fully unmounts when closed, freeing memory
+**2. Add a layout integrity safeguard (Index.tsx)**
+- Add a `key` prop tied to a layout version constant so React fully re-mounts the dashboard section if the layout structure changes
+- Add defensive console logging in dev mode so layout issues are immediately visible
 
-**2. Add an error boundary around the journal (new: JournalErrorBoundary)**
-- Wrap the journal in a React error boundary so that if it does crash, it catches the error gracefully instead of taking down the whole app
-- Show a "Something went wrong" card with a retry button
-
-**3. Optimize the Textarea input (DirectorsJournal.tsx)**
-- Use `useRef` for the textarea value during active typing instead of calling `setContent()` on every keystroke
-- Only sync to React state on blur or submit, reducing re-renders from potentially hundreds (while typing) to just one
-- This dramatically reduces the render load on mobile
+**3. Verify all components render correctly**
+- Confirm `ChiefAimCountdown` handles empty `byWhen` gracefully (already does)
+- Confirm `StreakBanner` renders in all states (already does)
+- Confirm `DailyRitualChecklist` collapsible works (already does)
+- No actual layout code changes needed -- the hierarchy is correct
 
 ### Files Modified
 
-1. **`src/pages/Index.tsx`** -- Conditional render for journal (1-line change)
-2. **`src/components/journal/DirectorsJournal.tsx`** -- Optimize textarea to use ref-based input, reduce re-renders; add error boundary wrapper
+1. **`public/sw.js`** -- Update cache version and add cache-busting logic to force old PWA installs to pull fresh content
+2. **`src/pages/Index.tsx`** -- Add layout version constant and key prop for bulletproof re-mounting; no layout order changes needed since the order is already correct
+
+### What You Should Do After This Deploys
+- On your phone/device, close the app completely and reopen it
+- If using iOS PWA: delete the home screen shortcut and re-add it
+- The PWA update prompt should also trigger automatically
+
