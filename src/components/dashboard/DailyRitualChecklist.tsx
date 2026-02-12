@@ -272,7 +272,25 @@ export const DailyRitualChecklist = ({
   return (
     <>
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg p-0 bg-card border-gold/20 overflow-hidden max-h-[85vh] overflow-y-auto">
+      <DialogContent className="w-full h-full max-w-none max-h-none m-0 rounded-none p-0 bg-background border-none overflow-y-auto data-[state=open]:slide-in-from-bottom-0 data-[state=open]:zoom-in-100 data-[state=closed]:zoom-out-100">
+        {/* Sticky nav header */}
+        <div className="sticky top-0 z-30 flex items-center justify-between px-4 py-3 bg-background/95 backdrop-blur-sm border-b border-border/30">
+          <button
+            onClick={() => onOpenChange?.(false)}
+            className="min-h-[44px] min-w-[44px] text-muted-foreground hover:text-gold transition-colors flex items-center gap-1.5 text-sm font-medium"
+          >
+            <span className="text-lg">←</span> Back
+          </button>
+          <span className="font-display text-base text-gold">Daily Ritual</span>
+          <button
+            onClick={() => onOpenChange?.(false)}
+            className="min-h-[44px] min-w-[44px] flex items-center justify-center text-muted-foreground hover:text-gold transition-colors"
+          >
+            ✕
+          </button>
+        </div>
+
+        <div className="max-w-lg mx-auto w-full">
         {/* Header */}
         <div className="px-5 pt-5 pb-3">
           <div className="flex items-center gap-3">
@@ -403,6 +421,7 @@ export const DailyRitualChecklist = ({
             </button>
           ))}
         </div>
+        </div> {/* end max-w-lg wrapper */}
       </DialogContent>
     </Dialog>
 
