@@ -291,30 +291,92 @@ export const DailyRitualChecklist = ({
         </div>
 
         <div className="max-w-lg mx-auto w-full">
-        {/* Header */}
-        <div className="px-5 pt-5 pb-3">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-gold/20 to-gold/5 flex items-center justify-center">
-              <Film className="w-5 h-5 text-gold" />
+        {/* Cinematic Progress Ring Header */}
+        <div className="px-5 pt-8 pb-6 flex flex-col items-center">
+          {/* Circular progress ring */}
+          <div className="relative w-32 h-32 mb-5">
+            <svg className="w-full h-full -rotate-90" viewBox="0 0 120 120">
+              {/* Background ring */}
+              <circle
+                cx="60" cy="60" r="52"
+                fill="none"
+                stroke="hsl(var(--secondary) / 0.3)"
+                strokeWidth="6"
+              />
+              {/* Progress ring */}
+              <circle
+                cx="60" cy="60" r="52"
+                fill="none"
+                stroke="url(#progressGradient)"
+                strokeWidth="6"
+                strokeLinecap="round"
+                strokeDasharray={`${2 * Math.PI * 52}`}
+                strokeDashoffset={`${2 * Math.PI * 52 * (1 - progress / 100)}`}
+                className="transition-all duration-1000 ease-out"
+                style={{
+                  filter: progress > 0 ? 'drop-shadow(0 0 8px hsl(37 87% 57% / 0.5))' : undefined,
+                }}
+              />
+              {/* Segment markers */}
+              {rituals.map((_, i) => {
+                const angle = (i / rituals.length) * 360 - 90;
+                const rad = (angle * Math.PI) / 180;
+                const x = 60 + 52 * Math.cos(rad);
+                const y = 60 + 52 * Math.sin(rad);
+                return (
+                  <circle
+                    key={i}
+                    cx={x} cy={y} r="3"
+                    fill={rituals[i].completed ? "hsl(37 87% 57%)" : "hsl(var(--muted-foreground) / 0.3)"}
+                    className="transition-all duration-500"
+                    style={{ transitionDelay: `${i * 100}ms` }}
+                  />
+                );
+              })}
+              <defs>
+                <linearGradient id="progressGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="hsl(37 87% 57%)" />
+                  <stop offset="100%" stopColor="hsl(37 87% 70%)" />
+                </linearGradient>
+              </defs>
+            </svg>
+            {/* Center content */}
+            <div className="absolute inset-0 flex flex-col items-center justify-center">
+              <span
+                className="text-3xl font-display text-gold transition-all duration-700"
+                style={{
+                  textShadow: completedCount === rituals.length ? '0 0 20px hsl(37 87% 57% / 0.6)' : undefined,
+                }}
+              >
+                {completedCount}/{rituals.length}
+              </span>
+              <span className="text-[10px] uppercase tracking-[0.15em] text-muted-foreground mt-0.5">
+                Scenes
+              </span>
             </div>
-            <div>
-              <h3 className="font-display text-xl sm:text-2xl tracking-wide">Daily Ritual</h3>
-              <p className="font-ui text-[10px] uppercase tracking-[0.15em] text-muted-foreground">
-                {completedCount} of {rituals.length} scenes complete
-              </p>
-            </div>
-            <span className="ml-auto font-ui text-xs text-gold bg-gold/10 px-2.5 py-1 rounded-full border border-gold/20">
-              {completedCount}/{rituals.length}
-            </span>
+            {/* Breathing glow when all complete */}
+            {completedCount === rituals.length && (
+              <div className="absolute inset-0 rounded-full animate-pulse" style={{
+                background: 'radial-gradient(circle, hsl(37 87% 57% / 0.15) 0%, transparent 70%)',
+              }} />
+            )}
           </div>
 
-          {/* Progress bar */}
-          <div className="h-1.5 bg-secondary/50 rounded-full overflow-hidden mt-3">
+          <h3 className="font-display text-2xl tracking-wide text-foreground">Daily Ritual</h3>
+          <p className="font-ui text-xs uppercase tracking-[0.2em] text-muted-foreground mt-1">
+            {completedCount === rituals.length
+              ? "✦ All scenes wrapped ✦"
+              : `${rituals.length - completedCount} scene${rituals.length - completedCount !== 1 ? 's' : ''} remaining`}
+          </p>
+
+          {/* Linear progress bar below */}
+          <div className="w-full h-1.5 bg-secondary/30 rounded-full overflow-hidden mt-4">
             <div
-              className="h-full bg-gradient-to-r from-gold to-gold/80 transition-all duration-500 rounded-full"
-              style={{ 
+              className="h-full rounded-full transition-all duration-1000 ease-out"
+              style={{
                 width: `${progress}%`,
-                boxShadow: progress > 0 ? '0 0 10px hsl(37 87% 57% / 0.5)' : undefined,
+                background: 'linear-gradient(90deg, hsl(37 87% 57%), hsl(37 87% 70%))',
+                boxShadow: progress > 0 ? '0 0 12px hsl(37 87% 57% / 0.5)' : undefined,
               }}
             />
           </div>
@@ -338,85 +400,116 @@ export const DailyRitualChecklist = ({
           />
         </div>
 
-        {/* Scene Cards */}
-        <div className="px-5 pb-5 space-y-2 mt-2">
+        {/* Animated Scene Cards */}
+        <div className="px-5 pb-8 space-y-3 mt-4">
           {rituals.map((ritual, index) => (
             <button
               key={ritual.id}
               onClick={() => handleRitualClick(ritual.id)}
               disabled={isLoading}
               className={cn(
-                "w-full relative flex items-center gap-3 sm:gap-4 p-3 sm:p-4 rounded-lg transition-all duration-300 text-left group/scene",
+                "w-full relative flex items-center gap-4 p-4 rounded-xl transition-all duration-300 text-left group/scene overflow-hidden",
                 "border",
                 ritual.completed
-                  ? "bg-gold/5 border-gold/20"
-                  : "bg-secondary/20 border-border/20 hover:border-gold/20 hover:bg-secondary/30",
+                  ? "bg-gold/5 border-gold/25 shadow-[0_0_15px_-5px_hsl(37_87%_57%_/_0.2)]"
+                  : "bg-secondary/10 border-border/20 hover:border-gold/30 hover:bg-secondary/20 hover:shadow-lg",
                 isLoading && "opacity-50",
-                "hover:translate-y-[-1px] active:scale-[0.99]"
+                "hover:translate-y-[-2px] active:scale-[0.98]"
               )}
               style={{
                 opacity: isVisible ? 1 : 0,
-                transform: isVisible ? 'translateY(0)' : 'translateY(8px)',
-                transition: `all 0.3s ease ${index * 0.06}s`,
+                transform: isVisible ? 'translateY(0)' : 'translateY(16px)',
+                transition: `all 0.5s cubic-bezier(0.16, 1, 0.3, 1) ${index * 0.08 + 0.2}s`,
               }}
             >
-              {/* Scene number */}
-              <div className={cn(
-                "flex-shrink-0 w-8 h-8 sm:w-9 sm:h-9 rounded-md flex items-center justify-center font-ui text-xs sm:text-sm font-bold border transition-colors",
-                ritual.completed
-                  ? "bg-gold/15 border-gold/30 text-gold"
-                  : "bg-secondary/40 border-border/30 text-muted-foreground"
-              )}>
-                {ritual.sceneNumber}
+              {/* Animated icon orb */}
+              <div
+                className={cn(
+                  "flex-shrink-0 w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-500 relative",
+                  ritual.completed
+                    ? "bg-gradient-to-br from-gold/25 to-gold/10 shadow-[0_0_20px_-5px_hsl(37_87%_57%_/_0.3)]"
+                    : "bg-secondary/30 group-hover/scene:bg-secondary/50"
+                )}
+                style={{
+                  borderColor: ritual.completed ? 'hsl(37 87% 57% / 0.3)' : undefined,
+                  borderWidth: '1px',
+                  borderStyle: 'solid',
+                }}
+              >
+                <div className={cn(
+                  "transition-all duration-500",
+                  ritual.completed
+                    ? "text-gold scale-110"
+                    : "text-muted-foreground group-hover/scene:text-foreground group-hover/scene:scale-110"
+                )}>
+                  {ritual.icon}
+                </div>
+                {/* Breathing glow on completed orbs */}
+                {ritual.completed && (
+                  <div className="absolute inset-0 rounded-xl animate-pulse opacity-30" style={{
+                    background: `radial-gradient(circle, ${ritual.color} 0%, transparent 70%)`,
+                  }} />
+                )}
               </div>
 
-              {/* Icon */}
+              {/* Scene number badge */}
               <div className={cn(
-                "flex-shrink-0 transition-colors",
-                ritual.completed ? "text-gold" : "text-muted-foreground group-hover/scene:text-foreground"
+                "absolute top-2 left-2 w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold font-ui transition-colors",
+                ritual.completed
+                  ? "bg-gold/20 text-gold border border-gold/30"
+                  : "bg-secondary/50 text-muted-foreground border border-border/30"
               )}>
-                {ritual.icon}
+                {ritual.sceneNumber}
               </div>
 
               {/* Title + subtitle */}
               <div className="flex-1 min-w-0">
                 <p className={cn(
-                  "font-ui text-sm sm:text-base tracking-wide transition-colors uppercase",
+                  "font-ui text-sm sm:text-base tracking-wide transition-colors uppercase font-medium",
                   ritual.completed ? "text-gold" : "text-foreground"
                 )}>
                   {ritual.title}
                 </p>
-                <p className="text-xs text-muted-foreground truncate">{ritual.subtitle}</p>
+                <p className="text-xs text-muted-foreground truncate mt-0.5">{ritual.subtitle}</p>
               </div>
 
-              {/* Completion check or arrow */}
+              {/* Completion indicator */}
               {ritual.completed ? (
-                <div className="flex-shrink-0 w-7 h-7 rounded-full bg-gold/15 border border-gold/30 flex items-center justify-center">
+                <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gold/15 border border-gold/30 flex items-center justify-center shadow-[0_0_10px_-3px_hsl(37_87%_57%_/_0.4)] transition-all duration-500">
                   <Check className="w-4 h-4 text-gold" />
                 </div>
               ) : (
-                <span className="flex-shrink-0 text-muted-foreground text-sm group-hover/scene:text-gold group-hover/scene:translate-x-0.5 transition-all">→</span>
+                <div className="flex-shrink-0 w-8 h-8 rounded-full bg-secondary/20 border border-border/20 flex items-center justify-center group-hover/scene:border-gold/30 group-hover/scene:bg-gold/5 transition-all duration-300">
+                  <span className="text-muted-foreground text-sm group-hover/scene:text-gold group-hover/scene:translate-x-0.5 transition-all">→</span>
+                </div>
               )}
 
               {/* SHOT ✓ stamp overlay */}
               {ritual.completed && (
-                <div className="absolute top-1/2 right-12 sm:right-16 -translate-y-1/2 -rotate-12 pointer-events-none opacity-[0.08]">
-                  <span className="font-display text-3xl sm:text-4xl text-gold tracking-widest uppercase">Shot ✓</span>
+                <div className="absolute top-1/2 right-14 -translate-y-1/2 -rotate-12 pointer-events-none opacity-[0.06]">
+                  <span className="font-display text-4xl text-gold tracking-widest uppercase">Shot ✓</span>
                 </div>
               )}
 
-              {/* Bottom amber progress line */}
-              <div className="absolute bottom-0 left-0 right-0 h-[2px] overflow-hidden rounded-b-lg">
-                <div 
+              {/* Bottom color accent line */}
+              <div className="absolute bottom-0 left-0 right-0 h-[2px] overflow-hidden rounded-b-xl">
+                <div
                   className={cn(
-                    "h-full transition-all duration-500",
+                    "h-full transition-all duration-700 ease-out",
                     ritual.completed ? "w-full" : "w-0 group-hover/scene:w-full"
                   )}
                   style={{
-                    background: ritual.color,
-                    opacity: ritual.completed ? 0.6 : 0.3,
+                    background: `linear-gradient(90deg, ${ritual.color}, transparent)`,
+                    opacity: ritual.completed ? 0.7 : 0.4,
                   }}
                 />
+              </div>
+
+              {/* Subtle background shimmer on hover */}
+              <div className="absolute inset-0 opacity-0 group-hover/scene:opacity-100 transition-opacity duration-500 pointer-events-none rounded-xl overflow-hidden">
+                <div className="absolute inset-0" style={{
+                  background: `radial-gradient(ellipse at 30% 50%, ${ritual.color}08 0%, transparent 60%)`,
+                }} />
               </div>
             </button>
           ))}
