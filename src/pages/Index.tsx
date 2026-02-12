@@ -33,7 +33,7 @@ import { ModuleCard } from "@/components/dashboard/ModuleCard";
 import { Button } from "@/components/ui/button";
 import { InfoTooltip } from "@/components/ui/info-tooltip";
 import { toast } from "sonner";
-import { DirectorRadioCard } from "@/components/radio/DirectorRadioCard";
+// DirectorRadioCard is now inside MusicStudioModule
 import { FeaturedArtistBanner } from "@/components/dashboard/FeaturedArtistBanner";
 import { TestimonialSubmissionDialog } from "@/components/testimonials/TestimonialSubmissionDialog";
 import { EnableNotificationsBanner } from "@/components/notifications/EnableNotificationsBanner";
@@ -506,6 +506,19 @@ const Index = () => {
             animationIndex={5}
           />
 
+          {/* ========== 8b. DIRECTOR'S JOURNAL ========== */}
+          <ModuleCard
+            onClick={() => setShowJournal(true)}
+            iconImage={iconJournal}
+            icon={null}
+            title="Director's Journal"
+            description="Record your journey • AI insights & accountability tracking"
+            actionText="Open Journal"
+            colorScheme="purple"
+            tooltip="Record your experiences, breakthroughs, and challenges. Get AI-powered feedback on your progress and accountability reports to track your transformation journey."
+            animationIndex={6}
+          />
+
           {/* ========== 9. KUT! RESET ========== */}
           <ModuleCard
             onClick={() => setShowCutReset(true)}
@@ -515,7 +528,7 @@ const Index = () => {
             actionText="KUT Now"
             colorScheme="red"
             tooltip="When old patterns show up, use the KUT technique to reset your nervous system and return to your Director's Chair."
-            animationIndex={6}
+            animationIndex={7}
           />
 
           {/* ========== 10. SHARE YOUR STORY ========== */}
@@ -526,26 +539,11 @@ const Index = () => {
             description="Record a testimonial • Inspire other directors • Get featured on the landing page"
             actionText="Share"
             colorScheme="emerald"
-            animationIndex={7}
-          />
-
-          {/* ========== 11. MUSIC STUDIO ========== */}
-          <MusicStudioModule className="animate-fade-in" />
-
-          {/* ========== 12. DIRECTOR RADIO ========== */}
-          <DirectorRadioCard />
-
-          {/* ========== 13. THE SCORE ========== */}
-          <ModuleCard
-            onClick={() => navigate("/score")}
-            icon={<Music className="w-7 h-7 text-gold" />}
-            title="The Score"
-            description="Your personal music library • Create playlists • Stream your tracks anywhere"
-            actionText="Open Score"
-            colorScheme="gold"
-            tooltip="Your personal music player. Organize tracks into playlists and stream your transformation soundtrack."
             animationIndex={8}
           />
+
+          {/* ========== 11. MUSIC STUDIO (contains Director Radio + The Score) ========== */}
+          <MusicStudioModule className="animate-fade-in" />
 
           {/* ========== SECONDARY ========== */}
 
@@ -565,19 +563,6 @@ const Index = () => {
             onOpenMovieVault={() => setShowMovieVault(true)}
             onOpenStoryboard={() => setShowStoryboardWizard(true)}
             className="animate-fade-in"
-          />
-
-          {/* DIRECTOR'S JOURNAL */}
-          <ModuleCard
-            onClick={() => setShowJournal(true)}
-            iconImage={iconJournal}
-            icon={null}
-            title="Director's Journal"
-            description="Record your journey • AI insights & accountability tracking"
-            actionText="Open Journal"
-            colorScheme="purple"
-            tooltip="Record your experiences, breakthroughs, and challenges. Get AI-powered feedback on your progress and accountability reports to track your transformation journey."
-            animationIndex={9}
           />
         </div>
       </main>
