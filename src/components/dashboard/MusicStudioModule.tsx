@@ -459,20 +459,48 @@ export function MusicStudioModule({ className }: MusicStudioModuleProps) {
             </ScrollArea>
           </div>
 
-          {/* Navigation buttons */}
-          <div className="px-6 py-3 border-t border-white/5 flex gap-2">
-            <Button variant="outline" size="sm" className="flex-1 border-pink-500/20 text-pink-400 hover:bg-pink-500/10"
-              onClick={() => { setIsOpen(false); navigate("/soundtrack"); }}
-            >
-              <Music className="w-4 h-4 mr-2" />
-              Soundtrack Studio
-            </Button>
-            <Button variant="outline" size="sm" className="flex-1 border-gold/20 text-gold hover:bg-gold/10"
+          {/* Sub-modules: Director Radio, The Score, Soundtrack Studio */}
+          <div className="px-4 py-3 border-t border-white/5 space-y-2">
+            <p className="text-xs text-muted-foreground uppercase tracking-wider px-2 mb-2">Music Modules</p>
+            <button
               onClick={() => { setIsOpen(false); navigate("/radio"); }}
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gold/5 border border-gold/10 hover:border-gold/30 transition-all group/item"
             >
-              <Headphones className="w-4 h-4 mr-2" />
-              Director Radio
-            </Button>
+              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-gold/20 to-amber-500/10 flex items-center justify-center">
+                <Headphones className="w-5 h-5 text-gold" />
+              </div>
+              <div className="flex-1 text-left">
+                <p className="text-sm font-medium text-gold group-hover/item:text-gold">Director Radio</p>
+                <p className="text-xs text-muted-foreground">Curated stations & live broadcasts</p>
+              </div>
+              <span className="text-xs text-muted-foreground group-hover/item:text-gold transition-colors">→</span>
+            </button>
+            <button
+              onClick={() => { setIsOpen(false); navigate("/score"); }}
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-amber-500/5 border border-amber-500/10 hover:border-amber-500/30 transition-all group/item"
+            >
+              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-amber-500/20 to-orange-500/10 flex items-center justify-center">
+                <ListMusic className="w-5 h-5 text-amber-400" />
+              </div>
+              <div className="flex-1 text-left">
+                <p className="text-sm font-medium text-amber-400 group-hover/item:text-amber-300">The Score</p>
+                <p className="text-xs text-muted-foreground">Full music library & playlists</p>
+              </div>
+              <span className="text-xs text-muted-foreground group-hover/item:text-amber-400 transition-colors">→</span>
+            </button>
+            <button
+              onClick={() => { setIsOpen(false); navigate("/soundtrack"); }}
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-pink-500/5 border border-pink-500/10 hover:border-pink-500/30 transition-all group/item"
+            >
+              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-pink-500/20 to-rose-500/10 flex items-center justify-center">
+                <Music className="w-5 h-5 text-pink-400" />
+              </div>
+              <div className="flex-1 text-left">
+                <p className="text-sm font-medium text-pink-400 group-hover/item:text-pink-300">Soundtrack Studio</p>
+                <p className="text-xs text-muted-foreground">Create custom AI music & lyrics</p>
+              </div>
+              <span className="text-xs text-muted-foreground group-hover/item:text-pink-400 transition-colors">→</span>
+            </button>
           </div>
         </DialogContent>
       </Dialog>
