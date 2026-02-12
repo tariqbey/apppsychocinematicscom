@@ -10,6 +10,7 @@ import {
   Plus,
   Trash2,
   Loader2,
+  RefreshCw,
 } from "lucide-react";
  import { EpisodeMovieSelector } from "./EpisodeMovieSelector";
 import { Button } from "@/components/ui/button";
@@ -19,6 +20,7 @@ import { VideoUploader } from "./VideoUploader";
 import { MindMoviePlayer, MindMoviePlayerHandle } from "./MindMoviePlayer";
 import { MediaStudio } from "@/components/studio/MediaStudio";
 import { useUserProfile } from "@/hooks/useUserProfile";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
@@ -45,6 +47,8 @@ export const TheaterView = ({ onClose }: TheaterViewProps) => {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [newTaskText, setNewTaskText] = useState("");
   const [isLoadingTasks, setIsLoadingTasks] = useState(false);
+  const [isSuggesting, setIsSuggesting] = useState(false);
+  const [suggestions, setSuggestions] = useState<{task: string; reason: string}[]>([]);
    
    // Episode movie mode
    const [videoSource, setVideoSource] = useState<"mind-movie" | "episode">("mind-movie");
@@ -227,6 +231,81 @@ export const TheaterView = ({ onClose }: TheaterViewProps) => {
     setShowUploader(false);
   };
 
+  // Mark morning screening as complete
+  const markMorningComplete = async () => {
+    if (!user) return;
+    const today = format(new Date(), "yyyy-MM-dd");
+    
+    const { data: existing } = await supabase
+      .from("daily_rituals")
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("ritual_date", today)
+      .maybeSingle();
+    
+    if (existing) {
+      await supabase
+        .from("daily_rituals")
+        .update({ morning_screening: true })
+        .eq("user_id", user.id)
+        .eq("ritual_date", today);
+    } else {
+      await supabase
+        .from("daily_rituals")
+        .insert({ user_id: user.id, ritual_date: today, morning_screening: true });
+    }
+    toast({ title: "Morning Screening Complete! ☀️" });
+  };
+
+  // AI task suggestions
+  const getSuggestions = async () => {
+    if (!user) return;
+    setIsSuggesting(true);
+    setSuggestions([]);
+
+    try {
+      const { data, error } = await supabase.functions.invoke("suggest-tasks", {
+        body: {
+          chiefAim: {
+            what: profile?.chief_aim_what,
+            byWhen: profile?.chief_aim_by_when,
+            exchange: profile?.chief_aim_exchange,
+            plan: profile?.chief_aim_plan,
+          },
+          existingTasks: tasks.map(t => t.task_text),
+          dayOfWeek: format(new Date(), "EEEE"),
+        },
+      });
+
+      if (error) throw error;
+      if (data?.suggestions) setSuggestions(data.suggestions);
+    } catch (err) {
+      console.error("Suggestion error:", err);
+      toast({ title: "Error", description: "Failed to get suggestions", variant: "destructive" });
+    } finally {
+      setIsSuggesting(false);
+    }
+  };
+
+  const addSuggestion = async (suggestion: {task: string; reason: string}) => {
+    if (!user) return;
+    if (tasks.length >= 3) {
+      toast({ title: "Maximum 3 tasks", description: "Remove one first.", variant: "destructive" });
+      return;
+    }
+    const dateStr = format(new Date(), "yyyy-MM-dd");
+    const { data, error } = await supabase
+      .from("daily_tasks")
+      .insert({ user_id: user.id, task_text: suggestion.task, task_date: dateStr, priority: tasks.length + 1 })
+      .select()
+      .single();
+    if (!error && data) {
+      setTasks([...tasks, data]);
+      setSuggestions(suggestions.filter(s => s.task !== suggestion.task));
+      toast({ title: "Task added", description: suggestion.task });
+    }
+  };
+
   // Render ---------------------------------------------------
   return (
     <>
@@ -324,11 +403,19 @@ export const TheaterView = ({ onClose }: TheaterViewProps) => {
                 />
 
                 {hasRecordedViewing && (
-                  <div className="absolute top-2 right-2 sm:top-4 sm:right-4 flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1 sm:py-2 rounded-lg bg-green-500/20 border border-green-500/30 z-10">
-                    <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4 text-green-500" />
-                    <span className="text-xs sm:text-sm text-green-400">
-                      Recorded
-                    </span>
+                  <div className="absolute top-2 right-2 sm:top-4 sm:right-4 flex items-center gap-2 z-10">
+                    <div className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1 sm:py-2 rounded-lg bg-green-500/20 border border-green-500/30">
+                      <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4 text-green-500" />
+                      <span className="text-xs sm:text-sm text-green-400">Recorded</span>
+                    </div>
+                    <Button
+                      size="sm"
+                      onClick={markMorningComplete}
+                      className="bg-gradient-to-r from-gold to-amber-500 text-black text-xs sm:text-sm"
+                    >
+                      <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
+                      Mark Morning Complete
+                    </Button>
                   </div>
                 )}
               </>
@@ -447,6 +534,60 @@ export const TheaterView = ({ onClose }: TheaterViewProps) => {
                   >
                     <Plus className="h-4 w-4" />
                   </Button>
+                </div>
+              )}
+
+              {/* AI Suggestions Button */}
+              <div className="mb-4">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={getSuggestions}
+                  disabled={isSuggesting}
+                  className="w-full gap-2 border-gold/30 hover:bg-gold/10"
+                >
+                  {isSuggesting ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Sparkles className="h-4 w-4 text-gold" />
+                  )}
+                  Director's Suggestions
+                </Button>
+              </div>
+
+              {/* AI Suggestions List */}
+              {suggestions.length > 0 && (
+                <div className="mb-4 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-gold flex items-center gap-1.5">
+                      <Sparkles className="h-3.5 w-3.5" /> AI Suggestions
+                    </span>
+                    <Button variant="ghost" size="sm" className="h-6 text-xs" onClick={() => setSuggestions([])}>
+                      <X className="h-3 w-3" />
+                    </Button>
+                  </div>
+                  <ScrollArea className="max-h-[200px]">
+                    <div className="space-y-2">
+                      {suggestions.map((s, i) => (
+                        <div key={i} className="p-3 rounded-lg bg-gold/5 border border-gold/20">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium">{s.task}</p>
+                              <p className="text-xs text-muted-foreground mt-1">{s.reason}</p>
+                            </div>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="shrink-0 h-7 text-xs border-gold/30"
+                              onClick={() => addSuggestion(s)}
+                            >
+                              <Plus className="h-3 w-3 mr-1" /> Add
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </ScrollArea>
                 </div>
               )}
 
