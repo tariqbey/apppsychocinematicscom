@@ -1,6 +1,6 @@
  import { useState } from "react";
  import { useNavigate } from "react-router-dom";
- import { Film, Clapperboard, Music, FolderOpen, X, Sparkles } from "lucide-react";
+import { Film, Clapperboard, Music, FolderOpen, X, Sparkles } from "lucide-react";
  import { Button } from "@/components/ui/button";
  import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
  import iconEditBay from "@/assets/icons/icon-edit-bay.png";
@@ -130,15 +130,24 @@
  
        {/* Studio Selection Dialog */}
        <Dialog open={isOpen} onOpenChange={setIsOpen}>
-         <DialogContent className="max-w-2xl bg-background border-gold/30">
-           <DialogHeader>
-             <DialogTitle className="flex items-center gap-3 text-2xl font-display">
-               <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-gold/20 to-amber-500/20 flex items-center justify-center">
-                 <Clapperboard className="w-5 h-5 text-gold" />
-               </div>
-               Psycho Cinematic Movie Studio
-             </DialogTitle>
-           </DialogHeader>
+          <DialogContent className="max-w-2xl bg-background border-gold/30 [&>button:last-child]:hidden">
+            <div className="flex items-center justify-between mb-2">
+              <button onClick={() => setIsOpen(false)} className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors">
+                <span className="text-lg">←</span>
+                <span>Back</span>
+              </button>
+              <button onClick={() => setIsOpen(false)} className="text-muted-foreground hover:text-foreground transition-colors">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-3 text-2xl font-display">
+                <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-gold/20 to-amber-500/20 flex items-center justify-center">
+                  <Clapperboard className="w-5 h-5 text-gold" />
+                </div>
+                Psycho Cinematic Movie Studio
+              </DialogTitle>
+            </DialogHeader>
            
            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
              {studioOptions.map((option, index) => (
