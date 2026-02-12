@@ -116,6 +116,20 @@ export const DailyRitualChecklist = ({
   const [isLoading, setIsLoading] = useState(true);
   const [isVisible, setIsVisible] = useState(false);
 
+  // Check action execution completion based on tasks
+  const checkActionExecution = async (userId: string, today: string) => {
+    const { data: tasks } = await supabase
+      .from("daily_tasks")
+      .select("id, is_completed, incomplete_reason")
+      .eq("user_id", userId)
+      .eq("task_date", today);
+
+    if (!tasks || tasks.length === 0) return false;
+
+    // All tasks must be either completed OR have an excuse logged
+    return tasks.every(t => t.is_completed || (t.incomplete_reason && t.incomplete_reason.trim() !== ""));
+  };
+
   useEffect(() => {
     const loadRitualState = async () => {
       if (!user) {
@@ -132,10 +146,28 @@ export const DailyRitualChecklist = ({
         .eq("ritual_date", today)
         .maybeSingle();
 
+      // Check action execution from tasks
+      const actionsComplete = await checkActionExecution(user.id, today);
+
+      // If action_execution status changed, sync it to the DB
+      if (data && data.action_execution !== actionsComplete) {
+        await supabase
+          .from("daily_rituals")
+          .update({ action_execution: actionsComplete })
+          .eq("user_id", user.id)
+          .eq("ritual_date", today);
+      }
+
       if (data && !error) {
         setRituals(prev => prev.map(ritual => ({
           ...ritual,
-          completed: data[ritual.dbField] || false
+          completed: ritual.id === "actions" ? actionsComplete : (data[ritual.dbField] || false)
+        })));
+      } else {
+        // No ritual row yet — still reflect action status
+        setRituals(prev => prev.map(ritual => ({
+          ...ritual,
+          completed: ritual.id === "actions" ? actionsComplete : false
         })));
       }
       setIsLoading(false);
@@ -216,6 +248,7 @@ export const DailyRitualChecklist = ({
       return;
     } else if (id === "actions") {
       navigate("/actions");
+      return;
     } else if (id === "journal") {
       if (onJournalClick) {
         onJournalClick();
