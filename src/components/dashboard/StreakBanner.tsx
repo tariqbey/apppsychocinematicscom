@@ -67,15 +67,36 @@ export const StreakBanner = ({ streak, bestStreak, lastActiveDate, daysInactive 
   return (
     <div 
       className={cn(
-        "relative overflow-hidden rounded-xl border transition-all duration-500",
-        isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4',
+        "relative overflow-hidden rounded-xl border transition-all duration-700",
+        isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6',
         isCold 
-          ? 'border-sky-500/20 bg-gradient-to-r from-card via-sky-950/20 to-card' 
+          ? 'border-sky-500/30 bg-gradient-to-br from-sky-950/40 via-card to-cyan-950/30' 
           : isHot && streak > 0
-            ? 'border-gold/20 bg-gradient-to-r from-card via-amber-950/10 to-card'
-            : 'border-border/30 bg-card'
+            ? 'border-gold/30 bg-gradient-to-br from-amber-950/40 via-card to-orange-950/20'
+            : 'border-border/30 bg-gradient-to-br from-card via-card to-secondary/30'
       )}
     >
+      {/* Animated gradient background */}
+      <div 
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          background: isCold
+            ? 'radial-gradient(ellipse at 30% 20%, hsl(200 80% 50% / 0.08) 0%, transparent 60%), radial-gradient(ellipse at 70% 80%, hsl(190 80% 50% / 0.06) 0%, transparent 60%)'
+            : isHot && streak > 0
+              ? 'radial-gradient(ellipse at 30% 20%, hsl(37 87% 57% / 0.1) 0%, transparent 60%), radial-gradient(ellipse at 70% 80%, hsl(25 90% 50% / 0.06) 0%, transparent 60%)'
+              : 'radial-gradient(ellipse at 50% 50%, hsl(37 87% 57% / 0.03) 0%, transparent 60%)',
+          animation: 'streak-bg-drift 8s ease-in-out infinite',
+        }}
+      />
+
+      {/* Top accent line */}
+      <div className={cn(
+        "absolute top-0 left-0 right-0 h-[2px]",
+        isCold 
+          ? "bg-gradient-to-r from-transparent via-sky-400/50 to-transparent" 
+          : "bg-gradient-to-r from-transparent via-gold/50 to-transparent"
+      )} />
+
       {/* Frost overlay for cold state */}
       {isCold && (
         <div className="absolute inset-0 bg-gradient-to-b from-sky-400/5 via-transparent to-sky-400/5 pointer-events-none" />
@@ -93,9 +114,10 @@ export const StreakBanner = ({ streak, bestStreak, lastActiveDate, daysInactive 
       {/* Hot embers */}
       {isHot && streak > 0 && (
         <>
-          <div className="absolute bottom-0 left-[20%] w-1 h-1 rounded-full bg-gold/50 animate-ember-float" style={{ animationDelay: '0s' }} />
-          <div className="absolute bottom-0 left-[50%] w-1 h-1 rounded-full bg-gold/40 animate-ember-float" style={{ animationDelay: '0.7s' }} />
-          <div className="absolute bottom-0 left-[75%] w-1 h-1 rounded-full bg-gold/40 animate-ember-float" style={{ animationDelay: '1.4s' }} />
+          <div className="absolute bottom-0 left-[20%] w-1.5 h-1.5 rounded-full bg-gold/60 animate-ember-float" style={{ animationDelay: '0s' }} />
+          <div className="absolute bottom-0 left-[40%] w-1 h-1 rounded-full bg-amber-400/50 animate-ember-float" style={{ animationDelay: '0.5s' }} />
+          <div className="absolute bottom-0 left-[60%] w-1 h-1 rounded-full bg-gold/40 animate-ember-float" style={{ animationDelay: '1s' }} />
+          <div className="absolute bottom-0 left-[80%] w-1.5 h-1.5 rounded-full bg-orange-400/40 animate-ember-float" style={{ animationDelay: '1.5s' }} />
         </>
       )}
 
@@ -139,34 +161,52 @@ export const StreakBanner = ({ streak, bestStreak, lastActiveDate, daysInactive 
         <div className="grid grid-cols-2 gap-3 sm:gap-4">
           {/* Consecutive Shooting Days */}
           <div className={cn(
-            "p-3 sm:p-4 rounded-lg border text-center",
+            "relative p-3 sm:p-4 rounded-lg border text-center overflow-hidden group/stat",
             isCold 
-              ? 'border-sky-500/15 bg-sky-950/20'
+              ? 'border-sky-500/20 bg-gradient-to-b from-sky-950/40 to-sky-950/20'
               : isHot && streak > 0 
-                ? 'border-gold/15 bg-gold/5'
-                : 'border-border/20 bg-secondary/30'
+                ? 'border-gold/20 bg-gradient-to-b from-gold/8 to-gold/3'
+                : 'border-border/20 bg-gradient-to-b from-secondary/40 to-secondary/20'
           )}>
-            <p className="font-ui text-[9px] sm:text-[10px] uppercase tracking-[0.15em] text-muted-foreground mb-1">
+            {/* Inner glow */}
+            <div className={cn(
+              "absolute inset-0 rounded-lg pointer-events-none",
+              isCold ? "bg-radial-gradient" : ""
+            )} style={{
+              background: isCold 
+                ? 'radial-gradient(circle at 50% 80%, hsl(200 80% 50% / 0.1) 0%, transparent 70%)'
+                : isHot && streak > 0
+                  ? 'radial-gradient(circle at 50% 80%, hsl(37 87% 57% / 0.1) 0%, transparent 70%)'
+                  : 'none',
+            }} />
+            <p className="font-ui text-[9px] sm:text-[10px] uppercase tracking-[0.15em] text-muted-foreground mb-1 relative z-10">
               {isCold ? 'Days Frozen' : 'Consecutive Shooting Days'}
             </p>
             <p className={cn(
-              "font-display text-4xl sm:text-5xl leading-none",
+              "font-display text-4xl sm:text-5xl leading-none relative z-10",
               isCold ? 'text-sky-400' : isHot && streak > 0 ? 'text-gold' : 'text-muted-foreground'
             )} style={{
-              textShadow: isHot && streak > 0 ? '0 0 20px hsl(37 87% 57% / 0.4)' : undefined,
+              textShadow: isCold
+                ? '0 0 25px hsl(200 80% 50% / 0.5)'
+                : isHot && streak > 0 
+                  ? '0 0 25px hsl(37 87% 57% / 0.5)' 
+                  : undefined,
             }}>
               <AnimatedNumber value={isCold ? daysInactive : streak} />
             </p>
           </div>
 
           {/* All-Time Best */}
-          <div className="p-3 sm:p-4 rounded-lg border border-border/20 bg-secondary/30 text-center">
-            <p className="font-ui text-[9px] sm:text-[10px] uppercase tracking-[0.15em] text-muted-foreground mb-1">
-              <TrendingUp className="w-3 h-3 inline mr-1 -mt-0.5" />
+          <div className="relative p-3 sm:p-4 rounded-lg border border-gold/15 bg-gradient-to-b from-gold/8 to-gold/3 text-center overflow-hidden">
+            <div className="absolute inset-0 pointer-events-none" style={{
+              background: 'radial-gradient(circle at 50% 80%, hsl(37 87% 57% / 0.08) 0%, transparent 70%)',
+            }} />
+            <p className="font-ui text-[9px] sm:text-[10px] uppercase tracking-[0.15em] text-muted-foreground mb-1 relative z-10">
+              <TrendingUp className="w-3 h-3 inline mr-1 -mt-0.5 text-gold/60" />
               All-Time Record
             </p>
-            <p className="font-display text-4xl sm:text-5xl leading-none text-gold" style={{
-              textShadow: '0 0 20px hsl(37 87% 57% / 0.3)',
+            <p className="font-display text-4xl sm:text-5xl leading-none text-gold relative z-10" style={{
+              textShadow: '0 0 25px hsl(37 87% 57% / 0.5)',
             }}>
               <AnimatedNumber value={bestStreak} />
             </p>
@@ -180,6 +220,14 @@ export const StreakBanner = ({ streak, bestStreak, lastActiveDate, daysInactive 
           </p>
         )}
       </div>
+
+      {/* Bottom accent */}
+      <div className={cn(
+        "absolute bottom-0 left-0 right-0 h-[2px]",
+        isCold 
+          ? "bg-gradient-to-r from-transparent via-sky-400/30 to-transparent" 
+          : "bg-gradient-to-r from-transparent via-gold/30 to-transparent"
+      )} />
     </div>
   );
 };

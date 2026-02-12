@@ -391,6 +391,13 @@
       transform: translateY(0) scale(1);
     }
   }
+
+
+  /* Streak background drift */
+  @keyframes streak-bg-drift {
+    0%, 100% { opacity: 0.8; }
+    50% { opacity: 1; }
+  }
 }
 
 /* Scrollbar styling */

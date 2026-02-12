@@ -124,21 +124,48 @@ export function ModuleCard({
       onMouseLeave={() => setIsHovered(false)}
       className={cn(
         "w-full relative group text-left overflow-hidden",
-        "rounded-xl border border-border/30 bg-card",
+        "rounded-xl border bg-card",
         "transition-all duration-400 ease-out",
         colors.border,
         "active:scale-[0.98] hover:translate-y-[-2px]",
         featured && "ring-1 ring-gold/20",
         !hasAnimatedIn && "opacity-0 translate-y-4",
         hasAnimatedIn && "opacity-100 translate-y-0",
+        isHovered ? "border-gold/30" : "border-border/30",
         className
       )}
       style={{
         boxShadow: isHovered ? `0 8px 30px ${colors.glowColor}` : `0 0 0 0 transparent`,
         transitionDelay: !hasAnimatedIn ? `${animationIndex * 60}ms` : '0ms',
-        animation: hasAnimatedIn ? `module-glow-pulse 4s ease-in-out ${animationIndex * 0.5}s infinite` : 'none',
+        background: isHovered
+          ? `linear-gradient(135deg, hsl(240 5% 8%) 0%, ${colors.accent}08 50%, hsl(240 5% 8%) 100%)`
+          : undefined,
       }}
     >
+      {/* Radial glow on hover */}
+      <div
+        className={cn(
+          "absolute inset-0 pointer-events-none transition-opacity duration-500",
+          isHovered ? "opacity-100" : "opacity-0"
+        )}
+        style={{
+          background: `radial-gradient(ellipse at 20% 50%, ${colors.glowColor} 0%, transparent 60%)`,
+        }}
+      />
+
+      {/* Top accent line */}
+      <div className="absolute top-0 left-0 right-0 h-[1px] overflow-hidden">
+        <div
+          className={cn(
+            "h-full w-full transition-opacity duration-500",
+            isHovered ? "opacity-100" : "opacity-0"
+          )}
+          style={{
+            background: `linear-gradient(90deg, transparent, ${colors.accent}, transparent)`,
+          }}
+        />
+      </div>
+
       {/* Card content */}
       <div className="relative z-10 p-5 sm:p-6 flex items-center gap-4">
         {/* Icon */}
@@ -147,10 +174,10 @@ export function ModuleCard({
             "w-12 h-12 sm:w-14 sm:h-14 rounded-xl flex items-center justify-center flex-shrink-0",
             "bg-gradient-to-br transition-all duration-300",
             colors.iconBg,
-            isHovered && "scale-105"
+            isHovered && "scale-110"
           )}
           style={{
-            boxShadow: isHovered ? `0 0 20px ${colors.glowColor}` : 'none',
+            boxShadow: isHovered ? `0 0 25px ${colors.glowColor}` : 'none',
           }}
         >
           {iconImage ? (
@@ -171,10 +198,9 @@ export function ModuleCard({
             </h3>
             {tooltip && <InfoTooltip content={tooltip} />}
           </div>
-          {/* Description: hidden by default, slides up on hover */}
           <p className={cn(
             "font-ui text-xs text-muted-foreground line-clamp-1 transition-all duration-300",
-            isHovered ? "opacity-100 translate-y-0" : "opacity-60 translate-y-0"
+            isHovered ? "opacity-100" : "opacity-60"
           )}>
             {description}
           </p>
@@ -189,18 +215,7 @@ export function ModuleCard({
         </div>
       </div>
 
-      {/* Top shimmer line */}
-      <div className="absolute top-0 left-0 right-0 h-[1px] overflow-hidden">
-        <div
-          className="h-full w-full opacity-0 group-hover:opacity-100 transition-opacity duration-500"
-          style={{
-            background: `linear-gradient(90deg, transparent, ${colors.accent}, transparent)`,
-            animation: 'calendar-shimmer 3s ease-in-out infinite',
-          }}
-        />
-      </div>
-
-      {/* Bottom amber progress line */}
+      {/* Bottom progress line */}
       <div className="absolute bottom-0 left-0 right-0 h-[2px] overflow-hidden">
         <div 
           className="h-full w-0 group-hover:w-full transition-all duration-700 ease-out"
