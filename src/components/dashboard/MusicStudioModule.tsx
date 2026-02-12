@@ -278,11 +278,18 @@ export function MusicStudioModule({ className }: MusicStudioModuleProps) {
 
       {/* Music Player Dialog */}
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogContent className="max-w-lg p-0 bg-[hsl(240_5%_6%)] border-pink-500/20 overflow-hidden rounded-2xl gap-0">
-          {/* Close */}
-          <button onClick={() => setIsOpen(false)} className="absolute top-4 right-4 z-20 text-muted-foreground hover:text-foreground transition-colors">
-            <X className="w-5 h-5" />
-          </button>
+        <DialogContent className="max-w-lg p-0 bg-[hsl(240_5%_6%)] border-pink-500/20 overflow-hidden rounded-2xl gap-0 [&>button:last-child]:hidden">
+          {/* Header with back button */}
+          <div className="flex items-center justify-between px-4 pt-4 pb-0 relative z-20">
+            <button onClick={() => setIsOpen(false)} className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors">
+              <span className="text-lg">←</span>
+              <span>Back</span>
+            </button>
+            <span className="text-xs text-muted-foreground uppercase tracking-wider">Music Studio</span>
+            <button onClick={() => setIsOpen(false)} className="text-muted-foreground hover:text-foreground transition-colors">
+              <X className="w-5 h-5" />
+            </button>
+          </div>
 
           {/* Album Art / Vinyl Section */}
           <div className="relative px-8 pt-10 pb-6 flex flex-col items-center"
