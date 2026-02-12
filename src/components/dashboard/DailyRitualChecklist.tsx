@@ -1,17 +1,15 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Check, LightbulbIcon, Film, ScrollText, Rocket, Moon, BookOpen, ChevronDown } from "lucide-react";
+import { Check, LightbulbIcon, Film, ScrollText, Rocket, Moon, BookOpen } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { InfoTooltip } from "@/components/ui/info-tooltip";
 import { TutorialTipCard } from "@/components/community/TutorialTipCard";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { useIsMobile } from "@/hooks/use-mobile";
 import { usePointsContext } from "@/contexts/PointsContext";
-import { format, startOfWeek, addDays, isToday } from "date-fns";
+import { format } from "date-fns";
 import { ScriptReviewModal } from "./ScriptReviewModal";
 import { EveningReviewModal } from "./EveningReviewModal";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 
 interface RitualItem {
   id: string;
@@ -40,6 +38,8 @@ interface DailyRitualChecklistProps {
   onEditChiefAim?: () => void;
   onAdjustChiefAim?: () => void;
   onSongListened?: () => void;
+  isOpen?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
 export const DailyRitualChecklist = ({ 
@@ -53,10 +53,11 @@ export const DailyRitualChecklist = ({
   onEditChiefAim,
   onAdjustChiefAim,
   onSongListened,
+  isOpen = false,
+  onOpenChange,
 }: DailyRitualChecklistProps) => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const isMobile = useIsMobile();
   const { triggerRecalculation } = usePointsContext();
   const [showScriptModal, setShowScriptModal] = useState(false);
   const [showEveningModal, setShowEveningModal] = useState(false);
@@ -114,9 +115,7 @@ export const DailyRitualChecklist = ({
   ]);
   const [isLoading, setIsLoading] = useState(true);
   const [isVisible, setIsVisible] = useState(false);
-  const [isOpen, setIsOpen] = useState(false);
 
-  // Load today's ritual state from database
   useEffect(() => {
     const loadRitualState = async () => {
       if (!user) {
@@ -269,60 +268,39 @@ export const DailyRitualChecklist = ({
 
   return (
     <>
-    <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-    <div 
-      className={cn(
-        "rounded-xl border border-border/30 bg-card overflow-hidden transition-all duration-500",
-        isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
-      )}
-    >
-      {/* Weekly Calendar Header */}
-      <WeeklyCalendarHeader />
-
-      {/* Clapperboard-style header */}
-      <div className="px-4 sm:px-5 pb-3">
-        <CollapsibleTrigger asChild>
-          <button className="w-full flex items-center justify-between cursor-pointer group/trigger">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-gradient-to-br from-gold/20 to-gold/5 flex items-center justify-center">
-                <Film className="w-4 h-4 sm:w-5 sm:h-5 text-gold" />
-              </div>
-              <div>
-                <h3 className="font-display text-xl sm:text-2xl tracking-wide">Daily Ritual</h3>
-                <p className="font-ui text-[10px] uppercase tracking-[0.15em] text-muted-foreground">
-                  {completedCount} of {rituals.length} scenes complete
-                </p>
-              </div>
-              <InfoTooltip content="Your daily ritual is the foundation of transformation. Complete all 5 scenes daily." />
+    <Dialog open={isOpen} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-lg p-0 bg-card border-gold/20 overflow-hidden max-h-[85vh] overflow-y-auto">
+        {/* Header */}
+        <div className="px-5 pt-5 pb-3">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-gold/20 to-gold/5 flex items-center justify-center">
+              <Film className="w-5 h-5 text-gold" />
             </div>
-            <div className="flex items-center gap-2">
-              <span className="font-ui text-xs text-gold bg-gold/10 px-2.5 py-1 rounded-full border border-gold/20">
-                {completedCount}/{rituals.length}
-              </span>
-              <ChevronDown className={cn(
-                "w-4 h-4 text-gold transition-transform duration-300",
-                isOpen && "rotate-180"
-              )} />
+            <div>
+              <h3 className="font-display text-xl sm:text-2xl tracking-wide">Daily Ritual</h3>
+              <p className="font-ui text-[10px] uppercase tracking-[0.15em] text-muted-foreground">
+                {completedCount} of {rituals.length} scenes complete
+              </p>
             </div>
-          </button>
-        </CollapsibleTrigger>
+            <span className="ml-auto font-ui text-xs text-gold bg-gold/10 px-2.5 py-1 rounded-full border border-gold/20">
+              {completedCount}/{rituals.length}
+            </span>
+          </div>
 
-        {/* Progress bar */}
-        <div className="h-1.5 bg-secondary/50 rounded-full overflow-hidden mt-3">
-          <div
-            className="h-full bg-gradient-to-r from-gold to-gold/80 transition-all duration-500 rounded-full"
-            style={{ 
-              width: `${progress}%`,
-              boxShadow: progress > 0 ? '0 0 10px hsl(37 87% 57% / 0.5)' : undefined,
-            }}
-          />
+          {/* Progress bar */}
+          <div className="h-1.5 bg-secondary/50 rounded-full overflow-hidden mt-3">
+            <div
+              className="h-full bg-gradient-to-r from-gold to-gold/80 transition-all duration-500 rounded-full"
+              style={{ 
+                width: `${progress}%`,
+                boxShadow: progress > 0 ? '0 0 10px hsl(37 87% 57% / 0.5)' : undefined,
+              }}
+            />
+          </div>
         </div>
-      </div>
 
-      {/* Collapsible Content - Scene Cards */}
-      <CollapsibleContent className="transition-all duration-300 data-[state=open]:animate-accordion-down data-[state=closed]:animate-accordion-up overflow-hidden">
         {/* Tutorial Tip */}
-        <div className="px-4 sm:px-5 mt-1">
+        <div className="px-5">
           <TutorialTipCard
             id="daily-ritual-tips"
             title="Master Your Daily Ritual"
@@ -340,7 +318,7 @@ export const DailyRitualChecklist = ({
         </div>
 
         {/* Scene Cards */}
-        <div className="px-4 sm:px-5 pb-4 space-y-2 mt-2">
+        <div className="px-5 pb-5 space-y-2 mt-2">
           {rituals.map((ritual, index) => (
             <button
               key={ritual.id}
@@ -361,7 +339,7 @@ export const DailyRitualChecklist = ({
                 transition: `all 0.3s ease ${index * 0.06}s`,
               }}
             >
-              {/* Scene number — clapperboard style */}
+              {/* Scene number */}
               <div className={cn(
                 "flex-shrink-0 w-8 h-8 sm:w-9 sm:h-9 rounded-md flex items-center justify-center font-ui text-xs sm:text-sm font-bold border transition-colors",
                 ritual.completed
@@ -375,7 +353,7 @@ export const DailyRitualChecklist = ({
               <div className={cn(
                 "flex-shrink-0 transition-colors",
                 ritual.completed ? "text-gold" : "text-muted-foreground group-hover/scene:text-foreground"
-              )} style={{ color: ritual.completed ? undefined : undefined }}>
+              )}>
                 {ritual.icon}
               </div>
 
@@ -399,14 +377,10 @@ export const DailyRitualChecklist = ({
                 <span className="flex-shrink-0 text-muted-foreground text-sm group-hover/scene:text-gold group-hover/scene:translate-x-0.5 transition-all">→</span>
               )}
 
-              {/* SHOT ✓ stamp overlay for completed */}
+              {/* SHOT ✓ stamp overlay */}
               {ritual.completed && (
-                <div 
-                  className="absolute top-1/2 right-12 sm:right-16 -translate-y-1/2 -rotate-12 pointer-events-none opacity-[0.08]"
-                >
-                  <span className="font-display text-3xl sm:text-4xl text-gold tracking-widest uppercase">
-                    Shot ✓
-                  </span>
+                <div className="absolute top-1/2 right-12 sm:right-16 -translate-y-1/2 -rotate-12 pointer-events-none opacity-[0.08]">
+                  <span className="font-display text-3xl sm:text-4xl text-gold tracking-widest uppercase">Shot ✓</span>
                 </div>
               )}
 
@@ -426,9 +400,8 @@ export const DailyRitualChecklist = ({
             </button>
           ))}
         </div>
-      </CollapsibleContent>
-    </div>
-    </Collapsible>
+      </DialogContent>
+    </Dialog>
 
     {/* Script Review Modal */}
     <ScriptReviewModal
@@ -463,63 +436,3 @@ export const DailyRitualChecklist = ({
     </>
   );
 };
-
-// Weekly calendar header component
-function WeeklyCalendarHeader() {
-  const today = new Date();
-  const weekStart = startOfWeek(today, { weekStartsOn: 0 });
-
-  const weekDays = useMemo(() => {
-    return Array.from({ length: 7 }).map((_, i) => {
-      const date = addDays(weekStart, i);
-      return {
-        date,
-        dayNum: format(date, "d"),
-        dayName: format(date, "EEE"),
-        isToday: isToday(date),
-      };
-    });
-  }, [weekStart]);
-
-  return (
-    <div className="px-4 sm:px-5 pt-4 pb-3">
-      {/* Current date */}
-      <div className="text-center mb-3">
-        <p className="font-display text-lg sm:text-xl text-gold">
-          {format(today, "EEEE")}
-        </p>
-        <p className="font-ui text-[10px] sm:text-xs text-muted-foreground uppercase tracking-[0.15em]">
-          {format(today, "MMMM d, yyyy")}
-        </p>
-      </div>
-
-      {/* Week days row */}
-      <div className="flex items-center justify-between gap-1">
-        {weekDays.map((day) => (
-          <div
-            key={day.dayNum}
-            className={cn(
-              "flex flex-col items-center justify-center py-1.5 px-1 sm:px-2.5 rounded-lg transition-all duration-300 flex-1",
-              day.isToday
-                ? "bg-gold/10 border border-gold/30"
-                : "bg-secondary/20 border border-transparent"
-            )}
-          >
-            <span className={cn(
-              "font-ui text-[9px] sm:text-[10px] uppercase tracking-wider",
-              day.isToday ? "text-gold" : "text-muted-foreground"
-            )}>
-              {day.dayName}
-            </span>
-            <span className={cn(
-              "font-display text-sm sm:text-base",
-              day.isToday ? "text-gold" : "text-foreground/60"
-            )}>
-              {day.dayNum}
-            </span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
