@@ -134,8 +134,9 @@ export function ModuleCard({
         className
       )}
       style={{
-        boxShadow: isHovered ? `0 8px 30px ${colors.glowColor}` : 'none',
+        boxShadow: isHovered ? `0 8px 30px ${colors.glowColor}` : `0 0 0 0 transparent`,
         transitionDelay: !hasAnimatedIn ? `${animationIndex * 60}ms` : '0ms',
+        animation: hasAnimatedIn ? `module-glow-pulse 4s ease-in-out ${animationIndex * 0.5}s infinite` : 'none',
       }}
     >
       {/* Card content */}
@@ -186,6 +187,17 @@ export function ModuleCard({
         )}>
           →
         </div>
+      </div>
+
+      {/* Top shimmer line */}
+      <div className="absolute top-0 left-0 right-0 h-[1px] overflow-hidden">
+        <div
+          className="h-full w-full opacity-0 group-hover:opacity-100 transition-opacity duration-500"
+          style={{
+            background: `linear-gradient(90deg, transparent, ${colors.accent}, transparent)`,
+            animation: 'calendar-shimmer 3s ease-in-out infinite',
+          }}
+        />
       </div>
 
       {/* Bottom amber progress line */}

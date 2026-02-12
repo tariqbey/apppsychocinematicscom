@@ -363,6 +363,34 @@
       background-position: 0% 50%;
     }
   }
+
+  /* Calendar shimmer */
+  @keyframes calendar-shimmer {
+    0% { background-position: -200% 0; }
+    50% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+
+  /* Module card glow pulse */
+  @keyframes module-glow-pulse {
+    0%, 100% { box-shadow: 0 0 0 0 transparent; }
+    50% { box-shadow: 0 0 20px hsl(37 87% 57% / 0.1); }
+  }
+
+  .animate-module-entrance {
+    animation: module-entrance 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
+  @keyframes module-entrance {
+    from {
+      opacity: 0;
+      transform: translateY(20px) scale(0.98);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
 }
 
 /* Scrollbar styling */
