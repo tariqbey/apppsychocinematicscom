@@ -103,6 +103,7 @@ const Index = () => {
   const [showEpisodeWizard, setShowEpisodeWizard] = useState(false);
   const [showTestimonialDialog, setShowTestimonialDialog] = useState(false);
   const [showStoryboardWizard, setShowStoryboardWizard] = useState(false);
+  const [showDailyRitual, setShowDailyRitual] = useState(false);
   const [episodeForMovie, setEpisodeForMovie] = useState<{
     id: string;
     title: string;
@@ -329,11 +330,22 @@ const Index = () => {
             className="animate-fade-in"
           />
 
-          {/* ========== 2. ANIMATED FIRE COUNTDOWN (layout v2) ========== */}
+          {/* ========== 2. ANIMATED FIRE/ICE COUNTDOWN ========== */}
           <ChiefAimCountdown
             byWhen={chiefAim.byWhen}
             whatSummary={chiefAim.what ? chiefAim.what.slice(0, 100) : undefined}
             className="animate-fade-in"
+            streakStatus={
+              !lastActivityDate ? (currentStreak > 0 ? 'warm' : 'frozen')
+              : (() => {
+                  const diffTime = new Date().getTime() - new Date(lastActivityDate).getTime();
+                  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+                  if (diffDays === 0) return 'hot' as const;
+                  if (diffDays === 1) return 'warm' as const;
+                  if (diffDays <= 3) return 'cold' as const;
+                  return 'frozen' as const;
+                })()
+            }
           />
 
           {/* ========== 2b. STREAK BANNER (hot/cold) ========== */}
@@ -347,8 +359,21 @@ const Index = () => {
             />
           </div>
 
-          {/* ========== 3. DAILY RITUAL CHECKLIST ========== */}
+          {/* ========== 3. DAILY RITUAL MODULE CARD ========== */}
+          <ModuleCard
+            onClick={() => setShowDailyRitual(true)}
+            icon={<Film className="w-7 h-7 text-gold" />}
+            title="Daily Ritual"
+            description="Your 5-scene daily transformation ritual • Morning to evening"
+            actionText="Open Ritual"
+            colorScheme="gold"
+            tooltip="Your daily ritual is the foundation of transformation. Complete all 5 scenes daily."
+            animationIndex={2}
+          />
+
           <DailyRitualChecklist
+            isOpen={showDailyRitual}
+            onOpenChange={setShowDailyRitual}
             onTheaterClick={() => setShowTheater(true)}
             onScorecardClick={() => setShowScorecard(true)}
             onEveningMindMovieClick={() => {
