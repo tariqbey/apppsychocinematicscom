@@ -120,6 +120,18 @@ export const DirectorAIChat = ({ isOpen, onToggle, chiefAim, userId }: DirectorA
     const generateGreeting = async () => {
       setIsGeneratingGreeting(true);
       try {
+        // Fetch user's display name
+        let userName = "Director";
+        if (userId) {
+          const { data: profile } = await supabase
+            .from("user_profiles")
+            .select("display_name, director_character_name")
+            .eq("user_id", userId)
+            .single();
+          if (profile?.display_name) userName = profile.display_name;
+          else if (profile?.director_character_name) userName = profile.director_character_name;
+        }
+
         const response = await fetch(CHAT_URL, {
           method: "POST",
           headers: {
@@ -127,7 +139,7 @@ export const DirectorAIChat = ({ isOpen, onToggle, chiefAim, userId }: DirectorA
             Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
           },
           body: JSON.stringify({
-            messages: [{ role: "user", content: "Give me your opening greeting. Check my status — journal, tasks, streak, scorecard, everything — and come at me based on what you see. Keep it to 2-3 sentences max. Be real. Don't introduce yourself, just jump in like you already know me." }],
+            messages: [{ role: "user", content: `Give me your opening greeting. My name is ${userName} — call me by my name. Check my status — journal, tasks, streak, scorecard, everything — and come at me based on what you see. Keep it to 2-3 sentences max. Be real. Don't introduce yourself, just jump in like you already know me. Never say the same thing twice.` }],
             chiefAim,
             userContext: activeEpisode ? {
               activeEpisode: {

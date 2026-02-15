@@ -41,47 +41,11 @@ const loadSavedPersonality = (): PersonalityPreset => {
   return PERSONALITY_PRESETS[0];
 };
 
-// Generate proactive greeting
-const generateProactiveOpening = (context: ReturnType<typeof useCoachingContext>["context"]) => {
-  if (!context) {
-    return "Welcome to Psycho-Cinematics™, Director! I'm your personal AI coach. Together, we'll transform you into the Director of your life story. Let's start by creating your Definite Chief Aim — the foundation of everything we'll build together. What's the biggest dream you want to achieve?";
-  }
-
-  const { greeting, dayNumber, currentStreak, chiefAimComplete, tasksSetForToday, allTasksCompleted, 
-          watchedMindMovieToday, hasMindMovie, todaysTasks, completedTasksCount, directorCharacterName } = context;
-  
-  const name = directorCharacterName ? `, ${directorCharacterName}` : "";
-  
-  if (dayNumber <= 1 && currentStreak === 0 && !chiefAimComplete) {
-    return `Welcome to the Director's Chair${name}! 🎬 I'm your personal AI coach, trained in the Psycho-Cinematics™ methodology. Think of me as your Jarvis — here to guide you every step of the way.\n\nFirst things first: Every great movie starts with a clear vision. Let's create your **Definite Chief Aim** — a crystal-clear statement of what you want to achieve, when you'll achieve it, what you'll give in exchange, and your plan.\n\nClose your eyes for a moment. Picture yourself having achieved your biggest dream. What does that look like? Tell me about it.`;
-  }
-  
-  if (!chiefAimComplete) {
-    return `${greeting}${name}. Director, I see we haven't completed your Definite Chief Aim yet. This is Phase 1 - Pre-Production. Without a clear Final Scene, we're shooting blind. Every great production starts with knowing the destination. What's the dream you're building toward?`;
-  }
-
-  if (!tasksSetForToday) {
-    return `${greeting}${name}! Day ${dayNumber} of production. I notice you haven't locked in your Three Things for today yet. A Director without a shot list is just hoping for magic. What are the three scenes you're directing today?`;
-  }
-
-  if (hasMindMovie && !watchedMindMovieToday) {
-    const taskStatus = allTasksCompleted 
-      ? "Your Three Things are all complete - outstanding!" 
-      : `You've completed ${completedTasksCount} of ${todaysTasks.length} tasks.`;
-    return `${greeting}${name}! ${taskStatus} But I notice you haven't viewed your Mind Movie yet today. That daily viewing is Phase 4 - it's how we program your nervous system. Ready to step into the theater?`;
-  }
-
-  if (tasksSetForToday && !allTasksCompleted) {
-    const remaining = todaysTasks.length - completedTasksCount;
-    const incompleteTasks = todaysTasks.filter(t => !t.is_completed).map(t => t.task_text).join(", ");
-    return `${greeting}${name}! Day ${dayNumber}, and you're on a ${currentStreak}-day streak. You've got ${remaining} scene${remaining > 1 ? 's' : ''} left to shoot today: ${incompleteTasks}. What's blocking the next take?`;
-  }
-
-  if (allTasksCompleted && watchedMindMovieToday) {
-    return `${greeting}${name}! Outstanding work on Day ${dayNumber}! You've watched your Mind Movie, all Three Things are wrapped, and you're on a ${currentStreak}-day streak. This is Oscar-worthy production. What scene are we directing next?`;
-  }
-
-  return `${greeting}${name}! Day ${dayNumber} of your production. You're on a ${currentStreak}-day streak. Your Three Things are locked in. What's the first take we're shooting today?`;
+// Fallback greeting if AI call fails
+const getFallbackGreeting = (context: ReturnType<typeof useCoachingContext>["context"]) => {
+  if (!context) return "What's good, Director. Let's get to work.";
+  const name = context.displayName || context.directorCharacterName || "Director";
+  return `Yo ${name}, I'm locked in on your status. Let's get it.`;
 };
 
 export default function DirectorAI() {
@@ -176,21 +140,93 @@ export default function DirectorAI() {
     }
   }, [isListening, orbState]);
 
-  // Generate greeting
+  // Generate dynamic AI greeting
   useEffect(() => {
     if (user && !hasGreeted.current && messages.length === 0 && !contextLoading) {
       hasGreeted.current = true;
-      const welcomeMessage = generateProactiveOpening(coachingContext);
-      const welcomeMsg: TranscriptMessage = {
-        id: crypto.randomUUID(),
-        role: "assistant",
-        content: welcomeMessage,
-        timestamp: new Date(),
+      
+      const generateDynamicGreeting = async () => {
+        setOrbState("processing");
+        try {
+          const { data: sessionData } = await supabase.auth.getSession();
+          const token = sessionData?.session?.access_token;
+          if (!token) throw new Error("No session");
+
+          const userName = coachingContext?.displayName || coachingContext?.directorCharacterName || "Director";
+
+          const userContext = coachingContext ? {
+            timeOfDay: coachingContext.timeOfDay,
+            dayNumber: coachingContext.dayNumber,
+            currentStreak: coachingContext.currentStreak,
+            bestStreak: coachingContext.bestStreak,
+            chiefAimComplete: coachingContext.chiefAimComplete,
+            directorCharacterName: coachingContext.directorCharacterName,
+            characterArchetype: coachingContext.characterArchetype,
+            transformationAnalysis: coachingContext.transformationAnalysis,
+            tasksSetForToday: coachingContext.tasksSetForToday,
+            allTasksCompleted: coachingContext.allTasksCompleted,
+            completedTasksCount: coachingContext.completedTasksCount,
+            todaysTasks: coachingContext.todaysTasks,
+            hasMindMovie: coachingContext.hasMindMovie,
+            watchedMindMovieToday: coachingContext.watchedMindMovieToday,
+            filledScorecardToday: coachingContext.filledScorecardToday,
+            todaysScorecardScore: coachingContext.todaysScorecardScore,
+          } : undefined;
+
+          const response = await fetch(CHAT_URL, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+              apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+            },
+            body: JSON.stringify({
+              messages: [{ role: "user", content: `Give me your opening greeting. My name is ${userName} — call me by my name. Check my status — journal, tasks, streak, scorecard, everything — and come at me based on what you see. Keep it to 2-3 sentences max. Be real. Don't introduce yourself, just jump in like you already know me. Never say the same thing twice.` }],
+              chiefAim: coachingContext?.chiefAim,
+              userContext,
+              personalityStyle: selectedPersonality.style,
+              isGreeting: true,
+            }),
+          });
+
+          if (!response.ok || !response.body) throw new Error("Greeting failed");
+
+          let greetingContent = "";
+          await readOpenAITextStream({
+            response,
+            onDelta: (chunk) => {
+              greetingContent += chunk;
+              // Update the greeting message in real-time
+              setMessages([{
+                id: "greeting",
+                role: "assistant",
+                content: greetingContent,
+                timestamp: new Date(),
+              }]);
+            },
+          });
+
+          setOrbState("idle");
+          if (ttsEnabled && greetingContent.trim()) {
+            setTimeout(() => speakText(greetingContent), 100);
+          }
+        } catch (error) {
+          console.error("Dynamic greeting error:", error);
+          const fallback = getFallbackGreeting(coachingContext);
+          setMessages([{
+            id: "greeting",
+            role: "assistant",
+            content: fallback,
+            timestamp: new Date(),
+          }]);
+          setOrbState("idle");
+          if (ttsEnabled) {
+            setTimeout(() => speakText(fallback), 100);
+          }
+        }
       };
-      setMessages([welcomeMsg]);
-      if (ttsEnabled) {
-        setTimeout(() => speakText(welcomeMessage), 100);
-      }
+
+      generateDynamicGreeting();
     }
   }, [user, messages.length, ttsEnabled, contextLoading, coachingContext]);
 

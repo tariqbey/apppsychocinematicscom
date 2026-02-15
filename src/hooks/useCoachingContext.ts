@@ -44,6 +44,7 @@ interface CoachingContext {
   };
   chiefAimComplete: boolean;
   directorCharacterName: string | null;
+  displayName: string | null;
   
   // Character Transformation
   characterArchetype: string | null;
@@ -160,6 +161,7 @@ export const useCoachingContext = () => {
         },
         chiefAimComplete,
         directorCharacterName: profile?.director_character_name || null,
+        displayName: profile?.display_name || null,
 
         // Character Transformation
         characterArchetype: characterProfile?.archetype || null,
