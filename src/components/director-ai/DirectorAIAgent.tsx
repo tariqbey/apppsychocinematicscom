@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { VoiceOrb } from "./VoiceOrb";
 import { VoiceWaveform } from "./VoiceWaveform";
 import { AgentTranscript, TranscriptMessage } from "./AgentTranscript";
-import { DirectorAISettings, VOICE_OPTIONS, PERSONALITY_PRESETS, VoiceOption, PersonalityPreset } from "./DirectorAISettings";
+import { DirectorAISettings, VOICE_OPTIONS, PERSONALITY_PRESETS, VoiceOption, PersonalityPreset, getAllVoices } from "./DirectorAISettings";
 import { useVoiceInput } from "@/hooks/useVoiceInput";
 import { useCoachingContext } from "@/hooks/useCoachingContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -33,7 +33,7 @@ const loadSavedVoice = (): VoiceOption => {
     const saved = localStorage.getItem("director-ai-voice");
     if (saved) {
       const parsed = JSON.parse(saved);
-      const found = VOICE_OPTIONS.find(v => v.id === parsed.id);
+      const found = getAllVoices().find(v => v.id === parsed.id);
       if (found) return found;
     }
   } catch {}
@@ -149,6 +149,7 @@ function DirectorAIAgentInner({ isOpen, onClose, chiefAim }: DirectorAIAgentProp
   const ttsAbortControllerRef = useRef<AbortController | null>(null);
   const ttsRequestIdRef = useRef(0);
   const stopRequestedRef = useRef(false);
+  const voiceModeRef = useRef(false);
   
   // Defer component initialization to prevent UI freeze on mobile
   useEffect(() => {
@@ -370,7 +371,6 @@ function DirectorAIAgentInner({ isOpen, onClose, chiefAim }: DirectorAIAgentProp
       }, 100);
       
       audio.onended = () => {
-        // Don't do anything if stop was requested
         if (stopRequestedRef.current) return;
 
         if (audioLevelIntervalRef.current) {
@@ -382,6 +382,16 @@ function DirectorAIAgentInner({ isOpen, onClose, chiefAim }: DirectorAIAgentProp
         if (audioUrlRef.current) {
           URL.revokeObjectURL(audioUrlRef.current);
           audioUrlRef.current = null;
+        }
+        // Auto-resume listening if user was in voice mode
+        if (voiceModeRef.current && !stopRequestedRef.current) {
+          setTimeout(() => {
+            if (voiceModeRef.current && !stopRequestedRef.current) {
+              setVoiceEnabled(true);
+              setOrbState("listening");
+              startListening();
+            }
+          }, 300);
         }
       };
 
@@ -474,6 +484,7 @@ function DirectorAIAgentInner({ isOpen, onClose, chiefAim }: DirectorAIAgentProp
     
     // Set stop flag FIRST - this blocks any pending operations
     stopRequestedRef.current = true;
+    voiceModeRef.current = false;
     
     // Abort any in-flight chat fetch
     if (abortControllerRef.current) {

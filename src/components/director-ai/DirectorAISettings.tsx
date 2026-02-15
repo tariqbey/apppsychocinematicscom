@@ -1,7 +1,8 @@
-import { useState, useRef } from "react";
-import { ChevronDown, Check, Volume2, Play, Loader2, Square } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
+import { ChevronDown, Check, Volume2, Play, Square, Plus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -10,11 +11,19 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
-// ElevenLabs voice options
 // ElevenLabs voice options - American voices prioritized
-export const VOICE_OPTIONS = [
+export const VOICE_OPTIONS: VoiceOption[] = [
   { id: "cjVigY5qzO86Huf0OWal", name: "Eric", description: "American, energetic motivational male", gender: "male" },
   { id: "JBFqnCBsd6RMkjVDRZzb", name: "George", description: "American, deep commanding male", gender: "male" },
   { id: "TX3LPaxmHKxFdv7VOQHJ", name: "Liam", description: "American, warm friendly male", gender: "male" },
@@ -25,7 +34,7 @@ export const VOICE_OPTIONS = [
   { id: "XrExE9yKIg1WjnnlVkGX", name: "Matilda", description: "American, confident clear female", gender: "female" },
   { id: "Xb7hH8MSUJpSbSDYk0k2", name: "Alice", description: "American, natural friendly female", gender: "female" },
   { id: "cgSgspJ2msm6clMCkdW9", name: "Jessica", description: "American, elegant refined female", gender: "female" },
-] as const;
+];
 
 // Personality presets
 export const PERSONALITY_PRESETS = [
@@ -80,8 +89,32 @@ export const PERSONALITY_PRESETS = [
   },
 ] as const;
 
-export type VoiceOption = typeof VOICE_OPTIONS[number];
+export interface VoiceOption {
+  id: string;
+  name: string;
+  description: string;
+  gender: string;
+}
+
 export type PersonalityPreset = typeof PERSONALITY_PRESETS[number];
+
+// Load custom voices from localStorage
+export const loadCustomVoices = (): VoiceOption[] => {
+  try {
+    const saved = localStorage.getItem("director-ai-custom-voices");
+    if (saved) return JSON.parse(saved);
+  } catch {}
+  return [];
+};
+
+export const saveCustomVoices = (voices: VoiceOption[]) => {
+  localStorage.setItem("director-ai-custom-voices", JSON.stringify(voices));
+};
+
+// Get all voices (built-in + custom)
+export const getAllVoices = (): VoiceOption[] => {
+  return [...VOICE_OPTIONS, ...loadCustomVoices()];
+};
 
 interface DirectorAISettingsProps {
   selectedVoice: VoiceOption;
@@ -101,6 +134,10 @@ export function DirectorAISettings({
   disabled,
 }: DirectorAISettingsProps) {
   const [previewingVoice, setPreviewingVoice] = useState<string | null>(null);
+  const [showCustomVoiceDialog, setShowCustomVoiceDialog] = useState(false);
+  const [customVoiceId, setCustomVoiceId] = useState("");
+  const [customVoiceName, setCustomVoiceName] = useState("");
+  const [customVoices, setCustomVoices] = useState<VoiceOption[]>(loadCustomVoices);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const stopPreview = () => {
@@ -115,15 +152,12 @@ export function DirectorAISettings({
   const previewVoice = async (voice: VoiceOption, e: React.MouseEvent) => {
     e.stopPropagation();
     
-    // If already previewing this voice, stop it
     if (previewingVoice === voice.id) {
       stopPreview();
       return;
     }
     
-    // Stop any current preview
     stopPreview();
-    
     setPreviewingVoice(voice.id);
     
     try {
@@ -173,10 +207,45 @@ export function DirectorAISettings({
     } catch (error) {
       console.error("Voice preview error:", error);
       setPreviewingVoice(null);
+      toast.error("Failed to preview voice. Make sure your ElevenLabs API key is set in Settings → Integrations.");
     }
   };
 
-  const renderVoiceItem = (voice: VoiceOption) => (
+  const handleAddCustomVoice = () => {
+    if (!customVoiceId.trim() || !customVoiceName.trim()) {
+      toast.error("Please enter both a name and voice ID");
+      return;
+    }
+
+    const newVoice: VoiceOption = {
+      id: customVoiceId.trim(),
+      name: customVoiceName.trim(),
+      description: "Custom ElevenLabs voice",
+      gender: "custom",
+    };
+
+    const updated = [...customVoices, newVoice];
+    setCustomVoices(updated);
+    saveCustomVoices(updated);
+    onVoiceChange(newVoice);
+    setCustomVoiceId("");
+    setCustomVoiceName("");
+    setShowCustomVoiceDialog(false);
+    toast.success(`Added custom voice: ${newVoice.name}`);
+  };
+
+  const handleRemoveCustomVoice = (voiceId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const updated = customVoices.filter(v => v.id !== voiceId);
+    setCustomVoices(updated);
+    saveCustomVoices(updated);
+    if (selectedVoice.id === voiceId) {
+      onVoiceChange(VOICE_OPTIONS[0]);
+    }
+    toast.success("Custom voice removed");
+  };
+
+  const renderVoiceItem = (voice: VoiceOption, isCustom = false) => (
     <DropdownMenuItem
       key={voice.id}
       onClick={() => onVoiceChange(voice)}
@@ -197,79 +266,169 @@ export function DirectorAISettings({
             <Play className="w-3 h-3 text-gold" />
           )}
         </button>
-        <div>
+        <div className="flex-1 min-w-0">
           <span className="font-medium">{voice.name}</span>
-          <p className="text-xs text-muted-foreground">{voice.description}</p>
+          <p className="text-xs text-muted-foreground truncate">{voice.description}</p>
         </div>
       </div>
-      {selectedVoice.id === voice.id && <Check className="w-4 h-4 text-gold" />}
+      <div className="flex items-center gap-1">
+        {isCustom && (
+          <button
+            onClick={(e) => handleRemoveCustomVoice(voice.id, e)}
+            className="p-1 rounded hover:bg-destructive/20 text-muted-foreground hover:text-destructive transition-colors"
+            title="Remove custom voice"
+          >
+            ×
+          </button>
+        )}
+        {selectedVoice.id === voice.id && <Check className="w-4 h-4 text-gold" />}
+      </div>
     </DropdownMenuItem>
   );
-  return (
-    <div className="flex items-center gap-2">
-      {/* Voice Selector */}
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={disabled}
-            className="h-8 gap-1 border-border/50 bg-card/60 hover:bg-card text-xs"
-          >
-            <Volume2 className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">{selectedVoice.name}</span>
-            <ChevronDown className="w-3 h-3 opacity-50" />
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-64 bg-card border-border max-h-80 overflow-y-auto">
-          <DropdownMenuLabel className="text-xs text-muted-foreground">Voice (click ▶ to preview)</DropdownMenuLabel>
-          <DropdownMenuSeparator />
-          <DropdownMenuLabel className="text-xs text-gold/70 font-normal">Male Voices</DropdownMenuLabel>
-          {VOICE_OPTIONS.filter(v => v.gender === "male").map(renderVoiceItem)}
-          <DropdownMenuSeparator />
-          <DropdownMenuLabel className="text-xs text-gold/70 font-normal">Female Voices</DropdownMenuLabel>
-          {VOICE_OPTIONS.filter(v => v.gender === "female").map(renderVoiceItem)}
-        </DropdownMenuContent>
-      </DropdownMenu>
 
-      {/* Personality Selector */}
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={disabled}
-            className="h-8 gap-1 border-border/50 bg-card/60 hover:bg-card text-xs"
-          >
-            <span>{selectedPersonality.emoji}</span>
-            <span className="hidden sm:inline">{selectedPersonality.name}</span>
-            <ChevronDown className="w-3 h-3 opacity-50" />
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-64 bg-card border-border">
-          <DropdownMenuLabel className="text-xs text-muted-foreground">Coaching Style</DropdownMenuLabel>
-          <DropdownMenuSeparator />
-          {PERSONALITY_PRESETS.map((preset) => (
-            <DropdownMenuItem
-              key={preset.id}
-              onClick={() => onPersonalityChange(preset)}
-              className={cn(
-                "flex items-center justify-between cursor-pointer",
-                selectedPersonality.id === preset.id && "bg-gold/10"
-              )}
+  return (
+    <>
+      <div className="flex items-center gap-2">
+        {/* Voice Selector */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={disabled}
+              className="h-8 gap-1 border-border/50 bg-card/60 hover:bg-card text-xs"
             >
-              <div className="flex items-center gap-2">
-                <span className="text-lg">{preset.emoji}</span>
-                <div>
-                  <span className="font-medium">{preset.name}</span>
-                  <p className="text-xs text-muted-foreground">{preset.description}</p>
-                </div>
-              </div>
-              {selectedPersonality.id === preset.id && <Check className="w-4 h-4 text-gold" />}
+              <Volume2 className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">{selectedVoice.name}</span>
+              <ChevronDown className="w-3 h-3 opacity-50" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-64 bg-card border-border max-h-80 overflow-y-auto">
+            <DropdownMenuLabel className="text-xs text-muted-foreground">Voice (click ▶ to preview)</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            
+            {/* Custom voices section */}
+            {customVoices.length > 0 && (
+              <>
+                <DropdownMenuLabel className="text-xs text-gold/70 font-normal">🎤 My Voices</DropdownMenuLabel>
+                {customVoices.map(v => renderVoiceItem(v, true))}
+                <DropdownMenuSeparator />
+              </>
+            )}
+            
+            <DropdownMenuLabel className="text-xs text-gold/70 font-normal">Male Voices</DropdownMenuLabel>
+            {VOICE_OPTIONS.filter(v => v.gender === "male").map(v => renderVoiceItem(v))}
+            <DropdownMenuSeparator />
+            <DropdownMenuLabel className="text-xs text-gold/70 font-normal">Female Voices</DropdownMenuLabel>
+            {VOICE_OPTIONS.filter(v => v.gender === "female").map(v => renderVoiceItem(v))}
+            <DropdownMenuSeparator />
+            
+            {/* Add custom voice button */}
+            <DropdownMenuItem
+              onClick={() => setShowCustomVoiceDialog(true)}
+              className="cursor-pointer text-gold hover:text-gold"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              <span>Add My ElevenLabs Voice</span>
             </DropdownMenuItem>
-          ))}
-        </DropdownMenuContent>
-      </DropdownMenu>
-    </div>
+          </DropdownMenuContent>
+        </DropdownMenu>
+
+        {/* Personality Selector */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={disabled}
+              className="h-8 gap-1 border-border/50 bg-card/60 hover:bg-card text-xs"
+            >
+              <span>{selectedPersonality.emoji}</span>
+              <span className="hidden sm:inline">{selectedPersonality.name}</span>
+              <ChevronDown className="w-3 h-3 opacity-50" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-64 bg-card border-border">
+            <DropdownMenuLabel className="text-xs text-muted-foreground">Coaching Style</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            {PERSONALITY_PRESETS.map((preset) => (
+              <DropdownMenuItem
+                key={preset.id}
+                onClick={() => onPersonalityChange(preset)}
+                className={cn(
+                  "flex items-center justify-between cursor-pointer",
+                  selectedPersonality.id === preset.id && "bg-gold/10"
+                )}
+              >
+                <div className="flex items-center gap-2">
+                  <span className="text-lg">{preset.emoji}</span>
+                  <div>
+                    <span className="font-medium">{preset.name}</span>
+                    <p className="text-xs text-muted-foreground">{preset.description}</p>
+                  </div>
+                </div>
+                {selectedPersonality.id === preset.id && <Check className="w-4 h-4 text-gold" />}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+
+      {/* Custom Voice Dialog */}
+      <Dialog open={showCustomVoiceDialog} onOpenChange={setShowCustomVoiceDialog}>
+        <DialogContent className="bg-card border-border">
+          <DialogHeader>
+            <DialogTitle className="text-gold">Add Your ElevenLabs Voice</DialogTitle>
+            <DialogDescription>
+              Use your own cloned or custom voices from ElevenLabs. Find your Voice ID in the{" "}
+              <a 
+                href="https://elevenlabs.io/voice-library" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-gold underline"
+              >
+                ElevenLabs Voice Library
+              </a>{" "}
+              → click on a voice → copy the Voice ID.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div>
+              <label className="text-sm text-muted-foreground mb-1 block">Voice Name</label>
+              <Input
+                value={customVoiceName}
+                onChange={(e) => setCustomVoiceName(e.target.value)}
+                placeholder='e.g. "My Voice Clone"'
+                className="bg-background border-border"
+              />
+            </div>
+            <div>
+              <label className="text-sm text-muted-foreground mb-1 block">ElevenLabs Voice ID</label>
+              <Input
+                value={customVoiceId}
+                onChange={(e) => setCustomVoiceId(e.target.value)}
+                placeholder="e.g. pNInz6obpgDQGcFmaJgB"
+                className="bg-background border-border font-mono text-sm"
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              💡 Make sure your ElevenLabs API key is set in <strong>Settings → Integrations</strong> to use your own voices.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowCustomVoiceDialog(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleAddCustomVoice}
+              className="bg-gold text-black hover:bg-gold/90"
+              disabled={!customVoiceId.trim() || !customVoiceName.trim()}
+            >
+              Add Voice
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
