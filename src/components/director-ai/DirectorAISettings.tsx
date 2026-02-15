@@ -71,6 +71,13 @@ export const PERSONALITY_PRESETS = [
     description: "Warm, encouraging, always in your corner",
     style: "supportive",
   },
+  {
+    id: "hustler",
+    name: "The Hustler",
+    emoji: "💰",
+    description: "Jay-Z energy, from the block, talks real",
+    style: "hustler",
+  },
 ] as const;
 
 export type VoiceOption = typeof VOICE_OPTIONS[number];

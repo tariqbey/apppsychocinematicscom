@@ -41,20 +41,21 @@ const VOICE_OPTIONS = [
 
 type VoiceOption = (typeof VOICE_OPTIONS)[number];
 
-const WELCOME_MESSAGE: Message = {
+const LOADING_WELCOME: Message = {
   id: "welcome",
   role: "assistant",
-  content: "Welcome, Director. I'm here to keep you in character and moving toward your Chief Aim. How can I assist you today?",
+  content: "",
 };
 
 const SUMMARY_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-chat-summary`;
 
 export const DirectorAIChat = ({ isOpen, onToggle, chiefAim, userId }: DirectorAIChatProps) => {
   const navigate = useNavigate();
-  const [messages, setMessages] = useState<Message[]>([WELCOME_MESSAGE]);
+  const [messages, setMessages] = useState<Message[]>([LOADING_WELCOME]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+  const [isGeneratingGreeting, setIsGeneratingGreeting] = useState(false);
   const [ttsEnabled, setTtsEnabled] = useState(true);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [selectedVoice, setSelectedVoice] = useState(VOICE_OPTIONS[0]);
@@ -91,7 +92,7 @@ export const DirectorAIChat = ({ isOpen, onToggle, chiefAim, userId }: DirectorA
             role: m.role as "user" | "assistant",
             content: m.content,
           }));
-          setMessages([WELCOME_MESSAGE, ...loadedMessages]);
+          setMessages([LOADING_WELCOME, ...loadedMessages]);
 
           // Generate summary if we have enough messages
           if (data.length >= 3) {
@@ -108,6 +109,91 @@ export const DirectorAIChat = ({ isOpen, onToggle, chiefAim, userId }: DirectorA
 
     loadHistory();
   }, [userId]);
+
+  // Generate dynamic opening message based on user's current status
+  useEffect(() => {
+    if (!isOpen || !chiefAim) return;
+    // Only generate if the welcome message is still empty (not yet greeted)
+    const welcomeMsg = messages.find(m => m.id === "welcome");
+    if (!welcomeMsg || welcomeMsg.content) return;
+
+    const generateGreeting = async () => {
+      setIsGeneratingGreeting(true);
+      try {
+        const response = await fetch(CHAT_URL, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          },
+          body: JSON.stringify({
+            messages: [{ role: "user", content: "Give me your opening greeting. Check my status — journal, tasks, streak, scorecard, everything — and come at me based on what you see. Keep it to 2-3 sentences max. Be real. Don't introduce yourself, just jump in like you already know me." }],
+            chiefAim,
+            userContext: activeEpisode ? {
+              activeEpisode: {
+                title: activeEpisode.title,
+                objective: activeEpisode.objective,
+                deadline: activeEpisode.deadline,
+                daysRemaining: getDaysRemaining(activeEpisode.deadline),
+                alignmentScore: activeEpisode.alignment_score,
+                status: activeEpisode.status,
+              },
+            } : undefined,
+            isGreeting: true,
+          }),
+        });
+
+        if (!response.ok || !response.body) {
+          throw new Error("Failed to generate greeting");
+        }
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
+        let greetingContent = "";
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+
+          let newlineIndex: number;
+          while ((newlineIndex = buffer.indexOf("\n")) !== -1) {
+            let line = buffer.slice(0, newlineIndex);
+            buffer = buffer.slice(newlineIndex + 1);
+            if (line.endsWith("\r")) line = line.slice(0, -1);
+            if (line.startsWith(":") || line.trim() === "") continue;
+            if (!line.startsWith("data: ")) continue;
+            const jsonStr = line.slice(6).trim();
+            if (jsonStr === "[DONE]") break;
+            try {
+              const parsed = JSON.parse(jsonStr);
+              const content = parsed.choices?.[0]?.delta?.content;
+              if (content) {
+                greetingContent += content;
+                setMessages(prev => prev.map(m => m.id === "welcome" ? { ...m, content: greetingContent } : m));
+              }
+            } catch { break; }
+          }
+        }
+
+        if (greetingContent.trim()) {
+          speakText(greetingContent);
+        }
+      } catch (error) {
+        console.error("Greeting generation error:", error);
+        // Fallback to a static message
+        setMessages(prev => prev.map(m => m.id === "welcome" 
+          ? { ...m, content: "What's good, Director. I'm locked in on your status — let's get to work. What's on your mind?" } 
+          : m
+        ));
+      } finally {
+        setIsGeneratingGreeting(false);
+      }
+    };
+
+    generateGreeting();
+  }, [isOpen, chiefAim]);
 
   // Generate chat summary
   const generateSummary = async () => {
@@ -167,7 +253,7 @@ export const DirectorAIChat = ({ isOpen, onToggle, chiefAim, userId }: DirectorA
         .update({ chat_summary: null, chat_summary_updated_at: null })
         .eq("user_id", userId);
 
-      setMessages([WELCOME_MESSAGE]);
+      setMessages([LOADING_WELCOME]);
       setChatSummary(null);
       toast.success("Chat history cleared");
     } catch (error) {
