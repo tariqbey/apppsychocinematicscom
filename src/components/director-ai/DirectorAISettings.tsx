@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { ChevronDown, Check, Volume2, Play, Square, Plus } from "lucide-react";
+import { ChevronDown, Check, Volume2, Play, Square, Plus, Download, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,6 +21,8 @@ import {
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+
+const VOICES_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/elevenlabs-voices`;
 
 // ElevenLabs voice options - American voices prioritized
 export const VOICE_OPTIONS: VoiceOption[] = [
@@ -135,6 +137,10 @@ export function DirectorAISettings({
 }: DirectorAISettingsProps) {
   const [previewingVoice, setPreviewingVoice] = useState<string | null>(null);
   const [showCustomVoiceDialog, setShowCustomVoiceDialog] = useState(false);
+  const [showImportDialog, setShowImportDialog] = useState(false);
+  const [importingVoices, setImportingVoices] = useState(false);
+  const [elevenlabsVoices, setElevenlabsVoices] = useState<VoiceOption[]>([]);
+  const [selectedImports, setSelectedImports] = useState<Set<string>>(new Set());
   const [customVoiceId, setCustomVoiceId] = useState("");
   const [customVoiceName, setCustomVoiceName] = useState("");
   const [customVoices, setCustomVoices] = useState<VoiceOption[]>(loadCustomVoices);
@@ -245,6 +251,66 @@ export function DirectorAISettings({
     toast.success("Custom voice removed");
   };
 
+  const fetchElevenLabsVoices = async () => {
+    setImportingVoices(true);
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token;
+      if (!token) throw new Error("Not authenticated");
+
+      const response = await fetch(VOICES_URL, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+        },
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "Failed to fetch voices");
+      }
+
+      const data = await response.json();
+      // Filter out voices already in custom or built-in lists
+      const existingIds = new Set([...VOICE_OPTIONS.map(v => v.id), ...customVoices.map(v => v.id)]);
+      const newVoices = data.voices.filter((v: VoiceOption) => !existingIds.has(v.id));
+      setElevenlabsVoices(newVoices);
+      setSelectedImports(new Set(newVoices.map((v: VoiceOption) => v.id)));
+      setShowImportDialog(true);
+    } catch (error: any) {
+      console.error("Failed to fetch ElevenLabs voices:", error);
+      toast.error(error.message || "Failed to fetch voices. Make sure your ElevenLabs API key is set in Settings → Integrations.");
+    } finally {
+      setImportingVoices(false);
+    }
+  };
+
+  const handleImportSelected = () => {
+    const toImport = elevenlabsVoices.filter(v => selectedImports.has(v.id));
+    if (toImport.length === 0) {
+      toast.error("Select at least one voice to import");
+      return;
+    }
+    const updated = [...customVoices, ...toImport];
+    setCustomVoices(updated);
+    saveCustomVoices(updated);
+    setShowImportDialog(false);
+    toast.success(`Imported ${toImport.length} voice${toImport.length > 1 ? "s" : ""}`);
+    // Auto-select the first imported voice
+    if (toImport.length > 0) {
+      onVoiceChange(toImport[0]);
+    }
+  };
+
+  const toggleImportSelection = (voiceId: string) => {
+    setSelectedImports(prev => {
+      const next = new Set(prev);
+      if (next.has(voiceId)) next.delete(voiceId);
+      else next.add(voiceId);
+      return next;
+    });
+  };
+
   const renderVoiceItem = (voice: VoiceOption, isCustom = false) => (
     <DropdownMenuItem
       key={voice.id}
@@ -323,13 +389,27 @@ export function DirectorAISettings({
             {VOICE_OPTIONS.filter(v => v.gender === "female").map(v => renderVoiceItem(v))}
             <DropdownMenuSeparator />
             
-            {/* Add custom voice button */}
+            {/* Import from ElevenLabs */}
+            <DropdownMenuItem
+              onClick={fetchElevenLabsVoices}
+              className="cursor-pointer text-gold hover:text-gold"
+              disabled={importingVoices}
+            >
+              {importingVoices ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <Download className="w-4 h-4 mr-2" />
+              )}
+              <span>Import from ElevenLabs</span>
+            </DropdownMenuItem>
+
+            {/* Add custom voice manually */}
             <DropdownMenuItem
               onClick={() => setShowCustomVoiceDialog(true)}
-              className="cursor-pointer text-gold hover:text-gold"
+              className="cursor-pointer text-muted-foreground hover:text-foreground"
             >
               <Plus className="w-4 h-4 mr-2" />
-              <span>Add My ElevenLabs Voice</span>
+              <span>Add Voice ID Manually</span>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -374,22 +454,67 @@ export function DirectorAISettings({
         </DropdownMenu>
       </div>
 
-      {/* Custom Voice Dialog */}
+      {/* Import Voices Dialog */}
+      <Dialog open={showImportDialog} onOpenChange={setShowImportDialog}>
+        <DialogContent className="bg-card border-border max-h-[80vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="text-gold">Import ElevenLabs Voices</DialogTitle>
+            <DialogDescription>
+              Select voices from your ElevenLabs account to use with Director AI.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex-1 overflow-y-auto space-y-1 py-2 max-h-[50vh]">
+            {elevenlabsVoices.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-4">
+                No new voices found. All your ElevenLabs voices are already imported.
+              </p>
+            ) : (
+              elevenlabsVoices.map((voice) => (
+                <button
+                  key={voice.id}
+                  onClick={() => toggleImportSelection(voice.id)}
+                  className={cn(
+                    "w-full flex items-center gap-3 p-3 rounded-lg text-left transition-colors",
+                    selectedImports.has(voice.id) 
+                      ? "bg-gold/10 border border-gold/30" 
+                      : "bg-muted/20 border border-transparent hover:bg-muted/40"
+                  )}
+                >
+                  <div className={cn(
+                    "w-5 h-5 rounded border-2 flex items-center justify-center shrink-0",
+                    selectedImports.has(voice.id) ? "border-gold bg-gold" : "border-muted-foreground"
+                  )}>
+                    {selectedImports.has(voice.id) && <Check className="w-3 h-3 text-black" />}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-sm">{voice.name}</p>
+                    <p className="text-xs text-muted-foreground truncate">{voice.description}</p>
+                  </div>
+                  <span className="text-xs text-muted-foreground capitalize">{voice.gender}</span>
+                </button>
+              ))
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowImportDialog(false)}>Cancel</Button>
+            <Button
+              onClick={handleImportSelected}
+              className="bg-gold text-black hover:bg-gold/90"
+              disabled={selectedImports.size === 0}
+            >
+              Import {selectedImports.size} Voice{selectedImports.size !== 1 ? "s" : ""}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Custom Voice Dialog (manual) */}
       <Dialog open={showCustomVoiceDialog} onOpenChange={setShowCustomVoiceDialog}>
         <DialogContent className="bg-card border-border">
           <DialogHeader>
-            <DialogTitle className="text-gold">Add Your ElevenLabs Voice</DialogTitle>
+            <DialogTitle className="text-gold">Add Voice ID Manually</DialogTitle>
             <DialogDescription>
-              Use your own cloned or custom voices from ElevenLabs. Find your Voice ID in the{" "}
-              <a 
-                href="https://elevenlabs.io/voice-library" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="text-gold underline"
-              >
-                ElevenLabs Voice Library
-              </a>{" "}
-              → click on a voice → copy the Voice ID.
+              Enter an ElevenLabs Voice ID directly.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
@@ -411,9 +536,6 @@ export function DirectorAISettings({
                 className="bg-background border-border font-mono text-sm"
               />
             </div>
-            <p className="text-xs text-muted-foreground">
-              💡 Make sure your ElevenLabs API key is set in <strong>Settings → Integrations</strong> to use your own voices.
-            </p>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowCustomVoiceDialog(false)}>
