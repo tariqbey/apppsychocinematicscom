@@ -32,6 +32,7 @@ import Challenges from "./pages/Challenges";
 import ResetPassword from "./pages/ResetPassword";
 import DirectorProfile from "./pages/DirectorProfile";
 import DirectorAI from "./pages/DirectorAI";
+import Blueprint from "./pages/Blueprint";
 import NotFound from "./pages/NotFound";
 import { RequireAdmin } from "./components/auth/RequireAdmin";
 
@@ -75,6 +76,7 @@ const App = () => (
               <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/director/:userId" element={<DirectorProfile />} />
               <Route path="/director-ai" element={<DirectorAI />} />
+              <Route path="/blueprint" element={<Blueprint />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>

@@ -221,6 +221,48 @@ export type Database = {
           },
         ]
       }
+      blueprints: {
+        Row: {
+          chief_aim_snapshot: Json | null
+          created_at: string
+          id: string
+          objective: string
+          sops: Json | null
+          status: string
+          strategic_plan: Json
+          tags: string[] | null
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          chief_aim_snapshot?: Json | null
+          created_at?: string
+          id?: string
+          objective: string
+          sops?: Json | null
+          status?: string
+          strategic_plan?: Json
+          tags?: string[] | null
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          chief_aim_snapshot?: Json | null
+          created_at?: string
+          id?: string
+          objective?: string
+          sops?: Json | null
+          status?: string
+          strategic_plan?: Json
+          tags?: string[] | null
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       challenge_soundtracks: {
         Row: {
           archetype_id: string | null
