@@ -95,3 +95,6 @@ verify_jwt = false
 
 [functions.telegram-proactive]
 verify_jwt = false
+
+[functions.generate-blueprint]
+verify_jwt = false

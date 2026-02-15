@@ -230,6 +230,48 @@ serve(async (req) => {
     // Build the full system prompt with personality
     const SYSTEM_PROMPT = BASE_SYSTEM_PROMPT + "\n\n" + stylePrompt;
 
+    // Fetch additional user context from DB for deeper coaching
+    let journalContext = "";
+    let excuseContext = "";
+    try {
+      const [journalRes, excuseRes] = await Promise.all([
+        supabaseClient.from("journal_entries")
+          .select("content, mood, ai_analysis, created_at")
+          .eq("user_id", userId)
+          .order("created_at", { ascending: false })
+          .limit(3),
+        supabaseClient.from("daily_tasks")
+          .select("task_text, incomplete_reason, task_date")
+          .eq("user_id", userId)
+          .eq("is_completed", false)
+          .not("incomplete_reason", "is", null)
+          .order("task_date", { ascending: false })
+          .limit(10),
+      ]);
+
+      if (journalRes.data && journalRes.data.length > 0) {
+        journalContext = `\n\n### RECENT JOURNAL ENTRIES (Private insights into their state)\n`;
+        journalRes.data.forEach((j: any) => {
+          journalContext += `- [${j.mood || "neutral"}] ${j.ai_analysis || j.content.substring(0, 200)}\n`;
+        });
+      }
+
+      if (excuseRes.data && excuseRes.data.length > 0) {
+        const excuseCounts: Record<string, number> = {};
+        excuseRes.data.forEach((t: any) => {
+          if (t.incomplete_reason) {
+            excuseCounts[t.incomplete_reason] = (excuseCounts[t.incomplete_reason] || 0) + 1;
+          }
+        });
+        excuseContext = `\n\n### EXCUSE PATTERNS (Call these out with love!)\n`;
+        Object.entries(excuseCounts).sort((a, b) => b[1] - a[1]).forEach(([excuse, count]) => {
+          excuseContext += `- "${excuse}" — used ${count} times\n`;
+        });
+      }
+    } catch (e) {
+      console.error("Failed to fetch enrichment context:", e);
+    }
+
     // Build enhanced context with full user status
     let contextSection = "";
     
@@ -363,7 +405,7 @@ COACHING DIRECTIVE: This is their CURRENT FOCUS. When discussing near-term actio
       contextSection += `\n\n## CHIEF AIM STATUS\n⚠️ The user has not yet defined their Definite Chief Aim. This is critical! Guide them toward Phase 1 (Pre-Production) to craft their Final Scene.`;
     }
 
-    const enhancedSystemPrompt = SYSTEM_PROMPT + contextSection;
+    const enhancedSystemPrompt = SYSTEM_PROMPT + contextSection + journalContext + excuseContext;
 
     console.log("Director AI processing request");
 

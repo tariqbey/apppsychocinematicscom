@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { MessageCircle, X, Send, Scissors, Sparkles, Loader2, Mic, MicOff, Volume2, VolumeX, ChevronDown, Play, Square, Trash2 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { MessageCircle, X, Send, Scissors, Sparkles, Loader2, Mic, MicOff, Volume2, VolumeX, ChevronDown, Play, Square, Trash2, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -49,6 +50,7 @@ const WELCOME_MESSAGE: Message = {
 const SUMMARY_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-chat-summary`;
 
 export const DirectorAIChat = ({ isOpen, onToggle, chiefAim, userId }: DirectorAIChatProps) => {
+  const navigate = useNavigate();
   const [messages, setMessages] = useState<Message[]>([WELCOME_MESSAGE]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -652,16 +654,24 @@ export const DirectorAIChat = ({ isOpen, onToggle, chiefAim, userId }: DirectorA
         <div ref={messagesEndRef} />
       </div>
 
-      {/* KUT! Button */}
-      <div className="px-4 py-2 border-t border-border/50">
+      {/* Action Buttons */}
+      <div className="px-4 py-2 border-t border-border/50 flex gap-2">
         <Button
           variant="cut"
-          className="w-full"
+          className="flex-1"
           onClick={handleKut}
           disabled={isLoading}
         >
           <Scissors className="w-4 h-4 mr-2" />
-          KUT! — I Need a Reset
+          KUT! — Reset
+        </Button>
+        <Button
+          variant="outline"
+          className="border-gold/30 text-gold hover:bg-gold/10"
+          onClick={() => navigate("/blueprint")}
+        >
+          <FileText className="w-4 h-4 mr-1" />
+          Blueprint
         </Button>
       </div>
 
