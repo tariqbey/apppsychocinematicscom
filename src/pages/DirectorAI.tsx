@@ -234,13 +234,9 @@ export default function DirectorAI() {
             // No TTS - start listening (on iOS, show tap prompt)
             voiceModeRef.current = true;
             stopRequestedRef.current = false;
-            if (isIOSDevice) {
-              setWaitingForTap(true);
-            } else {
-              setVoiceEnabled(true);
-              setOrbState("listening");
-              startListening();
-            }
+            setVoiceEnabled(true);
+            setOrbState("listening");
+            startListening();
           }
         } catch (error) {
           console.error("Dynamic greeting error:", error);
@@ -259,13 +255,9 @@ export default function DirectorAI() {
           } else if (isSupported) {
             voiceModeRef.current = true;
             stopRequestedRef.current = false;
-            if (isIOSDevice) {
-              setWaitingForTap(true);
-            } else {
-              setVoiceEnabled(true);
-              setOrbState("listening");
-              startListening();
-            }
+            setVoiceEnabled(true);
+            setOrbState("listening");
+            startListening();
           }
         }
       };
@@ -369,12 +361,6 @@ export default function DirectorAI() {
         }
         // Auto-resume listening if user was in voice mode
         if (voiceModeRef.current && !stopRequestedRef.current) {
-          if (isIOSDevice) {
-            // iOS requires a user gesture to start speech recognition
-            // Show "tap to speak" state instead of auto-starting
-            setWaitingForTap(true);
-            setOrbState("idle");
-          } else {
             setTimeout(() => {
               if (voiceModeRef.current && !stopRequestedRef.current) {
                 setVoiceEnabled(true);
@@ -382,7 +368,6 @@ export default function DirectorAI() {
                 startListening();
               }
             }, 300);
-          }
         }
       };
 
@@ -571,7 +556,14 @@ export default function DirectorAI() {
         // If in voice mode and no TTS, resume listening
         if (voiceModeRef.current && !stopRequestedRef.current) {
           if (isIOSDevice) {
-            setWaitingForTap(true);
+            // Small delay for iOS to release audio resources before starting mic
+            setTimeout(() => {
+              if (voiceModeRef.current && !stopRequestedRef.current) {
+                setVoiceEnabled(true);
+                setOrbState("listening");
+                startListening();
+              }
+            }, 500);
           } else {
             setVoiceEnabled(true);
             setOrbState("listening");
