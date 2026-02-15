@@ -20,7 +20,7 @@ export const MAX_LENGTHS = {
 
 // Valid values for enums
 export const VALID_PERSONALITY_STYLES = [
-  "swag", "formal", "motivational", "zen", "drill", "supportive"
+  "swag", "formal", "motivational", "zen", "drill", "supportive", "hustler"
 ] as const;
 
 export const VALID_SOCIAL_PLATFORMS = [

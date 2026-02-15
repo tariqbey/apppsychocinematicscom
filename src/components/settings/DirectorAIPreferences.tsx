@@ -58,6 +58,12 @@ const PERSONALITY_PRESETS = [
     emoji: "💛",
     description: "Warm, encouraging, always in your corner",
   },
+  {
+    id: "hustler",
+    name: "The Hustler",
+    emoji: "💰",
+    description: "Jay-Z energy, from the block, talks real",
+  },
 ] as const;
 
 type VoiceOption = typeof VOICE_OPTIONS[number];
