@@ -216,9 +216,19 @@ export default function DirectorAI() {
             },
           });
 
-          setOrbState("idle");
+        setOrbState("idle");
           if (ttsEnabled && greetingContent.trim()) {
+            // Enable voice mode so auto-listen kicks in after greeting TTS ends
+            voiceModeRef.current = true;
+            stopRequestedRef.current = false;
             setTimeout(() => speakText(greetingContent), 100);
+          } else if (isSupported) {
+            // No TTS - start listening immediately after greeting
+            voiceModeRef.current = true;
+            stopRequestedRef.current = false;
+            setVoiceEnabled(true);
+            setOrbState("listening");
+            startListening();
           }
         } catch (error) {
           console.error("Dynamic greeting error:", error);
@@ -231,7 +241,15 @@ export default function DirectorAI() {
           }]);
           setOrbState("idle");
           if (ttsEnabled) {
+            voiceModeRef.current = true;
+            stopRequestedRef.current = false;
             setTimeout(() => speakText(fallback), 100);
+          } else if (isSupported) {
+            voiceModeRef.current = true;
+            stopRequestedRef.current = false;
+            setVoiceEnabled(true);
+            setOrbState("listening");
+            startListening();
           }
         }
       };
