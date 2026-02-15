@@ -293,8 +293,27 @@ export default function DirectorAI() {
     }
   }, []);
 
+  // Split long text into chunks for TTS (ElevenLabs has limits)
+  const splitTextForTTS = (text: string, maxChars = 4000): string[] => {
+    if (text.length <= maxChars) return [text];
+    const chunks: string[] = [];
+    const sentences = text.match(/[^.!?]+[.!?]+/g) || [text];
+    let current = "";
+    for (const sentence of sentences) {
+      if ((current + sentence).length > maxChars && current) {
+        chunks.push(current.trim());
+        current = sentence;
+      } else {
+        current += sentence;
+      }
+    }
+    if (current.trim()) chunks.push(current.trim());
+    return chunks;
+  };
+
   const speakText = async (text: string) => {
     const currentRequestId = ++ttsRequestIdRef.current;
+    const chunks = splitTextForTTS(text);
     
     try {
       if (stopRequestedRef.current) return;
@@ -302,94 +321,109 @@ export default function DirectorAI() {
       stopListening();
       setOrbState("speaking");
       
-      ttsAbortControllerRef.current = new AbortController();
-      
       const { data: sessionData } = await supabase.auth.getSession();
       const token = sessionData?.session?.access_token;
-      
       if (!token) throw new Error("Not authenticated");
-      
-      const response = await fetch(TTS_URL, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "apikey": import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-          "Authorization": `Bearer ${token}`,
-        },
-        body: JSON.stringify({ text, voiceId: selectedVoice.id }),
-        signal: ttsAbortControllerRef.current.signal,
-      });
 
-      if (stopRequestedRef.current || currentRequestId !== ttsRequestIdRef.current) return;
+      for (let i = 0; i < chunks.length; i++) {
+        if (stopRequestedRef.current || currentRequestId !== ttsRequestIdRef.current) return;
 
-      if (!response.ok) throw new Error("TTS failed");
+        ttsAbortControllerRef.current = new AbortController();
 
-      const audioBlob = await response.blob();
-      if (stopRequestedRef.current || currentRequestId !== ttsRequestIdRef.current) return;
-      
-      const audioUrl = URL.createObjectURL(audioBlob);
-      audioUrlRef.current = audioUrl;
-      
-      // Reuse the existing unlocked audio element on iOS, or create new one
-      if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current.onended = null;
-        audioRef.current.onerror = null;
+        const response = await fetch(TTS_URL, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "apikey": import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+            "Authorization": `Bearer ${token}`,
+          },
+          body: JSON.stringify({ text: chunks[i], voiceId: selectedVoice.id }),
+          signal: ttsAbortControllerRef.current.signal,
+        });
+
+        if (stopRequestedRef.current || currentRequestId !== ttsRequestIdRef.current) return;
+
+        if (!response.ok) {
+          const errBody = await response.text().catch(() => "");
+          console.error("TTS error response:", response.status, errBody);
+          if (response.status === 400 && errBody.includes("No ElevenLabs API key")) {
+            toast.error("Add your ElevenLabs API key in Settings → Integrations to enable voice.");
+            break;
+          }
+          throw new Error("TTS failed");
+        }
+
+        const audioBlob = await response.blob();
+        if (stopRequestedRef.current || currentRequestId !== ttsRequestIdRef.current) return;
+        
+        const audioUrl = URL.createObjectURL(audioBlob);
+        audioUrlRef.current = audioUrl;
+        
+        if (audioRef.current) {
+          audioRef.current.pause();
+          audioRef.current.onended = null;
+          audioRef.current.onerror = null;
+        }
+        
+        const audio = audioRef.current || new Audio();
+        audio.src = audioUrl;
+        audio.volume = 1;
+        audioRef.current = audio;
+        
+        if (!audioLevelIntervalRef.current) {
+          audioLevelIntervalRef.current = setInterval(() => {
+            if (!stopRequestedRef.current) {
+              setAudioLevel(Math.random() * 0.5 + 0.3);
+            }
+          }, 100);
+        }
+        
+        // Wait for this chunk to finish playing
+        await new Promise<void>((resolve, reject) => {
+          audio.onended = () => {
+            if (audioUrlRef.current) {
+              URL.revokeObjectURL(audioUrlRef.current);
+              audioUrlRef.current = null;
+            }
+            resolve();
+          };
+          audio.onerror = () => {
+            reject(new Error("Audio playback error"));
+          };
+          if (stopRequestedRef.current || currentRequestId !== ttsRequestIdRef.current) {
+            resolve();
+            return;
+          }
+          audio.play().catch(reject);
+        });
       }
-      
-      const audio = audioRef.current || new Audio();
-      audio.src = audioUrl;
-      audio.volume = 1;
-      audioRef.current = audio;
-      
-      audioLevelIntervalRef.current = setInterval(() => {
-        if (!stopRequestedRef.current) {
-          setAudioLevel(Math.random() * 0.5 + 0.3);
-        }
-      }, 100);
-      
-      audio.onended = () => {
-        if (stopRequestedRef.current) return;
-        if (audioLevelIntervalRef.current) {
-          clearInterval(audioLevelIntervalRef.current);
-        }
-        setAudioLevel(0);
-        setOrbState("idle");
-        if (audioUrlRef.current) {
-          URL.revokeObjectURL(audioUrlRef.current);
-          audioUrlRef.current = null;
-        }
-        // Auto-resume listening if user was in voice mode
-        if (voiceModeRef.current && !stopRequestedRef.current) {
-            setTimeout(() => {
-              if (voiceModeRef.current && !stopRequestedRef.current) {
-                setVoiceEnabled(true);
-                setOrbState("listening");
-                startListening();
-              }
-            }, 300);
-        }
-      };
 
-      audio.onerror = () => {
-        if (stopRequestedRef.current) return;
-        if (audioLevelIntervalRef.current) {
-          clearInterval(audioLevelIntervalRef.current);
-        }
-        setAudioLevel(0);
-        setOrbState("idle");
-      };
-      
-      if (stopRequestedRef.current || currentRequestId !== ttsRequestIdRef.current) {
-        URL.revokeObjectURL(audioUrl);
-        return;
+      // All chunks done - clean up and auto-resume listening
+      if (audioLevelIntervalRef.current) {
+        clearInterval(audioLevelIntervalRef.current);
+        audioLevelIntervalRef.current = null;
       }
-      
-      await audio.play();
+      setAudioLevel(0);
+      setOrbState("idle");
+
+      if (voiceModeRef.current && !stopRequestedRef.current) {
+        setTimeout(() => {
+          if (voiceModeRef.current && !stopRequestedRef.current) {
+            setVoiceEnabled(true);
+            setOrbState("listening");
+            startListening();
+          }
+        }, 300);
+      }
     } catch (error: any) {
       if (error?.name !== "AbortError") {
         console.error("TTS error:", error);
       }
+      if (audioLevelIntervalRef.current) {
+        clearInterval(audioLevelIntervalRef.current);
+        audioLevelIntervalRef.current = null;
+      }
+      setAudioLevel(0);
       setOrbState("idle");
     } finally {
       ttsAbortControllerRef.current = null;
@@ -548,6 +582,16 @@ export default function DirectorAI() {
 
       setMessages((prev) => [...prev, assistantMsg]);
       setCurrentResponse("");
+
+      // Save both messages to DB for conversation memory
+      if (user?.id) {
+        supabase.from("chat_messages").insert([
+          { user_id: user.id, role: "user", content: userMessage },
+          { user_id: user.id, role: "assistant", content: fullResponse },
+        ]).then(({ error }) => {
+          if (error) console.error("Failed to save chat messages:", error);
+        });
+      }
 
       if (ttsEnabled && fullResponse) {
         await speakText(fullResponse);
