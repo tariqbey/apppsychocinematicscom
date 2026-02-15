@@ -74,6 +74,7 @@ export default function DirectorAI() {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const audioUrlRef = useRef<string | null>(null);
   const audioLevelIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const audioUnlockedRef = useRef(false); // Track if iOS audio has been unlocked
   const hasGreeted = useRef(false);
   const [pendingVoiceSubmit, setPendingVoiceSubmit] = useState<string | null>(null);
   const lastAutoSubmitRef = useRef<string | null>(null);
@@ -285,6 +286,21 @@ export default function DirectorAI() {
     toast.success(`Coaching style: ${personality.name}`);
   }, []);
 
+  // Unlock audio on iOS - must be called from a user gesture
+  const unlockAudio = useCallback(() => {
+    if (audioUnlockedRef.current) return;
+    audioUnlockedRef.current = true;
+    // Create a persistent audio element and play silence to unlock iOS audio
+    const audio = new Audio();
+    audio.src = "data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4Ljc2LjEwMAAAAAAAAAAAAAAA//tQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWGluZwAAAA8AAAACAAABhgC7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7//////////////////////////////////////////////////////////////////8AAAAATGF2YzU4LjEzAAAAAAAAAAAAAAAAJAAAAAAAAAAAAYYoRwAAAAAAAAAAAAAAAAAAAA==";
+    audio.volume = 0.01;
+    audio.play().catch(() => {});
+    // Keep this element around as the "unlocked" audio element
+    if (!audioRef.current) {
+      audioRef.current = audio;
+    }
+  }, []);
+
   const speakText = async (text: string) => {
     const currentRequestId = ++ttsRequestIdRef.current;
     
@@ -322,12 +338,16 @@ export default function DirectorAI() {
       const audioUrl = URL.createObjectURL(audioBlob);
       audioUrlRef.current = audioUrl;
       
+      // Reuse the existing unlocked audio element on iOS, or create new one
       if (audioRef.current) {
         audioRef.current.pause();
-        audioRef.current.src = "";
+        audioRef.current.onended = null;
+        audioRef.current.onerror = null;
       }
       
-      const audio = new Audio(audioUrl);
+      const audio = audioRef.current || new Audio();
+      audio.src = audioUrl;
+      audio.volume = 1;
       audioRef.current = audio;
       
       audioLevelIntervalRef.current = setInterval(() => {
@@ -583,6 +603,7 @@ export default function DirectorAI() {
 
   const handleSend = () => {
     if (!inputText.trim() || isLoading) return;
+    unlockAudio(); // Unlock iOS audio on user gesture
     const text = inputText.trim();
     setInputText("");
     streamChat(text);
@@ -596,6 +617,7 @@ export default function DirectorAI() {
       setOrbState("idle");
       toast.info("Voice input disabled");
     } else {
+      unlockAudio(); // Unlock iOS audio on user gesture
       stopRequestedRef.current = false;
       voiceModeRef.current = true; // Enter voice conversation mode
       
@@ -726,6 +748,7 @@ export default function DirectorAI() {
         <div 
           className="flex-shrink-0 mb-4 cursor-pointer" 
           onClick={() => {
+            unlockAudio(); // Unlock iOS audio on any orb tap
             if (waitingForTap) {
               // User tapped — this provides the gesture iOS needs
               setWaitingForTap(false);
