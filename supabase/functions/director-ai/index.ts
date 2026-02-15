@@ -183,10 +183,21 @@ You rewrite mental scripts. The user's old story — their excuses, their fears,
 ## WHAT MAKES YOU DIFFERENT FROM GENERIC AI
 
 - You have CONTEXT about this person: their Chief Aim, their tasks, their streaks, their journal entries, their excuse patterns. USE IT.
-- You REMEMBER the conversation. Reference what they said earlier.
+- You REMEMBER the conversation AND past sessions. Reference what they said earlier AND in previous conversations.
 - You give REAL TALK. Not motivational platitudes. Specific, situational coaching.
 - You challenge them when needed. A coach who only agrees is not a coach.
 - You care. Genuinely. That's why you push hard. Because their dream matters.
+
+## ANTI-REPETITION RULES (CRITICAL)
+
+**NEVER repeat yourself. NEVER say the same thing twice. NEVER use the same phrases across responses.**
+
+- Before responding, mentally review what you've already said in this conversation. DO NOT repeat those points, phrases, or structures.
+- If you already gave advice on a topic, BUILD ON IT — don't restate it. Say "Building on what we talked about earlier..." and go DEEPER.
+- Vary your sentence structure. If your last response started with a question, start this one with a statement. If you used a metaphor last time, use a direct challenge this time.
+- NEVER use the same opening line twice. No "Alright Director", "Let's get it", "Real talk" over and over. Mix it up every single time.
+- If the user brings up the same topic again, acknowledge it: "You keep coming back to this — that tells me something. Let's dig deeper into WHY."
+- Track the FLOW of the conversation. Each response should feel like the NEXT step, not a reset.
 
 ## PROACTIVE COACHING
 
@@ -509,7 +520,39 @@ COACHING DIRECTIVE: This is their CURRENT FOCUS. When discussing near-term actio
 
     const enhancedSystemPrompt = SYSTEM_PROMPT + contextSection + ritualContext + journalContext + excuseContext;
 
-    console.log("Director AI processing request");
+    // Load past conversation history for memory continuity
+    let pastMessages: any[] = [];
+    try {
+      const { data: pastMsgs } = await supabaseClient
+        .from("chat_messages")
+        .select("role, content")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false })
+        .limit(30);
+      
+      if (pastMsgs && pastMsgs.length > 0) {
+        pastMessages = pastMsgs.reverse();
+      }
+    } catch (e) {
+      console.error("Failed to load chat history:", e);
+    }
+
+    // Combine: past history (for memory) + current session messages
+    // Deduplicate: if current messages overlap with past, prefer current
+    const currentContents = new Set(messages.map((m: any) => m.content?.substring(0, 100)));
+    const uniquePastMessages = pastMessages.filter(
+      (pm: any) => !currentContents.has(pm.content?.substring(0, 100))
+    );
+
+    const allContextMessages = [
+      ...(uniquePastMessages.length > 0 ? [
+        { role: "system", content: `## PREVIOUS SESSION HISTORY (The user expects you to remember these conversations)\nThe following are messages from previous coaching sessions. Reference them naturally to show continuity.` },
+        ...uniquePastMessages,
+      ] : []),
+      ...messages,
+    ];
+
+    console.log("Director AI processing request", { pastMsgCount: uniquePastMessages.length, currentMsgCount: messages.length });
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -521,7 +564,7 @@ COACHING DIRECTIVE: This is their CURRENT FOCUS. When discussing near-term actio
         model: "google/gemini-2.5-flash",
         messages: [
           { role: "system", content: enhancedSystemPrompt },
-          ...messages,
+          ...allContextMessages,
         ],
         stream: true,
       }),

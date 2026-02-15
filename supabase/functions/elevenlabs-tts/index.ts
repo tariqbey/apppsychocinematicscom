@@ -123,7 +123,7 @@ serve(async (req) => {
 
     const { text, voiceId } = await req.json();
     
-    // Check for user's personal ElevenLabs API key first
+    // Each user MUST provide their own ElevenLabs API key
     const { data: userIntegration } = await supabaseClient
       .from("user_integrations")
       .select("api_key")
@@ -131,11 +131,10 @@ serve(async (req) => {
       .eq("service_name", "elevenlabs")
       .single();
 
-    // Use user's key if available, otherwise fall back to system key
-    const ELEVENLABS_API_KEY = userIntegration?.api_key || Deno.env.get("ELEVENLABS_API_KEY");
+    const ELEVENLABS_API_KEY = userIntegration?.api_key;
 
     if (!ELEVENLABS_API_KEY) {
-      throw new Error("ELEVENLABS_API_KEY not configured. Please add your API key in Settings → Integrations.");
+      throw new Error("No ElevenLabs API key found. Please add your personal API key in Settings → Integrations to use voice features.");
     }
 
     if (!text) {
@@ -150,8 +149,7 @@ serve(async (req) => {
     // Use "George" voice by default - authoritative and warm, perfect for a director/coach
     const selectedVoiceId = voiceId || "JBFqnCBsd6RMkjVDRZzb";
     
-    const usingPersonalKey = !!userIntegration?.api_key;
-    console.log(`TTS for user ${userId} (using ${usingPersonalKey ? "personal" : "system"} API key)`);
+    console.log(`TTS for user ${userId} (personal API key)`);
 
     const response = await fetch(
       `https://api.elevenlabs.io/v1/text-to-speech/${selectedVoiceId}?output_format=mp3_44100_128`,
