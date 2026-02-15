@@ -314,9 +314,14 @@ export const useVoiceInput = (options: UseVoiceInputOptions = {}) => {
       return;
     }
     
+    // If already started, force-stop first to reset the recognition state
     if (hasStartedRef.current) {
-      console.log("[VoiceInput] Already started, skipping");
-      return;
+      console.log("[VoiceInput] Already started — stopping first to reset");
+      try { recognitionRef.current.abort(); } catch (e) {}
+      hasStartedRef.current = false;
+      setIsListening(false);
+      // Wait a beat for the browser to release the recognition
+      await new Promise(resolve => setTimeout(resolve, 200));
     }
 
     console.log("[VoiceInput] Starting listening...", { isMobile: isMobile(), isIOS: isIOS() });
