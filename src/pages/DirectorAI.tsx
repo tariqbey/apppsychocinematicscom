@@ -7,7 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useCoachingContext } from "@/hooks/useCoachingContext";
 import { useVoiceInput } from "@/hooks/useVoiceInput";
-import { DirectorAISettings, VOICE_OPTIONS, PERSONALITY_PRESETS, VoiceOption, PersonalityPreset } from "@/components/director-ai/DirectorAISettings";
+import { DirectorAISettings, VOICE_OPTIONS, PERSONALITY_PRESETS, VoiceOption, PersonalityPreset, getAllVoices } from "@/components/director-ai/DirectorAISettings";
 import { JarvisOrb } from "@/components/director-ai/JarvisOrb";
 import { AgentTranscript, TranscriptMessage } from "@/components/director-ai/AgentTranscript";
 import { readOpenAITextStream } from "@/lib/sse";
@@ -22,7 +22,7 @@ const loadSavedVoice = (): VoiceOption => {
     const saved = localStorage.getItem("director-ai-voice");
     if (saved) {
       const parsed = JSON.parse(saved);
-      const found = VOICE_OPTIONS.find(v => v.id === parsed.id);
+      const found = getAllVoices().find(v => v.id === parsed.id);
       if (found) return found;
     }
   } catch {}
@@ -113,6 +113,7 @@ export default function DirectorAI() {
   const ttsAbortControllerRef = useRef<AbortController | null>(null);
   const ttsRequestIdRef = useRef(0);
   const stopRequestedRef = useRef(false);
+  const voiceModeRef = useRef(false); // Track if user started a voice conversation
   
   // Redirect if not authenticated
   useEffect(() => {
@@ -147,6 +148,7 @@ export default function DirectorAI() {
       const trimmed = finalTranscript.trim();
       if (trimmed && trimmed !== lastAutoSubmitRef.current) {
         lastAutoSubmitRef.current = trimmed;
+        // Don't clear voiceModeRef - keep voice conversation going
         setVoiceEnabled(false);
         setInputText("");
         setPendingVoiceSubmit(trimmed);
@@ -266,6 +268,16 @@ export default function DirectorAI() {
           URL.revokeObjectURL(audioUrlRef.current);
           audioUrlRef.current = null;
         }
+        // Auto-resume listening if user was in voice mode
+        if (voiceModeRef.current && !stopRequestedRef.current) {
+          setTimeout(() => {
+            if (voiceModeRef.current && !stopRequestedRef.current) {
+              setVoiceEnabled(true);
+              setOrbState("listening");
+              startListening();
+            }
+          }, 300);
+        }
       };
 
       audio.onerror = () => {
@@ -324,6 +336,7 @@ export default function DirectorAI() {
 
   const stopConversation = useCallback(() => {
     stopRequestedRef.current = true;
+    voiceModeRef.current = false; // Exit voice conversation mode
     
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
@@ -342,6 +355,7 @@ export default function DirectorAI() {
 
   const streamChat = useCallback(async (userMessage: string) => {
     stopListening();
+    // Don't clear voiceModeRef - we want to auto-resume after AI responds
     setVoiceEnabled(false);
     stopRequestedRef.current = false;
     
@@ -481,20 +495,23 @@ export default function DirectorAI() {
     if (voiceEnabled || isListening) {
       stopListening();
       setVoiceEnabled(false);
+      voiceModeRef.current = false; // Exit voice mode
       setOrbState("idle");
       toast.info("Voice input disabled");
     } else {
       stopRequestedRef.current = false;
+      voiceModeRef.current = true; // Enter voice conversation mode
       
       if (!isSupported) {
         toast.error("Voice input is not supported on this browser.", { duration: 5000 });
+        voiceModeRef.current = false;
         return;
       }
       
       stopSpeaking();
       setVoiceEnabled(true);
       setOrbState("listening");
-      toast.info("🎤 Tap and speak clearly...", { duration: 2000 });
+      toast.info("🎤 Speak — I'll listen and respond", { duration: 2000 });
       
       try {
         await startListening();
