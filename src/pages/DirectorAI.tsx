@@ -1,20 +1,23 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Send, Mic, MicOff, Volume2, VolumeX, Zap, Square, Settings2 } from "lucide-react";
+import { ArrowLeft, Send, Mic, MicOff, Volume2, VolumeX, Zap, Square, Settings2, Download, Loader2, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useCoachingContext } from "@/hooks/useCoachingContext";
 import { useVoiceInput } from "@/hooks/useVoiceInput";
-import { DirectorAISettings, VOICE_OPTIONS, PERSONALITY_PRESETS, VoiceOption, PersonalityPreset, getAllVoices } from "@/components/director-ai/DirectorAISettings";
+import { DirectorAISettings, VOICE_OPTIONS, PERSONALITY_PRESETS, VoiceOption, PersonalityPreset, getAllVoices, loadCustomVoices, saveCustomVoices } from "@/components/director-ai/DirectorAISettings";
 import { JarvisOrb } from "@/components/director-ai/JarvisOrb";
 import { AgentTranscript, TranscriptMessage } from "@/components/director-ai/AgentTranscript";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { cn } from "@/lib/utils";
 import { readOpenAITextStream } from "@/lib/sse";
 import { toast } from "sonner";
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/director-ai`;
 const TTS_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/elevenlabs-tts`;
+const VOICES_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/elevenlabs-voices`;
 
 // Load saved preferences
 const loadSavedVoice = (): VoiceOption => {
@@ -78,6 +81,13 @@ export default function DirectorAI() {
   const ttsRequestIdRef = useRef(0);
   const stopRequestedRef = useRef(false);
   const voiceModeRef = useRef(false); // Track if user started a voice conversation
+  
+  // ElevenLabs import state
+  const [showImportDialog, setShowImportDialog] = useState(false);
+  const [importingVoices, setImportingVoices] = useState(false);
+  const [elevenlabsVoices, setElevenlabsVoices] = useState<VoiceOption[]>([]);
+  const [selectedImports, setSelectedImports] = useState<Set<string>>(new Set());
+  const [customVoices, setCustomVoices] = useState<VoiceOption[]>(loadCustomVoices);
   
   // Redirect if not authenticated
   useEffect(() => {
@@ -566,6 +576,61 @@ export default function DirectorAI() {
     streamChat("KUT! I need to reset. Walk me through the KUT technique right now.");
   };
 
+  const fetchElevenLabsVoices = async () => {
+    setImportingVoices(true);
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token;
+      if (!token) throw new Error("Not authenticated");
+
+      const response = await fetch(VOICES_URL, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+        },
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "Failed to fetch voices");
+      }
+
+      const data = await response.json();
+      const existingIds = new Set([...VOICE_OPTIONS.map(v => v.id), ...customVoices.map(v => v.id)]);
+      const newVoices = data.voices.filter((v: VoiceOption) => !existingIds.has(v.id));
+      setElevenlabsVoices(newVoices);
+      setSelectedImports(new Set(newVoices.map((v: VoiceOption) => v.id)));
+      setShowImportDialog(true);
+    } catch (error: any) {
+      console.error("Failed to fetch ElevenLabs voices:", error);
+      toast.error(error.message || "Failed to fetch voices. Make sure your ElevenLabs API key is set in Settings → Integrations.");
+    } finally {
+      setImportingVoices(false);
+    }
+  };
+
+  const handleImportSelected = () => {
+    const toImport = elevenlabsVoices.filter(v => selectedImports.has(v.id));
+    if (toImport.length === 0) return;
+    const updated = [...customVoices, ...toImport];
+    setCustomVoices(updated);
+    saveCustomVoices(updated);
+    setShowImportDialog(false);
+    toast.success(`Imported ${toImport.length} voice${toImport.length > 1 ? "s" : ""}`);
+    if (toImport.length > 0) {
+      handleVoiceChange(toImport[0]);
+    }
+  };
+
+  const toggleImportSelection = (voiceId: string) => {
+    setSelectedImports(prev => {
+      const next = new Set(prev);
+      if (next.has(voiceId)) next.delete(voiceId);
+      else next.add(voiceId);
+      return next;
+    });
+  };
+
   if (authLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -633,6 +698,24 @@ export default function DirectorAI() {
             messages={messages}
             currentResponse={currentResponse}
           />
+        </div>
+
+        {/* ElevenLabs Voice Import */}
+        <div className="flex-shrink-0 w-full max-w-lg">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={fetchElevenLabsVoices}
+            disabled={importingVoices}
+            className="text-gold/60 hover:text-gold text-xs gap-1.5 h-7"
+          >
+            {importingVoices ? (
+              <Loader2 className="w-3 h-3 animate-spin" />
+            ) : (
+              <Download className="w-3 h-3" />
+            )}
+            Import ElevenLabs Voices
+          </Button>
         </div>
       </div>
 
@@ -715,6 +798,60 @@ export default function DirectorAI() {
           </div>
         </div>
       </div>
+
+      {/* ElevenLabs Import Dialog */}
+      <Dialog open={showImportDialog} onOpenChange={setShowImportDialog}>
+        <DialogContent className="bg-card border-border max-h-[80vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="text-gold">Import ElevenLabs Voices</DialogTitle>
+            <DialogDescription>
+              Select voices from your ElevenLabs account to use with Director AI.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex-1 overflow-y-auto space-y-1 py-2 max-h-[50vh]">
+            {elevenlabsVoices.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-4">
+                No new voices found. All your ElevenLabs voices are already imported.
+              </p>
+            ) : (
+              elevenlabsVoices.map((voice) => (
+                <button
+                  key={voice.id}
+                  onClick={() => toggleImportSelection(voice.id)}
+                  className={cn(
+                    "w-full flex items-center gap-3 p-3 rounded-lg text-left transition-colors",
+                    selectedImports.has(voice.id)
+                      ? "bg-gold/10 border border-gold/30"
+                      : "bg-muted/20 border border-transparent hover:bg-muted/40"
+                  )}
+                >
+                  <div className={cn(
+                    "w-5 h-5 rounded border-2 flex items-center justify-center shrink-0",
+                    selectedImports.has(voice.id) ? "border-gold bg-gold" : "border-muted-foreground"
+                  )}>
+                    {selectedImports.has(voice.id) && <Check className="w-3 h-3 text-black" />}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-sm">{voice.name}</p>
+                    <p className="text-xs text-muted-foreground truncate">{voice.description}</p>
+                  </div>
+                  <span className="text-xs text-muted-foreground capitalize">{voice.gender}</span>
+                </button>
+              ))
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowImportDialog(false)}>Cancel</Button>
+            <Button
+              onClick={handleImportSelected}
+              className="bg-gold text-black hover:bg-gold/90"
+              disabled={selectedImports.size === 0}
+            >
+              Import {selectedImports.size} Voice{selectedImports.size !== 1 ? "s" : ""}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

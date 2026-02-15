@@ -250,10 +250,13 @@ serve(async (req) => {
     const SYSTEM_PROMPT = BASE_SYSTEM_PROMPT + "\n\n" + stylePrompt;
 
     // Fetch additional user context from DB for deeper coaching
+    // CRITICAL: Always fetch chief aim directly from DB for accuracy
     let journalContext = "";
     let excuseContext = "";
+    let dbChiefAim: { what: string | null; byWhen: string | null; exchange: string | null; plan: string | null } | null = null;
+    let dbChiefAimComplete = false;
     try {
-      const [journalRes, excuseRes] = await Promise.all([
+      const [journalRes, excuseRes, profileRes] = await Promise.all([
         supabaseClient.from("journal_entries")
           .select("content, mood, ai_analysis, created_at")
           .eq("user_id", userId)
@@ -266,7 +269,23 @@ serve(async (req) => {
           .not("incomplete_reason", "is", null)
           .order("task_date", { ascending: false })
           .limit(10),
+        supabaseClient.from("user_profiles")
+          .select("chief_aim_what, chief_aim_by_when, chief_aim_exchange, chief_aim_plan")
+          .eq("user_id", userId)
+          .single(),
       ]);
+
+      // Use DB chief aim data (authoritative source)
+      if (profileRes.data) {
+        const p = profileRes.data;
+        dbChiefAim = {
+          what: p.chief_aim_what || null,
+          byWhen: p.chief_aim_by_when || null,
+          exchange: p.chief_aim_exchange || null,
+          plan: p.chief_aim_plan || null,
+        };
+        dbChiefAimComplete = !!(p.chief_aim_what && p.chief_aim_what.trim().length > 0);
+      }
 
       if (journalRes.data && journalRes.data.length > 0) {
         journalContext = `\n\n### RECENT JOURNAL ENTRIES (Private insights into their state)\n`;
@@ -291,20 +310,24 @@ serve(async (req) => {
       console.error("Failed to fetch enrichment context:", e);
     }
 
+    // Use DB chief aim as authoritative source, fall back to client-passed data
+    const effectiveChiefAim = dbChiefAim || chiefAim;
+    const effectiveChiefAimComplete = dbChiefAimComplete || (userContext?.chiefAimComplete ?? false);
+
     // Build enhanced context with full user status
     let contextSection = "";
     
     // Chief Aim context
-    if (chiefAim) {
-      if (typeof chiefAim === "string") {
-        contextSection += `\n\n## THE USER'S DEFINITE CHIEF AIM (FINAL SCENE)\n${chiefAim}`;
+    if (effectiveChiefAim) {
+      if (typeof effectiveChiefAim === "string") {
+        contextSection += `\n\n## THE USER'S DEFINITE CHIEF AIM (FINAL SCENE)\n${effectiveChiefAim}`;
       } else {
         contextSection += `\n\n## THE USER'S DEFINITE CHIEF AIM (FINAL SCENE)
 
-**THE DREAM (What They Want):** ${chiefAim.what || "Not yet defined - help them craft this!"}
-**THE DEADLINE (By When):** ${chiefAim.byWhen || "Not yet set"}
-**THE EXCHANGE (What They Give):** ${chiefAim.exchange || "Not yet defined"}
-**THE PLAN (How They'll Start):** ${chiefAim.plan || "Not yet outlined"}`;
+**THE DREAM (What They Want):** ${effectiveChiefAim.what || "Not yet defined - help them craft this!"}
+**THE DEADLINE (By When):** ${effectiveChiefAim.byWhen || "Not yet set"}
+**THE EXCHANGE (What They Give):** ${effectiveChiefAim.exchange || "Not yet defined"}
+**THE PLAN (How They'll Start):** ${effectiveChiefAim.plan || "Not yet outlined"}`;
       }
     }
 
@@ -318,7 +341,7 @@ serve(async (req) => {
 **Best Streak:** ${userContext.bestStreak || 0} days
 
 ### CHIEF AIM STATUS
-${userContext.chiefAimComplete 
+${effectiveChiefAimComplete 
   ? "✓ Chief Aim is COMPLETE - They have their Final Scene defined."
   : "⚠️ Chief Aim is INCOMPLETE - They need to define their Final Scene! This is Phase 1 priority."}
 ${userContext.directorCharacterName ? `**Director Character Name:** ${userContext.directorCharacterName}` : ""}`;
@@ -414,13 +437,13 @@ COACHING DIRECTIVE: This is their CURRENT FOCUS. When discussing near-term actio
       contextSection += `
 
 ## COACHING PRIORITIES (in order)
-1. ${!userContext.chiefAimComplete ? "URGENT: Help them complete their Chief Aim!" : "Chief Aim complete ✓"}
+1. ${!effectiveChiefAimComplete ? "URGENT: Help them complete their Chief Aim!" : "Chief Aim complete ✓"}
 2. ${userContext.activeEpisode ? `Active Episode: "${userContext.activeEpisode.title}" - ${userContext.activeEpisode.daysRemaining < 0 ? "OVERDUE!" : `${userContext.activeEpisode.daysRemaining} days left`}` : "No active episode"}
 3. ${!userContext.tasksSetForToday ? "Set today's Three Things" : (userContext.allTasksCompleted ? "All tasks done ✓" : "Check on task progress")}
 4. ${!userContext.watchedMindMovieToday && userContext.hasMindMovie ? "Encourage Mind Movie viewing" : "Mind Movie status OK ✓"}
 5. ${!userContext.filledScorecardToday ? "Remind about scorecard (end of day)" : "Scorecard done ✓"}
 6. ${userContext.transformationAnalysis ? "Reference their character transformation - remind them WHO they must become!" : "Encourage them to complete Character Analysis"}`;
-    } else if (!chiefAim) {
+    } else if (!effectiveChiefAim) {
       contextSection += `\n\n## CHIEF AIM STATUS\n⚠️ The user has not yet defined their Definite Chief Aim. This is critical! Guide them toward Phase 1 (Pre-Production) to craft their Final Scene.`;
     }
 
