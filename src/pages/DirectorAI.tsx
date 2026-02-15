@@ -66,6 +66,7 @@ export default function DirectorAI() {
   const [ttsEnabled, setTtsEnabled] = useState(true);
   const [voiceEnabled, setVoiceEnabled] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [waitingForTap, setWaitingForTap] = useState(false); // iOS: waiting for user gesture to start mic
   
   const [selectedVoice, setSelectedVoice] = useState<VoiceOption>(loadSavedVoice);
   const [selectedPersonality, setSelectedPersonality] = useState<PersonalityPreset>(loadSavedPersonality);
@@ -81,6 +82,12 @@ export default function DirectorAI() {
   const ttsRequestIdRef = useRef(0);
   const stopRequestedRef = useRef(false);
   const voiceModeRef = useRef(false); // Track if user started a voice conversation
+  
+  // Detect iOS for gesture-required speech recognition
+  const isIOSDevice = useRef(
+    /iPad|iPhone|iPod/.test(navigator.userAgent) || 
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+  ).current;
   
   // ElevenLabs import state
   const [showImportDialog, setShowImportDialog] = useState(false);
@@ -223,12 +230,16 @@ export default function DirectorAI() {
             stopRequestedRef.current = false;
             setTimeout(() => speakText(greetingContent), 100);
           } else if (isSupported) {
-            // No TTS - start listening immediately after greeting
+            // No TTS - start listening (on iOS, show tap prompt)
             voiceModeRef.current = true;
             stopRequestedRef.current = false;
-            setVoiceEnabled(true);
-            setOrbState("listening");
-            startListening();
+            if (isIOSDevice) {
+              setWaitingForTap(true);
+            } else {
+              setVoiceEnabled(true);
+              setOrbState("listening");
+              startListening();
+            }
           }
         } catch (error) {
           console.error("Dynamic greeting error:", error);
@@ -247,9 +258,13 @@ export default function DirectorAI() {
           } else if (isSupported) {
             voiceModeRef.current = true;
             stopRequestedRef.current = false;
-            setVoiceEnabled(true);
-            setOrbState("listening");
-            startListening();
+            if (isIOSDevice) {
+              setWaitingForTap(true);
+            } else {
+              setVoiceEnabled(true);
+              setOrbState("listening");
+              startListening();
+            }
           }
         }
       };
@@ -334,13 +349,20 @@ export default function DirectorAI() {
         }
         // Auto-resume listening if user was in voice mode
         if (voiceModeRef.current && !stopRequestedRef.current) {
-          setTimeout(() => {
-            if (voiceModeRef.current && !stopRequestedRef.current) {
-              setVoiceEnabled(true);
-              setOrbState("listening");
-              startListening();
-            }
-          }, 300);
+          if (isIOSDevice) {
+            // iOS requires a user gesture to start speech recognition
+            // Show "tap to speak" state instead of auto-starting
+            setWaitingForTap(true);
+            setOrbState("idle");
+          } else {
+            setTimeout(() => {
+              if (voiceModeRef.current && !stopRequestedRef.current) {
+                setVoiceEnabled(true);
+                setOrbState("listening");
+                startListening();
+              }
+            }, 300);
+          }
         }
       };
 
@@ -410,6 +432,7 @@ export default function DirectorAI() {
     stopSpeaking();
     stopListening();
     setVoiceEnabled(false);
+    setWaitingForTap(false);
     setIsLoading(false);
     setCurrentResponse("");
     setOrbState("idle");
@@ -525,6 +548,16 @@ export default function DirectorAI() {
         await speakText(fullResponse);
       } else {
         setOrbState("idle");
+        // If in voice mode and no TTS, resume listening
+        if (voiceModeRef.current && !stopRequestedRef.current) {
+          if (isIOSDevice) {
+            setWaitingForTap(true);
+          } else {
+            setVoiceEnabled(true);
+            setOrbState("listening");
+            startListening();
+          }
+        }
       }
     } catch (error: any) {
       if (error?.name !== "AbortError") {
@@ -690,9 +723,20 @@ export default function DirectorAI() {
       {/* Main content area */}
       <div className="relative z-10 flex-1 flex flex-col items-center px-4 py-4 min-h-0">
         {/* Jarvis Orb - central animated element */}
-        <div className="flex-shrink-0 mb-4">
+        <div 
+          className="flex-shrink-0 mb-4 cursor-pointer" 
+          onClick={() => {
+            if (waitingForTap) {
+              // User tapped — this provides the gesture iOS needs
+              setWaitingForTap(false);
+              setVoiceEnabled(true);
+              setOrbState("listening");
+              startListening();
+            }
+          }}
+        >
           <JarvisOrb 
-            state={orbState}
+            state={waitingForTap ? "listening" : orbState}
             audioLevel={orbState === "listening" ? voiceInputLevel : audioLevel}
           />
         </div>
@@ -700,10 +744,11 @@ export default function DirectorAI() {
         {/* Status text */}
         <div className="flex-shrink-0 mb-4 text-center">
           <p className="text-gold/80 text-xs tracking-widest uppercase">
-            {orbState === "listening" && (voiceInputLevel > 0.15 ? "Hearing you..." : "Listening...")}
-            {orbState === "speaking" && "Speaking..."}
-            {orbState === "processing" && "Processing..."}
-            {orbState === "idle" && "Ready"}
+            {waitingForTap && "Tap the orb to speak"}
+            {!waitingForTap && orbState === "listening" && (voiceInputLevel > 0.15 ? "Hearing you..." : "Listening...")}
+            {!waitingForTap && orbState === "speaking" && "Speaking..."}
+            {!waitingForTap && orbState === "processing" && "Processing..."}
+            {!waitingForTap && orbState === "idle" && "Ready"}
           </p>
           {transcript && isListening && (
             <p className="text-foreground/70 text-sm italic mt-2 max-w-xs">"{transcript}"</p>
