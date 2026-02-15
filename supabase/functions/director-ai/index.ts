@@ -253,10 +253,12 @@ serve(async (req) => {
     // CRITICAL: Always fetch chief aim directly from DB for accuracy
     let journalContext = "";
     let excuseContext = "";
+    let ritualContext = "";
     let dbChiefAim: { what: string | null; byWhen: string | null; exchange: string | null; plan: string | null } | null = null;
     let dbChiefAimComplete = false;
     try {
-      const [journalRes, excuseRes, profileRes] = await Promise.all([
+      const today = new Date().toISOString().split('T')[0];
+      const [journalRes, excuseRes, profileRes, ritualRes] = await Promise.all([
         supabaseClient.from("journal_entries")
           .select("content, mood, ai_analysis, created_at")
           .eq("user_id", userId)
@@ -273,6 +275,11 @@ serve(async (req) => {
           .select("chief_aim_what, chief_aim_by_when, chief_aim_exchange, chief_aim_plan")
           .eq("user_id", userId)
           .single(),
+        supabaseClient.from("daily_rituals")
+          .select("*")
+          .eq("user_id", userId)
+          .eq("ritual_date", today)
+          .single(),
       ]);
 
       // Use DB chief aim data (authoritative source)
@@ -285,6 +292,28 @@ serve(async (req) => {
           plan: p.chief_aim_plan || null,
         };
         dbChiefAimComplete = !!(p.chief_aim_what && p.chief_aim_what.trim().length > 0);
+        console.log("Chief Aim DB check:", { hasChiefAim: dbChiefAimComplete, whatPreview: p.chief_aim_what?.substring(0, 50) });
+      }
+
+      // Build daily ritual context from DB
+      if (ritualRes.data) {
+        const r = ritualRes.data;
+        const completedRituals = [];
+        const pendingRituals = [];
+        if (r.morning_screening) completedRituals.push("Morning Screening"); else pendingRituals.push("Morning Screening");
+        if (r.script_review) completedRituals.push("Script Review"); else pendingRituals.push("Script Review");
+        if (r.chief_aim_listened) completedRituals.push("Chief Aim Anthem Listened"); else pendingRituals.push("Chief Aim Anthem");
+        if (r.action_execution) completedRituals.push("Action Execution"); else pendingRituals.push("Action Execution");
+        if (r.evening_review) completedRituals.push("Evening Review"); else pendingRituals.push("Evening Review");
+        if (r.journal_entry) completedRituals.push("Journal Entry"); else pendingRituals.push("Journal Entry");
+
+        ritualContext = `\n\n### TODAY'S DAILY RITUALS (from database)
+Completed: ${completedRituals.length > 0 ? completedRituals.join(", ") : "None yet"}
+Pending: ${pendingRituals.length > 0 ? pendingRituals.join(", ") : "All done! ✓"}
+Progress: ${completedRituals.length}/6 rituals completed today`;
+      } else {
+        ritualContext = `\n\n### TODAY'S DAILY RITUALS
+No ritual data recorded for today yet.`;
       }
 
       if (journalRes.data && journalRes.data.length > 0) {
@@ -342,7 +371,7 @@ serve(async (req) => {
 
 ### CHIEF AIM STATUS
 ${effectiveChiefAimComplete 
-  ? "✓ Chief Aim is COMPLETE - They have their Final Scene defined."
+  ? "✅ CONFIRMED: Chief Aim IS COMPLETE — they HAVE their Final Scene defined. DO NOT tell them to create one. DO NOT suggest they need one. They already have it. Acknowledge it and reference it."
   : "⚠️ Chief Aim is INCOMPLETE - They need to define their Final Scene! This is Phase 1 priority."}
 ${userContext.directorCharacterName ? `**Director Character Name:** ${userContext.directorCharacterName}` : ""}`;
 
@@ -437,7 +466,7 @@ COACHING DIRECTIVE: This is their CURRENT FOCUS. When discussing near-term actio
       contextSection += `
 
 ## COACHING PRIORITIES (in order)
-1. ${!effectiveChiefAimComplete ? "URGENT: Help them complete their Chief Aim!" : "Chief Aim complete ✓"}
+1. ${!effectiveChiefAimComplete ? "URGENT: Help them complete their Chief Aim!" : "Chief Aim is DONE ✓ — do NOT tell them to create one."}
 2. ${userContext.activeEpisode ? `Active Episode: "${userContext.activeEpisode.title}" - ${userContext.activeEpisode.daysRemaining < 0 ? "OVERDUE!" : `${userContext.activeEpisode.daysRemaining} days left`}` : "No active episode"}
 3. ${!userContext.tasksSetForToday ? "Set today's Three Things" : (userContext.allTasksCompleted ? "All tasks done ✓" : "Check on task progress")}
 4. ${!userContext.watchedMindMovieToday && userContext.hasMindMovie ? "Encourage Mind Movie viewing" : "Mind Movie status OK ✓"}
@@ -447,7 +476,7 @@ COACHING DIRECTIVE: This is their CURRENT FOCUS. When discussing near-term actio
       contextSection += `\n\n## CHIEF AIM STATUS\n⚠️ The user has not yet defined their Definite Chief Aim. This is critical! Guide them toward Phase 1 (Pre-Production) to craft their Final Scene.`;
     }
 
-    const enhancedSystemPrompt = SYSTEM_PROMPT + contextSection + journalContext + excuseContext;
+    const enhancedSystemPrompt = SYSTEM_PROMPT + contextSection + ritualContext + journalContext + excuseContext;
 
     console.log("Director AI processing request");
 
