@@ -407,13 +407,20 @@ export default function DirectorAI() {
       setOrbState("idle");
 
       if (voiceModeRef.current && !stopRequestedRef.current) {
+        // Clear stale transcript guard so next voice input always submits
+        lastAutoSubmitRef.current = null;
+        // Ensure recognition is fully stopped before restarting
+        stopListening();
+        // Longer delay on iOS to let audio hardware fully release
+        const resumeDelay = isIOSDevice ? 800 : 400;
         setTimeout(() => {
           if (voiceModeRef.current && !stopRequestedRef.current) {
+            console.log("[DirectorAI] Auto-resuming listening after TTS");
             setVoiceEnabled(true);
             setOrbState("listening");
             startListening();
           }
-        }, 300);
+        }, resumeDelay);
       }
     } catch (error: any) {
       if (error?.name !== "AbortError") {
@@ -599,20 +606,17 @@ export default function DirectorAI() {
         setOrbState("idle");
         // If in voice mode and no TTS, resume listening
         if (voiceModeRef.current && !stopRequestedRef.current) {
-          if (isIOSDevice) {
-            // Small delay for iOS to release audio resources before starting mic
-            setTimeout(() => {
-              if (voiceModeRef.current && !stopRequestedRef.current) {
-                setVoiceEnabled(true);
-                setOrbState("listening");
-                startListening();
-              }
-            }, 500);
-          } else {
-            setVoiceEnabled(true);
-            setOrbState("listening");
-            startListening();
-          }
+          lastAutoSubmitRef.current = null;
+          stopListening();
+          const resumeDelay = isIOSDevice ? 800 : 400;
+          setTimeout(() => {
+            if (voiceModeRef.current && !stopRequestedRef.current) {
+              console.log("[DirectorAI] Auto-resuming listening (no TTS)");
+              setVoiceEnabled(true);
+              setOrbState("listening");
+              startListening();
+            }
+          }, resumeDelay);
         }
       }
     } catch (error: any) {
