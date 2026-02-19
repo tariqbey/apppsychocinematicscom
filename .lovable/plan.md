@@ -1,86 +1,77 @@
 
 
-# Fix: Director AI Voice Loop Breaking After First Exchange
+# Daily Ritual: Auto-Advance Flow + Dashboard Progress Indicator
 
-## Problem
+## What You'll Get
 
-The voice conversation stops working after the AI's first response. The user speaks, the AI responds with voice, but then it can no longer hear the user. There are three root causes:
+1. **Auto-advance between ritual steps** -- After completing one ritual (e.g., Morning Screening), the ritual dialog stays open and automatically highlights/scrolls to the next incomplete step instead of sending you back to the homepage.
 
----
+2. **Next step "lit up"** -- The current/next incomplete ritual card gets a glowing highlight treatment so you always know what's next.
 
-## Root Cause 1: `stopSpeaking()` destroys the audio element permanently
-
-In `stopSpeaking()` (line 454-457), when the AI finishes speaking or is interrupted, the code sets `audioRef.current = null`. This means the next time `speakText` runs, it creates a new `Audio()` element -- but on iOS, that new element was never "unlocked" by a user gesture, so playback silently fails. When playback fails, `onended` never fires, and the auto-resume-listening logic never triggers.
-
-**Fix**: Stop clearing `audioRef.current = null` in `stopSpeaking`. Instead, just pause and reset the src without destroying the reference.
-
----
-
-## Root Cause 2: `stopListening()` inside `onSilence` kills the mic before the transcript submits
-
-When silence is detected (line 129-138 in DirectorAI.tsx), the `onSilence` callback calls `setVoiceEnabled(false)`, which is correct. But then in `streamChat` (line 490), `stopListening()` is called again. The real issue is that after the full AI response + TTS cycle completes and `startListening()` is called to resume, the `permissionGranted` flag in `useVoiceInput` may have been reset because `stopAudioAnalysis` (called from `stopListening`) closes the AudioContext and stops all media tracks. On the next `startListening`, the hook tries to request microphone permission again -- which on iOS requires a user gesture and silently fails without one.
-
-**Fix**: Persist `permissionGranted` across stop/start cycles. Once granted, it should stay granted for the session. Also, avoid calling `startAudioAnalysis` on every `startListening` since it creates a new media stream each time. Cache the permission state.
-
----
-
-## Root Cause 3: iOS `continuous` mode is disabled, causing recognition to end after one result
-
-On iOS (line 177), `recognition.continuous` is set to `false` because iOS Safari doesn't support continuous mode well. This means after getting one final result, recognition ends. The `onend` handler (line 187-204) checks `continuous && hasStartedRef.current` to auto-restart, but since `continuous` is `false` on iOS, it never auto-restarts. The silence timer fires and submits, but by then recognition is already dead.
-
-**Fix**: In the `onend` handler, also auto-restart when `hasStartedRef.current` is true regardless of the `continuous` flag. The key signal is whether the user/system still wants to be listening (`hasStartedRef.current`), not the browser API mode.
-
----
-
-## Implementation Steps
-
-### Step 1: Fix `stopSpeaking` to preserve the audio element
-
-In `src/pages/DirectorAI.tsx`, change `stopSpeaking` to NOT null out `audioRef.current`:
-
-```typescript
-// Before:
-audioRef.current.pause();
-audioRef.current.src = "";
-audioRef.current = null;
-
-// After:
-audioRef.current.pause();
-audioRef.current.src = "";
-// Keep the reference alive for iOS audio unlock persistence
-```
-
-### Step 2: Fix `useVoiceInput` auto-restart on iOS
-
-In `src/hooks/useVoiceInput.ts`, update the `onend` handler to restart recognition whenever `hasStartedRef.current` is true, not just when `continuous` is true:
-
-```typescript
-// Before:
-if (continuous && hasStartedRef.current) {
-
-// After:
-if (hasStartedRef.current) {
-```
-
-### Step 3: Persist microphone permission across stop/start cycles
-
-In `src/hooks/useVoiceInput.ts`, do NOT reset `permissionGranted` when stopping. Also skip redundant `startAudioAnalysis` calls if permission was already granted and we're on iOS (where audio analysis is already skipped).
-
-### Step 4: Prevent `stopAudioAnalysis` from killing media tracks on iOS
-
-Since iOS already skips audio analysis (line in `startListening`), ensure `stopAudioAnalysis` doesn't try to close non-existent contexts. This is already mostly handled, but add a guard to prevent side effects.
-
-### Step 5: Add resilient listening recovery
-
-In `DirectorAI.tsx`, after TTS ends and `startListening()` is called, add a verification check 2 seconds later that confirms `isListening` is actually true. If not, retry `startListening()`. This acts as a safety net for edge cases where the browser silently drops the recognition session.
+3. **Animated progress indicator on the Dashboard module card** -- The Daily Ritual card on the welcome page will show a live progress ring/bar so you can see at a glance how many scenes you've completed today without opening the ritual.
 
 ---
 
 ## Technical Details
 
-### Files to modify:
-1. **`src/pages/DirectorAI.tsx`** -- Fix `stopSpeaking`, add listening recovery check
-2. **`src/hooks/useVoiceInput.ts`** -- Fix `onend` auto-restart for iOS, persist permission state
+### File 1: `src/components/dashboard/DailyRitualChecklist.tsx`
 
-### No new dependencies or database changes needed.
+**Auto-advance after completing a step:**
+- When `handleRitualClick` fires for "morning" (Theater), "script" (Script Review), "evening" (Evening Review), or "journal", the dialog currently closes or navigates away.
+- Change the flow so after the sub-modal/view completes (e.g., Theater closes, Script Review modal closes), the ritual dialog **stays open** and the completion state refreshes.
+- Add a `currentStepIndex` state that points to the first incomplete ritual. After any ritual is toggled complete, auto-advance `currentStepIndex` to the next incomplete one.
+
+**"Lit up" next step:**
+- Add a visual distinction for the "current" (next incomplete) ritual card -- a pulsing border glow, brighter background, and a "NOW PLAYING" or "UP NEXT" badge.
+- Other incomplete steps remain dimmed; completed steps keep their gold "SHOT" styling.
+
+**Keep dialog open after sub-actions:**
+- For "morning" (Theater): Instead of closing the ritual dialog permanently, set a flag so that when `TheaterView` closes, the ritual dialog re-opens automatically.
+- For "script" (Script Review): The `ScriptReviewModal` already opens within the same component -- just ensure the ritual dialog stays visible behind it or re-opens after.
+- For "actions": Instead of `navigate("/actions")`, show a mini-task panel inline or open it as a modal, then return to the ritual flow.
+- For "journal": Same pattern -- re-open ritual dialog after journal closes.
+
+### File 2: `src/pages/Index.tsx`
+
+**Re-open ritual dialog after sub-views close:**
+- Add callback props so when Theater, Scorecard, or Journal close, they can signal the Index page to re-open `showDailyRitual`.
+- Example: When `TheaterView` closes via `onClose`, check a flag and call `setShowDailyRitual(true)` to bring the user back to the ritual flow.
+
+**Pass ritual progress data to the ModuleCard:**
+- Fetch today's `daily_rituals` row in `Index.tsx` (or lift the state from `DailyRitualChecklist`) so we know `completedCount` and `totalRituals` at the dashboard level.
+
+### File 3: `src/components/dashboard/ModuleCard.tsx`
+
+**Add optional progress prop:**
+- Add `progress?: number` (0-100) and `progressLabel?: string` (e.g., "3/5") to `ModuleCardProps`.
+- When `progress` is provided, render an animated circular progress ring or a glowing linear progress bar at the bottom of the card.
+- The progress bar will use the card's `colorScheme` for the fill color with a glow effect, and animate on mount using a CSS transition.
+
+### New State Management
+
+A small custom hook or lifted state in `Index.tsx` will:
+1. Query `daily_rituals` for today on mount.
+2. Also check `daily_tasks` for action execution status.
+3. Expose `{ completedCount, totalRituals, ritualProgress }` so both the `ModuleCard` and `DailyRitualChecklist` share the same source of truth.
+4. Provide a `refresh()` function that both components call after any ritual state change.
+
+### Flow Summary
+
+```text
+User taps "Daily Ritual" card (sees progress: 2/5)
+  -> Ritual dialog opens, Step 3 "Action Execution" is highlighted as "UP NEXT"
+  -> User taps "Action Execution" 
+  -> Mini task panel appears (or Actions modal)
+  -> User completes tasks, closes panel
+  -> Ritual dialog is still open, now Step 4 "Evening Session" is highlighted
+  -> User taps "Evening Session"
+  -> Evening Review modal opens
+  -> User completes review, closes modal
+  -> Ritual dialog still open, Step 5 "Journal" highlighted
+  -> ...and so on until all 5 complete
+```
+
+### No Database Changes Required
+
+All ritual data already lives in the `daily_rituals` and `daily_tasks` tables. This is purely a frontend flow improvement.
 
