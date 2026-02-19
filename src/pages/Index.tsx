@@ -28,6 +28,7 @@ import { useGamification } from "@/hooks/useGamification";
 import { useMindMovies, MindMovie } from "@/hooks/useMindMovies";
 import { useEpisodes } from "@/hooks/useEpisodes";
 import { supabase } from "@/integrations/supabase/client";
+import { useRitualProgress } from "@/hooks/useRitualProgress";
 import { Loader2, Sparkles, Bot, Clapperboard, Zap, MessageSquareHeart, FileText, Wand2, FolderOpen, BookOpen, Target, User2, Music, XCircle, Flame, Film, ListTodo } from "lucide-react";
 import { ModuleCard } from "@/components/dashboard/ModuleCard";
 import { Button } from "@/components/ui/button";
@@ -106,6 +107,8 @@ const Index = () => {
   const [showTestimonialDialog, setShowTestimonialDialog] = useState(false);
   const [showStoryboardWizard, setShowStoryboardWizard] = useState(false);
   const [showDailyRitual, setShowDailyRitual] = useState(false);
+  const [returnToRitualAfterClose, setReturnToRitualAfterClose] = useState(false);
+  const { completedCount, totalRituals, ritualProgress, refresh: refreshRitualProgress } = useRitualProgress();
   const [episodeForMovie, setEpisodeForMovie] = useState<{
     id: string;
     title: string;
@@ -379,17 +382,26 @@ const Index = () => {
             colorScheme="gold"
             tooltip="Your daily ritual is the foundation of transformation. Complete all 5 scenes daily."
             animationIndex={2}
+            progress={ritualProgress}
+            progressLabel={`${completedCount}/${totalRituals}`}
           />
 
           <DailyRitualChecklist
             isOpen={showDailyRitual}
             onOpenChange={setShowDailyRitual}
-            onTheaterClick={() => setShowTheater(true)}
+            onTheaterClick={() => {
+              setReturnToRitualAfterClose(true);
+              setShowTheater(true);
+            }}
             onScorecardClick={() => setShowScorecard(true)}
             onEveningMindMovieClick={() => {
               setShowTheater(true);
             }}
-            onJournalClick={() => setShowJournal(true)}
+            onJournalClick={() => {
+              setReturnToRitualAfterClose(true);
+              setShowJournal(true);
+            }}
+            onRitualProgressChange={refreshRitualProgress}
              chiefAim={chiefAim}
              chiefAimSongUrl={profile?.chief_aim_song_url}
              onEditChiefAim={() => setShowChiefAimWizard(true)}
@@ -580,7 +592,14 @@ const Index = () => {
 
       {/* Theater View */}
       {showTheater && (
-        <TheaterView onClose={() => setShowTheater(false)} />
+        <TheaterView onClose={() => {
+          setShowTheater(false);
+          if (returnToRitualAfterClose) {
+            setReturnToRitualAfterClose(false);
+            refreshRitualProgress();
+            setTimeout(() => setShowDailyRitual(true), 200);
+          }
+        }} />
       )}
 
       {/* Edit Bay */}
@@ -762,7 +781,14 @@ const Index = () => {
       {showJournal && (
         <DirectorsJournal
           isOpen={showJournal}
-          onClose={() => setShowJournal(false)}
+          onClose={() => {
+            setShowJournal(false);
+            if (returnToRitualAfterClose) {
+              setReturnToRitualAfterClose(false);
+              refreshRitualProgress();
+              setTimeout(() => setShowDailyRitual(true), 200);
+            }
+          }}
         />
       )}
 

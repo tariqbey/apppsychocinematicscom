@@ -24,6 +24,8 @@ interface ModuleCardProps {
   className?: string;
   featured?: boolean;
   animationIndex?: number;
+  progress?: number;
+  progressLabel?: string;
 }
 
 const colorConfig = {
@@ -140,6 +142,8 @@ export function ModuleCard({
   className,
   featured = false,
   animationIndex = 0,
+  progress,
+  progressLabel,
 }: ModuleCardProps) {
   const colors = colorConfig[colorScheme];
   const isMobile = useIsMobile();
@@ -256,6 +260,32 @@ export function ModuleCard({
           →
         </div>
       </div>
+
+      {/* Animated progress bar (when progress prop is provided) */}
+      {progress !== undefined && (
+        <div className="relative z-10 px-5 sm:px-6 pb-4 -mt-1">
+          <div className="flex items-center gap-2">
+            <div className="flex-1 h-1.5 bg-secondary/30 rounded-full overflow-hidden">
+              <div
+                className="h-full rounded-full transition-all duration-1000 ease-out"
+                style={{
+                  width: `${progress}%`,
+                  background: colors.accent,
+                  boxShadow: progress > 0 ? `0 0 10px ${colors.glowColor}` : undefined,
+                }}
+              />
+            </div>
+            {progressLabel && (
+              <span
+                className="text-[11px] font-ui font-semibold tabular-nums"
+                style={{ color: colors.accent }}
+              >
+                {progressLabel}
+              </span>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Bottom progress line */}
       <div className="absolute bottom-0 left-0 right-0 h-[2px] overflow-hidden">
