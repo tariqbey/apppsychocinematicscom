@@ -40,6 +40,7 @@ interface DailyRitualChecklistProps {
   onSongListened?: () => void;
   isOpen?: boolean;
   onOpenChange?: (open: boolean) => void;
+  onRitualProgressChange?: () => void;
 }
 
 export const DailyRitualChecklist = ({ 
@@ -55,6 +56,7 @@ export const DailyRitualChecklist = ({
   onSongListened,
   isOpen = false,
   onOpenChange,
+  onRitualProgressChange,
 }: DailyRitualChecklistProps) => {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -231,11 +233,13 @@ export const DailyRitualChecklist = ({
       );
     } else {
       triggerRecalculation();
+      onRitualProgressChange?.();
     }
   };
 
   const completedCount = rituals.filter(r => r.completed).length;
   const progress = (completedCount / rituals.length) * 100;
+  const nextStepIndex = rituals.findIndex(r => !r.completed);
 
   const handleRitualClick = (id: string) => {
     if (id === "morning") {
@@ -247,12 +251,15 @@ export const DailyRitualChecklist = ({
       setShowEveningModal(true);
       return;
     } else if (id === "actions") {
-      navigate("/actions");
+      onOpenChange?.(false);
+      setTimeout(() => navigate("/actions"), 150);
       return;
     } else if (id === "journal") {
       if (onJournalClick) {
-        onJournalClick();
+        onOpenChange?.(false);
+        setTimeout(() => onJournalClick(), 150);
       }
+      return;
     } else if (id === "script") {
       if (onScriptReviewClick) {
         onScriptReviewClick();
@@ -300,6 +307,7 @@ export const DailyRitualChecklist = ({
       prev.map(r => r.id === "script" ? { ...r, completed: true } : r)
     );
     triggerRecalculation();
+    onRitualProgressChange?.();
   };
 
   return (
@@ -435,7 +443,9 @@ export const DailyRitualChecklist = ({
 
         {/* Animated Scene Cards */}
         <div className="px-5 pb-8 space-y-3 mt-4">
-          {rituals.map((ritual, index) => (
+          {rituals.map((ritual, index) => {
+            const isNextStep = index === nextStepIndex;
+            return (
             <button
               key={ritual.id}
               onClick={() => handleRitualClick(ritual.id)}
@@ -445,16 +455,27 @@ export const DailyRitualChecklist = ({
                 "border",
                 ritual.completed
                   ? "bg-gold/5 border-gold/25 shadow-[0_0_15px_-5px_hsl(37_87%_57%_/_0.2)]"
-                  : "bg-secondary/10 border-border/20 hover:border-gold/30 hover:bg-secondary/20 hover:shadow-lg",
+                  : isNextStep
+                  ? "border-gold/40 bg-gold/8 shadow-[0_0_25px_-5px_hsl(37_87%_57%_/_0.35)]"
+                  : "bg-secondary/10 border-border/20 hover:border-gold/30 hover:bg-secondary/20 hover:shadow-lg opacity-60",
                 isLoading && "opacity-50",
                 "hover:translate-y-[-2px] active:scale-[0.98]"
               )}
               style={{
-                opacity: isVisible ? 1 : 0,
+                opacity: isVisible ? (ritual.completed || isNextStep ? 1 : 0.6) : 0,
                 transform: isVisible ? 'translateY(0)' : 'translateY(16px)',
                 transition: `all 0.5s cubic-bezier(0.16, 1, 0.3, 1) ${index * 0.08 + 0.2}s`,
+                ...(isNextStep ? { animation: 'pulse 2.5s ease-in-out infinite' } : {}),
               }}
             >
+              {/* UP NEXT badge */}
+              {isNextStep && !ritual.completed && (
+                <div className="absolute top-2 right-2 z-20">
+                  <span className="text-[9px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full bg-gold/20 text-gold border border-gold/30 animate-pulse">
+                    Up Next
+                  </span>
+                </div>
+              )}
               {/* Animated icon orb */}
               <div
                 className={cn(
@@ -545,7 +566,8 @@ export const DailyRitualChecklist = ({
                 }} />
               </div>
             </button>
-          ))}
+            );
+          })}
         </div>
         </div> {/* end max-w-lg wrapper */}
       </DialogContent>
@@ -570,6 +592,7 @@ export const DailyRitualChecklist = ({
         setShowEveningModal(open);
         if (!open) {
           toggleRitual("evening");
+          onRitualProgressChange?.();
         }
       }}
       onWatchMindMovie={() => {
