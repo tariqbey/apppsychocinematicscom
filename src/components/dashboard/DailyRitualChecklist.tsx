@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Check, LightbulbIcon, Film, ScrollText, Rocket, Moon, BookOpen } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -132,51 +132,59 @@ export const DailyRitualChecklist = ({
     return tasks.every(t => t.is_completed || (t.incomplete_reason && t.incomplete_reason.trim() !== ""));
   };
 
-  useEffect(() => {
-    const loadRitualState = async () => {
-      if (!user) {
-        setIsLoading(false);
-        return;
-      }
-
-      const today = format(new Date(), "yyyy-MM-dd");
-      
-      const { data, error } = await supabase
-        .from("daily_rituals")
-        .select("*")
-        .eq("user_id", user.id)
-        .eq("ritual_date", today)
-        .maybeSingle();
-
-      // Check action execution from tasks
-      const actionsComplete = await checkActionExecution(user.id, today);
-
-      // If action_execution status changed, sync it to the DB
-      if (data && data.action_execution !== actionsComplete) {
-        await supabase
-          .from("daily_rituals")
-          .update({ action_execution: actionsComplete })
-          .eq("user_id", user.id)
-          .eq("ritual_date", today);
-      }
-
-      if (data && !error) {
-        setRituals(prev => prev.map(ritual => ({
-          ...ritual,
-          completed: ritual.id === "actions" ? actionsComplete : (data[ritual.dbField] || false)
-        })));
-      } else {
-        // No ritual row yet — still reflect action status
-        setRituals(prev => prev.map(ritual => ({
-          ...ritual,
-          completed: ritual.id === "actions" ? actionsComplete : false
-        })));
-      }
+  const loadRitualState = useCallback(async () => {
+    if (!user) {
       setIsLoading(false);
-    };
+      return;
+    }
 
-    loadRitualState();
+    const today = format(new Date(), "yyyy-MM-dd");
+    
+    const { data, error } = await supabase
+      .from("daily_rituals")
+      .select("*")
+      .eq("user_id", user.id)
+      .eq("ritual_date", today)
+      .maybeSingle();
+
+    // Check action execution from tasks
+    const actionsComplete = await checkActionExecution(user.id, today);
+
+    // If action_execution status changed, sync it to the DB
+    if (data && data.action_execution !== actionsComplete) {
+      await supabase
+        .from("daily_rituals")
+        .update({ action_execution: actionsComplete })
+        .eq("user_id", user.id)
+        .eq("ritual_date", today);
+    }
+
+    if (data && !error) {
+      setRituals(prev => prev.map(ritual => ({
+        ...ritual,
+        completed: ritual.id === "actions" ? actionsComplete : (data[ritual.dbField] || false)
+      })));
+    } else {
+      // No ritual row yet — still reflect action status
+      setRituals(prev => prev.map(ritual => ({
+        ...ritual,
+        completed: ritual.id === "actions" ? actionsComplete : false
+      })));
+    }
+    setIsLoading(false);
   }, [user]);
+
+  // Load on mount
+  useEffect(() => {
+    loadRitualState();
+  }, [loadRitualState]);
+
+  // Reload whenever the dialog re-opens so state is fresh after returning from Theater/Journal
+  useEffect(() => {
+    if (isOpen) {
+      loadRitualState();
+    }
+  }, [isOpen]); // intentionally only re-run when isOpen flips, not on every loadRitualState change
 
   const toggleRitual = async (id: string) => {
     if (!user) return;
@@ -244,8 +252,10 @@ export const DailyRitualChecklist = ({
   const handleRitualClick = (id: string) => {
     if (id === "morning") {
       onOpenChange?.(false);
+      // Do NOT call toggleRitual here — morning_screening is marked complete
+      // by TheaterView itself after the video finishes. Calling it here causes
+      // a premature DB write + re-render that can interrupt video playback.
       setTimeout(() => onTheaterClick(), 150);
-      toggleRitual(id);
       return;
     } else if (id === "evening") {
       setShowEveningModal(true);
