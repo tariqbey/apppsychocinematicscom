@@ -60,16 +60,17 @@
              <Circle className="w-6 h-6 text-gold" />
            </div>
            <div>
-             <h2 className="text-xl font-display tracking-wide text-gold-gradient">The 11 Spheres</h2>
-             <p className="text-sm text-muted-foreground">Metu Neter Archetype Guide</p>
+              <h2 className="text-xl font-display tracking-wide text-gold-gradient">The 11 Spheres</h2>
+              <p className="text-sm text-muted-foreground">The 11 Laws of God — Metu Neter Archetype System</p>
            </div>
          </div>
-         <p className="text-sm text-muted-foreground leading-relaxed">
-           These 11 archetypes are based on the Spheres and Laws of the Metu Neter (Paut Neteru/Tree of Life). 
-           Each sphere represents a divine principle and law that governs transformation. Understanding your 
-           archetype helps you recognize your natural gifts, anticipate your blind spots, and navigate your 
-           hero's journey with greater awareness.
-         </p>
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            Based on Ra Un Nefer Amen's "Maat: The 11 Laws of God" and the Kemetic Tree of Life (Paut Neteru). 
+            These aren't personality labels — they're spheres of spiritual influence that shape your thinking, 
+            feelings, actions, and destiny. Each sphere carries a divine principle, a law, and a programming 
+            function. Understanding yours means knowing your power source, your blind spots, and how to 
+            direct your transformation with precision.
+          </p>
        </div>
  
        {/* All Archetypes - Full Details on Expand */}
