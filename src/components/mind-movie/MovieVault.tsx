@@ -322,9 +322,10 @@ export function MovieVault({ isOpen, onClose, onSelectMovie, onCreateNew }: Movi
               {vaultFilter !== "episode" && (
                 <Button variant="gold" size="lg" onClick={onCreateNew}>
                   <Plus className="w-4 h-4 mr-2" />
-                Create Your First Movie
-              </Button>
-            )}
+                  Create Your First Movie
+                </Button>
+              )}
+            </div>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
