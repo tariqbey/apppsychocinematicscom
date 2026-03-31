@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect } from "react";
+import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Header } from "@/components/layout/Header";
 import { LandingPage } from "@/components/landing/LandingPage";
