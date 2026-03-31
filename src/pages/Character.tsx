@@ -27,6 +27,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
 const Character = () => {
+  useDocumentTitle("Character | Director's OS");
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
   const { refetch } = useCycleTracking();

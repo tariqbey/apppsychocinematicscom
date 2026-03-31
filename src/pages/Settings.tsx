@@ -20,6 +20,7 @@ import { DirectorAIPreferences } from "@/components/settings/DirectorAIPreferenc
 import { ProfileSettingsForm } from "@/components/settings/ProfileSettingsForm";
 
 export default function Settings() {
+  useDocumentTitle("Settings | Director's OS");
   const { user, loading: authLoading } = useAuth();
   const { isAdmin, loading: adminLoading } = useAdminStatus();
   const { subscription, isSubscribed, isTrialing, openCustomerPortal, createSubscription, loading: subLoading } = useSubscription();

@@ -50,6 +50,7 @@ import { EpisodeCharacterTransformation } from "@/components/episodes/EpisodeTra
  }
 
 export default function Episodes() {
+  useDocumentTitle("Episodes | Director's OS");
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
   const { profile } = useUserProfile();

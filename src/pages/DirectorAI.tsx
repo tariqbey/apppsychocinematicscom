@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from "react";
+import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Send, Mic, MicOff, Volume2, VolumeX, Zap, Square, Settings2, Download, Loader2, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
