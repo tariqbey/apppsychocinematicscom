@@ -30,7 +30,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { AudioVisualizer, SimpleWaveformBars } from "@/components/music/AudioVisualizer";
 import { useMediaSession, configureAudioForBackground, useIOSBackgroundAudio } from "@/hooks/useMediaSession";
-import { useAudioOptional } from "@/hooks/useGlobalAudio";
+import { useAudio } from "@/hooks/useGlobalAudio";
 import { TrackEditDialog } from "@/components/music/TrackEditDialog";
 import { useAdminStatus } from "@/hooks/useAdminStatus";
 
