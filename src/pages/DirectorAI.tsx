@@ -53,6 +53,7 @@ const getFallbackGreeting = (context: ReturnType<typeof useCoachingContext>["con
 };
 
 export default function DirectorAI() {
+  useDocumentTitle("Director AI | Director's OS");
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
   const { context: coachingContext, loading: contextLoading } = useCoachingContext();
