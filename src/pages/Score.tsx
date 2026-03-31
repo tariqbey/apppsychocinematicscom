@@ -36,7 +36,7 @@ import { AudioVisualizer, SimpleWaveformBars } from "@/components/music/AudioVis
 import { useMediaSession, configureAudioForBackground, useIOSBackgroundAudio } from "@/hooks/useMediaSession";
 import { useOfflineTracks } from "@/hooks/useOfflineTracks";
 import { Badge } from "@/components/ui/badge";
-import { useAudioOptional } from "@/hooks/useGlobalAudio";
+import { useAudio } from "@/hooks/useGlobalAudio";
 
 export default function ScorePage() {
   const navigate = useNavigate();
