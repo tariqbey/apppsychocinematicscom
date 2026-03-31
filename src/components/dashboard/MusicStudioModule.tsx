@@ -55,7 +55,7 @@ export function MusicStudioModule({ className }: MusicStudioModuleProps) {
     fetchPlaylistTracks,
   } = useUserPlaylists();
 
-  const globalAudio = useAudioOptional();
+  const globalAudio = useAudio();
 
   // Stop global audio when player opens
   useEffect(() => {

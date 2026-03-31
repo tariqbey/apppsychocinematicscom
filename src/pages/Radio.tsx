@@ -130,7 +130,7 @@ export default function RadioPage() {
   }, []);
 
   // Stop any global audio when Radio page mounts (prevents overlap)
-  const globalAudio = useAudioOptional();
+  const globalAudio = useAudio();
   useEffect(() => {
     if (globalAudio?.isPlaying) {
       console.log('[Radio] Stopping global audio on mount');

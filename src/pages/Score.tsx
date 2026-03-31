@@ -136,7 +136,7 @@ export default function ScorePage() {
   const currentAudioUrlRef = useRef<string | null>(null);
 
   // Stop any global audio when Score page mounts (prevents overlap)
-  const globalAudio = useAudioOptional();
+  const globalAudio = useAudio();
   useEffect(() => {
     if (globalAudio?.isPlaying) {
       console.log('[Score] Stopping global audio on mount');

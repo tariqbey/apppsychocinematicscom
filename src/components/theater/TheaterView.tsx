@@ -63,7 +63,7 @@ export const TheaterView = ({ onClose }: TheaterViewProps) => {
   const { user } = useAuth();
   const { toast } = useToast();
   
-  const globalAudio = useAudioOptional();
+  const globalAudio = useAudio();
 
   const streak = profile?.current_streak || 0;
    const mindMovieUrl = profile?.mind_movie_url;
