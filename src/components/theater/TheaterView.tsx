@@ -26,7 +26,7 @@ import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
-import { useAudioOptional } from "@/hooks/useGlobalAudio";
+import { useAudio } from "@/hooks/useGlobalAudio";
 
 interface Task {
   id: string;
