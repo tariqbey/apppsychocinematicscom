@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 import { Header } from "@/components/layout/Header";
 import { CharacterCentral } from "@/components/character/CharacterCentral";
 import { CharacterScorecard } from "@/components/character/CharacterScorecard";
