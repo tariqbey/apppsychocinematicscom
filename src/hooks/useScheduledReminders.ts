@@ -59,8 +59,8 @@ export function useScheduledReminders() {
   const [isLoading, setIsLoading] = useState(true);
   
   // Keep track of scheduled timeouts
-  const timeoutRefs = useRef<{ [key: string]: NodeJS.Timeout }>({});
-  const motivationalIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const timeoutRefs = useRef<{ [key: string]: ReturnType<typeof setTimeout> }>({});
+  const motivationalIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Load settings from database
   const loadSettings = useCallback(async () => {

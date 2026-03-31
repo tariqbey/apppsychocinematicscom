@@ -62,7 +62,7 @@ export function ChallengeSoundtrackGenerator({
   const [editedLyrics, setEditedLyrics] = useState("");
   const [isEditing, setIsEditing] = useState(false);
   const [vocalGender, setVocalGender] = useState<"m" | "f">("m");
-  const [pollInterval, setPollInterval] = useState<NodeJS.Timeout | null>(null);
+  const [pollInterval, setPollInterval] = useState<ReturnType<typeof setInterval> | null>(null);
 
   // Use global audio context
   const { 

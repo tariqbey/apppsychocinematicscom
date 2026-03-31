@@ -57,7 +57,7 @@ export const useVoiceInput = (options: UseVoiceInputOptions = {}) => {
   const [permissionGranted, setPermissionGranted] = useState(false);
   
   const recognitionRef = useRef<any>(null);
-  const silenceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const accumulatedTranscriptRef = useRef<string>("");
   const hasStartedRef = useRef(false);
   const isStartingRef = useRef(false);
