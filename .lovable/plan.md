@@ -1,77 +1,122 @@
 
 
-# Daily Ritual: Auto-Advance Flow + Dashboard Progress Indicator
+# Full Codebase Optimization Plan
 
-## What You'll Get
+## Part A: Fix Build Errors (Immediate)
 
-1. **Auto-advance between ritual steps** -- After completing one ritual (e.g., Morning Screening), the ritual dialog stays open and automatically highlights/scrolls to the next incomplete step instead of sending you back to the homepage.
+The `NodeJS.Timeout` type is unavailable because `tsconfig.app.json` doesn't include Node types. Replace all `NodeJS.Timeout` references with `ReturnType<typeof setTimeout>` across six files:
 
-2. **Next step "lit up"** -- The current/next incomplete ritual card gets a glowing highlight treatment so you always know what's next.
-
-3. **Animated progress indicator on the Dashboard module card** -- The Daily Ritual card on the welcome page will show a live progress ring/bar so you can see at a glance how many scenes you've completed today without opening the ritual.
+- `src/components/challenges/ChallengeSoundtrackGenerator.tsx` (line 65)
+- `src/components/testimonials/TestimonialRecorder.tsx` (lines 74, 78)
+- `src/contexts/PointsContext.tsx` (line 53)
+- `src/hooks/useScheduledReminders.ts` (lines 62, 63)
+- `src/hooks/useVoiceInput.ts` (line 60)
 
 ---
 
-## Technical Details
+## Part B: Performance — Lazy Loading (High Impact)
 
-### File 1: `src/components/dashboard/DailyRitualChecklist.tsx`
+**File: `src/App.tsx`**
 
-**Auto-advance after completing a step:**
-- When `handleRitualClick` fires for "morning" (Theater), "script" (Script Review), "evening" (Evening Review), or "journal", the dialog currently closes or navigates away.
-- Change the flow so after the sub-modal/view completes (e.g., Theater closes, Script Review modal closes), the ritual dialog **stays open** and the completion state refreshes.
-- Add a `currentStepIndex` state that points to the first incomplete ritual. After any ritual is toggled complete, auto-advance `currentStepIndex` to the next incomplete one.
+Convert all page imports to `React.lazy()` and wrap `<Routes>` in `<Suspense fallback={<AppLoader />}>`. This cuts initial bundle by ~40-60%.
 
-**"Lit up" next step:**
-- Add a visual distinction for the "current" (next incomplete) ritual card -- a pulsing border glow, brighter background, and a "NOW PLAYING" or "UP NEXT" badge.
-- Other incomplete steps remain dimmed; completed steps keep their gold "SHOT" styling.
+Pages to lazy-load (all except `Index` which is the landing):
+- Signup, DirectorCorner, Subscribe, SubscriptionSuccess, CreditsSuccess, Credits, DirectorsGuide, AdminDashboard, AwardsCeremony, Settings, Actions, Character, Episodes, Soundtrack, Music, Radio, Score, DoneForYou, DFYSuccess, Challenges, ResetPassword, DirectorProfile, DirectorAI, Blueprint, NotFound
 
-**Keep dialog open after sub-actions:**
-- For "morning" (Theater): Instead of closing the ritual dialog permanently, set a flag so that when `TheaterView` closes, the ritual dialog re-opens automatically.
-- For "script" (Script Review): The `ScriptReviewModal` already opens within the same component -- just ensure the ritual dialog stays visible behind it or re-opens after.
-- For "actions": Instead of `navigate("/actions")`, show a mini-task panel inline or open it as a modal, then return to the ritual flow.
-- For "journal": Same pattern -- re-open ritual dialog after journal closes.
+---
 
-### File 2: `src/pages/Index.tsx`
+## Part C: Route Cleanup
 
-**Re-open ritual dialog after sub-views close:**
-- Add callback props so when Theater, Scorecard, or Journal close, they can signal the Index page to re-open `showDailyRitual`.
-- Example: When `TheaterView` closes via `onClose`, check a flag and call `setShowDailyRitual(true)` to bring the user back to the ritual flow.
+**File: `src/App.tsx`**
 
-**Pass ritual progress data to the ModuleCard:**
-- Fetch today's `daily_rituals` row in `Index.tsx` (or lift the state from `DailyRitualChecklist`) so we know `completedCount` and `totalRituals` at the dashboard level.
-
-### File 3: `src/components/dashboard/ModuleCard.tsx`
-
-**Add optional progress prop:**
-- Add `progress?: number` (0-100) and `progressLabel?: string` (e.g., "3/5") to `ModuleCardProps`.
-- When `progress` is provided, render an animated circular progress ring or a glowing linear progress bar at the bottom of the card.
-- The progress bar will use the card's `colorScheme` for the fill color with a glow effect, and animate on mount using a CSS transition.
-
-### New State Management
-
-A small custom hook or lifted state in `Index.tsx` will:
-1. Query `daily_rituals` for today on mount.
-2. Also check `daily_tasks` for action execution status.
-3. Expose `{ completedCount, totalRituals, ritualProgress }` so both the `ModuleCard` and `DailyRitualChecklist` share the same source of truth.
-4. Provide a `refresh()` function that both components call after any ritual state change.
-
-### Flow Summary
+Replace duplicate route aliases with `<Navigate>` redirects:
 
 ```text
-User taps "Daily Ritual" card (sees progress: 2/5)
-  -> Ritual dialog opens, Step 3 "Action Execution" is highlighted as "UP NEXT"
-  -> User taps "Action Execution" 
-  -> Mini task panel appears (or Actions modal)
-  -> User completes tasks, closes panel
-  -> Ritual dialog is still open, now Step 4 "Evening Session" is highlighted
-  -> User taps "Evening Session"
-  -> Evening Review modal opens
-  -> User completes review, closes modal
-  -> Ritual dialog still open, Step 5 "Journal" highlighted
-  -> ...and so on until all 5 complete
+/user-manual → redirect to /guide
+/manual      → redirect to /guide
+/tutorial    → redirect to /guide
+/tutorials   → redirect to /guide
 ```
 
-### No Database Changes Required
+---
 
-All ritual data already lives in the `daily_rituals` and `daily_tasks` tables. This is purely a frontend flow improvement.
+## Part D: Error Boundaries
+
+**New file: `src/components/ui/FeatureErrorBoundary.tsx`**
+
+Create a reusable error boundary component with cinematic styling (dark card, gold accent, "Scene interrupted" messaging, retry button).
+
+Wrap these high-risk sections in `Index.tsx` and other pages:
+- TheaterView
+- DirectorAIChat / DirectorAIAgent
+- EditBay (timeline editor)
+- MindMovieScriptWizard
+- DirectorsJournal (already has one — keep it)
+
+---
+
+## Part E: Consolidate Audio Context
+
+**File: `src/contexts/AudioContext.tsx`**
+
+Remove `useAudioOptional()`. Search all consumers — any component using `useAudioOptional` should be confirmed as always rendered inside `<AudioProvider>` (which wraps the entire app), then switched to `useAudio()`.
+
+---
+
+## Part F: Branded Loading State
+
+**File: `src/components/ui/AppLoader.tsx`**
+
+The cinematic splash already exists. Ensure the `<Suspense>` fallback in Part B uses `<AppLoader />` (the simple variant) so lazy-loaded pages get the branded spinner with the Psycho-Cinematics logo instead of a blank screen.
+
+---
+
+## Part G: Empty States
+
+Audit key list views and add cinematic empty states with clear CTAs:
+- Episodes list (no episodes) → "Your story hasn't started. Create Episode One."
+- Journal entries (none) → "The Director's chair is empty. Write your first entry."
+- Movie Vault (no movies) → "No footage in the vault. Shoot your first Mind Movie."
+- Community posts (none) → "The Director's Corner is quiet. Start the conversation."
+
+Each empty state: dark card, subtle film grain texture, gold CTA button, one-line motivational copy.
+
+**Files affected:**
+- `src/components/episodes/EpisodesList.tsx`
+- `src/components/journal/DirectorsJournal.tsx`
+- `src/components/mind-movie/MovieVault.tsx`
+- `src/components/community/CreatePostForm.tsx` or the community feed component
+
+---
+
+## Part H: Accessibility Quick Wins
+
+- Director AI floating button: add `role="button"`, `aria-label="Open Director AI coach"`, keyboard focus ring
+- Gold-on-dark contrast: audit key text elements, bump gold from `#D4AF37` to `#E5C158` where needed for WCAG AA
+- Add per-route `<title>` via a small `useDocumentTitle` hook
+
+---
+
+## Part I: Meta Tags Per Route
+
+**New file: `src/hooks/useDocumentTitle.ts`**
+
+Simple hook that sets `document.title` on mount. Call it in each page component:
+```
+useDocumentTitle("Episodes | Director's OS")
+```
+
+---
+
+## Implementation Order
+
+1. **Part A** — Fix build errors (unblocks everything)
+2. **Part B + C + F** — Lazy loading + route cleanup + branded fallback (biggest perf win)
+3. **Part D** — Error boundaries (stability)
+4. **Part E** — Audio context consolidation (code quality)
+5. **Part G** — Empty states (UX)
+6. **Part H + I** — Accessibility + meta tags (polish)
+
+Total files created: 2 (`FeatureErrorBoundary.tsx`, `useDocumentTitle.ts`)
+Total files edited: ~15
 
