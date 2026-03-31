@@ -42,7 +42,8 @@ export const useAudio = () => {
   return context;
 };
 
-// Optional hook that doesn't throw if context is missing (for gradual migration)
+// @deprecated — useAudioOptional is no longer needed since AudioProvider wraps the entire app.
+// Kept temporarily for backward compatibility; all new code should use useAudio().
 export const useAudioOptional = () => {
   return useContext(AudioContext);
 };
