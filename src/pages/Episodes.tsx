@@ -1,5 +1,6 @@
  import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
+import { useDocumentTitle } from "@/hooks/useDocumentTitle";
  import { Zap, Plus, ArrowLeft, Film, Clapperboard, Sparkles, Target, Music, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Header } from "@/components/layout/Header";
@@ -49,6 +50,7 @@ import { EpisodeCharacterTransformation } from "@/components/episodes/EpisodeTra
  }
 
 export default function Episodes() {
+  useDocumentTitle("Episodes | Director's OS");
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
   const { profile } = useUserProfile();

@@ -192,26 +192,32 @@ export function EpisodesList() {
       {activeView === "list" && (
         <>
           {filteredEpisodes.length === 0 ? (
-            <div className="glass-card p-8 text-center">
-              <Zap className="w-12 h-12 text-amber-500/50 mx-auto mb-4" />
-              <h3 className="text-lg font-medium mb-2">
-                {filter === "all" ? "No Episodes Yet" : `No ${filterLabels[filter]} Episodes`}
-              </h3>
-              <p className="text-sm text-muted-foreground mb-4">
-                {filter === "all" 
-                  ? "Episodes are short-term sprints that support your main Chief Aim."
-                  : "Try changing the filter to see other episodes."
-                }
-              </p>
-              {filter === "all" && (
-                <Button
-                  className="bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700"
-                  onClick={() => setShowWizard(true)}
-                >
-                  <Plus className="w-4 h-4 mr-2" />
-                  Create Your First Episode
-                </Button>
-              )}
+            <div className="relative overflow-hidden rounded-xl border border-border/30 bg-card/60 backdrop-blur-sm p-12 text-center">
+              <div className="absolute inset-0 film-grain opacity-10 pointer-events-none" />
+              <div className="relative z-10">
+                <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-6">
+                  <Zap className="w-8 h-8 text-primary" />
+                </div>
+                <h3 className="text-xl font-semibold text-foreground mb-2">
+                  {filter === "all" ? "Your Story Hasn't Started" : `No ${filterLabels[filter]} Episodes`}
+                </h3>
+                <p className="text-muted-foreground mb-6 max-w-sm mx-auto">
+                  {filter === "all" 
+                    ? "Every transformation begins with Episode One. Set your objective, define the character you need to become, and press record on your life."
+                    : "Try changing the filter to see other episodes."
+                  }
+                </p>
+                {filter === "all" && (
+                  <Button
+                    variant="gold"
+                    size="lg"
+                    onClick={() => setShowWizard(true)}
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Create Episode One
+                  </Button>
+                )}
+              </div>
             </div>
           ) : (
             <div className="space-y-6">

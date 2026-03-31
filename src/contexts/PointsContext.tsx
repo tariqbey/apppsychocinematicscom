@@ -50,7 +50,7 @@ const POINTS_CONFIG = {
 
 export const PointsProvider: React.FC<PointsProviderProps> = ({ children }) => {
   const { user } = useAuth();
-  const debounceRef = useRef<NodeJS.Timeout | null>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const previousTotalRef = useRef<number | null>(null);
 
   const calculateAndSavePoints = useCallback(async () => {

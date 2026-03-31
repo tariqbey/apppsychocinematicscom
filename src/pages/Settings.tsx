@@ -3,6 +3,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useAdminStatus } from "@/hooks/useAdminStatus";
 import { useSubscription } from "@/hooks/useSubscription";
 import { useState, useEffect } from "react";
+import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -19,6 +20,7 @@ import { DirectorAIPreferences } from "@/components/settings/DirectorAIPreferenc
 import { ProfileSettingsForm } from "@/components/settings/ProfileSettingsForm";
 
 export default function Settings() {
+  useDocumentTitle("Settings | Director's OS");
   const { user, loading: authLoading } = useAuth();
   const { isAdmin, loading: adminLoading } = useAdminStatus();
   const { subscription, isSubscribed, isTrialing, openCustomerPortal, createSubscription, loading: subLoading } = useSubscription();

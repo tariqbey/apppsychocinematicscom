@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect } from "react";
+import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Header } from "@/components/layout/Header";
 import { LandingPage } from "@/components/landing/LandingPage";
@@ -61,6 +62,7 @@ import iconActions from "@/assets/icons/icon-actions.png";
 import iconSoundtrack from "@/assets/icons/icon-soundtrack.png";
 
 const Index = () => {
+  useDocumentTitle("Director's OS | Psycho-Cinematics");
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [showTheater, setShowTheater] = useState(() => {

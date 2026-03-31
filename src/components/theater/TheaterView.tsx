@@ -26,7 +26,7 @@ import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
-import { useAudioOptional } from "@/hooks/useGlobalAudio";
+import { useAudio } from "@/hooks/useGlobalAudio";
 
 interface Task {
   id: string;
@@ -63,7 +63,7 @@ export const TheaterView = ({ onClose }: TheaterViewProps) => {
   const { user } = useAuth();
   const { toast } = useToast();
   
-  const globalAudio = useAudioOptional();
+  const globalAudio = useAudio();
 
   const streak = profile?.current_streak || 0;
    const mindMovieUrl = profile?.mind_movie_url;

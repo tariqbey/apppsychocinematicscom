@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 import { Header } from "@/components/layout/Header";
 import { CharacterCentral } from "@/components/character/CharacterCentral";
 import { CharacterScorecard } from "@/components/character/CharacterScorecard";
@@ -26,6 +27,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
 const Character = () => {
+  useDocumentTitle("Character | Director's OS");
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
   const { refetch } = useCycleTracking();

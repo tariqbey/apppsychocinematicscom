@@ -10,7 +10,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserPlaylists, type PlaylistTrack } from "@/hooks/useUserPlaylists";
-import { useAudioOptional } from "@/hooks/useGlobalAudio";
+import { useAudio } from "@/hooks/useGlobalAudio";
 import { useMediaSession, configureAudioForBackground, useIOSBackgroundAudio } from "@/hooks/useMediaSession";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -55,7 +55,7 @@ export function MusicStudioModule({ className }: MusicStudioModuleProps) {
     fetchPlaylistTracks,
   } = useUserPlaylists();
 
-  const globalAudio = useAudioOptional();
+  const globalAudio = useAudio();
 
   // Stop global audio when player opens
   useEffect(() => {
