@@ -303,21 +303,25 @@ export function MovieVault({ isOpen, onClose, onSelectMovie, onCreateNew }: Movi
             <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
           </div>
         ) : (filteredMovies.length === 0 && !showRitualMovieCard) ? (
-          <div className="flex flex-col items-center justify-center py-16 text-center">
-            <Film className="w-16 h-16 text-muted-foreground/50 mb-4" />
-            <h3 className="text-lg font-medium mb-2">
-              {vaultFilter === "all" ? "No Mind Movies Yet" : 
-               vaultFilter === "episode" ? "No Episode Movies Yet" : "No Main Movies Yet"}
-            </h3>
-            <p className="text-muted-foreground mb-6 max-w-md">
-              {vaultFilter === "episode" 
-                ? "Create a Mind Movie from your episodes to visualize your short-term sprints."
-                : "Create your first Mind Movie to visualize your goals and manifest your dreams."
-              }
-            </p>
-            {vaultFilter !== "episode" && (
-              <Button variant="gold" onClick={onCreateNew}>
-                <Plus className="w-4 h-4 mr-2" />
+          <div className="relative overflow-hidden rounded-xl border border-border/30 bg-card/60 backdrop-blur-sm p-12 text-center">
+            <div className="absolute inset-0 film-grain opacity-10 pointer-events-none" />
+            <div className="relative z-10">
+              <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-6">
+                <Film className="w-8 h-8 text-primary" />
+              </div>
+              <h3 className="text-xl font-semibold text-foreground mb-2">
+                {vaultFilter === "all" ? "No Footage in the Vault" : 
+                 vaultFilter === "episode" ? "No Episode Movies Yet" : "No Main Movies Yet"}
+              </h3>
+              <p className="text-muted-foreground mb-6 max-w-md mx-auto">
+                {vaultFilter === "episode" 
+                  ? "Create a Mind Movie from your episodes to visualize your short-term sprints."
+                  : "Your Mind Movie is the trailer for the life you're building. Shoot your first one and watch it daily."
+                }
+              </p>
+              {vaultFilter !== "episode" && (
+                <Button variant="gold" size="lg" onClick={onCreateNew}>
+                  <Plus className="w-4 h-4 mr-2" />
                 Create Your First Movie
               </Button>
             )}
