@@ -481,6 +481,30 @@ export type Database = {
         }
         Relationships: []
       }
+      coaching_session_notes: {
+        Row: {
+          created_at: string
+          id: string
+          note: string
+          topic: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          note: string
+          topic?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          note?: string
+          topic?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       community_movies: {
         Row: {
           chief_aim_preview: string | null
