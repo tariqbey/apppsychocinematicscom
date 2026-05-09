@@ -51,12 +51,9 @@ serve(async (req) => {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          config: {
-            uses: 1,
-            expireTime,
-            newSessionExpireTime,
-            httpOptions: { apiVersion: "v1alpha" },
-          },
+          uses: 1,
+          expireTime,
+          newSessionExpireTime,
         }),
       },
     );
