@@ -238,7 +238,7 @@ Open the conversation by greeting them by name in 1-2 sentences and asking one d
       }
       try {
         sessionRef.current.sendRealtimeInput({
-          media: { data: pcm16ToBase64(i16), mimeType: `audio/pcm;rate=${INPUT_SAMPLE_RATE}` },
+          audio: { data: pcm16ToBase64(i16), mimeType: `audio/pcm;rate=${INPUT_SAMPLE_RATE}` },
         });
       } catch {
         // ignore — session may be closing
