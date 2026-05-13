@@ -9,11 +9,12 @@ import { JarvisOrb } from "@/components/director-ai/JarvisOrb";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
-type Status = "idle" | "connecting" | "connected" | "listening" | "speaking" | "thinking" | "error";
+type Status = "idle" | "connecting" | "connected" | "listening" | "speaking" | "thinking" | "reconnecting" | "error";
 
 const MODEL = "gemini-live-2.5-flash-preview";
 const INPUT_SAMPLE_RATE = 16000;
 const OUTPUT_SAMPLE_RATE = 24000;
+const MAX_RECONNECT_ATTEMPTS = 3;
 
 // PCM16 base64 helpers
 const pcm16ToBase64 = (int16: Int16Array) => {
@@ -45,6 +46,9 @@ export default function VoiceCoach({ thinkingLevel, onStatusChange }: Props) {
   const [status, setStatus] = useState<Status>("idle");
   const [transcript, setTranscript] = useState<{ role: "user" | "assistant"; text: string }[]>([]);
   const [micLevel, setMicLevel] = useState(0);
+  const [micError, setMicError] = useState<string | null>(null);
+  const [debugLines, setDebugLines] = useState<string[]>(["Voice session idle"]);
+  const [audioChunksSent, setAudioChunksSent] = useState(0);
 
   const sessionRef = useRef<Session | null>(null);
   const inputCtxRef = useRef<AudioContext | null>(null);
@@ -57,6 +61,23 @@ export default function VoiceCoach({ thinkingLevel, onStatusChange }: Props) {
   const currentOutputTextRef = useRef("");
   const lastLevelUpdateRef = useRef(0);
   const socketClosedDuringConnectRef = useRef(false);
+  const shouldStayConnectedRef = useRef(false);
+  const manualDisconnectRef = useRef(false);
+  const suppressNextCloseRef = useRef(false);
+  const reconnectAttemptsRef = useRef(0);
+  const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const healthTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const connectRef = useRef<((isReconnect?: boolean) => Promise<void>) | null>(null);
+  const lastAudioLogRef = useRef(0);
+  const lastAudioSentMsRef = useRef(0);
+  const audioChunksSentRef = useRef(0);
+
+  const logDebug = useCallback((line: string, data?: unknown) => {
+    const stamp = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+    const message = `${stamp} ${line}`;
+    console.log(`[DirectorAI Voice] ${line}`, data ?? "");
+    setDebugLines((prev) => [...prev.slice(-7), message]);
+  }, []);
 
   const updateStatus = useCallback((s: Status) => {
     setStatus(s);
