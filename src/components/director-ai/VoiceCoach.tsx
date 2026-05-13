@@ -127,7 +127,7 @@ export default function VoiceCoach({ thinkingLevel, onStatusChange }: Props) {
   const startHealthCheck = useCallback(() => {
     if (healthTimerRef.current) clearInterval(healthTimerRef.current);
     healthTimerRef.current = setInterval(() => {
-      const conn = sessionRef.current?.conn as WebSocket | undefined;
+      const conn = sessionRef.current?.conn as unknown as WebSocket | undefined;
       if (!shouldStayConnectedRef.current || !conn) return;
       if (conn.readyState !== WebSocket.OPEN) {
         logDebug(`Health check failed: socket state ${conn.readyState}`);
