@@ -49,6 +49,7 @@ export const TheaterView = ({ onClose }: TheaterViewProps) => {
   const [isLoadingTasks, setIsLoadingTasks] = useState(false);
   const [isSuggesting, setIsSuggesting] = useState(false);
   const [suggestions, setSuggestions] = useState<{task: string; reason: string}[]>([]);
+  const [uploadedVideoUrl, setUploadedVideoUrl] = useState<string | null>(null);
    
    // Episode movie mode
    const [videoSource, setVideoSource] = useState<"mind-movie" | "episode">("mind-movie");
@@ -71,7 +72,7 @@ export const TheaterView = ({ onClose }: TheaterViewProps) => {
    // Determine which video to play based on source
    const videoUrl = videoSource === "episode" && selectedEpisode?.movie_url 
      ? selectedEpisode.movie_url 
-     : mindMovieUrl;
+     : uploadedVideoUrl || mindMovieUrl;
 
   // Force stop all media on close — safe pause only, no source destruction
   const stopAllMedia = useCallback(() => {
