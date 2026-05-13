@@ -537,29 +537,32 @@ Open the conversation by greeting them by name in 1-2 sentences and asking one d
   }, [status, buildSystemPrompt, handleMessage, logDebug, scheduleReconnect, startHealthCheck, startMic, thinkingLevel, updateStatus]);
 
   const disconnect = useCallback(() => {
-    try { procRef.current?.disconnect(); } catch {}
-    try { sourceRef.current?.disconnect(); } catch {}
-    try { inputCtxRef.current?.close(); } catch {}
+    manualDisconnectRef.current = true;
+    shouldStayConnectedRef.current = false;
+    clearTimers();
+    logDebug("Manual disconnect");
+    stopMic();
     try { outputCtxRef.current?.close(); } catch {}
-    streamRef.current?.getTracks().forEach((t) => t.stop());
     sessionRef.current?.close();
     sessionRef.current = null;
-    procRef.current = null;
-    sourceRef.current = null;
-    inputCtxRef.current = null;
     outputCtxRef.current = null;
-    streamRef.current = null;
     playbackTimeRef.current = 0;
-    setMicLevel(0);
+    reconnectAttemptsRef.current = 0;
+    audioChunksSentRef.current = 0;
+    setAudioChunksSent(0);
     updateStatus("idle");
-  }, [updateStatus]);
+  }, [clearTimers, logDebug, stopMic, updateStatus]);
+
+  useEffect(() => {
+    connectRef.current = connect;
+  }, [connect]);
 
   useEffect(() => () => disconnect(), [disconnect]);
 
-  const isLive = status === "connected" || status === "listening" || status === "speaking" || status === "thinking";
+  const isLive = status === "connected" || status === "listening" || status === "speaking" || status === "thinking" || status === "reconnecting";
   const orbState =
     status === "speaking" ? "speaking" :
-    status === "thinking" || status === "connecting" ? "processing" :
+    status === "thinking" || status === "connecting" || status === "reconnecting" ? "processing" :
     status === "listening" || status === "connected" ? "listening" :
     "idle";
 
@@ -577,6 +580,7 @@ Open the conversation by greeting them by name in 1-2 sentences and asking one d
           {status === "listening" && "Listening"}
           {status === "speaking" && "Speaking"}
           {status === "thinking" && "Thinking"}
+          {status === "reconnecting" && "Reconnecting..."}
           {status === "error" && "Error — tap to retry"}
         </p>
       </div>
@@ -585,11 +589,11 @@ Open the conversation by greeting them by name in 1-2 sentences and asking one d
         {!isLive ? (
           <Button
             size="lg"
-            onClick={connect}
-            disabled={status === "connecting"}
+            onClick={() => connect()}
+            disabled={status === "connecting" || status === "reconnecting"}
             className="bg-gold text-black hover:bg-gold/90 rounded-full px-8"
           >
-            {status === "connecting" ? (
+            {status === "connecting" || status === "reconnecting" ? (
               <Loader2 className="w-5 h-5 animate-spin mr-2" />
             ) : (
               <Mic className="w-5 h-5 mr-2" />
