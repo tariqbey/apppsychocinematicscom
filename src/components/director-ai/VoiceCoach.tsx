@@ -381,7 +381,7 @@ Open the conversation by greeting them by name in 1-2 sentences and asking one d
     source.connect(proc);
     proc.connect(ctx.destination);
     logDebug("Microphone stream active");
-  }, [assertMicAvailable, logDebug, scheduleReconnect]);
+  }, [assertMicAvailable, logDebug]);
 
   // ===== Connect to Gemini Live =====
   const connect = useCallback(async (isReconnect = false) => {
