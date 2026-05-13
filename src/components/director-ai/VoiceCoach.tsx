@@ -131,16 +131,11 @@ export default function VoiceCoach({ thinkingLevel, onStatusChange }: Props) {
   }, [logDebug, updateStatus]);
 
   const startHealthCheck = useCallback(() => {
+    // Disabled: SDK does not expose underlying socket reliably.
+    // We rely on the onclose callback to trigger reconnect when needed.
     if (healthTimerRef.current) clearInterval(healthTimerRef.current);
-    healthTimerRef.current = setInterval(() => {
-      const conn = sessionRef.current?.conn as unknown as WebSocket | undefined;
-      if (!shouldStayConnectedRef.current || !conn) return;
-      if (conn.readyState !== WebSocket.OPEN) {
-        logDebug(`Health check failed: socket state ${conn.readyState}`);
-        scheduleReconnect("health check detected a closed socket");
-      }
-    }, 2500);
-  }, [logDebug, scheduleReconnect]);
+    healthTimerRef.current = null;
+  }, []);
 
   const assertMicAvailable = useCallback(async () => {
     setMicError(null);
