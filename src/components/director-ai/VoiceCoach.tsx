@@ -613,6 +613,35 @@ Open the conversation by greeting them by name in 1-2 sentences and asking one d
         )}
       </div>
 
+      {(micError || debugLines.length > 0) && (
+        <div className="w-full max-w-2xl rounded-lg border border-border bg-card/50 px-4 py-3 text-left">
+          {micError && (
+            <div className="mb-3 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+              {micError}
+            </div>
+          )}
+          <div className="grid gap-2 text-xs text-muted-foreground sm:grid-cols-3">
+            <div>
+              <span className="block uppercase tracking-wider text-gold/80">Socket</span>
+              <span className="text-foreground">{status}</span>
+            </div>
+            <div>
+              <span className="block uppercase tracking-wider text-gold/80">Mic Level</span>
+              <span className="text-foreground">{micLevel.toFixed(2)}</span>
+            </div>
+            <div>
+              <span className="block uppercase tracking-wider text-gold/80">Audio Sent</span>
+              <span className="text-foreground">{audioChunksSent} chunks</span>
+            </div>
+          </div>
+          <div className="mt-3 space-y-1 border-t border-border pt-3 font-mono text-[11px] text-muted-foreground">
+            {debugLines.map((line, index) => (
+              <div key={`${line}-${index}`}>{line}</div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {transcript.length > 0 && (
         <div className="w-full max-w-2xl mt-4 max-h-64 overflow-y-auto px-4 space-y-3">
           {transcript.slice(-10).map((m, i) => (
