@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils";
 
 type Status = "idle" | "connecting" | "connected" | "listening" | "speaking" | "thinking" | "error";
 
-const MODEL = "gemini-3.1-flash-live-preview";
+const MODEL = "gemini-live-2.5-flash-preview";
 const INPUT_SAMPLE_RATE = 16000;
 const OUTPUT_SAMPLE_RATE = 24000;
 
@@ -323,8 +323,6 @@ Open the conversation by greeting them by name in 1-2 sentences and asking one d
               ],
             },
           ],
-          // @ts-expect-error - thinkingConfig is supported on 3.x live preview
-          thinkingConfig: { thinkingLevel },
         },
         callbacks: {
           onopen: () => {
