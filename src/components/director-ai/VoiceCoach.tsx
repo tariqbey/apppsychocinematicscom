@@ -313,6 +313,10 @@ Open the conversation by greeting them by name in 1-2 sentences and asking one d
 
   // ===== Start mic streaming =====
   const startMic = useCallback(async () => {
+    if (streamRef.current && procRef.current) {
+      logDebug("Microphone stream already active");
+      return;
+    }
     await assertMicAvailable();
     let stream: MediaStream;
     try {
@@ -380,10 +384,24 @@ Open the conversation by greeting them by name in 1-2 sentences and asking one d
   }, [assertMicAvailable, logDebug, scheduleReconnect]);
 
   // ===== Connect to Gemini Live =====
-  const connect = useCallback(async () => {
-    if (status === "connecting" || status === "connected" || status === "listening" || status === "speaking") return;
-    updateStatus("connecting");
+  const connect = useCallback(async (isReconnect = false) => {
+    if (!isReconnect && ["connecting", "connected", "listening", "speaking", "thinking", "reconnecting"].includes(status)) return;
+    manualDisconnectRef.current = false;
+    shouldStayConnectedRef.current = true;
+    setMicError(null);
+    updateStatus(isReconnect ? "reconnecting" : "connecting");
+    logDebug(isReconnect ? "Reconnecting Live session" : "Starting Live session");
     try {
+      if (sessionRef.current) {
+        suppressNextCloseRef.current = true;
+        try { sessionRef.current.close(); } catch {}
+        sessionRef.current = null;
+      }
+      if (outputCtxRef.current) {
+        try { await outputCtxRef.current.close(); } catch {}
+        outputCtxRef.current = null;
+      }
+
       // Create and resume output audio immediately from the user's click so
       // browser autoplay policies don't silently block Gemini's voice later.
       const outCtx = new (window.AudioContext || (window as any).webkitAudioContext)({
@@ -393,7 +411,11 @@ Open the conversation by greeting them by name in 1-2 sentences and asking one d
       playbackTimeRef.current = 0;
       if (outCtx.state === "suspended") await outCtx.resume();
 
+      // Request mic early from the user gesture; reconnects reuse the same stream.
+      await startMic();
+
       // 1. Mint ephemeral token
+      logDebug("Minting Live token");
       const { data: sessData } = await supabase.auth.getSession();
       const accessToken = sessData?.session?.access_token;
       if (!accessToken) throw new Error("Not authenticated");
@@ -411,6 +433,7 @@ Open the conversation by greeting them by name in 1-2 sentences and asking one d
       );
       if (!tokenResp.ok) throw new Error("Could not mint live token");
       const { token } = await tokenResp.json();
+      logDebug("Live token ready; opening socket");
 
       // 3. Connect to Live API with ephemeral token
       const ai = new GoogleGenAI({
@@ -460,17 +483,29 @@ Open the conversation by greeting them by name in 1-2 sentences and asking one d
         },
         callbacks: {
           onopen: () => {
+            logDebug("Live socket open");
+            reconnectAttemptsRef.current = 0;
             updateStatus("connected");
           },
           onmessage: handleMessage,
           onerror: (e: ErrorEvent) => {
             console.error("Live error", e);
-            toast.error("Live connection error");
-            updateStatus("error");
+            logDebug("Live socket error", e);
+            scheduleReconnect("socket error");
           },
           onclose: () => {
             socketClosedDuringConnectRef.current = true;
-            updateStatus("idle");
+            logDebug("Live socket closed");
+            sessionRef.current = null;
+            if (suppressNextCloseRef.current) {
+              suppressNextCloseRef.current = false;
+              return;
+            }
+            if (manualDisconnectRef.current || !shouldStayConnectedRef.current) {
+              updateStatus("idle");
+              return;
+            }
+            scheduleReconnect("socket closed unexpectedly");
           },
         },
       });
@@ -480,24 +515,26 @@ Open the conversation by greeting them by name in 1-2 sentences and asking one d
         throw new Error("Live connection closed before the microphone was ready");
       }
 
-      // 4. Start mic
-      await startMic();
       if (socketClosedDuringConnectRef.current) {
         throw new Error("Live connection closed before audio streaming started");
       }
       updateStatus("listening");
+      startHealthCheck();
 
       // 5. Kick off greeting
+      logDebug("Sending opening prompt");
       session.sendClientContent({
         turns: [{ role: "user", parts: [{ text: "Open the session. Greet me by name." }] }],
         turnComplete: true,
       });
     } catch (e) {
       console.error(e);
+      logDebug("Live session failed", e);
       toast.error(e instanceof Error ? e.message : "Failed to connect");
+      if (!isReconnect) shouldStayConnectedRef.current = false;
       updateStatus("error");
     }
-  }, [status, buildSystemPrompt, handleMessage, startMic, thinkingLevel, updateStatus]);
+  }, [status, buildSystemPrompt, handleMessage, logDebug, scheduleReconnect, startHealthCheck, startMic, thinkingLevel, updateStatus]);
 
   const disconnect = useCallback(() => {
     try { procRef.current?.disconnect(); } catch {}
