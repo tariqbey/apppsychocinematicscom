@@ -313,9 +313,24 @@ Open the conversation by greeting them by name in 1-2 sentences and asking one d
 
   // ===== Start mic streaming =====
   const startMic = useCallback(async () => {
-    const stream = await navigator.mediaDevices.getUserMedia({
-      audio: { sampleRate: INPUT_SAMPLE_RATE, channelCount: 1, echoCancellation: true, noiseSuppression: true },
-    });
+    await assertMicAvailable();
+    let stream: MediaStream;
+    try {
+      logDebug("Requesting microphone stream");
+      stream = await navigator.mediaDevices.getUserMedia({
+        audio: { sampleRate: INPUT_SAMPLE_RATE, channelCount: 1, echoCancellation: true, noiseSuppression: true },
+      });
+    } catch (err) {
+      const name = err instanceof DOMException ? err.name : "UnknownError";
+      const message =
+        name === "NotAllowedError" ? "Microphone permission denied. Click the lock icon in the address bar and allow microphone access." :
+        name === "NotFoundError" ? "No microphone found. Connect a microphone, then tap Start Live Session again." :
+        name === "NotReadableError" ? "Microphone is busy or unavailable. Close other apps using it, then retry." :
+        "Microphone could not start. Check your browser mic settings and retry.";
+      setMicError(message);
+      logDebug(`Microphone error: ${name}`);
+      throw new Error(message);
+    }
     streamRef.current = stream;
     const ctx = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: INPUT_SAMPLE_RATE });
     inputCtxRef.current = ctx;
@@ -337,19 +352,32 @@ Open the conversation by greeting them by name in 1-2 sentences and asking one d
       const now = performance.now();
       if (now - lastLevelUpdateRef.current > 100) {
         lastLevelUpdateRef.current = now;
-        setMicLevel(Math.min(1, Math.sqrt(sum / f32.length) * 8));
+        const level = Math.min(1, Math.sqrt(sum / f32.length) * 8);
+        setMicLevel(level);
+        if (level > 0.02 && now - lastAudioLogRef.current > 1500) {
+          lastAudioLogRef.current = now;
+          logDebug(`Audio captured: level ${level.toFixed(2)}`);
+        }
       }
       try {
         sessionRef.current.sendRealtimeInput({
           audio: { data: pcm16ToBase64(i16), mimeType: `audio/pcm;rate=${INPUT_SAMPLE_RATE}` },
         });
-      } catch {
-        // ignore — session may be closing
+        audioChunksSentRef.current += 1;
+        setAudioChunksSent(audioChunksSentRef.current);
+        lastAudioSentMsRef.current = Date.now();
+        if (audioChunksSentRef.current === 1 || audioChunksSentRef.current % 25 === 0) {
+          logDebug(`Audio sent: ${audioChunksSentRef.current} chunks`);
+        }
+      } catch (e) {
+        logDebug("Audio send failed; socket may be closing", e);
+        scheduleReconnect("audio send failed");
       }
     };
     source.connect(proc);
     proc.connect(ctx.destination);
-  }, []);
+    logDebug("Microphone stream active");
+  }, [assertMicAvailable, logDebug, scheduleReconnect]);
 
   // ===== Connect to Gemini Live =====
   const connect = useCallback(async () => {
