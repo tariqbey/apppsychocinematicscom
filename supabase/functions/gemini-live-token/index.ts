@@ -68,14 +68,13 @@ serve(async (req) => {
     }
 
     const data = await resp.json();
-    // The API returns { name: "auth_tokens/<token>", expireTime, ... }
+    // The SDK expects the full resource name ("auth_tokens/..."). If the
+    // prefix is stripped, it treats the token like a normal API key and the
+    // Live socket opens then closes before it can hear mic audio.
     const tokenName: string = data.name ?? "";
-    const ephemeralToken = tokenName.startsWith("auth_tokens/")
-      ? tokenName.slice("auth_tokens/".length)
-      : tokenName;
 
     return new Response(
-      JSON.stringify({ token: ephemeralToken, expireTime: data.expireTime }),
+      JSON.stringify({ token: tokenName, expireTime: data.expireTime }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   } catch (e) {
