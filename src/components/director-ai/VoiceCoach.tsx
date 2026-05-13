@@ -226,6 +226,7 @@ Open the conversation by greeting them by name in 1-2 sentences and asking one d
     streamRef.current = stream;
     const ctx = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: INPUT_SAMPLE_RATE });
     inputCtxRef.current = ctx;
+    if (ctx.state === "suspended") await ctx.resume();
     const source = ctx.createMediaStreamSource(stream);
     sourceRef.current = source;
     const proc = ctx.createScriptProcessor(4096, 1, 1);
@@ -262,6 +263,15 @@ Open the conversation by greeting them by name in 1-2 sentences and asking one d
     if (status === "connecting" || status === "connected" || status === "listening" || status === "speaking") return;
     updateStatus("connecting");
     try {
+      // Create and resume output audio immediately from the user's click so
+      // browser autoplay policies don't silently block Gemini's voice later.
+      const outCtx = new (window.AudioContext || (window as any).webkitAudioContext)({
+        sampleRate: OUTPUT_SAMPLE_RATE,
+      });
+      outputCtxRef.current = outCtx;
+      playbackTimeRef.current = 0;
+      if (outCtx.state === "suspended") await outCtx.resume();
+
       // 1. Mint ephemeral token
       const { data: sessData } = await supabase.auth.getSession();
       const accessToken = sessData?.session?.access_token;
@@ -280,13 +290,6 @@ Open the conversation by greeting them by name in 1-2 sentences and asking one d
       );
       if (!tokenResp.ok) throw new Error("Could not mint live token");
       const { token } = await tokenResp.json();
-
-      // 2. Output audio context
-      const outCtx = new (window.AudioContext || (window as any).webkitAudioContext)({
-        sampleRate: OUTPUT_SAMPLE_RATE,
-      });
-      outputCtxRef.current = outCtx;
-      playbackTimeRef.current = 0;
 
       // 3. Connect to Live API with ephemeral token
       const ai = new GoogleGenAI({
