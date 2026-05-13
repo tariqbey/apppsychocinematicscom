@@ -56,6 +56,7 @@ export default function VoiceCoach({ thinkingLevel, onStatusChange }: Props) {
   const currentInputTextRef = useRef("");
   const currentOutputTextRef = useRef("");
   const lastLevelUpdateRef = useRef(0);
+  const socketClosedDuringConnectRef = useRef(false);
 
   const updateStatus = useCallback((s: Status) => {
     setStatus(s);
@@ -296,6 +297,7 @@ Open the conversation by greeting them by name in 1-2 sentences and asking one d
         apiKey: token,
         httpOptions: { apiVersion: "v1alpha" },
       });
+      socketClosedDuringConnectRef.current = false;
 
       const session = await ai.live.connect({
         model: MODEL,
@@ -347,14 +349,22 @@ Open the conversation by greeting them by name in 1-2 sentences and asking one d
             updateStatus("error");
           },
           onclose: () => {
+            socketClosedDuringConnectRef.current = true;
             updateStatus("idle");
           },
         },
       });
       sessionRef.current = session;
 
+      if (socketClosedDuringConnectRef.current) {
+        throw new Error("Live connection closed before the microphone was ready");
+      }
+
       // 4. Start mic
       await startMic();
+      if (socketClosedDuringConnectRef.current) {
+        throw new Error("Live connection closed before audio streaming started");
+      }
       updateStatus("listening");
 
       // 5. Kick off greeting
