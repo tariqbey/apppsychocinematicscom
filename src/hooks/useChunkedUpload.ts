@@ -194,11 +194,19 @@ export const useChunkedUpload = () => {
     onError?: (error: Error) => void,
     maxRetries = 3
   ): Promise<string | null> => {
+    setState({ isUploading: true, progress: 0, error: null });
+    abortControllerRef.current = new AbortController();
+
     let lastError: Error | null = null;
     
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
-        console.log(`Upload attempt ${attempt}/${maxRetries}`);
+        console.log(`Upload attempt ${attempt}/${maxRetries}`, {
+          bucket,
+          filePath,
+          size: file.size,
+          type: file.type || "application/octet-stream",
+        });
         
         const { data: sessionData } = await supabase.auth.getSession();
         const token = sessionData?.session?.access_token;
@@ -215,12 +223,19 @@ export const useChunkedUpload = () => {
           
           // Set longer timeout for large files (30 minutes)
           xhr.timeout = 30 * 60 * 1000;
+
+          xhr.upload.addEventListener("loadstart", () => {
+            setState((prev) => ({ ...prev, isUploading: true, progress: Math.max(prev.progress, 1) }));
+            onProgress?.(1);
+            console.log("Upload started", { filePath, size: file.size });
+          });
           
           xhr.upload.addEventListener("progress", (event) => {
             if (event.lengthComputable) {
               const progress = Math.round((event.loaded / event.total) * 100);
               setState((prev) => ({ ...prev, progress }));
               onProgress?.(progress);
+              console.log("Upload progress", { filePath, progress, loaded: event.loaded, total: event.total });
             }
           });
 
@@ -250,6 +265,7 @@ export const useChunkedUpload = () => {
           xhr.open("POST", url);
           xhr.setRequestHeader("Authorization", `Bearer ${token}`);
           xhr.setRequestHeader("x-upsert", "true");
+          xhr.setRequestHeader("Content-Type", file.type || "application/octet-stream");
           xhr.send(file);
 
           abortControllerRef.current?.signal.addEventListener("abort", () => {

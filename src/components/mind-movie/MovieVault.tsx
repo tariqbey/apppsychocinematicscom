@@ -28,6 +28,7 @@ import { format } from "date-fns";
 import { toast } from "sonner";
 import { useAdminStatus } from "@/hooks/useAdminStatus";
 import { useAuth } from "@/hooks/useAuth";
+import { useChunkedUpload } from "@/hooks/useChunkedUpload";
 
 type VaultFilter = "all" | "main" | "episode";
 
@@ -57,6 +58,10 @@ export function MovieVault({ isOpen, onClose, onSelectMovie, onCreateNew }: Movi
   const [featuringMovieId, setFeaturingMovieId] = useState<string | null>(null);
   const ritualFileInputRef = useRef<HTMLInputElement>(null);
   const { updateProfile, refetch: refetchProfile } = useUserProfile();
+  const {
+    progress: ritualUploadProgress,
+    uploadFile: uploadRitualFile,
+  } = useChunkedUpload();
 
   // Handler to feature a movie as "Movie of the Week" (admin only)
   const handleFeatureMovie = async (movie: MindMovie) => {
@@ -185,19 +190,13 @@ export function MovieVault({ isOpen, onClose, onSelectMovie, onCreateNew }: Movi
       const fileExt = file.name.split('.').pop()?.toLowerCase() || 'mp4';
       const fileName = `${user.id}/mind-movie-${Date.now()}.${fileExt}`;
 
-      // Upload to mind-movies bucket
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from('mind-movies')
-        .upload(fileName, file, { upsert: true });
+      const newMovieUrl = await uploadRitualFile(file, fileName, {
+        bucket: "mind-movies",
+        onProgress: (progress) => console.log("Ritual Mind Movie upload progress", { progress, fileName }),
+        onError: (error) => toast.error(error.message || "Failed to upload movie. Please try again."),
+      });
 
-      if (uploadError) throw uploadError;
-
-      // Get public URL
-      const { data: urlData } = supabase.storage
-        .from('mind-movies')
-        .getPublicUrl(fileName);
-
-      const newMovieUrl = urlData.publicUrl;
+      if (!newMovieUrl) throw new Error("Upload did not complete. Please try again.");
 
       // Update user profile with new mind_movie_url
       await updateProfile({ mind_movie_url: newMovieUrl });
@@ -338,6 +337,7 @@ export function MovieVault({ isOpen, onClose, onSelectMovie, onCreateNew }: Movi
                 onShareToCommunity={() => setShareRitualMovie(true)}
                 onReplace={handleReplaceRitualMovie}
                 isReplacing={isReplacingRitual}
+                replaceProgress={ritualUploadProgress}
               />
             )}
             
@@ -441,9 +441,10 @@ interface RitualMovieCardProps {
   onShareToCommunity: () => void;
   onReplace: () => void;
   isReplacing?: boolean;
+  replaceProgress?: number;
 }
 
-function RitualMovieCard({ movieUrl, displayName, onPreview, onShareToCommunity, onReplace, isReplacing }: RitualMovieCardProps) {
+function RitualMovieCard({ movieUrl, displayName, onPreview, onShareToCommunity, onReplace, isReplacing, replaceProgress = 0 }: RitualMovieCardProps) {
   const [duration, setDuration] = useState<number | null>(null);
 
   useEffect(() => {
@@ -538,6 +539,13 @@ function RitualMovieCard({ movieUrl, displayName, onPreview, onShareToCommunity,
         <p className="text-xs text-muted-foreground line-clamp-2 mb-3 italic">
           This is your main Mind Movie that plays during your morning ritual.
         </p>
+
+        {isReplacing && (
+          <div className="mb-3 space-y-1">
+            <Progress value={replaceProgress} className="h-2" />
+            <p className="text-xs text-muted-foreground">Uploading… {replaceProgress}%</p>
+          </div>
+        )}
 
         {/* Actions */}
         <div className="flex flex-wrap items-center gap-1 sm:gap-2">
