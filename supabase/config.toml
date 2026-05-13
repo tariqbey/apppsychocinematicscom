@@ -104,3 +104,7 @@ verify_jwt = false
 
 [functions.gemini-live-token]
 verify_jwt = false
+
+[functions.admin-reset-password]
+verify_jwt = false
+
