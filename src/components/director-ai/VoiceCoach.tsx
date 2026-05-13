@@ -103,6 +103,58 @@ export default function VoiceCoach({ thinkingLevel, onStatusChange }: Props) {
     healthTimerRef.current = null;
   }, []);
 
+  const scheduleReconnect = useCallback((reason: string) => {
+    if (!shouldStayConnectedRef.current || manualDisconnectRef.current) return;
+    if (reconnectTimerRef.current) return;
+    if (reconnectAttemptsRef.current >= MAX_RECONNECT_ATTEMPTS) {
+      const message = "Live session dropped. Tap Start Live Session to retry.";
+      setMicError(message);
+      logDebug(`Reconnect stopped: ${reason}`);
+      toast.error(message);
+      updateStatus("error");
+      return;
+    }
+    reconnectAttemptsRef.current += 1;
+    const delay = Math.min(1000 * reconnectAttemptsRef.current, 3000);
+    updateStatus("reconnecting");
+    logDebug(`Reconnect ${reconnectAttemptsRef.current}/${MAX_RECONNECT_ATTEMPTS} in ${delay}ms: ${reason}`);
+    reconnectTimerRef.current = setTimeout(() => {
+      reconnectTimerRef.current = null;
+      connectRef.current?.(true);
+    }, delay);
+  }, [logDebug, updateStatus]);
+
+  const startHealthCheck = useCallback(() => {
+    if (healthTimerRef.current) clearInterval(healthTimerRef.current);
+    healthTimerRef.current = setInterval(() => {
+      const conn = sessionRef.current?.conn as WebSocket | undefined;
+      if (!shouldStayConnectedRef.current || !conn) return;
+      if (conn.readyState !== WebSocket.OPEN) {
+        logDebug(`Health check failed: socket state ${conn.readyState}`);
+        scheduleReconnect("health check detected a closed socket");
+      }
+    }, 2500);
+  }, [logDebug, scheduleReconnect]);
+
+  const assertMicAvailable = useCallback(async () => {
+    setMicError(null);
+    if (!navigator.mediaDevices?.getUserMedia) {
+      throw new Error("Microphone is not available in this browser. Use Chrome or Safari and reload the app.");
+    }
+    try {
+      if (navigator.permissions?.query) {
+        const permission = await navigator.permissions.query({ name: "microphone" as PermissionName });
+        logDebug(`Microphone permission: ${permission.state}`);
+        if (permission.state === "denied") {
+          throw new Error("Microphone blocked. Enable microphone access in your browser settings, then reload this page.");
+        }
+      }
+    } catch (e) {
+      if (e instanceof Error && e.message.includes("Microphone blocked")) throw e;
+      logDebug("Microphone permission query unavailable; requesting mic directly");
+    }
+  }, [logDebug]);
+
   // ===== Tool handlers =====
   const callTool = useCallback(async (name: string, args: Record<string, unknown>) => {
     if (!user) return { error: "Not authenticated" };
