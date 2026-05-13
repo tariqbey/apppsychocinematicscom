@@ -9,11 +9,12 @@ import { JarvisOrb } from "@/components/director-ai/JarvisOrb";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
-type Status = "idle" | "connecting" | "connected" | "listening" | "speaking" | "thinking" | "error";
+type Status = "idle" | "connecting" | "connected" | "listening" | "speaking" | "thinking" | "reconnecting" | "error";
 
 const MODEL = "gemini-live-2.5-flash-preview";
 const INPUT_SAMPLE_RATE = 16000;
 const OUTPUT_SAMPLE_RATE = 24000;
+const MAX_RECONNECT_ATTEMPTS = 3;
 
 // PCM16 base64 helpers
 const pcm16ToBase64 = (int16: Int16Array) => {
@@ -45,6 +46,9 @@ export default function VoiceCoach({ thinkingLevel, onStatusChange }: Props) {
   const [status, setStatus] = useState<Status>("idle");
   const [transcript, setTranscript] = useState<{ role: "user" | "assistant"; text: string }[]>([]);
   const [micLevel, setMicLevel] = useState(0);
+  const [micError, setMicError] = useState<string | null>(null);
+  const [debugLines, setDebugLines] = useState<string[]>(["Voice session idle"]);
+  const [audioChunksSent, setAudioChunksSent] = useState(0);
 
   const sessionRef = useRef<Session | null>(null);
   const inputCtxRef = useRef<AudioContext | null>(null);
@@ -57,11 +61,99 @@ export default function VoiceCoach({ thinkingLevel, onStatusChange }: Props) {
   const currentOutputTextRef = useRef("");
   const lastLevelUpdateRef = useRef(0);
   const socketClosedDuringConnectRef = useRef(false);
+  const shouldStayConnectedRef = useRef(false);
+  const manualDisconnectRef = useRef(false);
+  const suppressNextCloseRef = useRef(false);
+  const reconnectAttemptsRef = useRef(0);
+  const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const healthTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const connectRef = useRef<((isReconnect?: boolean) => Promise<void>) | null>(null);
+  const lastAudioLogRef = useRef(0);
+  const lastAudioSentMsRef = useRef(0);
+  const audioChunksSentRef = useRef(0);
+
+  const logDebug = useCallback((line: string, data?: unknown) => {
+    const stamp = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+    const message = `${stamp} ${line}`;
+    console.log(`[DirectorAI Voice] ${line}`, data ?? "");
+    setDebugLines((prev) => [...prev.slice(-7), message]);
+  }, []);
 
   const updateStatus = useCallback((s: Status) => {
     setStatus(s);
     onStatusChange?.(s);
   }, [onStatusChange]);
+
+  const stopMic = useCallback(() => {
+    try { procRef.current?.disconnect(); } catch {}
+    try { sourceRef.current?.disconnect(); } catch {}
+    try { inputCtxRef.current?.close(); } catch {}
+    streamRef.current?.getTracks().forEach((t) => t.stop());
+    procRef.current = null;
+    sourceRef.current = null;
+    inputCtxRef.current = null;
+    streamRef.current = null;
+    setMicLevel(0);
+  }, []);
+
+  const clearTimers = useCallback(() => {
+    if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
+    if (healthTimerRef.current) clearInterval(healthTimerRef.current);
+    reconnectTimerRef.current = null;
+    healthTimerRef.current = null;
+  }, []);
+
+  const scheduleReconnect = useCallback((reason: string) => {
+    if (!shouldStayConnectedRef.current || manualDisconnectRef.current) return;
+    if (reconnectTimerRef.current) return;
+    if (reconnectAttemptsRef.current >= MAX_RECONNECT_ATTEMPTS) {
+      const message = "Live session dropped. Tap Start Live Session to retry.";
+      setMicError(message);
+      logDebug(`Reconnect stopped: ${reason}`);
+      toast.error(message);
+      updateStatus("error");
+      return;
+    }
+    reconnectAttemptsRef.current += 1;
+    const delay = Math.min(1000 * reconnectAttemptsRef.current, 3000);
+    updateStatus("reconnecting");
+    logDebug(`Reconnect ${reconnectAttemptsRef.current}/${MAX_RECONNECT_ATTEMPTS} in ${delay}ms: ${reason}`);
+    reconnectTimerRef.current = setTimeout(() => {
+      reconnectTimerRef.current = null;
+      connectRef.current?.(true);
+    }, delay);
+  }, [logDebug, updateStatus]);
+
+  const startHealthCheck = useCallback(() => {
+    if (healthTimerRef.current) clearInterval(healthTimerRef.current);
+    healthTimerRef.current = setInterval(() => {
+      const conn = sessionRef.current?.conn as unknown as WebSocket | undefined;
+      if (!shouldStayConnectedRef.current || !conn) return;
+      if (conn.readyState !== WebSocket.OPEN) {
+        logDebug(`Health check failed: socket state ${conn.readyState}`);
+        scheduleReconnect("health check detected a closed socket");
+      }
+    }, 2500);
+  }, [logDebug, scheduleReconnect]);
+
+  const assertMicAvailable = useCallback(async () => {
+    setMicError(null);
+    if (!navigator.mediaDevices?.getUserMedia) {
+      throw new Error("Microphone is not available in this browser. Use Chrome or Safari and reload the app.");
+    }
+    try {
+      if (navigator.permissions?.query) {
+        const permission = await navigator.permissions.query({ name: "microphone" as PermissionName });
+        logDebug(`Microphone permission: ${permission.state}`);
+        if (permission.state === "denied") {
+          throw new Error("Microphone blocked. Enable microphone access in your browser settings, then reload this page.");
+        }
+      }
+    } catch (e) {
+      if (e instanceof Error && e.message.includes("Microphone blocked")) throw e;
+      logDebug("Microphone permission query unavailable; requesting mic directly");
+    }
+  }, [logDebug]);
 
   // ===== Tool handlers =====
   const callTool = useCallback(async (name: string, args: Record<string, unknown>) => {
@@ -221,9 +313,28 @@ Open the conversation by greeting them by name in 1-2 sentences and asking one d
 
   // ===== Start mic streaming =====
   const startMic = useCallback(async () => {
-    const stream = await navigator.mediaDevices.getUserMedia({
-      audio: { sampleRate: INPUT_SAMPLE_RATE, channelCount: 1, echoCancellation: true, noiseSuppression: true },
-    });
+    if (streamRef.current && procRef.current) {
+      logDebug("Microphone stream already active");
+      return;
+    }
+    await assertMicAvailable();
+    let stream: MediaStream;
+    try {
+      logDebug("Requesting microphone stream");
+      stream = await navigator.mediaDevices.getUserMedia({
+        audio: { sampleRate: INPUT_SAMPLE_RATE, channelCount: 1, echoCancellation: true, noiseSuppression: true },
+      });
+    } catch (err) {
+      const name = err instanceof DOMException ? err.name : "UnknownError";
+      const message =
+        name === "NotAllowedError" ? "Microphone permission denied. Click the lock icon in the address bar and allow microphone access." :
+        name === "NotFoundError" ? "No microphone found. Connect a microphone, then tap Start Live Session again." :
+        name === "NotReadableError" ? "Microphone is busy or unavailable. Close other apps using it, then retry." :
+        "Microphone could not start. Check your browser mic settings and retry.";
+      setMicError(message);
+      logDebug(`Microphone error: ${name}`);
+      throw new Error(message);
+    }
     streamRef.current = stream;
     const ctx = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: INPUT_SAMPLE_RATE });
     inputCtxRef.current = ctx;
@@ -245,25 +356,52 @@ Open the conversation by greeting them by name in 1-2 sentences and asking one d
       const now = performance.now();
       if (now - lastLevelUpdateRef.current > 100) {
         lastLevelUpdateRef.current = now;
-        setMicLevel(Math.min(1, Math.sqrt(sum / f32.length) * 8));
+        const level = Math.min(1, Math.sqrt(sum / f32.length) * 8);
+        setMicLevel(level);
+        if (level > 0.02 && now - lastAudioLogRef.current > 1500) {
+          lastAudioLogRef.current = now;
+          logDebug(`Audio captured: level ${level.toFixed(2)}`);
+        }
       }
       try {
         sessionRef.current.sendRealtimeInput({
           audio: { data: pcm16ToBase64(i16), mimeType: `audio/pcm;rate=${INPUT_SAMPLE_RATE}` },
         });
-      } catch {
-        // ignore — session may be closing
+        audioChunksSentRef.current += 1;
+        setAudioChunksSent(audioChunksSentRef.current);
+        lastAudioSentMsRef.current = Date.now();
+        if (audioChunksSentRef.current === 1 || audioChunksSentRef.current % 25 === 0) {
+          logDebug(`Audio sent: ${audioChunksSentRef.current} chunks`);
+        }
+      } catch (e) {
+        logDebug("Audio send failed; socket may be closing", e);
+        scheduleReconnect("audio send failed");
       }
     };
     source.connect(proc);
     proc.connect(ctx.destination);
-  }, []);
+    logDebug("Microphone stream active");
+  }, [assertMicAvailable, logDebug, scheduleReconnect]);
 
   // ===== Connect to Gemini Live =====
-  const connect = useCallback(async () => {
-    if (status === "connecting" || status === "connected" || status === "listening" || status === "speaking") return;
-    updateStatus("connecting");
+  const connect = useCallback(async (isReconnect = false) => {
+    if (!isReconnect && ["connecting", "connected", "listening", "speaking", "thinking", "reconnecting"].includes(status)) return;
+    manualDisconnectRef.current = false;
+    shouldStayConnectedRef.current = true;
+    setMicError(null);
+    updateStatus(isReconnect ? "reconnecting" : "connecting");
+    logDebug(isReconnect ? "Reconnecting Live session" : "Starting Live session");
     try {
+      if (sessionRef.current) {
+        suppressNextCloseRef.current = true;
+        try { sessionRef.current.close(); } catch {}
+        sessionRef.current = null;
+      }
+      if (outputCtxRef.current) {
+        try { await outputCtxRef.current.close(); } catch {}
+        outputCtxRef.current = null;
+      }
+
       // Create and resume output audio immediately from the user's click so
       // browser autoplay policies don't silently block Gemini's voice later.
       const outCtx = new (window.AudioContext || (window as any).webkitAudioContext)({
@@ -273,7 +411,11 @@ Open the conversation by greeting them by name in 1-2 sentences and asking one d
       playbackTimeRef.current = 0;
       if (outCtx.state === "suspended") await outCtx.resume();
 
+      // Request mic early from the user gesture; reconnects reuse the same stream.
+      await startMic();
+
       // 1. Mint ephemeral token
+      logDebug("Minting Live token");
       const { data: sessData } = await supabase.auth.getSession();
       const accessToken = sessData?.session?.access_token;
       if (!accessToken) throw new Error("Not authenticated");
@@ -291,6 +433,7 @@ Open the conversation by greeting them by name in 1-2 sentences and asking one d
       );
       if (!tokenResp.ok) throw new Error("Could not mint live token");
       const { token } = await tokenResp.json();
+      logDebug("Live token ready; opening socket");
 
       // 3. Connect to Live API with ephemeral token
       const ai = new GoogleGenAI({
@@ -340,17 +483,29 @@ Open the conversation by greeting them by name in 1-2 sentences and asking one d
         },
         callbacks: {
           onopen: () => {
+            logDebug("Live socket open");
+            reconnectAttemptsRef.current = 0;
             updateStatus("connected");
           },
           onmessage: handleMessage,
           onerror: (e: ErrorEvent) => {
             console.error("Live error", e);
-            toast.error("Live connection error");
-            updateStatus("error");
+            logDebug("Live socket error", e);
+            scheduleReconnect("socket error");
           },
           onclose: () => {
             socketClosedDuringConnectRef.current = true;
-            updateStatus("idle");
+            logDebug("Live socket closed");
+            sessionRef.current = null;
+            if (suppressNextCloseRef.current) {
+              suppressNextCloseRef.current = false;
+              return;
+            }
+            if (manualDisconnectRef.current || !shouldStayConnectedRef.current) {
+              updateStatus("idle");
+              return;
+            }
+            scheduleReconnect("socket closed unexpectedly");
           },
         },
       });
@@ -360,49 +515,54 @@ Open the conversation by greeting them by name in 1-2 sentences and asking one d
         throw new Error("Live connection closed before the microphone was ready");
       }
 
-      // 4. Start mic
-      await startMic();
       if (socketClosedDuringConnectRef.current) {
         throw new Error("Live connection closed before audio streaming started");
       }
       updateStatus("listening");
+      startHealthCheck();
 
       // 5. Kick off greeting
+      logDebug("Sending opening prompt");
       session.sendClientContent({
         turns: [{ role: "user", parts: [{ text: "Open the session. Greet me by name." }] }],
         turnComplete: true,
       });
     } catch (e) {
       console.error(e);
+      logDebug("Live session failed", e);
       toast.error(e instanceof Error ? e.message : "Failed to connect");
+      if (!isReconnect) shouldStayConnectedRef.current = false;
       updateStatus("error");
     }
-  }, [status, buildSystemPrompt, handleMessage, startMic, thinkingLevel, updateStatus]);
+  }, [status, buildSystemPrompt, handleMessage, logDebug, scheduleReconnect, startHealthCheck, startMic, thinkingLevel, updateStatus]);
 
   const disconnect = useCallback(() => {
-    try { procRef.current?.disconnect(); } catch {}
-    try { sourceRef.current?.disconnect(); } catch {}
-    try { inputCtxRef.current?.close(); } catch {}
+    manualDisconnectRef.current = true;
+    shouldStayConnectedRef.current = false;
+    clearTimers();
+    logDebug("Manual disconnect");
+    stopMic();
     try { outputCtxRef.current?.close(); } catch {}
-    streamRef.current?.getTracks().forEach((t) => t.stop());
     sessionRef.current?.close();
     sessionRef.current = null;
-    procRef.current = null;
-    sourceRef.current = null;
-    inputCtxRef.current = null;
     outputCtxRef.current = null;
-    streamRef.current = null;
     playbackTimeRef.current = 0;
-    setMicLevel(0);
+    reconnectAttemptsRef.current = 0;
+    audioChunksSentRef.current = 0;
+    setAudioChunksSent(0);
     updateStatus("idle");
-  }, [updateStatus]);
+  }, [clearTimers, logDebug, stopMic, updateStatus]);
+
+  useEffect(() => {
+    connectRef.current = connect;
+  }, [connect]);
 
   useEffect(() => () => disconnect(), [disconnect]);
 
-  const isLive = status === "connected" || status === "listening" || status === "speaking" || status === "thinking";
+  const isLive = status === "connected" || status === "listening" || status === "speaking" || status === "thinking" || status === "reconnecting";
   const orbState =
     status === "speaking" ? "speaking" :
-    status === "thinking" || status === "connecting" ? "processing" :
+    status === "thinking" || status === "connecting" || status === "reconnecting" ? "processing" :
     status === "listening" || status === "connected" ? "listening" :
     "idle";
 
@@ -420,6 +580,7 @@ Open the conversation by greeting them by name in 1-2 sentences and asking one d
           {status === "listening" && "Listening"}
           {status === "speaking" && "Speaking"}
           {status === "thinking" && "Thinking"}
+          {status === "reconnecting" && "Reconnecting..."}
           {status === "error" && "Error — tap to retry"}
         </p>
       </div>
@@ -428,7 +589,7 @@ Open the conversation by greeting them by name in 1-2 sentences and asking one d
         {!isLive ? (
           <Button
             size="lg"
-            onClick={connect}
+            onClick={() => connect()}
             disabled={status === "connecting"}
             className="bg-gold text-black hover:bg-gold/90 rounded-full px-8"
           >
@@ -451,6 +612,35 @@ Open the conversation by greeting them by name in 1-2 sentences and asking one d
           </Button>
         )}
       </div>
+
+      {(micError || debugLines.length > 0) && (
+        <div className="w-full max-w-2xl rounded-lg border border-border bg-card/50 px-4 py-3 text-left">
+          {micError && (
+            <div className="mb-3 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+              {micError}
+            </div>
+          )}
+          <div className="grid gap-2 text-xs text-muted-foreground sm:grid-cols-3">
+            <div>
+              <span className="block uppercase tracking-wider text-gold/80">Socket</span>
+              <span className="text-foreground">{status}</span>
+            </div>
+            <div>
+              <span className="block uppercase tracking-wider text-gold/80">Mic Level</span>
+              <span className="text-foreground">{micLevel.toFixed(2)}</span>
+            </div>
+            <div>
+              <span className="block uppercase tracking-wider text-gold/80">Audio Sent</span>
+              <span className="text-foreground">{audioChunksSent} chunks</span>
+            </div>
+          </div>
+          <div className="mt-3 space-y-1 border-t border-border pt-3 font-mono text-[11px] text-muted-foreground">
+            {debugLines.map((line, index) => (
+              <div key={`${line}-${index}`}>{line}</div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {transcript.length > 0 && (
         <div className="w-full max-w-2xl mt-4 max-h-64 overflow-y-auto px-4 space-y-3">
