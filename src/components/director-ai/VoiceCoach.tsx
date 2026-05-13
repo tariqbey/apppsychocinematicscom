@@ -590,10 +590,10 @@ Open the conversation by greeting them by name in 1-2 sentences and asking one d
           <Button
             size="lg"
             onClick={() => connect()}
-            disabled={status === "connecting" || status === "reconnecting"}
+            disabled={status === "connecting"}
             className="bg-gold text-black hover:bg-gold/90 rounded-full px-8"
           >
-            {status === "connecting" || status === "reconnecting" ? (
+            {status === "connecting" ? (
               <Loader2 className="w-5 h-5 animate-spin mr-2" />
             ) : (
               <Mic className="w-5 h-5 mr-2" />
