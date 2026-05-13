@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from "react";
-import { GoogleGenAI, Modality, type Session, type LiveServerMessage } from "@google/genai";
+import { GoogleGenAI, Modality, type Session, type LiveServerMessage, type LiveConnectConfig } from "@google/genai";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useCoachingContext } from "@/hooks/useCoachingContext";
@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils";
 
 type Status = "idle" | "connecting" | "connected" | "listening" | "speaking" | "thinking" | "reconnecting" | "error";
 
-const MODEL = "gemini-live-2.5-flash-preview";
+const MODEL = "gemini-3.1-flash-live-preview";
 const INPUT_SAMPLE_RATE = 16000;
 const OUTPUT_SAMPLE_RATE = 24000;
 const MAX_RECONNECT_ATTEMPTS = 3;
@@ -47,8 +47,6 @@ export default function VoiceCoach({ thinkingLevel, onStatusChange }: Props) {
   const [transcript, setTranscript] = useState<{ role: "user" | "assistant"; text: string }[]>([]);
   const [micLevel, setMicLevel] = useState(0);
   const [micError, setMicError] = useState<string | null>(null);
-  const [debugLines, setDebugLines] = useState<string[]>(["Voice session idle"]);
-  const [audioChunksSent, setAudioChunksSent] = useState(0);
 
   const sessionRef = useRef<Session | null>(null);
   const inputCtxRef = useRef<AudioContext | null>(null);
@@ -61,6 +59,7 @@ export default function VoiceCoach({ thinkingLevel, onStatusChange }: Props) {
   const currentOutputTextRef = useRef("");
   const lastLevelUpdateRef = useRef(0);
   const socketClosedDuringConnectRef = useRef(false);
+  const hasOpenedRef = useRef(false);
   const shouldStayConnectedRef = useRef(false);
   const manualDisconnectRef = useRef(false);
   const suppressNextCloseRef = useRef(false);
@@ -73,10 +72,7 @@ export default function VoiceCoach({ thinkingLevel, onStatusChange }: Props) {
   const audioChunksSentRef = useRef(0);
 
   const logDebug = useCallback((line: string, data?: unknown) => {
-    const stamp = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
-    const message = `${stamp} ${line}`;
     console.log(`[DirectorAI Voice] ${line}`, data ?? "");
-    setDebugLines((prev) => [...prev.slice(-7), message]);
   }, []);
 
   const updateStatus = useCallback((s: Status) => {
@@ -106,11 +102,21 @@ export default function VoiceCoach({ thinkingLevel, onStatusChange }: Props) {
   const scheduleReconnect = useCallback((reason: string) => {
     if (!shouldStayConnectedRef.current || manualDisconnectRef.current) return;
     if (reconnectTimerRef.current) return;
+    if (!hasOpenedRef.current) {
+      const message = "Live session could not stay connected. Please try again.";
+      shouldStayConnectedRef.current = false;
+      setMicError(message);
+      logDebug(`Reconnect blocked before healthy open: ${reason}`);
+      toast.error(message);
+      updateStatus("error");
+      return;
+    }
     if (reconnectAttemptsRef.current >= MAX_RECONNECT_ATTEMPTS) {
       const message = "Live session dropped. Tap Start Live Session to retry.";
       setMicError(message);
       logDebug(`Reconnect stopped: ${reason}`);
       toast.error(message);
+      shouldStayConnectedRef.current = false;
       updateStatus("error");
       return;
     }
@@ -144,7 +150,7 @@ export default function VoiceCoach({ thinkingLevel, onStatusChange }: Props) {
     try {
       if (navigator.permissions?.query) {
         const permission = await navigator.permissions.query({ name: "microphone" as PermissionName });
-        logDebug(`Microphone permission: ${permission.state}`);
+        console.log(`[DirectorAI Voice] Microphone permission: ${permission.state}`);
         if (permission.state === "denied") {
           throw new Error("Microphone blocked. Enable microphone access in your browser settings, then reload this page.");
         }
@@ -344,7 +350,9 @@ Open the conversation by greeting them by name in 1-2 sentences and asking one d
     const proc = ctx.createScriptProcessor(4096, 1, 1);
     procRef.current = proc;
     proc.onaudioprocess = (e) => {
-      if (!sessionRef.current) return;
+      const session = sessionRef.current;
+      const conn = session?.conn as unknown as WebSocket | undefined;
+      if (!session || conn?.readyState !== WebSocket.OPEN) return;
       const f32 = e.inputBuffer.getChannelData(0);
       const i16 = new Int16Array(f32.length);
       let sum = 0;
@@ -364,18 +372,16 @@ Open the conversation by greeting them by name in 1-2 sentences and asking one d
         }
       }
       try {
-        sessionRef.current.sendRealtimeInput({
+        session.sendRealtimeInput({
           audio: { data: pcm16ToBase64(i16), mimeType: `audio/pcm;rate=${INPUT_SAMPLE_RATE}` },
         });
         audioChunksSentRef.current += 1;
-        setAudioChunksSent(audioChunksSentRef.current);
         lastAudioSentMsRef.current = Date.now();
         if (audioChunksSentRef.current === 1 || audioChunksSentRef.current % 25 === 0) {
           logDebug(`Audio sent: ${audioChunksSentRef.current} chunks`);
         }
       } catch (e) {
         logDebug("Audio send failed; socket may be closing", e);
-        scheduleReconnect("audio send failed");
       }
     };
     source.connect(proc);
@@ -441,18 +447,17 @@ Open the conversation by greeting them by name in 1-2 sentences and asking one d
         httpOptions: { apiVersion: "v1alpha" },
       });
       socketClosedDuringConnectRef.current = false;
+      hasOpenedRef.current = false;
 
-      const session = await ai.live.connect({
-        model: MODEL,
-        config: {
-          responseModalities: [Modality.AUDIO],
-          systemInstruction: buildSystemPrompt(),
-          inputAudioTranscription: {},
-          outputAudioTranscription: {},
-          speechConfig: {
-            voiceConfig: { prebuiltVoiceConfig: { voiceName: "Charon" } },
-          },
-          tools: [
+      const liveConfig: LiveConnectConfig = {
+        responseModalities: [Modality.AUDIO],
+        systemInstruction: buildSystemPrompt(),
+        inputAudioTranscription: {},
+        outputAudioTranscription: {},
+        speechConfig: {
+          voiceConfig: { prebuiltVoiceConfig: { voiceName: "Charon" } },
+        },
+        tools: [
             {
               functionDeclarations: [
                 {
@@ -479,11 +484,16 @@ Open the conversation by greeting them by name in 1-2 sentences and asking one d
                 },
               ],
             },
-          ],
-        },
+        ],
+      };
+
+      const session = await ai.live.connect({
+        model: MODEL,
+        config: liveConfig,
         callbacks: {
           onopen: () => {
             logDebug("Live socket open");
+            hasOpenedRef.current = true;
             reconnectAttemptsRef.current = 0;
             updateStatus("connected");
           },
@@ -493,9 +503,9 @@ Open the conversation by greeting them by name in 1-2 sentences and asking one d
             logDebug("Live socket error", e);
             scheduleReconnect("socket error");
           },
-          onclose: () => {
+          onclose: (event: CloseEvent) => {
             socketClosedDuringConnectRef.current = true;
-            logDebug("Live socket closed");
+            logDebug(`Live socket closed: ${event.code} ${event.reason || "no reason"}`);
             sessionRef.current = null;
             if (suppressNextCloseRef.current) {
               suppressNextCloseRef.current = false;
@@ -505,7 +515,13 @@ Open the conversation by greeting them by name in 1-2 sentences and asking one d
               updateStatus("idle");
               return;
             }
-            scheduleReconnect("socket closed unexpectedly");
+            if (hasOpenedRef.current) {
+              scheduleReconnect("socket closed unexpectedly");
+            } else {
+              shouldStayConnectedRef.current = false;
+              setMicError("Live session could not stay connected. Please try again.");
+              updateStatus("error");
+            }
           },
         },
       });
@@ -549,7 +565,6 @@ Open the conversation by greeting them by name in 1-2 sentences and asking one d
     playbackTimeRef.current = 0;
     reconnectAttemptsRef.current = 0;
     audioChunksSentRef.current = 0;
-    setAudioChunksSent(0);
     updateStatus("idle");
   }, [clearTimers, logDebug, stopMic, updateStatus]);
 
@@ -613,32 +628,9 @@ Open the conversation by greeting them by name in 1-2 sentences and asking one d
         )}
       </div>
 
-      {(micError || debugLines.length > 0) && (
-        <div className="w-full max-w-2xl rounded-lg border border-border bg-card/50 px-4 py-3 text-left">
-          {micError && (
-            <div className="mb-3 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-              {micError}
-            </div>
-          )}
-          <div className="grid gap-2 text-xs text-muted-foreground sm:grid-cols-3">
-            <div>
-              <span className="block uppercase tracking-wider text-gold/80">Socket</span>
-              <span className="text-foreground">{status}</span>
-            </div>
-            <div>
-              <span className="block uppercase tracking-wider text-gold/80">Mic Level</span>
-              <span className="text-foreground">{micLevel.toFixed(2)}</span>
-            </div>
-            <div>
-              <span className="block uppercase tracking-wider text-gold/80">Audio Sent</span>
-              <span className="text-foreground">{audioChunksSent} chunks</span>
-            </div>
-          </div>
-          <div className="mt-3 space-y-1 border-t border-border pt-3 font-mono text-[11px] text-muted-foreground">
-            {debugLines.map((line, index) => (
-              <div key={`${line}-${index}`}>{line}</div>
-            ))}
-          </div>
+      {micError && (
+        <div className="w-full max-w-2xl rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+          {micError}
         </div>
       )}
 
