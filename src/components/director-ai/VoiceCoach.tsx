@@ -44,6 +44,7 @@ export default function VoiceCoach({ thinkingLevel, onStatusChange }: Props) {
   const { context: coachingContext } = useCoachingContext();
   const [status, setStatus] = useState<Status>("idle");
   const [transcript, setTranscript] = useState<{ role: "user" | "assistant"; text: string }[]>([]);
+  const [micLevel, setMicLevel] = useState(0);
 
   const sessionRef = useRef<Session | null>(null);
   const inputCtxRef = useRef<AudioContext | null>(null);
@@ -54,6 +55,8 @@ export default function VoiceCoach({ thinkingLevel, onStatusChange }: Props) {
   const playbackTimeRef = useRef(0);
   const currentInputTextRef = useRef("");
   const currentOutputTextRef = useRef("");
+  const lastLevelUpdateRef = useRef(0);
+  const socketClosedDuringConnectRef = useRef(false);
 
   const updateStatus = useCallback((s: Status) => {
     setStatus(s);
@@ -224,6 +227,7 @@ Open the conversation by greeting them by name in 1-2 sentences and asking one d
     streamRef.current = stream;
     const ctx = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: INPUT_SAMPLE_RATE });
     inputCtxRef.current = ctx;
+    if (ctx.state === "suspended") await ctx.resume();
     const source = ctx.createMediaStreamSource(stream);
     sourceRef.current = source;
     const proc = ctx.createScriptProcessor(4096, 1, 1);
@@ -232,9 +236,16 @@ Open the conversation by greeting them by name in 1-2 sentences and asking one d
       if (!sessionRef.current) return;
       const f32 = e.inputBuffer.getChannelData(0);
       const i16 = new Int16Array(f32.length);
+      let sum = 0;
       for (let i = 0; i < f32.length; i++) {
         const s = Math.max(-1, Math.min(1, f32[i]));
+        sum += s * s;
         i16[i] = s < 0 ? s * 0x8000 : s * 0x7fff;
+      }
+      const now = performance.now();
+      if (now - lastLevelUpdateRef.current > 100) {
+        lastLevelUpdateRef.current = now;
+        setMicLevel(Math.min(1, Math.sqrt(sum / f32.length) * 8));
       }
       try {
         sessionRef.current.sendRealtimeInput({
@@ -253,6 +264,15 @@ Open the conversation by greeting them by name in 1-2 sentences and asking one d
     if (status === "connecting" || status === "connected" || status === "listening" || status === "speaking") return;
     updateStatus("connecting");
     try {
+      // Create and resume output audio immediately from the user's click so
+      // browser autoplay policies don't silently block Gemini's voice later.
+      const outCtx = new (window.AudioContext || (window as any).webkitAudioContext)({
+        sampleRate: OUTPUT_SAMPLE_RATE,
+      });
+      outputCtxRef.current = outCtx;
+      playbackTimeRef.current = 0;
+      if (outCtx.state === "suspended") await outCtx.resume();
+
       // 1. Mint ephemeral token
       const { data: sessData } = await supabase.auth.getSession();
       const accessToken = sessData?.session?.access_token;
@@ -272,18 +292,12 @@ Open the conversation by greeting them by name in 1-2 sentences and asking one d
       if (!tokenResp.ok) throw new Error("Could not mint live token");
       const { token } = await tokenResp.json();
 
-      // 2. Output audio context
-      const outCtx = new (window.AudioContext || (window as any).webkitAudioContext)({
-        sampleRate: OUTPUT_SAMPLE_RATE,
-      });
-      outputCtxRef.current = outCtx;
-      playbackTimeRef.current = 0;
-
       // 3. Connect to Live API with ephemeral token
       const ai = new GoogleGenAI({
         apiKey: token,
         httpOptions: { apiVersion: "v1alpha" },
       });
+      socketClosedDuringConnectRef.current = false;
 
       const session = await ai.live.connect({
         model: MODEL,
@@ -335,14 +349,22 @@ Open the conversation by greeting them by name in 1-2 sentences and asking one d
             updateStatus("error");
           },
           onclose: () => {
+            socketClosedDuringConnectRef.current = true;
             updateStatus("idle");
           },
         },
       });
       sessionRef.current = session;
 
+      if (socketClosedDuringConnectRef.current) {
+        throw new Error("Live connection closed before the microphone was ready");
+      }
+
       // 4. Start mic
       await startMic();
+      if (socketClosedDuringConnectRef.current) {
+        throw new Error("Live connection closed before audio streaming started");
+      }
       updateStatus("listening");
 
       // 5. Kick off greeting
@@ -371,6 +393,7 @@ Open the conversation by greeting them by name in 1-2 sentences and asking one d
     outputCtxRef.current = null;
     streamRef.current = null;
     playbackTimeRef.current = 0;
+    setMicLevel(0);
     updateStatus("idle");
   }, [updateStatus]);
 
@@ -386,7 +409,7 @@ Open the conversation by greeting them by name in 1-2 sentences and asking one d
   return (
     <div className="flex flex-col items-center gap-6 w-full">
       <div className="relative">
-        <JarvisOrb state={orbState as any} audioLevel={status === "speaking" ? 0.6 : 0} />
+        <JarvisOrb state={orbState as any} audioLevel={status === "speaking" ? 0.6 : micLevel} />
       </div>
 
       <div className="text-center">
