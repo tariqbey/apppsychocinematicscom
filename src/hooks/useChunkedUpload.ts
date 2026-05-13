@@ -30,13 +30,12 @@ export const useChunkedUpload = () => {
     ): Promise<string | null> => {
       const { bucket, onProgress, onError, chunkSize = 5 * 1024 * 1024 } = options;
 
-      // For files under 50MB, use standard upload with XHR for progress
+      // Always use XHR-based upload so we get real upload progress events.
+      // fetch() does not emit progress, which made large uploads look frozen.
       if (file.size < 50 * 1024 * 1024) {
         return uploadWithProgress(file, filePath, bucket, onProgress, onError);
       }
-
-      // For larger files, use resumable upload
-      return uploadResumable(file, filePath, bucket, chunkSize, onProgress, onError);
+      return uploadWithRetry(file, filePath, bucket, onProgress, onError);
     },
     []
   );
