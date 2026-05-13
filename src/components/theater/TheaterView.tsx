@@ -228,7 +228,8 @@ export const TheaterView = ({ onClose }: TheaterViewProps) => {
     }
   };
 
-  const handleUploadComplete = () => {
+  const handleUploadComplete = (url: string) => {
+    setUploadedVideoUrl(url);
     setShowUploader(false);
   };
 
