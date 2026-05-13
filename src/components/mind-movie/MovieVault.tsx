@@ -441,9 +441,10 @@ interface RitualMovieCardProps {
   onShareToCommunity: () => void;
   onReplace: () => void;
   isReplacing?: boolean;
+  replaceProgress?: number;
 }
 
-function RitualMovieCard({ movieUrl, displayName, onPreview, onShareToCommunity, onReplace, isReplacing }: RitualMovieCardProps) {
+function RitualMovieCard({ movieUrl, displayName, onPreview, onShareToCommunity, onReplace, isReplacing, replaceProgress = 0 }: RitualMovieCardProps) {
   const [duration, setDuration] = useState<number | null>(null);
 
   useEffect(() => {
@@ -538,6 +539,13 @@ function RitualMovieCard({ movieUrl, displayName, onPreview, onShareToCommunity,
         <p className="text-xs text-muted-foreground line-clamp-2 mb-3 italic">
           This is your main Mind Movie that plays during your morning ritual.
         </p>
+
+        {isReplacing && (
+          <div className="mb-3 space-y-1">
+            <Progress value={replaceProgress} className="h-2" />
+            <p className="text-xs text-muted-foreground">Uploading… {replaceProgress}%</p>
+          </div>
+        )}
 
         {/* Actions */}
         <div className="flex flex-wrap items-center gap-1 sm:gap-2">
