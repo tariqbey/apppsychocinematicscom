@@ -346,8 +346,6 @@ Open the conversation by greeting them by name in 1-2 sentences and asking one d
     procRef.current = proc;
     proc.onaudioprocess = (e) => {
       const session = sessionRef.current;
-      const conn = session?.conn as unknown as WebSocket | undefined;
-      if (!session || conn?.readyState !== WebSocket.OPEN) return;
       const f32 = e.inputBuffer.getChannelData(0);
       const i16 = new Int16Array(f32.length);
       let sum = 0;
@@ -366,6 +364,7 @@ Open the conversation by greeting them by name in 1-2 sentences and asking one d
           logDebug(`Audio captured: level ${level.toFixed(2)}`);
         }
       }
+      if (!session) return;
       try {
         session.sendRealtimeInput({
           audio: { data: pcm16ToBase64(i16), mimeType: `audio/pcm;rate=${INPUT_SAMPLE_RATE}` },
