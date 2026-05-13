@@ -44,6 +44,7 @@ export default function VoiceCoach({ thinkingLevel, onStatusChange }: Props) {
   const { context: coachingContext } = useCoachingContext();
   const [status, setStatus] = useState<Status>("idle");
   const [transcript, setTranscript] = useState<{ role: "user" | "assistant"; text: string }[]>([]);
+  const [micLevel, setMicLevel] = useState(0);
 
   const sessionRef = useRef<Session | null>(null);
   const inputCtxRef = useRef<AudioContext | null>(null);
@@ -54,6 +55,7 @@ export default function VoiceCoach({ thinkingLevel, onStatusChange }: Props) {
   const playbackTimeRef = useRef(0);
   const currentInputTextRef = useRef("");
   const currentOutputTextRef = useRef("");
+  const lastLevelUpdateRef = useRef(0);
 
   const updateStatus = useCallback((s: Status) => {
     setStatus(s);
@@ -232,9 +234,16 @@ Open the conversation by greeting them by name in 1-2 sentences and asking one d
       if (!sessionRef.current) return;
       const f32 = e.inputBuffer.getChannelData(0);
       const i16 = new Int16Array(f32.length);
+      let sum = 0;
       for (let i = 0; i < f32.length; i++) {
         const s = Math.max(-1, Math.min(1, f32[i]));
+        sum += s * s;
         i16[i] = s < 0 ? s * 0x8000 : s * 0x7fff;
+      }
+      const now = performance.now();
+      if (now - lastLevelUpdateRef.current > 100) {
+        lastLevelUpdateRef.current = now;
+        setMicLevel(Math.min(1, Math.sqrt(sum / f32.length) * 8));
       }
       try {
         sessionRef.current.sendRealtimeInput({
@@ -371,6 +380,7 @@ Open the conversation by greeting them by name in 1-2 sentences and asking one d
     outputCtxRef.current = null;
     streamRef.current = null;
     playbackTimeRef.current = 0;
+    setMicLevel(0);
     updateStatus("idle");
   }, [updateStatus]);
 
@@ -386,7 +396,7 @@ Open the conversation by greeting them by name in 1-2 sentences and asking one d
   return (
     <div className="flex flex-col items-center gap-6 w-full">
       <div className="relative">
-        <JarvisOrb state={orbState as any} audioLevel={status === "speaking" ? 0.6 : 0} />
+        <JarvisOrb state={orbState as any} audioLevel={status === "speaking" ? 0.6 : micLevel} />
       </div>
 
       <div className="text-center">
