@@ -84,6 +84,25 @@ export default function VoiceCoach({ thinkingLevel, onStatusChange }: Props) {
     onStatusChange?.(s);
   }, [onStatusChange]);
 
+  const stopMic = useCallback(() => {
+    try { procRef.current?.disconnect(); } catch {}
+    try { sourceRef.current?.disconnect(); } catch {}
+    try { inputCtxRef.current?.close(); } catch {}
+    streamRef.current?.getTracks().forEach((t) => t.stop());
+    procRef.current = null;
+    sourceRef.current = null;
+    inputCtxRef.current = null;
+    streamRef.current = null;
+    setMicLevel(0);
+  }, []);
+
+  const clearTimers = useCallback(() => {
+    if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
+    if (healthTimerRef.current) clearInterval(healthTimerRef.current);
+    reconnectTimerRef.current = null;
+    healthTimerRef.current = null;
+  }, []);
+
   // ===== Tool handlers =====
   const callTool = useCallback(async (name: string, args: Record<string, unknown>) => {
     if (!user) return { error: "Not authenticated" };
