@@ -177,6 +177,18 @@ serve(async (req) => {
       );
     }
 
+    // Verify request is actually from Telegram via the secret_token registered with setWebhook.
+    // This prevents user enumeration and unauthenticated webhook injection.
+    const expectedSecret = await deriveWebhookSecret(userId);
+    const providedSecret = req.headers.get("X-Telegram-Bot-Api-Secret-Token");
+    if (!safeEqual(providedSecret, expectedSecret)) {
+      console.warn("Telegram webhook secret mismatch", { userId, hasHeader: !!providedSecret });
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     const update: TelegramUpdate = await req.json();
     console.log("Telegram update received:", JSON.stringify(update));
 
