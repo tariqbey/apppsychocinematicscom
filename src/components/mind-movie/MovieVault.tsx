@@ -265,11 +265,7 @@ export function MovieVault({ isOpen, onClose, onSelectMovie, onCreateNew }: Movi
             </div>
           </div>
 
-          {/* Desktop: Create button */}
-          <Button variant="gold" onClick={onCreateNew} className="hidden sm:flex">
-            <Plus className="w-4 h-4 mr-2" />
-            Start New Movie
-          </Button>
+          {/* Create disabled */}
         </div>
       </div>
 
