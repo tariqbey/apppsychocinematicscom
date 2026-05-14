@@ -31,26 +31,38 @@ async function sendTelegramMessage(botToken: string, chatId: string, text: strin
   }
 }
 
+async function deriveWebhookSecret(userId: string): Promise<string> {
+  const seed = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+  const data = new TextEncoder().encode(`telegram-webhook:${seed}:${userId}`);
+  const digest = await crypto.subtle.digest("SHA-256", data);
+  return btoa(String.fromCharCode(...new Uint8Array(digest)))
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/g, "");
+}
+
 async function setWebhook(botToken: string, userId: string): Promise<{ success: boolean; error?: string; webhookUrl?: string }> {
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
   const webhookUrl = `${supabaseUrl}/functions/v1/telegram-webhook/${userId}`;
-  
+  const secretToken = await deriveWebhookSecret(userId);
+
   try {
     const response = await fetch(`https://api.telegram.org/bot${botToken}/setWebhook`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         url: webhookUrl,
+        secret_token: secretToken,
         allowed_updates: ["message"],
       }),
     });
-    
+
     const data = await response.json();
-    
+
     if (!data.ok) {
       return { success: false, error: data.description || "Failed to set webhook" };
     }
-    
+
     return { success: true, webhookUrl };
   } catch (error) {
     console.error("Webhook setup error:", error);
