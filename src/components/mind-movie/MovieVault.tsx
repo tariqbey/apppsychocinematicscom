@@ -749,10 +749,7 @@ function MovieCard({
 
         {/* Actions - Responsive grid */}
         <div className="flex flex-wrap items-center gap-1 sm:gap-2">
-          <Button variant="outline" size="sm" className="flex-1 min-w-[80px]" onClick={onSelect}>
-            <Edit3 className="w-3 h-3 mr-1" />
-            Edit
-          </Button>
+          {/* Edit disabled */}
 
           {!movie.is_active && hasVideo && (
             <Button
