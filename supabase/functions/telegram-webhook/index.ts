@@ -134,6 +134,23 @@ function getTimeOfDay(): string {
   return "evening";
 }
 
+export async function deriveWebhookSecret(userId: string): Promise<string> {
+  const seed = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+  const data = new TextEncoder().encode(`telegram-webhook:${seed}:${userId}`);
+  const digest = await crypto.subtle.digest("SHA-256", data);
+  return btoa(String.fromCharCode(...new Uint8Array(digest)))
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/g, "");
+}
+
+function safeEqual(a: string | null, b: string): boolean {
+  if (!a || a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
+}
+
 serve(async (req) => {
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
@@ -157,6 +174,18 @@ serve(async (req) => {
       return new Response(
         JSON.stringify({ error: "User ID required in webhook path" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Verify request is actually from Telegram via the secret_token registered with setWebhook.
+    // This prevents user enumeration and unauthenticated webhook injection.
+    const expectedSecret = await deriveWebhookSecret(userId);
+    const providedSecret = req.headers.get("X-Telegram-Bot-Api-Secret-Token");
+    if (!safeEqual(providedSecret, expectedSecret)) {
+      console.warn("Telegram webhook secret mismatch", { userId, hasHeader: !!providedSecret });
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
