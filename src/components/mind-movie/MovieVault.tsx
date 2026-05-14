@@ -237,10 +237,7 @@ export function MovieVault({ isOpen, onClose, onSelectMovie, onCreateNew }: Movi
               </p>
             </div>
           </div>
-          {/* Mobile: Create button in header row */}
-          <Button variant="gold" size="icon" onClick={onCreateNew} className="sm:hidden shrink-0">
-            <Plus className="w-5 h-5" />
-          </Button>
+          {/* Create disabled */}
         </div>
 
         {/* Second row on mobile: Storage + Create button */}
