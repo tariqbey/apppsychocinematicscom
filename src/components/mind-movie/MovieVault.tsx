@@ -237,10 +237,7 @@ export function MovieVault({ isOpen, onClose, onSelectMovie, onCreateNew }: Movi
               </p>
             </div>
           </div>
-          {/* Mobile: Create button in header row */}
-          <Button variant="gold" size="icon" onClick={onCreateNew} className="sm:hidden shrink-0">
-            <Plus className="w-5 h-5" />
-          </Button>
+          {/* Create disabled */}
         </div>
 
         {/* Second row on mobile: Storage + Create button */}
@@ -268,11 +265,7 @@ export function MovieVault({ isOpen, onClose, onSelectMovie, onCreateNew }: Movi
             </div>
           </div>
 
-          {/* Desktop: Create button */}
-          <Button variant="gold" onClick={onCreateNew} className="hidden sm:flex">
-            <Plus className="w-4 h-4 mr-2" />
-            Start New Movie
-          </Button>
+          {/* Create disabled */}
         </div>
       </div>
 
@@ -314,16 +307,10 @@ export function MovieVault({ isOpen, onClose, onSelectMovie, onCreateNew }: Movi
               </h3>
               <p className="text-muted-foreground mb-6 max-w-md mx-auto">
                 {vaultFilter === "episode" 
-                  ? "Create a Mind Movie from your episodes to visualize your short-term sprints."
-                  : "Your Mind Movie is the trailer for the life you're building. Shoot your first one and watch it daily."
+                  ? "Episode Mind Movies will appear here as they are produced for you."
+                  : "Your Mind Movie collection will appear here. Movie creation is currently unavailable."
                 }
               </p>
-              {vaultFilter !== "episode" && (
-                <Button variant="gold" size="lg" onClick={onCreateNew}>
-                  <Plus className="w-4 h-4 mr-2" />
-                  Create Your First Movie
-                </Button>
-              )}
             </div>
           </div>
         ) : (
@@ -762,10 +749,7 @@ function MovieCard({
 
         {/* Actions - Responsive grid */}
         <div className="flex flex-wrap items-center gap-1 sm:gap-2">
-          <Button variant="outline" size="sm" className="flex-1 min-w-[80px]" onClick={onSelect}>
-            <Edit3 className="w-3 h-3 mr-1" />
-            Edit
-          </Button>
+          {/* Edit disabled */}
 
           {!movie.is_active && hasVideo && (
             <Button

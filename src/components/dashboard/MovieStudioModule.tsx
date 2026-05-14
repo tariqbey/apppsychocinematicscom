@@ -33,55 +33,32 @@ import { Film, Clapperboard, Music, FolderOpen, X, Sparkles } from "lucide-react
    const navigate = useNavigate();
    const [isOpen, setIsOpen] = useState(false);
  
-   const studioOptions: StudioOption[] = [
-     {
-       id: "storyboard",
-       title: "Storyboard",
-       description: "Plan your vision with AI-generated scenes",
-       icon: <Film className="w-6 h-6 text-amber-500" />,
-       color: "from-amber-500/20 to-orange-600/20",
-       onClick: () => {
-         setIsOpen(false);
-         onOpenStoryboard();
-       },
-     },
-     {
-       id: "edit-bay",
-       title: "The Edit Bay",
-       description: "Generate images & videos with AI",
-       icon: null,
-       iconImage: iconEditBay,
-       color: "from-gold/20 to-amber-500/20",
-       onClick: () => {
-         setIsOpen(false);
-         onOpenEditBay();
-       },
-     },
-     {
-       id: "soundtrack",
-       title: "Soundtrack Studio",
-       description: "Create custom AI music & lyrics",
-       icon: null,
-       iconImage: iconSoundtrack,
-       color: "from-pink-500/20 to-rose-600/20",
-       onClick: () => {
-         setIsOpen(false);
-         navigate("/soundtrack");
-       },
-     },
-     {
-       id: "vault",
-       title: "Mind Movie Vault",
-       description: "Manage your movie collection",
-       icon: null,
-       iconImage: iconMindMovie,
-       color: "from-amber-500/20 to-yellow-600/20",
-       onClick: () => {
-         setIsOpen(false);
-         onOpenMovieVault();
-       },
-     },
-   ];
+  const studioOptions: StudioOption[] = [
+    {
+      id: "soundtrack",
+      title: "Soundtrack Studio",
+      description: "Create custom AI music & lyrics",
+      icon: null,
+      iconImage: iconSoundtrack,
+      color: "from-pink-500/20 to-rose-600/20",
+      onClick: () => {
+        setIsOpen(false);
+        navigate("/soundtrack");
+      },
+    },
+    {
+      id: "vault",
+      title: "Mind Movie Vault",
+      description: "Watch your movie collection",
+      icon: null,
+      iconImage: iconMindMovie,
+      color: "from-amber-500/20 to-yellow-600/20",
+      onClick: () => {
+        setIsOpen(false);
+        onOpenMovieVault();
+      },
+    },
+  ];
  
    return (
      <>
@@ -117,9 +94,9 @@ import { Film, Clapperboard, Music, FolderOpen, X, Sparkles } from "lucide-react
                </h3>
                <Sparkles className="w-4 h-4 text-gold/60 animate-pulse" />
              </div>
-             <p className="text-xs sm:text-sm text-muted-foreground">
-               Storyboard • Edit Bay • Soundtrack • Movie Vault
-             </p>
+            <p className="text-xs sm:text-sm text-muted-foreground">
+              Soundtrack • Movie Vault
+            </p>
            </div>
            <div className="hidden sm:flex items-center gap-2 text-sm text-gold group-hover:text-gold transition-colors">
              <span>Open Studio</span>
