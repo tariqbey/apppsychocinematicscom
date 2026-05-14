@@ -94,9 +94,9 @@ import { Film, Clapperboard, Music, FolderOpen, X, Sparkles } from "lucide-react
                </h3>
                <Sparkles className="w-4 h-4 text-gold/60 animate-pulse" />
              </div>
-             <p className="text-xs sm:text-sm text-muted-foreground">
-               Storyboard • Edit Bay • Soundtrack • Movie Vault
-             </p>
+            <p className="text-xs sm:text-sm text-muted-foreground">
+              Soundtrack • Movie Vault
+            </p>
            </div>
            <div className="hidden sm:flex items-center gap-2 text-sm text-gold group-hover:text-gold transition-colors">
              <span>Open Studio</span>
