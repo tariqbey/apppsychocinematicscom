@@ -229,22 +229,69 @@ Keep response under 400 words.
     const aiResponse = await response.json();
     const analysis = aiResponse.choices?.[0]?.message?.content || "Unable to generate analysis.";
 
+    // For single entry analysis: also tag relevant laws + fear signals
+    let relevantLaws: string[] = [];
+    let fearSignals: string[] = [];
+    if (analysisType === "single" && entryId) {
+      try {
+        const tagResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${LOVABLE_API_KEY}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model: "google/gemini-3-flash-preview",
+            messages: [
+              {
+                role: "system",
+                content: `You tag a journal entry against Napoleon Hill's 17 Laws of Success and his Six Basic Fears.
+
+LAWS (use the exact names): Definite Chief Aim, Self-Confidence, Habit of Saving, Initiative and Leadership, Imagination, Enthusiasm, Self-Control, Doing More Than Paid For, Pleasing Personality, Accurate Thinking, Concentration, Cooperation (Master Mind), Profiting from Failure, Tolerance, The Golden Rule, Cosmic Habitforce, The Master Mind.
+
+FEARS (use exactly): Fear of Poverty, Fear of Criticism, Fear of Ill Health, Fear of Loss of Love, Fear of Old Age, Fear of Death.
+
+Return ONLY valid JSON, no prose, no markdown fences:
+{"relevant_laws":["..."],"fear_signals":["..."]}
+Pick at most 3 laws and at most 2 fears. Use empty arrays if nothing applies.`,
+              },
+              { role: "user", content: entries[0].content?.substring(0, 4000) || "" },
+            ],
+            response_format: { type: "json_object" },
+          }),
+        });
+        if (tagResp.ok) {
+          const tj = await tagResp.json();
+          const raw = tj.choices?.[0]?.message?.content || "{}";
+          const parsed = JSON.parse(raw);
+          relevantLaws = Array.isArray(parsed.relevant_laws) ? parsed.relevant_laws.slice(0, 3) : [];
+          fearSignals = Array.isArray(parsed.fear_signals) ? parsed.fear_signals.slice(0, 2) : [];
+        }
+      } catch (e) {
+        console.error("Law/fear tagging failed:", e);
+      }
+    }
+
     // If single entry, save the analysis to the entry
     if (analysisType === "single" && entryId) {
       await supabase
         .from("journal_entries")
-        .update({ 
+        .update({
           ai_analysis: analysis,
-          ai_analyzed_at: new Date().toISOString()
+          ai_analyzed_at: new Date().toISOString(),
+          relevant_laws: relevantLaws,
+          fear_signals: fearSignals,
         })
         .eq("id", entryId)
         .eq("user_id", user.id);
     }
 
-    return new Response(JSON.stringify({ 
+    return new Response(JSON.stringify({
       analysis,
       analysisType,
-      entriesAnalyzed: entries.length
+      entriesAnalyzed: entries.length,
+      relevant_laws: relevantLaws,
+      fear_signals: fearSignals,
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

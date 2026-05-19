@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { useVoiceInput } from "@/hooks/useVoiceInput";
 import { useEpisodes } from "@/hooks/useEpisodes";
 import { supabase } from "@/integrations/supabase/client";
+import { SuggestedTaskCard } from "./SuggestedTaskCard";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,10 +15,43 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
+interface SuggestedTask {
+  title: string;
+  due_date?: string; // "today" | "tomorrow" | "YYYY-MM-DD"
+  linked_law?: string;
+  why?: string;
+}
+
 interface Message {
   id: string;
   role: "user" | "assistant";
   content: string;
+}
+
+const SUGGEST_TASK_REGEX = /\[SUGGEST_TASK:(\{[\s\S]*?\})\]/;
+
+function parseSuggestedTask(content: string): { clean: string; task: SuggestedTask | null } {
+  const m = content.match(SUGGEST_TASK_REGEX);
+  if (!m) return { clean: content, task: null };
+  try {
+    const task = JSON.parse(m[1]) as SuggestedTask;
+    if (!task?.title) return { clean: content.replace(SUGGEST_TASK_REGEX, "").trim(), task: null };
+    return { clean: content.replace(SUGGEST_TASK_REGEX, "").trim(), task };
+  } catch {
+    return { clean: content.replace(SUGGEST_TASK_REGEX, "").trim(), task: null };
+  }
+}
+
+function resolveDueDate(due?: string): string {
+  const today = new Date();
+  if (!due || due === "today") return today.toISOString().split("T")[0];
+  if (due === "tomorrow") {
+    const t = new Date(today);
+    t.setDate(t.getDate() + 1);
+    return t.toISOString().split("T")[0];
+  }
+  if (/^\d{4}-\d{2}-\d{2}$/.test(due)) return due;
+  return today.toISOString().split("T")[0];
 }
 
 interface DirectorAIChatProps {
@@ -365,7 +399,10 @@ export const DirectorAIChat = ({ isOpen, onToggle, chiefAim, userId }: DirectorA
   }, []);
 
   const speakText = useCallback(async (text: string) => {
-    if (!ttsEnabled || !text.trim()) return;
+    // Strip any [SUGGEST_TASK:{...}] marker so TTS doesn't read it aloud
+    const spoken = text.replace(SUGGEST_TASK_REGEX, "").trim();
+    if (!ttsEnabled || !spoken.trim()) return;
+    text = spoken;
 
     try {
       setIsSpeaking(true);
@@ -720,26 +757,38 @@ export const DirectorAIChat = ({ isOpen, onToggle, chiefAim, userId }: DirectorA
                 </div>
               </div>
             )}
-            {messages.map((message) => (
-              <div
-                key={message.id}
-                className={cn(
-                  "flex",
-                  message.role === "user" ? "justify-end" : "justify-start"
-                )}
-              >
+            {messages.map((message) => {
+              const { clean, task } = message.role === "assistant"
+                ? parseSuggestedTask(message.content)
+                : { clean: message.content, task: null as SuggestedTask | null };
+              return (
                 <div
+                  key={message.id}
                   className={cn(
-                    "max-w-[85%] rounded-lg p-3 text-sm",
-                    message.role === "user"
-                      ? "bg-gold text-primary-foreground"
-                      : "bg-secondary text-foreground"
+                    "flex flex-col gap-2",
+                    message.role === "user" ? "items-end" : "items-start"
                   )}
                 >
-                  <p className="whitespace-pre-wrap">{message.content}</p>
+                  <div
+                    className={cn(
+                      "max-w-[85%] rounded-lg p-3 text-sm",
+                      message.role === "user"
+                        ? "bg-gold text-primary-foreground"
+                        : "bg-secondary text-foreground"
+                    )}
+                  >
+                    <p className="whitespace-pre-wrap">{clean}</p>
+                  </div>
+                  {task && (
+                    <SuggestedTaskCard
+                      task={task}
+                      userId={userId}
+                      messageId={message.id}
+                    />
+                  )}
                 </div>
-              </div>
-            ))}
+              );
+            })}
             {isLoading && messages[messages.length - 1]?.role !== "assistant" && (
               <div className="flex justify-start">
                 <div className="bg-secondary rounded-lg p-3">
