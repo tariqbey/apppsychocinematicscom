@@ -1,122 +1,60 @@
+## Plan: Make Director AI sharper, less repetitive, and fully context-aware
 
+### Goals
+- Stop the Director AI from getting stuck asking the same question repeatedly.
+- Give it stronger access to journal entries, daily actions, ritual execution, excuses, Chief Aim, and character alignment.
+- Tune the coach voice toward the direct “you bullshitting / whose movie are you in?” swag accountability style while still motivating hard when the user is winning.
 
-# Full Codebase Optimization Plan
+### What I’ll change
 
-## Part A: Fix Build Errors (Immediate)
+1. **Fix the loop/repetition behavior in live voice mode**
+   - Update `src/components/director-ai/VoiceCoach.tsx` so the opening prompt does not restart the same greeting pattern every reconnect/session turn.
+   - Strengthen the live system prompt with explicit anti-loop rules: never repeat the previous question, acknowledge if the user has not answered, and move to a different angle/action instead of asking the same thing again.
+   - Add a small transcript-aware guard so recent user/assistant turns can be summarized into the prompt before opening or reconnecting.
 
-The `NodeJS.Timeout` type is unavailable because `tsconfig.app.json` doesn't include Node types. Replace all `NodeJS.Timeout` references with `ReturnType<typeof setTimeout>` across six files:
+2. **Expand the live voice tools/context**
+   - Add tools in `VoiceCoach.tsx` for:
+     - recent journal entries,
+     - today’s tasks/action executions,
+     - recent incomplete-task excuses,
+     - today’s ritual status,
+     - Chief Aim details.
+   - Update tool descriptions so Gemini Live knows when to call them instead of guessing.
 
-- `src/components/challenges/ChallengeSoundtrackGenerator.tsx` (line 65)
-- `src/components/testimonials/TestimonialRecorder.tsx` (lines 74, 78)
-- `src/contexts/PointsContext.tsx` (line 53)
-- `src/hooks/useScheduledReminders.ts` (lines 62, 63)
-- `src/hooks/useVoiceInput.ts` (line 60)
+3. **Upgrade the Director AI backend coaching context**
+   - Update `supabase/functions/director-ai/index.ts` to fetch richer status from the database:
+     - today’s completed and incomplete tasks,
+     - action execution ritual status,
+     - recent journal themes/moods,
+     - recent excuse patterns,
+     - scorecard status if available,
+     - Chief Aim as the authoritative source.
+   - Add an “accountability read” section that interprets the data instead of merely listing it: green light, yellow light, or bullshit alert.
 
----
+4. **Tune the voice/personality**
+   - Strengthen the `swag`/`hustler` coaching style to match your requested tone:
+     - “Yo, you bullshitting today” when actions do not match the Chief Aim,
+     - “Whose movie are you in?” when the user is acting out of alignment,
+     - “KUT, reset, resume” when they’re off-script,
+     - “Keep pushing, baby” / high-energy celebration when they’re executing.
+   - Keep it short, spoken, and TTS-friendly with numbers spelled out.
 
-## Part B: Performance — Lazy Loading (High Impact)
+5. **Make the greeting proactive**
+   - Update `generateProactiveOpening` in `DirectorAIAgent.tsx` and the backend greeting logic so the first thing the coach says is based on current status:
+     - if tasks/journal/action execution are missing: direct accountability,
+     - if excuses repeat: call the pattern out,
+     - if actions are done: celebrate and push forward,
+     - if Chief Aim is missing or incomplete: drive them back to the Final Scene.
 
-**File: `src/App.tsx`**
+6. **Safety/quality checks**
+   - Verify the chat and voice code still uses authenticated calls.
+   - Check that prompts do not encourage harmful abuse; the coach stays blunt, motivating, and aligned with the user’s preferred style.
+   - Run targeted verification through code inspection and any available function/log checks if needed.
 
-Convert all page imports to `React.lazy()` and wrap `<Routes>` in `<Suspense fallback={<AppLoader />}>`. This cuts initial bundle by ~40-60%.
-
-Pages to lazy-load (all except `Index` which is the landing):
-- Signup, DirectorCorner, Subscribe, SubscriptionSuccess, CreditsSuccess, Credits, DirectorsGuide, AdminDashboard, AwardsCeremony, Settings, Actions, Character, Episodes, Soundtrack, Music, Radio, Score, DoneForYou, DFYSuccess, Challenges, ResetPassword, DirectorProfile, DirectorAI, Blueprint, NotFound
-
----
-
-## Part C: Route Cleanup
-
-**File: `src/App.tsx`**
-
-Replace duplicate route aliases with `<Navigate>` redirects:
-
-```text
-/user-manual → redirect to /guide
-/manual      → redirect to /guide
-/tutorial    → redirect to /guide
-/tutorials   → redirect to /guide
-```
-
----
-
-## Part D: Error Boundaries
-
-**New file: `src/components/ui/FeatureErrorBoundary.tsx`**
-
-Create a reusable error boundary component with cinematic styling (dark card, gold accent, "Scene interrupted" messaging, retry button).
-
-Wrap these high-risk sections in `Index.tsx` and other pages:
-- TheaterView
-- DirectorAIChat / DirectorAIAgent
-- EditBay (timeline editor)
-- MindMovieScriptWizard
-- DirectorsJournal (already has one — keep it)
-
----
-
-## Part E: Consolidate Audio Context
-
-**File: `src/contexts/AudioContext.tsx`**
-
-Remove `useAudioOptional()`. Search all consumers — any component using `useAudioOptional` should be confirmed as always rendered inside `<AudioProvider>` (which wraps the entire app), then switched to `useAudio()`.
-
----
-
-## Part F: Branded Loading State
-
-**File: `src/components/ui/AppLoader.tsx`**
-
-The cinematic splash already exists. Ensure the `<Suspense>` fallback in Part B uses `<AppLoader />` (the simple variant) so lazy-loaded pages get the branded spinner with the Psycho-Cinematics logo instead of a blank screen.
-
----
-
-## Part G: Empty States
-
-Audit key list views and add cinematic empty states with clear CTAs:
-- Episodes list (no episodes) → "Your story hasn't started. Create Episode One."
-- Journal entries (none) → "The Director's chair is empty. Write your first entry."
-- Movie Vault (no movies) → "No footage in the vault. Shoot your first Mind Movie."
-- Community posts (none) → "The Director's Corner is quiet. Start the conversation."
-
-Each empty state: dark card, subtle film grain texture, gold CTA button, one-line motivational copy.
-
-**Files affected:**
-- `src/components/episodes/EpisodesList.tsx`
-- `src/components/journal/DirectorsJournal.tsx`
-- `src/components/mind-movie/MovieVault.tsx`
-- `src/components/community/CreatePostForm.tsx` or the community feed component
-
----
-
-## Part H: Accessibility Quick Wins
-
-- Director AI floating button: add `role="button"`, `aria-label="Open Director AI coach"`, keyboard focus ring
-- Gold-on-dark contrast: audit key text elements, bump gold from `#D4AF37` to `#E5C158` where needed for WCAG AA
-- Add per-route `<title>` via a small `useDocumentTitle` hook
-
----
-
-## Part I: Meta Tags Per Route
-
-**New file: `src/hooks/useDocumentTitle.ts`**
-
-Simple hook that sets `document.title` on mount. Call it in each page component:
-```
-useDocumentTitle("Episodes | Director's OS")
-```
-
----
-
-## Implementation Order
-
-1. **Part A** — Fix build errors (unblocks everything)
-2. **Part B + C + F** — Lazy loading + route cleanup + branded fallback (biggest perf win)
-3. **Part D** — Error boundaries (stability)
-4. **Part E** — Audio context consolidation (code quality)
-5. **Part G** — Empty states (UX)
-6. **Part H + I** — Accessibility + meta tags (polish)
-
-Total files created: 2 (`FeatureErrorBoundary.tsx`, `useDocumentTitle.ts`)
-Total files edited: ~15
-
+### Technical notes
+- Frontend files likely touched:
+  - `src/components/director-ai/VoiceCoach.tsx`
+  - `src/components/director-ai/DirectorAIAgent.tsx`
+- Backend file likely touched:
+  - `supabase/functions/director-ai/index.ts`
+- No new database tables are needed; the app already has journals, tasks, rituals, scorecards, profiles, and chat history.

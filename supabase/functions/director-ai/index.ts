@@ -19,21 +19,23 @@ const corsHeaders = {
 // Personality style prompts
 // Personality style prompts - ALL styles enforce BREVITY
 const PERSONALITY_STYLES: Record<string, string> = {
-  swag: `## COMMUNICATION STYLE - SWAG COACH (Keep It 100)
+  swag: `## COMMUNICATION STYLE - SWAG COACH (Keep It 100, Accountability With Love)
 
 **CRITICAL: Keep responses SHORT - 2-3 paragraphs MAX. Get to the point fast. No rambling.**
 
-- Warm but REAL - you care enough to be honest, no babying
-- Address them as "Director" - reminder of who they ARE
-- End with ONE specific question or action prompt
-- Celebrate wins BIG but brief: "YOOO that's Oscar-worthy! That's what I'm talking about!"
+- Warm but REAL - you care enough to be honest, no babying.
+- Address them as "Director" — reminder of WHO they ARE.
+- Open with a fast read on their status. If they're slipping, lead with: "Yo, you bullshittin' today?" or "Whose movie you in right now?"
+- When their actions don't match the Chief Aim: "You playin' a role that ain't yours. Call KUT and get back to your script."
+- When they ARE executing: "Keep pushin', baby — you almost there. That's Director energy."
+- Celebrate wins BIG but brief: "YOOO that's Oscar-worthy! That's what I'm talkin' about!"
 - Frame setbacks as "bad takes": "That was a bad take. So what? We reshoot."
-- When they're slacking: "Come on now, you're messing up your own movie!"
 - When they make excuses: "Nah nah nah, that's old script energy. What would your Director Character do RIGHT NOW?"
-- Add flavor: "You feel me?", "Real talk", "Let's get it", "Here's the thing"
-- Be encouraging but not soft: "I see you AND you gotta step it up."
+- Flavor: "You feel me?", "Real talk", "Let's get it", "Here's the thing".
+- End with ONE specific question or directive — never both.
 
-**NAPOLEON HILL LAW TO APPLY:** When relevant, mention which of the 17 Laws of Success applies - e.g., "This is Law #7: Self-Control. The KUT! technique."`,
+**NAPOLEON HILL LAW TO APPLY:** When relevant - e.g., "That's Law number seven: Self-Control. The KUT! technique."`,
+
 
   formal: `## COMMUNICATION STYLE - EXECUTIVE COACH (Professional Excellence)
 
@@ -298,9 +300,11 @@ serve(async (req) => {
     let ritualContext = "";
     let dbChiefAim: { what: string | null; byWhen: string | null; exchange: string | null; plan: string | null } | null = null;
     let dbChiefAimComplete = false;
+    let scorecardToday: { total_score: number | null } | null = null;
+    let completedTasksToday: Array<{ task_text: string }> = [];
     try {
       const today = new Date().toISOString().split('T')[0];
-      const [journalRes, excuseRes, profileRes, ritualRes] = await Promise.all([
+      const [journalRes, excuseRes, profileRes, ritualRes, scorecardRes, completedTasksRes] = await Promise.all([
         supabaseClient.from("journal_entries")
           .select("content, mood, ai_analysis, created_at")
           .eq("user_id", userId)
@@ -322,7 +326,21 @@ serve(async (req) => {
           .eq("user_id", userId)
           .eq("ritual_date", today)
           .single(),
+        supabaseClient.from("daily_scorecards")
+          .select("total_score")
+          .eq("user_id", userId)
+          .eq("scorecard_date", today)
+          .maybeSingle(),
+        supabaseClient.from("daily_tasks")
+          .select("task_text")
+          .eq("user_id", userId)
+          .eq("task_date", today)
+          .eq("is_completed", true),
       ]);
+
+      scorecardToday = scorecardRes.data ?? null;
+      completedTasksToday = completedTasksRes.data ?? [];
+
 
       // Use DB chief aim data (authoritative source)
       if (profileRes.data) {
@@ -518,7 +536,49 @@ COACHING DIRECTIVE: This is their CURRENT FOCUS. When discussing near-term actio
       contextSection += `\n\n## CHIEF AIM STATUS\n⚠️ The user has not yet defined their Definite Chief Aim. This is critical! Guide them toward Phase 1 (Pre-Production) to craft their Final Scene.`;
     }
 
-    const enhancedSystemPrompt = SYSTEM_PROMPT + contextSection + ritualContext + journalContext + excuseContext;
+    // ===== ACCOUNTABILITY READ =====
+    // Interpret the data into a verdict the coach should ACT on, not just recite.
+    const ctx: any = userContext || {};
+    const verdictParts: string[] = [];
+    const isMorning = ctx.timeOfDay === "morning";
+    const isEvening = ctx.timeOfDay === "evening";
+    const tasksTotal = ctx.todaysTasks?.length ?? 0;
+    const tasksDone = ctx.completedTasksCount ?? 0;
+    const completionRate = tasksTotal > 0 ? tasksDone / tasksTotal : null;
+    const repeatedExcuses = Object.values(
+      (excuseContext.match(/used (\d+) times/g) || []).reduce((acc: Record<string, number>, m) => {
+        const n = parseInt(m.replace(/\D/g, ""), 10);
+        acc.max = Math.max(acc.max || 0, n);
+        return acc;
+      }, {} as Record<string, number>)
+    )[0] as number | undefined;
+
+    if (!effectiveChiefAimComplete) {
+      verdictParts.push("🚨 NO CHIEF AIM. They're shooting a movie with no script. Lead with: 'Whose movie you in right now? You ain't even got your own script locked.' Push them to Phase one.");
+    } else if (isEvening && tasksTotal > 0 && completionRate !== null && completionRate < 0.34) {
+      verdictParts.push(`🚨 BULLSHIT ALERT (evening, ${tasksDone}/${tasksTotal} done). Open with: 'Yo, you bullshittin' today? It's evening and your Three Things ain't done.' Get the real reason — then prescribe ONE move before they sleep.`);
+    } else if (isMorning && !ctx.tasksSetForToday) {
+      verdictParts.push("⚠️ Morning, no Three Things set. Open with: 'Director, you can't direct a movie without a shot list. What three scenes are we shootin' today?'");
+    } else if (completionRate === 1) {
+      verdictParts.push("🟢 GREEN LIGHT: All tasks done. Lead with: 'Keep pushin', baby — that's Oscar-worthy execution.' Then push them to the NEXT level, don't let them coast.");
+    } else if (completionRate !== null && completionRate >= 0.5) {
+      verdictParts.push("🟡 MOMENTUM: Halfway or better. Acknowledge briefly, then push them to close out the remaining scenes today.");
+    }
+    if (repeatedExcuses && repeatedExcuses >= 3) {
+      verdictParts.push(`🔁 PATTERN: Same excuse showing up ${repeatedExcuses}+ times. Name it directly. Don't let it slide.`);
+    }
+    if (scorecardToday?.total_score !== undefined && scorecardToday?.total_score !== null && scorecardToday.total_score <= 4) {
+      verdictParts.push(`📉 Low scorecard today (${scorecardToday.total_score}/12). Ask what scene went off-script.`);
+    }
+    if (completedTasksToday.length > 0) {
+      verdictParts.push(`✓ Completed today: ${completedTasksToday.map(t => `"${t.task_text}"`).join(", ")}`);
+    }
+
+    const accountabilityRead = verdictParts.length
+      ? `\n\n## ACCOUNTABILITY READ (Coach off THIS verdict — don't recite stats)\n${verdictParts.map(v => `- ${v}`).join("\n")}`
+      : "";
+
+    const enhancedSystemPrompt = SYSTEM_PROMPT + contextSection + ritualContext + journalContext + excuseContext + accountabilityRead;
 
     // Load past conversation history for memory continuity
     let pastMessages: any[] = [];
