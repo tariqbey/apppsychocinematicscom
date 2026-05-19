@@ -71,13 +71,6 @@ export const TheaterView = ({ onClose }: TheaterViewProps) => {
 
   // Director AI auto-launch after Mind Movie completion
   const [coachCountdown, setCoachCountdown] = useState<number | null>(null);
-  const launchCoach = useCallback(() => {
-    setCoachCountdown(null);
-    stopAllMediaRef.current?.();
-    onClose();
-    navigate("/director-ai?context=post-screening");
-  }, [navigate, onClose]);
-  const stopAllMediaRef = useRef<(() => void) | null>(null);
 
   const streak = profile?.current_streak || 0;
    const mindMovieUrl = profile?.mind_movie_url;
