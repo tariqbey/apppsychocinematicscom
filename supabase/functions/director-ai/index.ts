@@ -536,7 +536,49 @@ COACHING DIRECTIVE: This is their CURRENT FOCUS. When discussing near-term actio
       contextSection += `\n\n## CHIEF AIM STATUS\n⚠️ The user has not yet defined their Definite Chief Aim. This is critical! Guide them toward Phase 1 (Pre-Production) to craft their Final Scene.`;
     }
 
-    const enhancedSystemPrompt = SYSTEM_PROMPT + contextSection + ritualContext + journalContext + excuseContext;
+    // ===== ACCOUNTABILITY READ =====
+    // Interpret the data into a verdict the coach should ACT on, not just recite.
+    const ctx: any = userContext || {};
+    const verdictParts: string[] = [];
+    const isMorning = ctx.timeOfDay === "morning";
+    const isEvening = ctx.timeOfDay === "evening";
+    const tasksTotal = ctx.todaysTasks?.length ?? 0;
+    const tasksDone = ctx.completedTasksCount ?? 0;
+    const completionRate = tasksTotal > 0 ? tasksDone / tasksTotal : null;
+    const repeatedExcuses = Object.values(
+      (excuseContext.match(/used (\d+) times/g) || []).reduce((acc: Record<string, number>, m) => {
+        const n = parseInt(m.replace(/\D/g, ""), 10);
+        acc.max = Math.max(acc.max || 0, n);
+        return acc;
+      }, {} as Record<string, number>)
+    )[0] as number | undefined;
+
+    if (!effectiveChiefAimComplete) {
+      verdictParts.push("🚨 NO CHIEF AIM. They're shooting a movie with no script. Lead with: 'Whose movie you in right now? You ain't even got your own script locked.' Push them to Phase one.");
+    } else if (isEvening && tasksTotal > 0 && completionRate !== null && completionRate < 0.34) {
+      verdictParts.push(`🚨 BULLSHIT ALERT (evening, ${tasksDone}/${tasksTotal} done). Open with: 'Yo, you bullshittin' today? It's evening and your Three Things ain't done.' Get the real reason — then prescribe ONE move before they sleep.`);
+    } else if (isMorning && !ctx.tasksSetForToday) {
+      verdictParts.push("⚠️ Morning, no Three Things set. Open with: 'Director, you can't direct a movie without a shot list. What three scenes are we shootin' today?'");
+    } else if (completionRate === 1) {
+      verdictParts.push("🟢 GREEN LIGHT: All tasks done. Lead with: 'Keep pushin', baby — that's Oscar-worthy execution.' Then push them to the NEXT level, don't let them coast.");
+    } else if (completionRate !== null && completionRate >= 0.5) {
+      verdictParts.push("🟡 MOMENTUM: Halfway or better. Acknowledge briefly, then push them to close out the remaining scenes today.");
+    }
+    if (repeatedExcuses && repeatedExcuses >= 3) {
+      verdictParts.push(`🔁 PATTERN: Same excuse showing up ${repeatedExcuses}+ times. Name it directly. Don't let it slide.`);
+    }
+    if (scorecardToday?.total_score !== undefined && scorecardToday?.total_score !== null && scorecardToday.total_score <= 4) {
+      verdictParts.push(`📉 Low scorecard today (${scorecardToday.total_score}/12). Ask what scene went off-script.`);
+    }
+    if (completedTasksToday.length > 0) {
+      verdictParts.push(`✓ Completed today: ${completedTasksToday.map(t => `"${t.task_text}"`).join(", ")}`);
+    }
+
+    const accountabilityRead = verdictParts.length
+      ? `\n\n## ACCOUNTABILITY READ (Coach off THIS verdict — don't recite stats)\n${verdictParts.map(v => `- ${v}`).join("\n")}`
+      : "";
+
+    const enhancedSystemPrompt = SYSTEM_PROMPT + contextSection + ritualContext + journalContext + excuseContext + accountabilityRead;
 
     // Load past conversation history for memory continuity
     let pastMessages: any[] = [];
