@@ -14,10 +14,43 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
+interface SuggestedTask {
+  title: string;
+  due_date?: string; // "today" | "tomorrow" | "YYYY-MM-DD"
+  linked_law?: string;
+  why?: string;
+}
+
 interface Message {
   id: string;
   role: "user" | "assistant";
   content: string;
+}
+
+const SUGGEST_TASK_REGEX = /\[SUGGEST_TASK:(\{[\s\S]*?\})\]/;
+
+function parseSuggestedTask(content: string): { clean: string; task: SuggestedTask | null } {
+  const m = content.match(SUGGEST_TASK_REGEX);
+  if (!m) return { clean: content, task: null };
+  try {
+    const task = JSON.parse(m[1]) as SuggestedTask;
+    if (!task?.title) return { clean: content.replace(SUGGEST_TASK_REGEX, "").trim(), task: null };
+    return { clean: content.replace(SUGGEST_TASK_REGEX, "").trim(), task };
+  } catch {
+    return { clean: content.replace(SUGGEST_TASK_REGEX, "").trim(), task: null };
+  }
+}
+
+function resolveDueDate(due?: string): string {
+  const today = new Date();
+  if (!due || due === "today") return today.toISOString().split("T")[0];
+  if (due === "tomorrow") {
+    const t = new Date(today);
+    t.setDate(t.getDate() + 1);
+    return t.toISOString().split("T")[0];
+  }
+  if (/^\d{4}-\d{2}-\d{2}$/.test(due)) return due;
+  return today.toISOString().split("T")[0];
 }
 
 interface DirectorAIChatProps {
