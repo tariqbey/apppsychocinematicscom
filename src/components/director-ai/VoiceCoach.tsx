@@ -38,9 +38,13 @@ const base64ToPCM16 = (b64: string) => {
 interface Props {
   thinkingLevel: "low" | "medium";
   onStatusChange?: (s: Status) => void;
+  /** Override the initial user-side prompt that triggers the AI greeting. */
+  openingPrompt?: string;
+  /** If true, automatically start the live session on mount. */
+  autoStart?: boolean;
 }
 
-export default function VoiceCoach({ thinkingLevel, onStatusChange }: Props) {
+export default function VoiceCoach({ thinkingLevel, onStatusChange, openingPrompt, autoStart }: Props) {
   const { user } = useAuth();
   const { context: coachingContext } = useCoachingContext();
   const [status, setStatus] = useState<Status>("idle");
