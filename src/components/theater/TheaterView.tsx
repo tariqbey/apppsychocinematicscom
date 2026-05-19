@@ -164,7 +164,7 @@ export const TheaterView = ({ onClose }: TheaterViewProps) => {
     setHasRecordedViewing(false);
   }, [videoUrl]);
 
-  // Video completed → record viewing + show tasks
+  // Video completed → record viewing + show tasks + queue Director AI handoff
   const handleVideoComplete = useCallback(
     (durationSeconds: number) => {
       if (hasRecordedViewing) return;
@@ -172,10 +172,11 @@ export const TheaterView = ({ onClose }: TheaterViewProps) => {
       void recordViewing(durationSeconds);
       toast({
         title: "Mind Movie completed",
-        description: "Completion recorded.",
+        description: "Director AI is coming to plan with you...",
       });
       setShowThreeThings(true);
       loadTodaysTasks();
+      setCoachCountdown(8); // 8s grace period before auto-launch
     },
     [hasRecordedViewing, recordViewing, toast, loadTodaysTasks]
   );
