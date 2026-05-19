@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { ArrowLeft, Brain, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
@@ -12,6 +12,20 @@ export default function DirectorAI() {
   const navigate = useNavigate();
   const { user, loading } = useAuth();
   const [thinkingLevel, setThinkingLevel] = useState<"low" | "medium">("low");
+  const [searchParams] = useSearchParams();
+
+  const context = searchParams.get("context"); // e.g. "post-screening"
+  const autoStart = searchParams.get("autostart") === "1" || context === "post-screening";
+
+  const openingPrompt = useMemo(() => {
+    if (context !== "post-screening") return undefined;
+    const hour = new Date().getHours();
+    const isEvening = hour >= 17 || hour < 4;
+    if (isEvening) {
+      return "The user just finished their EVENING Mind Movie screening. Greet them warmly by name like a real coach (e.g. 'Yo, what's up — ready to close this day out strong?'). Then immediately review the day with them: ask what they actually executed on, what they journaled about, and whether they hit or ducked their three things. If they bullshitted, call it out with love. End by asking them what tomorrow's win looks like — and if they give you one, SUGGEST_TASK it.";
+    }
+    return "The user just finished their MORNING Mind Movie screening. Greet them warmly by name like a real coach (e.g. 'What's up — you ready to go?'). Then immediately help them lock in their three priority actions for the day, anchored to their Definite Chief Aim. Ask what they're already planning. If they're stuck or vague, propose concrete next moves and use SUGGEST_TASK so they can one-tap-add them.";
+  }, [context]);
 
   useEffect(() => {
     if (!loading && !user) navigate("/");
@@ -62,7 +76,7 @@ export default function DirectorAI() {
 
         {/* Voice coach */}
         <div className="flex-1 flex flex-col items-center justify-center">
-          <VoiceCoach thinkingLevel={thinkingLevel} />
+          <VoiceCoach thinkingLevel={thinkingLevel} openingPrompt={openingPrompt} autoStart={autoStart} />
         </div>
 
         <p className="text-center text-[10px] uppercase tracking-widest text-muted-foreground/60 mt-6">

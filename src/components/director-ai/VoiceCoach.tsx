@@ -38,9 +38,13 @@ const base64ToPCM16 = (b64: string) => {
 interface Props {
   thinkingLevel: "low" | "medium";
   onStatusChange?: (s: Status) => void;
+  /** Override the initial user-side prompt that triggers the AI greeting. */
+  openingPrompt?: string;
+  /** If true, automatically start the live session on mount. */
+  autoStart?: boolean;
 }
 
-export default function VoiceCoach({ thinkingLevel, onStatusChange }: Props) {
+export default function VoiceCoach({ thinkingLevel, onStatusChange, openingPrompt, autoStart }: Props) {
   const { user } = useAuth();
   const { context: coachingContext } = useCoachingContext();
   const [status, setStatus] = useState<Status>("idle");
@@ -617,8 +621,11 @@ OPENING: Greet ${name} by name in one or two sentences, drop a fast read on thei
 
       // 5. Kick off greeting
       logDebug("Sending opening prompt");
+      const opening = openingPrompt && openingPrompt.trim().length > 0
+        ? openingPrompt
+        : "Open the session. Greet me by name.";
       session.sendClientContent({
-        turns: [{ role: "user", parts: [{ text: "Open the session. Greet me by name." }] }],
+        turns: [{ role: "user", parts: [{ text: opening }] }],
         turnComplete: true,
       });
     } catch (e) {
@@ -651,6 +658,15 @@ OPENING: Greet ${name} by name in one or two sentences, drop a fast read on thei
   }, [connect]);
 
   useEffect(() => () => disconnect(), [disconnect]);
+
+  // Auto-start the session if requested (e.g. when user lands here post-screening)
+  const autoStartedRef = useRef(false);
+  useEffect(() => {
+    if (!autoStart || autoStartedRef.current) return;
+    if (status !== "idle") return;
+    autoStartedRef.current = true;
+    void connect(false);
+  }, [autoStart, status, connect]);
 
   const isLive = status === "connected" || status === "listening" || status === "speaking" || status === "thinking" || status === "reconnecting";
   const orbState =
