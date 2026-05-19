@@ -300,9 +300,11 @@ serve(async (req) => {
     let ritualContext = "";
     let dbChiefAim: { what: string | null; byWhen: string | null; exchange: string | null; plan: string | null } | null = null;
     let dbChiefAimComplete = false;
+    let scorecardToday: { total_score: number | null } | null = null;
+    let completedTasksToday: Array<{ task_text: string }> = [];
     try {
       const today = new Date().toISOString().split('T')[0];
-      const [journalRes, excuseRes, profileRes, ritualRes] = await Promise.all([
+      const [journalRes, excuseRes, profileRes, ritualRes, scorecardRes, completedTasksRes] = await Promise.all([
         supabaseClient.from("journal_entries")
           .select("content, mood, ai_analysis, created_at")
           .eq("user_id", userId)
@@ -324,7 +326,21 @@ serve(async (req) => {
           .eq("user_id", userId)
           .eq("ritual_date", today)
           .single(),
+        supabaseClient.from("daily_scorecards")
+          .select("total_score")
+          .eq("user_id", userId)
+          .eq("scorecard_date", today)
+          .maybeSingle(),
+        supabaseClient.from("daily_tasks")
+          .select("task_text")
+          .eq("user_id", userId)
+          .eq("task_date", today)
+          .eq("is_completed", true),
       ]);
+
+      scorecardToday = scorecardRes.data ?? null;
+      completedTasksToday = completedTasksRes.data ?? [];
+
 
       // Use DB chief aim data (authoritative source)
       if (profileRes.data) {
