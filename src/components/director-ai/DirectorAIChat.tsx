@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { useVoiceInput } from "@/hooks/useVoiceInput";
 import { useEpisodes } from "@/hooks/useEpisodes";
 import { supabase } from "@/integrations/supabase/client";
+import { SuggestedTaskCard } from "./SuggestedTaskCard";
 import {
   DropdownMenu,
   DropdownMenuContent,
