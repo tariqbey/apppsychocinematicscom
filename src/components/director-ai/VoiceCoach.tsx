@@ -659,6 +659,15 @@ OPENING: Greet ${name} by name in one or two sentences, drop a fast read on thei
 
   useEffect(() => () => disconnect(), [disconnect]);
 
+  // Auto-start the session if requested (e.g. when user lands here post-screening)
+  const autoStartedRef = useRef(false);
+  useEffect(() => {
+    if (!autoStart || autoStartedRef.current) return;
+    if (status !== "idle") return;
+    autoStartedRef.current = true;
+    void connect(false);
+  }, [autoStart, status, connect]);
+
   const isLive = status === "connected" || status === "listening" || status === "speaking" || status === "thinking" || status === "reconnecting";
   const orbState =
     status === "speaking" ? "speaking" :
