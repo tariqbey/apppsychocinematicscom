@@ -485,6 +485,61 @@ export const TheaterView = ({ onClose }: TheaterViewProps) => {
         {showThreeThings && (
           <div className="absolute inset-0 z-10 bg-cinematic-midnight/95 backdrop-blur-sm flex items-center justify-center animate-fade-in p-4">
             <div className="w-full max-w-xl p-4 sm:p-8 rounded-2xl bg-card border border-gold/30 shadow-2xl max-h-[90vh] overflow-y-auto">
+              {/* Director AI handoff card */}
+              {coachCountdown !== null && (
+                <div className="mb-4 sm:mb-6 p-3 sm:p-4 rounded-xl bg-gradient-to-br from-gold/15 to-amber-500/10 border border-gold/40 animate-fade-in">
+                  <div className="flex items-start gap-3">
+                    <div className="w-10 h-10 shrink-0 rounded-full bg-gradient-to-br from-gold to-amber-500 flex items-center justify-center animate-pulse">
+                      <Mic className="w-5 h-5 text-black" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm sm:text-base font-display tracking-wide text-gold">
+                        Yo {profile?.display_name?.split(" ")[0] || "Director"} — your coach is up
+                      </p>
+                      <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
+                        {new Date().getHours() >= 17 || new Date().getHours() < 4
+                          ? "Let's review today — what you did, where you bullshitted, and tomorrow's win."
+                          : "Let's lock in today's three things and get you moving."}
+                      </p>
+                      <div className="flex flex-wrap items-center gap-2 mt-3">
+                        <Button
+                          size="sm"
+                          variant="gold"
+                          onClick={launchCoach}
+                          className="text-xs sm:text-sm"
+                        >
+                          <Mic className="w-3.5 h-3.5 mr-1.5" />
+                          Talk to Coach Now
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => setCoachCountdown(null)}
+                          className="text-xs text-muted-foreground"
+                        >
+                          Not now
+                        </Button>
+                        <span className="text-[10px] uppercase tracking-widest text-muted-foreground/70 ml-auto">
+                          auto in {coachCountdown}s
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+              {coachCountdown === null && hasRecordedViewing && (
+                <div className="mb-4 sm:mb-6 flex justify-center">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={launchCoach}
+                    className="text-xs gap-2 border-gold/40 hover:bg-gold/10"
+                  >
+                    <Mic className="w-3.5 h-3.5 text-gold" />
+                    Talk to Director AI
+                  </Button>
+                </div>
+              )}
               <div className="text-center mb-4 sm:mb-6">
                 <div className="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-3 sm:mb-4 rounded-full bg-gradient-to-br from-gold to-amber-soft flex items-center justify-center">
                   <Target className="w-6 h-6 sm:w-8 sm:h-8 text-primary-foreground" />
