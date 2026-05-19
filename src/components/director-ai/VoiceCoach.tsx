@@ -520,12 +520,32 @@ OPENING: Greet ${name} by name in one or two sentences, drop a fast read on thei
               functionDeclarations: [
                 {
                   name: "getCurrentChiefAim",
-                  description: "Pull the user's current Definite Chief Aim (the what, by when, exchange, and plan).",
+                  description: "Pull the user's current Definite Chief Aim (the what, by when, exchange, and plan) plus their Director Character name.",
                   parameters: { type: "OBJECT" as any, properties: {} },
                 },
                 {
-                  name: "getLastJournalEntry",
-                  description: "Read the user's most recent journal entry to understand their current state of mind.",
+                  name: "getRecentJournalEntries",
+                  description: "Read the user's most recent journal entries (up to 3) including mood and AI analysis to understand what's on their mind.",
+                  parameters: { type: "OBJECT" as any, properties: {} },
+                },
+                {
+                  name: "getTodaysTasks",
+                  description: "Check today's Three Things: which are done, which are pending. Use this to call out bullshit or celebrate execution.",
+                  parameters: { type: "OBJECT" as any, properties: {} },
+                },
+                {
+                  name: "getTodaysRituals",
+                  description: "Check today's ritual execution: morning screening, script review, action execution, evening review, journal, anthem listen.",
+                  parameters: { type: "OBJECT" as any, properties: {} },
+                },
+                {
+                  name: "getRecentExcuses",
+                  description: "Pull the user's recent incomplete-task reasons so you can name their excuse patterns directly.",
+                  parameters: { type: "OBJECT" as any, properties: {} },
+                },
+                {
+                  name: "getTodaysScorecard",
+                  description: "Get today's daily scorecard score if they filled it out.",
                   parameters: { type: "OBJECT" as any, properties: {} },
                 },
                 {
