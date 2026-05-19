@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Flame,
   Film,
@@ -11,6 +12,7 @@ import {
   Trash2,
   Loader2,
   RefreshCw,
+  Mic,
 } from "lucide-react";
  import { EpisodeMovieSelector } from "./EpisodeMovieSelector";
 import { Button } from "@/components/ui/button";
