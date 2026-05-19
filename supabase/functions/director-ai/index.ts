@@ -323,10 +323,10 @@ serve(async (req) => {
       const today = new Date().toISOString().split('T')[0];
       const [journalRes, excuseRes, profileRes, ritualRes, scorecardRes, completedTasksRes] = await Promise.all([
         supabaseClient.from("journal_entries")
-          .select("content, mood, ai_analysis, created_at")
+          .select("content, mood, ai_analysis, relevant_laws, fear_signals, created_at")
           .eq("user_id", userId)
           .order("created_at", { ascending: false })
-          .limit(3),
+          .limit(7),
         supabaseClient.from("daily_tasks")
           .select("task_text, incomplete_reason, task_date")
           .eq("user_id", userId)
