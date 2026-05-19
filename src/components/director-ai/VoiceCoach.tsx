@@ -621,8 +621,11 @@ OPENING: Greet ${name} by name in one or two sentences, drop a fast read on thei
 
       // 5. Kick off greeting
       logDebug("Sending opening prompt");
+      const opening = openingPrompt && openingPrompt.trim().length > 0
+        ? openingPrompt
+        : "Open the session. Greet me by name.";
       session.sendClientContent({
-        turns: [{ role: "user", parts: [{ text: "Open the session. Greet me by name." }] }],
+        turns: [{ role: "user", parts: [{ text: opening }] }],
         turnComplete: true,
       });
     } catch (e) {
