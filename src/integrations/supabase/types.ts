@@ -1223,8 +1223,10 @@ export type Database = {
           ai_analyzed_at: string | null
           content: string
           created_at: string
+          fear_signals: Json | null
           id: string
           mood: string | null
+          relevant_laws: Json | null
           tags: string[] | null
           title: string | null
           updated_at: string
@@ -1235,8 +1237,10 @@ export type Database = {
           ai_analyzed_at?: string | null
           content: string
           created_at?: string
+          fear_signals?: Json | null
           id?: string
           mood?: string | null
+          relevant_laws?: Json | null
           tags?: string[] | null
           title?: string | null
           updated_at?: string
@@ -1247,8 +1251,10 @@ export type Database = {
           ai_analyzed_at?: string | null
           content?: string
           created_at?: string
+          fear_signals?: Json | null
           id?: string
           mood?: string | null
+          relevant_laws?: Json | null
           tags?: string[] | null
           title?: string | null
           updated_at?: string
@@ -1333,6 +1339,39 @@ export type Database = {
           type?: string
           updated_at?: string
           year?: string | null
+        }
+        Relationships: []
+      }
+      law_of_success_chunks: {
+        Row: {
+          chunk_index: number
+          content: string
+          created_at: string
+          embedding: string | null
+          id: string
+          lesson: number | null
+          lesson_name: string | null
+          volume: number | null
+        }
+        Insert: {
+          chunk_index: number
+          content: string
+          created_at?: string
+          embedding?: string | null
+          id?: string
+          lesson?: number | null
+          lesson_name?: string | null
+          volume?: number | null
+        }
+        Update: {
+          chunk_index?: number
+          content?: string
+          created_at?: string
+          embedding?: string | null
+          id?: string
+          lesson?: number | null
+          lesson_name?: string | null
+          volume?: number | null
         }
         Relationships: []
       }
@@ -1872,6 +1911,60 @@ export type Database = {
         }
         Relationships: []
       }
+      suggested_tasks: {
+        Row: {
+          accepted_task_id: string | null
+          clickup_task_id: string | null
+          created_at: string
+          estimated_minutes: number | null
+          id: string
+          linked_law_id: number | null
+          linked_law_name: string | null
+          pushed_to_clickup: boolean | null
+          rationale: string | null
+          source: string
+          status: string
+          suggested_for_date: string | null
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          accepted_task_id?: string | null
+          clickup_task_id?: string | null
+          created_at?: string
+          estimated_minutes?: number | null
+          id?: string
+          linked_law_id?: number | null
+          linked_law_name?: string | null
+          pushed_to_clickup?: boolean | null
+          rationale?: string | null
+          source?: string
+          status?: string
+          suggested_for_date?: string | null
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          accepted_task_id?: string | null
+          clickup_task_id?: string | null
+          created_at?: string
+          estimated_minutes?: number | null
+          id?: string
+          linked_law_id?: number | null
+          linked_law_name?: string | null
+          pushed_to_clickup?: boolean | null
+          rationale?: string | null
+          source?: string
+          status?: string
+          suggested_for_date?: string | null
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       testimonials: {
         Row: {
           admin_notes: string | null
@@ -1988,6 +2081,42 @@ export type Database = {
           description?: string | null
           earned_at?: string
           id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_clickup_connections: {
+        Row: {
+          access_token: string
+          connected_at: string
+          default_list_id: string | null
+          default_list_name: string | null
+          default_space_id: string | null
+          default_workspace_id: string | null
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          access_token: string
+          connected_at?: string
+          default_list_id?: string | null
+          default_list_name?: string | null
+          default_space_id?: string | null
+          default_workspace_id?: string | null
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          access_token?: string
+          connected_at?: string
+          default_list_id?: string | null
+          default_list_name?: string | null
+          default_space_id?: string | null
+          default_workspace_id?: string | null
+          id?: string
+          updated_at?: string
           user_id?: string
         }
         Relationships: []
@@ -2161,10 +2290,14 @@ export type Database = {
           chat_summary: string | null
           chat_summary_updated_at: string | null
           chief_aim_by_when: string | null
+          chief_aim_definite_quantity: string | null
           chief_aim_exchange: string | null
+          chief_aim_laws_applied: Json | null
           chief_aim_plan: string | null
+          chief_aim_self_confidence_formula: string | null
           chief_aim_song_url: string | null
           chief_aim_what: string | null
+          chief_aim_written_statement: string | null
           coaching_call_enabled: boolean | null
           coaching_call_time: string | null
           coaching_call_timezone: string | null
@@ -2213,10 +2346,14 @@ export type Database = {
           chat_summary?: string | null
           chat_summary_updated_at?: string | null
           chief_aim_by_when?: string | null
+          chief_aim_definite_quantity?: string | null
           chief_aim_exchange?: string | null
+          chief_aim_laws_applied?: Json | null
           chief_aim_plan?: string | null
+          chief_aim_self_confidence_formula?: string | null
           chief_aim_song_url?: string | null
           chief_aim_what?: string | null
+          chief_aim_written_statement?: string | null
           coaching_call_enabled?: boolean | null
           coaching_call_time?: string | null
           coaching_call_timezone?: string | null
@@ -2265,10 +2402,14 @@ export type Database = {
           chat_summary?: string | null
           chat_summary_updated_at?: string | null
           chief_aim_by_when?: string | null
+          chief_aim_definite_quantity?: string | null
           chief_aim_exchange?: string | null
+          chief_aim_laws_applied?: Json | null
           chief_aim_plan?: string | null
+          chief_aim_self_confidence_formula?: string | null
           chief_aim_song_url?: string | null
           chief_aim_what?: string | null
+          chief_aim_written_statement?: string | null
           coaching_call_enabled?: boolean | null
           coaching_call_time?: string | null
           coaching_call_timezone?: string | null
@@ -2444,6 +2585,17 @@ export type Database = {
         Returns: boolean
       }
       is_admin: { Args: { _user_id: string }; Returns: boolean }
+      match_law_of_success: {
+        Args: { match_count?: number; query_embedding: string }
+        Returns: {
+          content: string
+          id: string
+          lesson: number
+          lesson_name: string
+          similarity: number
+          volume: number
+        }[]
+      }
       redeem_access_code: { Args: { p_code: string }; Returns: Json }
     }
     Enums: {
