@@ -399,7 +399,10 @@ export const DirectorAIChat = ({ isOpen, onToggle, chiefAim, userId }: DirectorA
   }, []);
 
   const speakText = useCallback(async (text: string) => {
-    if (!ttsEnabled || !text.trim()) return;
+    // Strip any [SUGGEST_TASK:{...}] marker so TTS doesn't read it aloud
+    const spoken = text.replace(SUGGEST_TASK_REGEX, "").trim();
+    if (!ttsEnabled || !spoken.trim()) return;
+    text = spoken;
 
     try {
       setIsSpeaking(true);
