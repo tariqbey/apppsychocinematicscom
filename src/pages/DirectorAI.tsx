@@ -76,7 +76,7 @@ export default function DirectorAI() {
 
         {/* Voice coach */}
         <div className="flex-1 flex flex-col items-center justify-center">
-          <VoiceCoach thinkingLevel={thinkingLevel} />
+          <VoiceCoach thinkingLevel={thinkingLevel} openingPrompt={openingPrompt} autoStart={autoStart} />
         </div>
 
         <p className="text-center text-[10px] uppercase tracking-widest text-muted-foreground/60 mt-6">
