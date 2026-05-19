@@ -96,6 +96,25 @@ export const TheaterView = ({ onClose }: TheaterViewProps) => {
     onClose();
   }, [stopAllMedia, onClose]);
 
+  // Hand off to the Director AI coach (auto or manual)
+  const launchCoach = useCallback(() => {
+    setCoachCountdown(null);
+    stopAllMedia();
+    onClose();
+    navigate("/director-ai?context=post-screening");
+  }, [stopAllMedia, onClose, navigate]);
+
+  // Countdown ticker
+  useEffect(() => {
+    if (coachCountdown === null) return;
+    if (coachCountdown <= 0) {
+      launchCoach();
+      return;
+    }
+    const t = setTimeout(() => setCoachCountdown((n) => (n === null ? null : n - 1)), 1000);
+    return () => clearTimeout(t);
+  }, [coachCountdown, launchCoach]);
+
   // Stop background audio when Theater opens
   useEffect(() => {
     globalAudio?.stopAudio();
