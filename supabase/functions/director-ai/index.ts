@@ -398,6 +398,21 @@ No ritual data recorded for today yet.`;
         journalRes.data.forEach((j: any) => {
           journalContext += `- [${j.mood || "neutral"}] ${j.ai_analysis || j.content.substring(0, 200)}\n`;
         });
+
+        // Aggregate recurring law / fear patterns across last 7 entries
+        const lawCounts: Record<string, number> = {};
+        const fearCounts: Record<string, number> = {};
+        journalRes.data.forEach((j: any) => {
+          (j.relevant_laws || []).forEach((l: string) => { lawCounts[l] = (lawCounts[l] || 0) + 1; });
+          (j.fear_signals || []).forEach((f: string) => { fearCounts[f] = (fearCounts[f] || 0) + 1; });
+        });
+        const topLaws = Object.entries(lawCounts).filter(([, n]) => n >= 2).sort((a, b) => b[1] - a[1]).slice(0, 3);
+        const topFears = Object.entries(fearCounts).filter(([, n]) => n >= 2).sort((a, b) => b[1] - a[1]).slice(0, 2);
+        if (topLaws.length || topFears.length) {
+          journalContext += `\n### RECURRING PATTERNS IN THEIR JOURNAL (last 7 entries)\n`;
+          topLaws.forEach(([l, n]) => { journalContext += `- Law showing up: **${l}** (${n}x) — cite Hill on this naturally.\n`; });
+          topFears.forEach(([f, n]) => { journalContext += `- Fear signal: **${f}** (${n}x) — name it with love, don't dance around it.\n`; });
+        }
       }
 
       if (excuseRes.data && excuseRes.data.length > 0) {
