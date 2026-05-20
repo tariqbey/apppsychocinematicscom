@@ -1,8 +1,9 @@
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useAdminStatus } from "@/hooks/useAdminStatus";
 import { useSubscription } from "@/hooks/useSubscription";
 import { useState, useEffect } from "react";
+import { toast } from "sonner";
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -25,6 +26,7 @@ export default function Settings() {
   const { isAdmin, loading: adminLoading } = useAdminStatus();
   const { subscription, isSubscribed, isTrialing, openCustomerPortal, createSubscription, loading: subLoading } = useSubscription();
   const navigate = useNavigate();
+  const location = useLocation();
   const [activeTab, setActiveTab] = useState("account");
   const [portalLoading, setPortalLoading] = useState(false);
   const [upgradeLoading, setUpgradeLoading] = useState(false);
@@ -34,6 +36,30 @@ export default function Settings() {
       navigate("/");
     }
   }, [user, authLoading, navigate]);
+
+  // Sync tab + handle OAuth callback messages from query params
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const tab = params.get("tab");
+    if (tab && tab !== activeTab) {
+      setActiveTab(tab);
+    }
+    const clickup = params.get("clickup");
+    if (clickup === "connected") {
+      toast.success("ClickUp connected");
+    } else if (clickup === "error") {
+      const reason = params.get("reason");
+      toast.error(`ClickUp connection failed${reason ? `: ${reason}` : ""}`);
+    }
+    if (clickup) {
+      // Clean URL so the toast doesn't fire again on re-render
+      params.delete("clickup");
+      params.delete("reason");
+      const qs = params.toString();
+      navigate(`/settings${qs ? `?${qs}` : ""}`, { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.search]);
 
   // Navigate to admin dashboard when admin tab is selected
   const handleTabChange = (value: string) => {
