@@ -105,4 +105,12 @@ verify_jwt = false
 [functions.gemini-live-token]
 verify_jwt = false
 
+[functions.clickup-oauth-initiate]
+verify_jwt = false
+
+[functions.clickup-oauth-callback]
+verify_jwt = false
+
+
+
 
