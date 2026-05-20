@@ -8,6 +8,7 @@ import { Loader2, Check, Trash2, ExternalLink, Eye, EyeOff, Mic2, MessageSquare,
 import { useUserIntegrations } from "@/hooks/useUserIntegrations";
 import { IntegrationCard } from "./IntegrationCard";
 import { TelegramIntegrationCard } from "./TelegramIntegrationCard";
+import { ClickUpIntegrationCard } from "./ClickUpIntegrationCard";
 import { SocialMediaConnections } from "./SocialMediaConnections";
 import type { Json } from "@/integrations/supabase/types";
 
@@ -119,6 +120,13 @@ export function IntegrationsTab() {
           isConnected={!!getIntegration("telegram")?.api_key}
           onSave={(key, settings) => handleSaveIntegration("telegram", key, settings)}
           onDelete={() => handleDeleteIntegration("telegram")}
+        />
+
+        {/* ClickUp Integration */}
+        <ClickUpIntegrationCard
+          isConnected={!!getIntegration("clickup")?.api_key}
+          settings={(getIntegration("clickup")?.settings as Record<string, any>) || null}
+          onDelete={() => handleDeleteIntegration("clickup")}
         />
       </div>
 
