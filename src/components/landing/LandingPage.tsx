@@ -1,34 +1,14 @@
 import { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { 
-  Film, 
-  Sparkles, 
-  Bot, 
-  Target, 
-  Calendar, 
-  Trophy, 
-  Users, 
-  Play, 
-  Check, 
+import { useNavigate } from "react-router-dom";
+import {
+  Film,
+  Clapperboard,
+  Armchair,
+  Users,
+  Play,
+  Check,
   Star,
-  Zap,
-  Brain,
-  Video,
-  Palette,
-  Mic,
-  Music,
-  Scissors,
-  Upload,
-  MessageSquare,
-  Share2,
-  Award,
-  Clock,
-  Layers,
-  Wand2,
   Quote,
-  HelpCircle,
-  ChevronDown,
-  Volume2
 } from "lucide-react";
 import {
   Accordion,
@@ -59,34 +39,64 @@ interface ApprovedTestimonial {
   result_highlight: string | null;
 }
 
+// Reusable REC dot
+const RecDot = ({ className = "" }: { className?: string }) => (
+  <span
+    className={`inline-block w-2 h-2 rounded-full bg-[hsl(0_72%_51%)] shadow-[0_0_8px_hsl(0_72%_51%_/_0.8)] ${className}`}
+    aria-hidden="true"
+  />
+);
+
+// Director CTA button — black bg, white text, red REC dot, square corners
+const DirectorCTA = ({
+  children,
+  onClick,
+  className = "",
+}: {
+  children: React.ReactNode;
+  onClick?: () => void;
+  className?: string;
+}) => (
+  <button
+    onClick={onClick}
+    className={`group inline-flex items-center gap-3 bg-black text-white border border-white/20 px-7 py-4 text-sm uppercase tracking-[0.18em] font-semibold hover:bg-white hover:text-black transition-colors duration-200 ${className}`}
+  >
+    <RecDot />
+    <span>{children}</span>
+    <span className="ml-1 transition-transform group-hover:translate-x-1">→</span>
+  </button>
+);
+
 export const LandingPage = ({ onLogin }: LandingPageProps) => {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [approvedTestimonials, setApprovedTestimonials] = useState<ApprovedTestimonial[]>([]);
   const navigate = useNavigate();
 
-  // Auto-show login modal if redirected from logout
   useEffect(() => {
-    if (sessionStorage.getItem('showLoginModal') === 'true') {
-      sessionStorage.removeItem('showLoginModal');
+    if (sessionStorage.getItem("showLoginModal") === "true") {
+      sessionStorage.removeItem("showLoginModal");
       setShowAuthModal(true);
     }
   }, []);
 
-  // Fetch approved testimonials from database
   useEffect(() => {
     const fetchApprovedTestimonials = async () => {
       const { data, error } = await supabase
         .from("testimonials")
-        .select("id, testimonial_type, text_content, media_url, thumbnail_url, display_name, avatar_url, user_title, result_highlight")
+        .select(
+          "id, testimonial_type, text_content, media_url, thumbnail_url, display_name, avatar_url, user_title, result_highlight",
+        )
         .eq("status", "approved")
         .order("submitted_at", { ascending: false })
         .limit(8);
 
       if (!error && data) {
-        // Sort by type priority: video > audio > text
         const sorted = [...data].sort((a, b) => {
           const priority = { video: 0, audio: 1, text: 2 };
-          return priority[a.testimonial_type as keyof typeof priority] - priority[b.testimonial_type as keyof typeof priority];
+          return (
+            priority[a.testimonial_type as keyof typeof priority] -
+            priority[b.testimonial_type as keyof typeof priority]
+          );
         });
         setApprovedTestimonials(sorted as ApprovedTestimonial[]);
       }
@@ -94,302 +104,213 @@ export const LandingPage = ({ onLogin }: LandingPageProps) => {
     fetchApprovedTestimonials();
   }, []);
 
-  const handleGetStarted = () => {
-    navigate("/signup");
-  };
-
-  const handleLogin = () => {
-    setShowAuthModal(true);
-  };
-
-  const features = [
-    {
-      icon: Target,
-      title: "Definite Chief Aim Creator",
-      description: "The animated foundation module. AI guides you through Napoleon Hill's proven 4-phase framework: The Dream, The Deadline, The Exchange, The Plan. Crystal-clear vision that drives your entire transformation."
-    },
-    {
-      icon: Brain,
-      title: "Character Builder & Hero Creator",
-      description: "Discover your archetype with our 28-question survey. Create your Hero Character with AI-generated front, side, and back views that become YOUR identity in all visualizations."
-    },
-    {
-      icon: Music,
-      title: "Soundtrack Studio & Director Radio",
-      description: "Generate custom soundtracks in 50+ genres with AI lyrics based on your Chief Aim. Stream motivational playlists on Director Radio with animated visual feedback."
-    },
-    {
-      icon: Film,
-      title: "Storyboard & Mind Movie Wizard",
-      description: "The 5-step wizard creates AI-generated scenes featuring YOU. Go from vision to finished movie with scene control, auto-generation, and custom soundtracks."
-    },
-    {
-      icon: Scissors,
-      title: "Edit Bay & Timeline Editor",
-      description: "Full AI production studio with Hollywood-grade video generation (Veo 3, Wan 2.1, Kling). Professional timeline editor with multi-track support, razor cuts, and 4K export."
-    },
-    {
-      icon: Video,
-      title: "Mind Movie Vault & Theater",
-      description: "Store multiple Mind Movies and watch in a distraction-free theater. Track viewing streaks — a 90-day streak creates permanent neural pathways for your new identity."
-    },
-    {
-      icon: Zap,
-      title: "Episode Sprints",
-      description: "Break your transformation into 1, 2, or 4-week episodes. Each sprint gets its own Mind Movie, AI character analysis, and production dashboard for focused execution."
-    },
-    {
-      icon: Calendar,
-      title: "Daily Rituals & Scorecard",
-      description: "Animated 4-step daily checklist: Morning Screening, Script Review, Action Execution, Evening Review. Track identity alignment with the Director Scorecard."
-    },
-    {
-      icon: Mic,
-      title: "Director AI Voice Coach",
-      description: "Voice-enabled AI coaching with 6 personality presets from 'Swag Coach' to 'Zen Guide'. Get challenged, inspired, and held accountable by an AI that knows your Chief Aim."
-    },
-    {
-      icon: Palette,
-      title: "Challenges & Adversity (Blue)",
-      description: "Transform obstacles into opportunities. Generate challenge storyboards with your Hero Character and create victory soundtracks for your toughest moments."
-    },
-    {
-      icon: Users,
-      title: "Director's Corner Community",
-      description: "Share your movies, vote for Movie of the Week, compete for Director of the Month, and celebrate at the Annual Awards Ceremony. Transform together."
-    },
-    {
-      icon: Share2,
-      title: "Ecosystem Integrations",
-      description: "Connect Slack, Telegram, and Notion for automated reminders. Push notifications with iOS PWA support and one-tap repair. Share to Facebook, X, Instagram, and TikTok."
-    }
-  ];
+  const handleSitInChair = () => navigate("/signup");
+  const handleLogin = () => setShowAuthModal(true);
+  const handleStudioPackage = () => navigate("/done-for-you");
 
   const phases = [
-    { phase: 1, title: "The Director Emerges", description: "Define your Definite Chief Aim — the foundation of everything. Decide who you're becoming and commit it to writing with AI guidance." },
-    { phase: 2, title: "The Script", description: "Create your Mind Movie storyboard with AI-generated scenes, visuals, and a custom soundtrack that embodies your Chief Aim." },
-    { phase: 3, title: "Pre-Production", description: "Build your daily ritual system. Set up morning visualizations, evening reviews, and the Three Things that move you forward." },
-    { phase: 4, title: "Principal Photography", description: "Daily visualization in the Theater + consistent action. Watch your movie, execute your plan, log your progress." },
-    { phase: 5, title: "Post-Production", description: "Refine with AI analysis. Journal insights, scorecard reviews, and Director AI coaching optimize your approach." },
-    { phase: 6, title: "The Premiere", description: "Celebrate milestones and victories. Earn awards, climb leaderboards, and share your transformation with the community." },
-    { phase: 7, title: "The Franchise", description: "Scale your transformation. Create multiple movies for different life areas and become a master of identity engineering." }
-  ];
-
-  const createPillar = [
-    { icon: Target, title: "Chief Aim Creator", description: "Animated 4-phase AI wizard" },
-    { icon: Video, title: "AI Video Generation", description: "Veo 3, Wan 2.1, Kling models" },
-    { icon: Palette, title: "Reference Photo AI", description: "Generate images with YOUR face" },
-    { icon: Music, title: "Soundtrack Studio", description: "50+ genres, Director Radio" },
-    { icon: Scissors, title: "Timeline Editor", description: "Multi-track NLE, 4K export" }
-  ];
-
-  const transformPillar = [
-    { icon: Bot, title: "Director AI Coach", description: "Voice-first, 6 personalities" },
-    { icon: Brain, title: "Hero Character Creator", description: "AI-generated hero images" },
-    { icon: Zap, title: "Episode Sprints", description: "1-4 week focused production" },
-    { icon: Calendar, title: "Daily Rituals", description: "Animated 4-step checklist" },
-    { icon: Mic, title: "Voice Transformation", description: "10+ premium voice options" }
-  ];
-
-  const connectPillar = [
-    { icon: Users, title: "Director's Corner", description: "Share, vote, celebrate" },
-    { icon: Trophy, title: "Movie of the Week", description: "Community voting" },
-    { icon: Award, title: "Annual Awards", description: "Yearly ceremony" },
-    { icon: MessageSquare, title: "Push & Messaging", description: "iOS PWA, Slack, Telegram" },
-    { icon: Share2, title: "Social Sharing", description: "FB, X, Instagram, TikTok" }
-  ];
-
-  const pricingFeatures = [
-    "Director AI Voice Coaching",
-    "1000 Monthly Credits (~33 videos OR 76 images OR 45 songs)",
-    "Full AI Media Studio (Veo 3, Wan 2.1, Kling)",
-    "Reference Photo Generation (AI images with YOUR face)",
-    "Professional Timeline Editor with 4K Export",
-    "5-Step Mind Movie Wizard with Scene Control",
-    "Episode Sprints (1, 2, or 4-week focused productions)",
-    "Character Builder & 28-Question Archetype Survey",
-    "21-Day Transformation Cycles (10 cycles, 3 Acts)",
-    "Daily Scorecard, Character Scorecard & Streak Tracking",
-    "Director's Journal with AI Analysis",
-    "Soundtrack Studio & Director Radio",
-    "Movie Vault (Multiple Projects)",
-    "5GB Mind Movie Uploads, 20GB Total Storage",
-    "Director's Corner Community & Annual Awards",
-    "Slack, Telegram, Notion & Social Media Integrations"
+    { n: "01", title: "The Director Emerges", line: "You stop being the lead. You sit in the chair." },
+    { n: "02", title: "The Script", line: "The Mind Movie gets storyboarded. AI scenes, custom soundtrack, you in the frame." },
+    { n: "03", title: "Pre-Production", line: "The daily rituals lock in. Morning Screening. Script Review. Action. Evening Dailies." },
+    { n: "04", title: "Principal Photography", line: "You shoot the film. Day after day. The Theater opens. You take the action." },
+    { n: "05", title: "Post-Production", line: "You review the dailies. The Director AI gives notes. The cut tightens." },
+    { n: "06", title: "The Premiere", line: "A milestone hits. You screen it for the Director's Corner. The room stands up." },
+    { n: "07", title: "The Franchise", line: "One Mind Movie becomes many. Career. Relationship. Body. You're running a slate now." },
   ];
 
   const testimonials = [
     {
-      quote: "I went from dreaming about my business to actually building it. Watching my Mind Movie every morning rewired something in my brain. The Director AI kept me accountable when I wanted to quit.",
+      quote:
+        "I stopped watching my life. I started directing it. Eight months later I'd built a seven-figure company — but more honestly, I'd become someone who could.",
       name: "Marcus Chen",
       title: "Founder, Apex Ventures",
-      result: "Launched 7-figure business in 8 months"
+      result: "LAUNCHED 7-FIGURE COMPANY IN 8 MONTHS",
     },
     {
-      quote: "This isn't just an app—it's a complete operating system for your mind. The Chief Aim Wizard helped me get crystal clear on what I wanted, and the daily scorecard made sure I showed up for it.",
+      quote:
+        "The Chief Aim work cut a year of confusion out of my practice. I doubled my roster because I finally knew which roster I was building.",
       name: "Jasmine Williams",
       title: "Executive Coach & Author",
-      result: "2x'd her client roster in 90 days"
+      result: "2× CLIENT ROSTER IN 90 DAYS",
     },
     {
-      quote: "The AI-generated Mind Movie brought tears to my eyes. Seeing my goals visualized with that quality of production—it made everything feel real and possible. I've never been more focused.",
+      quote:
+        "The first time the Mind Movie played, I sat in front of the screen for ten minutes after it ended. I wasn't watching myself anymore. I was watching the version of me I'd already decided to become.",
       name: "David Okonkwo",
       title: "Real Estate Developer",
-      result: "Closed his largest deal ever"
+      result: "CLOSED HIS LARGEST DEAL ON RECORD",
     },
     {
-      quote: "I've tried every productivity app out there. This is different. The Swag Coach personality literally calls me out when I'm slacking. It's like having a mentor in my pocket 24/7.",
+      quote:
+        "The Showrunner doesn't let me drift. I'm 120 production days in. I don't break a screening. I direct.",
       name: "Sarah Martinez",
       title: "Tech Startup CEO",
-      result: "120-day viewing streak and counting"
-    }
+      result: "120 CONSECUTIVE PRODUCTION DAYS",
+    },
+  ];
+
+  const osFeatures = [
+    "Director AI Voice Coach (six personalities)",
+    "1,000 production credits / month (≈ 33 videos, 76 images, or 45 tracks)",
+    "Full media studio — Veo 3, Wan 2.1, Kling",
+    "Hero Character generation with your face",
+    "Pro timeline editor, 4K export",
+    "5-step Mind Movie Wizard",
+    "Episode Sprints (1, 2, or 4 weeks)",
+    "The Dailies (daily scorecard) + Director's Journal",
+    "Soundtrack Studio + Director Radio",
+    "Movie Vault, 5 GB uploads, 20 GB total storage",
+    "Director's Corner + Annual Awards",
+    "Slack / Telegram / Notion / social integrations",
+    "Cancel any time. Walk off set whenever.",
+  ];
+
+  const studioPackageFeatures = [
+    "A 3-minute professional Mind Movie, made for you",
+    "A custom AI-generated soundtrack scored to your Chief Aim",
+    "A Definite Chief Aim coaching session with our team",
+    "Pro script writing",
+    "12+ AI-generated scenes with your face",
+    "1 month of Director's OS free ($29 value)",
+    "Unlimited revisions until the cut is right",
+    "Delivered in 7–10 days. 30-day money-back guarantee.",
   ];
 
   const faqs = [
     {
-      question: "What exactly is a Mind Movie?",
-      answer: "A Mind Movie is a personalized video that visualizes your goals, dreams, and the identity you're stepping into. Using our AI tools, you create cinematic scenes with images featuring YOUR face, video, music, and even your own voiceover that represent your ideal life. Watching it daily rewires your subconscious mind for success—based on proven visualization techniques from Maxwell Maltz and Napoleon Hill."
+      question: "What is a Mind Movie?",
+      answer:
+        "A 90-second to 3-minute film you direct, starring you, scored to your Chief Aim. You watch it every morning in the Theater. The brain treats repeated cinematic exposure to a future self the way it treats memory. Olympic athletes call it mental rehearsal. We call it Principal Photography.",
     },
     {
-      question: "Do I need any video editing experience?",
-      answer: "Absolutely not. Our 5-Step Mind Movie Wizard guides you from foundation to finished film. Upload a reference photo and AI generates scenes featuring YOU. For advanced control, our Timeline Editor offers multi-track editing, razor cuts, and 4K export. We've designed it so anyone can produce Hollywood-quality content."
-    },
-    {
-      question: "What is the dashboard module order?",
-      answer: "The dashboard follows a proven transformation pipeline: 1) Definite Chief Aim (animated foundation), 2) Character Builder, 3) Soundtrack Studio, 4) Storyboard, 5) Edit Bay, 6) Mind Movie Vault, 7) Episodes, 8) Action Execution, 9) Director's Journal, 10) Challenges & Adversity (blue), 11) Cut & Reset, 12) Director Radio (animated), 13) The Score, 14) Share Your Story."
-    },
-    {
-      question: "How do push notifications work on iOS?",
-      answer: "iOS push notifications require the app to be installed to your Home Screen (Safari → Share → Add to Home Screen). Once installed, enable notifications in Settings → Preferences. If notifications stop working, use the 'Repair Push' button in the Push Diagnostics panel to re-register your device."
+      question: "Do I need any film experience?",
+      answer:
+        "No. The Wizard walks you through every shot. If you've ever picked the song for a road trip, you have enough taste to direct your own Mind Movie.",
     },
     {
       question: "How is this different from other visualization apps?",
-      answer: "Most visualization apps give you static vision boards or generic guided meditations. Psycho-Cinematics gives you a complete production studio with AI video generation, reference photo personalization, voice coaching, animated dashboard modules, and a full character transformation system. It's the difference between looking at a photo and starring in your own movie."
+      answer:
+        "Most visualization apps are affirmations with a calmer voice. This is a film studio. You write the script. You cast yourself. You take final cut.",
     },
     {
-      question: "What's included in the 1000 monthly production credits?",
-      answer: "Your 1000 credits fuel AI generations: ~33 ten-second videos, ~76 HD images (including reference photos featuring YOU), ~45 custom soundtracks, or a mix of all three. That's enough to create 2-3 complete Mind Movies each month. Heavy users can purchase additional credit packs with up to 10% bonus credits."
+      question: "What's in the 1,000 monthly production credits?",
+      answer:
+        "Roughly 33 video generations, 76 reference images, or 45 soundtrack tracks. Most Directors burn the bulk of their credits in week one building the first Mind Movie, then spend the rest of the month refining and Episode Sprinting.",
     },
     {
       question: "How does the Director AI Voice Coach work?",
-      answer: "The Director AI is your voice-enabled accountability partner. It knows your Chief Aim, active Episode, character archetype, and daily progress. Choose from 6 personality styles—from the challenging 'Swag Coach' to the calming 'Zen Guide'—and 10 different voices. It references your transformation analysis to provide identity-shifting guidance."
+      answer:
+        "You pick a personality — The Showrunner, The Editor, The Auteur, The First AD, The Method, The Long Take — and they coach you in voice. They know your Chief Aim, your last seven days of Dailies, and your current Episode Sprint. They don't pep-talk. They direct.",
     },
     {
       question: "What if I want to cancel?",
-      answer: "Cancel anytime with one click—no questions asked. We're confident you'll see the value, and there's no long-term commitment required."
+      answer: "Walk off set any time. Your Mind Movies stay yours. We don't lock the vault.",
     },
     {
       question: "Is my content private?",
-      answer: "Completely. Your Mind Movies, journal entries, character profiles, and scorecards are private by default. You choose what to share with the Director's Corner community. We take privacy seriously—your transformation journey is yours alone unless you decide to inspire others."
-    }
+      answer:
+        "Yes. Your Mind Movies, your Chief Aim, your Dailies — all private to you. You choose what (if anything) to screen in the Director's Corner.",
+    },
   ];
 
   return (
     <div className="min-h-screen bg-background">
       {/* Navigation */}
-      <nav className="fixed top-0 left-0 right-0 z-50 border-b border-border/50 bg-background/80 backdrop-blur-xl">
+      <nav className="fixed top-0 left-0 right-0 z-50 border-b border-white/10 bg-black/80 backdrop-blur-xl">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <img 
-              src={psychoCinematicsLogo} 
-              alt="Psycho-Cinematics" 
-              className="h-12 w-auto"
-            />
+            <img src={psychoCinematicsLogo} alt="Psycho-Cinematics" className="h-10 w-auto" />
+            <span className="hidden sm:inline text-xs uppercase tracking-[0.25em] text-white/80 font-semibold">
+              Psycho-Cinematics
+            </span>
           </div>
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" onClick={handleLogin} className="text-muted-foreground hover:text-foreground">
+          <div className="flex items-center gap-2 sm:gap-5 text-xs uppercase tracking-[0.18em]">
+            <button
+              onClick={handleLogin}
+              className="hidden sm:inline text-white/60 hover:text-white transition-colors"
+            >
+              Film School
+            </button>
+            <button
+              onClick={handleLogin}
+              className="hidden sm:inline text-white/60 hover:text-white transition-colors"
+            >
+              Director's Corner
+            </button>
+            <button
+              onClick={handleLogin}
+              className="text-white/60 hover:text-white transition-colors"
+            >
               Login
-            </Button>
-            <Button variant="gold" onClick={handleGetStarted}>
-              Get Started
-            </Button>
+            </button>
+            <DirectorCTA onClick={handleSitInChair} className="!px-4 !py-2.5 !text-[11px]">
+              Sit in the Chair
+            </DirectorCTA>
           </div>
         </div>
       </nav>
 
-      {/* Hero Section */}
-      <section className="pt-24 pb-16 relative overflow-hidden">
-        {/* Background Effects */}
-        <div className="absolute inset-0 spotlight opacity-50" />
+      {/* 1. HERO */}
+      <section className="pt-28 pb-20 relative overflow-hidden bg-black">
+        <div className="absolute inset-0 spotlight opacity-40" />
         <div className="absolute inset-0 film-grain opacity-30" />
-        
+
         <div className="container mx-auto px-4 relative z-10">
           <div className="grid lg:grid-cols-2 gap-12 items-center min-h-[80vh]">
-            {/* Left Content */}
             <div className="space-y-8 animate-fade-in">
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gold/10 border border-gold/20">
-                <Sparkles className="w-4 h-4 text-gold" />
-                <span className="text-sm text-gold font-semibold">Start Your Transformation Today</span>
+              <div className="inline-flex items-center gap-3 text-[11px] uppercase tracking-[0.3em] text-white/80">
+                <RecDot />
+                <span>Now in Production</span>
               </div>
-              
-              <h1 className="text-5xl md:text-6xl lg:text-7xl font-display tracking-wide leading-tight">
-                You're Not Just Watching Your Life. <br />
-                <span className="text-gold-gradient">You're Directing It.</span>
+
+              <h1 className="text-5xl md:text-6xl lg:text-7xl font-display tracking-tight leading-[1.05] text-white">
+                Take Final Cut <br />
+                <span className="text-gold-gradient">on Your Life.</span>
               </h1>
 
-              {/* Mobile Only: Hero Image between headline and subheadline */}
+              {/* Mobile image */}
               <div className="lg:hidden relative animate-slide-up flex flex-col items-center">
-                <h2 className="text-3xl md:text-4xl font-display tracking-[0.2em] text-gold-gradient mb-4 text-center">
-                  PSYCHO CINEMATICS
-                </h2>
                 <div className="relative">
-                  <div className="absolute inset-0 bg-gradient-to-br from-gold/30 to-transparent rounded-2xl blur-3xl" />
-                  <img 
-                    src={heroImage} 
-                    alt="The Director - Psycho-Cinematics" 
+                  <div className="absolute inset-0 bg-gradient-to-br from-gold/20 to-transparent blur-3xl" />
+                  <img
+                    src={heroImage}
+                    alt="The Director"
                     className="relative w-full max-w-md mx-auto shadow-2xl shadow-black/50"
                   />
                 </div>
               </div>
-              
-              <p className="text-xl text-muted-foreground max-w-lg">
-                The world's first AI-powered identity transformation system. Create cinematic Mind Movies, get coached by an AI director who knows your goals, and track your transformation — all in one place.
+
+              <p className="text-xl text-white/70 max-w-xl leading-relaxed font-light italic">
+                The first film studio for your own identity. Direct your Mind Movie. Sit in the
+                chair. Decide what stays in the film — and what gets cut.
               </p>
 
-              <p className="text-lg font-display text-gold/80">
-                From Vision to Reality. Daily.
-              </p>
-              
-              <div className="flex flex-col sm:flex-row gap-4">
-                <Button variant="gold" size="lg" onClick={handleGetStarted} className="text-lg px-8">
-                  <Play className="w-5 h-5 mr-2" />
-                  Start Your Transformation
-                </Button>
-                <Button variant="outline" size="lg" onClick={handleLogin} className="text-lg px-8">
-                  Already a Director? Login
-                </Button>
+              <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                <DirectorCTA onClick={handleSitInChair}>Sit in the Chair</DirectorCTA>
+                <p className="text-xs uppercase tracking-[0.2em] text-white/50">
+                  3-day trial · No card · Walk off set anytime
+                </p>
               </div>
-              
-              <div className="flex items-center gap-6 pt-4">
-                <div className="flex items-center gap-2">
-                  <div className="flex -space-x-2">
-                    {[1, 2, 3, 4, 5].map((i) => (
-                      <div key={i} className="w-8 h-8 rounded-full bg-gradient-to-br from-gold/40 to-amber-600/40 border-2 border-background" />
-                    ))}
-                  </div>
-                  <span className="text-sm text-muted-foreground">2,500+ Directors Transforming</span>
-                </div>
-                <div className="flex items-center gap-1">
+
+              <div className="flex items-center gap-3 pt-2 text-[11px] uppercase tracking-[0.25em] text-white/60">
+                <span>2,500+ Directors on Set</span>
+                <span className="text-white/30">·</span>
+                <div className="flex items-center gap-0.5">
                   {[1, 2, 3, 4, 5].map((i) => (
-                    <Star key={i} className="w-4 h-4 fill-gold text-gold" />
+                    <Star key={i} className="w-3 h-3 fill-gold text-gold" />
                   ))}
-                  <span className="text-sm text-muted-foreground ml-1">5.0</span>
                 </div>
               </div>
             </div>
-            
-            {/* Right Image - Director Hero (Desktop Only) */}
-            <div className="hidden lg:flex relative animate-slide-up lg:scale-110 lg:-mr-12 flex-col items-center">
-              {/* PSYCHO CINEMATICS Title */}
-              <h2 className="text-4xl md:text-5xl lg:text-6xl font-display tracking-[0.3em] text-gold-gradient mb-4 text-center">
-                PSYCHO CINEMATICS
-              </h2>
+
+            {/* Desktop image */}
+            <div className="hidden lg:flex relative animate-slide-up lg:scale-105 flex-col items-center">
               <div className="relative">
-                <div className="absolute inset-0 bg-gradient-to-br from-gold/30 to-transparent rounded-2xl blur-3xl" />
-                <img 
-                  src={heroImage} 
-                  alt="The Director - Psycho-Cinematics" 
-                  className="relative w-full max-w-2xl mx-auto shadow-2xl shadow-black/50"
+                <div className="absolute inset-0 bg-gradient-to-br from-gold/20 to-transparent blur-3xl" />
+                <img
+                  src={heroImage}
+                  alt="The Director"
+                  className="relative w-full max-w-2xl mx-auto shadow-2xl shadow-black/60"
                 />
               </div>
             </div>
@@ -397,231 +318,216 @@ export const LandingPage = ({ onLogin }: LandingPageProps) => {
         </div>
       </section>
 
-      {/* Features Section */}
-      <section className="py-24 relative">
+      {/* 2. THE 7-PHASE FRAMEWORK */}
+      <section className="py-24 relative bg-black border-t border-white/5">
         <div className="container mx-auto px-4">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-display tracking-wide mb-4">
-              Your Complete <span className="text-gold-gradient">Transformation Toolkit</span>
+          <div className="max-w-3xl mb-16">
+            <div className="inline-flex items-center gap-3 text-[11px] uppercase tracking-[0.3em] text-white/60 mb-6">
+              <RecDot />
+              <span>The Production Arc</span>
+            </div>
+            <h2 className="text-4xl md:text-5xl font-display tracking-tight text-white mb-4">
+              Every Director moves through <span className="text-gold-gradient">seven phases.</span>
             </h2>
-            <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-              Hollywood-grade production tools meet proven transformation methodology. Everything you need to engineer your identity and create the life you've always envisioned.
+            <p className="text-lg text-white/60 italic font-light">
+              Same arc as a film. Same arc as a life that's been authored instead of accidented.
             </p>
           </div>
-          
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {features.map((feature, index) => (
-              <div 
-                key={feature.title}
-                className="glass-card p-8 cinematic-border hover:border-gold/50 transition-all duration-300 group"
-                style={{ animationDelay: `${index * 100}ms` }}
+
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {phases.map((p) => (
+              <div
+                key={p.n}
+                className="group relative border border-white/10 bg-black/40 p-6 hover:border-gold/40 hover:bg-black/60 transition-all duration-300"
               >
-                <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-gold/20 to-amber-soft/20 flex items-center justify-center mb-6 group-hover:from-gold/30 group-hover:to-amber-soft/30 transition-all">
-                  <feature.icon className="w-7 h-7 text-gold" />
+                <div className="flex items-baseline gap-3 mb-4">
+                  <span className="text-[hsl(0_72%_51%)] font-display text-2xl">{p.n}</span>
+                  <RecDot />
                 </div>
-                <h3 className="text-xl font-display mb-3 group-hover:text-gold transition-colors">{feature.title}</h3>
-                <p className="text-muted-foreground">{feature.description}</p>
+                <h3 className="text-lg font-display text-white mb-3 leading-snug">{p.title}</h3>
+                <p className="text-sm text-white/60 leading-relaxed">{p.line}</p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* What's Inside Section - Three Pillars */}
-      <section className="py-24 bg-card/30 relative">
+      {/* 3. STATUS FLIP */}
+      <section className="py-32 bg-black border-t border-white/5">
         <div className="container mx-auto px-4">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-display tracking-wide mb-4">
-              What's <span className="text-gold-gradient">Inside</span>
+          <div className="max-w-3xl mx-auto text-center space-y-8">
+            <h2 className="text-4xl md:text-5xl font-display tracking-tight text-white leading-tight">
+              Most people are extras in their own life.
             </h2>
-            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-              Three pillars of transformation: Create your vision, Transform your identity, Connect with community.
-            </p>
-          </div>
-          
-          <div className="grid lg:grid-cols-3 gap-8">
-            {/* CREATE Pillar */}
-            <div className="glass-card p-8 cinematic-border">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-gold/30 to-amber-soft/30 flex items-center justify-center">
-                  <Palette className="w-6 h-6 text-gold" />
-                </div>
-                <h3 className="text-2xl font-display text-gold">CREATE</h3>
-              </div>
-              <p className="text-muted-foreground mb-6">
-                Hollywood-grade AI production tools at your fingertips
+            <div className="space-y-5 text-lg text-white/70 leading-relaxed font-light italic">
+              <p>
+                They take notes from people who shouldn't be writing the script. They get cut from
+                scenes they should be leading. They watch the rough cut of their own day at night
+                and wonder how it got assembled this way.
               </p>
-              <ul className="space-y-4">
-                {createPillar.map((item) => (
-                  <li key={item.title} className="flex items-center gap-3">
-                    <item.icon className="w-5 h-5 text-gold/70" />
-                    <div>
-                      <span className="font-medium">{item.title}</span>
-                      <span className="text-muted-foreground text-sm ml-2">— {item.description}</span>
-                    </div>
-                  </li>
-                ))}
-              </ul>
+              <p>Directors don't live like that.</p>
+              <p className="text-white not-italic font-display text-2xl">Directors take final cut.</p>
             </div>
-
-            {/* TRANSFORM Pillar */}
-            <div className="glass-card p-8 cinematic-border border-gold/30">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-gold/30 to-amber-soft/30 flex items-center justify-center">
-                  <Brain className="w-6 h-6 text-gold" />
-                </div>
-                <h3 className="text-2xl font-display text-gold">TRANSFORM</h3>
-              </div>
-              <p className="text-muted-foreground mb-6">
-                Proven methodology for identity engineering
-              </p>
-              <ul className="space-y-4">
-                {transformPillar.map((item) => (
-                  <li key={item.title} className="flex items-center gap-3">
-                    <item.icon className="w-5 h-5 text-gold/70" />
-                    <div>
-                      <span className="font-medium">{item.title}</span>
-                      <span className="text-muted-foreground text-sm ml-2">— {item.description}</span>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            {/* CONNECT Pillar */}
-            <div className="glass-card p-8 cinematic-border">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-gold/30 to-amber-soft/30 flex items-center justify-center">
-                  <Users className="w-6 h-6 text-gold" />
-                </div>
-                <h3 className="text-2xl font-display text-gold">CONNECT</h3>
-              </div>
-              <p className="text-muted-foreground mb-6">
-                Community and accountability ecosystem
-              </p>
-              <ul className="space-y-4">
-                {connectPillar.map((item) => (
-                  <li key={item.title} className="flex items-center gap-3">
-                    <item.icon className="w-5 h-5 text-gold/70" />
-                    <div>
-                      <span className="font-medium">{item.title}</span>
-                      <span className="text-muted-foreground text-sm ml-2">— {item.description}</span>
-                    </div>
-                  </li>
-                ))}
-              </ul>
+            <div className="pt-4">
+              <DirectorCTA onClick={handleSitInChair}>Sit in the Chair</DirectorCTA>
             </div>
           </div>
         </div>
       </section>
 
-      {/* 7-Phase Framework */}
-      <section className="py-24 relative">
+      {/* 4. WHAT YOU GET — THREE PILLARS */}
+      <section className="py-24 bg-black border-t border-white/5">
         <div className="container mx-auto px-4">
           <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-display tracking-wide mb-4">
-              The <span className="text-gold-gradient">7-Phase Framework</span>
+            <div className="inline-flex items-center gap-3 text-[11px] uppercase tracking-[0.3em] text-white/60 mb-6">
+              <RecDot />
+              <span>What You Get</span>
+            </div>
+            <h2 className="text-4xl md:text-5xl font-display tracking-tight text-white">
+              A Studio. A Method. <span className="text-gold-gradient">A Crew.</span>
             </h2>
-            <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-              A proven system for identity transformation, inspired by Maxwell Maltz's Psycho-Cybernetics and Napoleon Hill's Think and Grow Rich. This is how directors create their masterpiece.
-            </p>
           </div>
-          
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {phases.map((phase, index) => (
-              <div 
-                key={phase.phase}
-                className={`relative glass-card p-6 hover:border-gold/30 transition-all duration-300 ${index === 6 ? 'lg:col-span-1 md:col-span-2' : ''}`}
-              >
-                <div className="absolute -top-3 -left-3 w-10 h-10 rounded-full bg-gold flex items-center justify-center font-display text-lg text-black font-bold shadow-lg shadow-gold/30">
-                  {phase.phase}
-                </div>
-                <div className="pt-4">
-                  <h3 className="text-lg font-display mb-2">{phase.title}</h3>
-                  <p className="text-sm text-muted-foreground">{phase.description}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
 
-      {/* Social Proof Section */}
-      <section className="py-16 bg-card/30 relative">
-        <div className="container mx-auto px-4">
-          <div className="text-center">
-            <p className="text-lg text-muted-foreground mb-8">
-              Directors are transforming daily
-            </p>
-            <div className="flex flex-wrap justify-center gap-8 md:gap-16">
-              <div className="text-center">
-                <div className="text-4xl md:text-5xl font-display text-gold mb-2">2,500+</div>
-                <p className="text-muted-foreground">Active Directors</p>
+          <div className="grid lg:grid-cols-3 gap-px bg-white/10 border border-white/10">
+            {/* CREATE */}
+            <div className="bg-black p-10 space-y-5">
+              <Clapperboard className="w-10 h-10 text-white/80" strokeWidth={1} />
+              <div>
+                <p className="text-[11px] uppercase tracking-[0.3em] text-[hsl(43_74%_49%)] mb-2">
+                  Create
+                </p>
+                <h3 className="text-2xl font-display text-white">The Studio</h3>
               </div>
-              <div className="text-center">
-                <div className="text-4xl md:text-5xl font-display text-gold mb-2">15,000+</div>
-                <p className="text-muted-foreground">Mind Movies Created</p>
+              <p className="text-white/70 leading-relaxed">
+                The full production stack. AI scene generation with your face (Veo 3, Wan 2.1,
+                Kling). Multi-track timeline editor with 4K export. Soundtrack Studio across 50+
+                genres. Hero Character generation in three views.
+              </p>
+              <p className="text-white/50 italic text-sm">Hollywood inputs, Director's Cut output.</p>
+            </div>
+
+            {/* TRANSFORM */}
+            <div className="bg-black p-10 space-y-5">
+              <Armchair className="w-10 h-10 text-white/80" strokeWidth={1} />
+              <div>
+                <p className="text-[11px] uppercase tracking-[0.3em] text-[hsl(43_74%_49%)] mb-2">
+                  Transform
+                </p>
+                <h3 className="text-2xl font-display text-white">The Method</h3>
               </div>
-              <div className="text-center">
-                <div className="text-4xl md:text-5xl font-display text-gold mb-2">180,000+</div>
-                <p className="text-muted-foreground">Daily Viewings Logged</p>
+              <p className="text-white/70 leading-relaxed">
+                The 7-phase production arc, scored daily. Episode Sprints (1, 2, or 4 weeks). The
+                K-U-T technique for cutting old self-image loops the moment they appear. Director AI
+                Voice Coach across six personalities — The Showrunner, The Editor, The Auteur, The
+                First AD, The Method, The Long Take.
+              </p>
+            </div>
+
+            {/* CONNECT */}
+            <div className="bg-black p-10 space-y-5">
+              <Users className="w-10 h-10 text-white/80" strokeWidth={1} />
+              <div>
+                <p className="text-[11px] uppercase tracking-[0.3em] text-[hsl(43_74%_49%)] mb-2">
+                  Connect
+                </p>
+                <h3 className="text-2xl font-display text-white">The Crew</h3>
               </div>
-              <div className="text-center">
-                <div className="text-4xl md:text-5xl font-display text-gold mb-2">97%</div>
-                <p className="text-muted-foreground">Report Identity Shifts</p>
-              </div>
+              <p className="text-white/70 leading-relaxed">
+                The Director's Corner: where Directors screen their work, vote Movie of the Week,
+                and walk the carpet at the Annual Psycho-Cinematic Awards.
+              </p>
+              <p className="text-white/50 italic text-sm">
+                You are not the only one in the chair. You're the only one in your chair.
+              </p>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Testimonials Section */}
-      <section className="py-24 relative">
+      {/* 5. DAILY RITUAL */}
+      <section className="py-24 bg-black border-t border-white/5">
         <div className="container mx-auto px-4">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-display tracking-wide mb-4">
-              Directors <span className="text-gold-gradient">Speak</span>
+          <div className="max-w-3xl mx-auto text-center space-y-8">
+            <Clapperboard className="w-12 h-12 text-[hsl(43_74%_49%)] mx-auto" strokeWidth={1} />
+            <h2 className="text-4xl md:text-5xl font-display tracking-tight text-white">
+              Open the Theater.
             </h2>
-            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-              Real transformations from directors who committed to the process.
+            <p className="text-lg text-white/70 leading-relaxed font-light italic">
+              Every morning starts the same way. The clapperboard slates the scene. The Mind Movie
+              rolls. The credits name the Director and the Chief Aim.{" "}
+              <span className="not-italic text-white">Sixty seconds. Then you go shoot the day.</span>
+            </p>
+
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-px bg-white/10 border border-white/10 mt-12">
+              {[
+                { d: "Day 7", t: "First Week Wrapped" },
+                { d: "Day 30", t: "Principal Photography" },
+                { d: "Day 60", t: "Picture Lock" },
+                { d: "Day 90", t: "The Director's Cut", gold: true },
+              ].map((m) => (
+                <div key={m.d} className="bg-black p-6 text-left">
+                  <p className="text-[10px] uppercase tracking-[0.3em] text-white/50 mb-2">{m.d}</p>
+                  <p
+                    className={`font-display text-base ${
+                      m.gold ? "text-[hsl(43_74%_49%)]" : "text-white"
+                    }`}
+                  >
+                    {m.t}
+                  </p>
+                </div>
+              ))}
+            </div>
+            <p className="text-sm text-white/50 italic pt-2">
+              Day 90 ships a real wrap gift to your door. Because this is a real wrap.
             </p>
           </div>
-          
-          {/* Dynamic Testimonials from Database */}
+        </div>
+      </section>
+
+      {/* 6. SOCIAL PROOF */}
+      <section className="py-24 bg-black border-t border-white/5">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-16">
+            <div className="inline-flex items-center gap-3 text-[11px] uppercase tracking-[0.3em] text-white/60 mb-6">
+              <RecDot />
+              <span>On the Record</span>
+            </div>
+            <h2 className="text-4xl md:text-5xl font-display tracking-tight text-white">
+              Directors on the Record
+            </h2>
+          </div>
+
           {approvedTestimonials.length > 0 && (
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto mb-12">
-              {approvedTestimonials.slice(0, 6).map((testimonial) => (
+              {approvedTestimonials.slice(0, 6).map((t) => (
                 <TestimonialCard
-                  key={testimonial.id}
-                  testimonialType={testimonial.testimonial_type}
-                  textContent={testimonial.text_content}
-                  mediaUrl={testimonial.media_url}
-                  thumbnailUrl={testimonial.thumbnail_url}
-                  displayName={testimonial.display_name}
-                  avatarUrl={testimonial.avatar_url}
-                  userTitle={testimonial.user_title}
-                  resultHighlight={testimonial.result_highlight}
+                  key={t.id}
+                  testimonialType={t.testimonial_type}
+                  textContent={t.text_content}
+                  mediaUrl={t.media_url}
+                  thumbnailUrl={t.thumbnail_url}
+                  displayName={t.display_name}
+                  avatarUrl={t.avatar_url}
+                  userTitle={t.user_title}
+                  resultHighlight={t.result_highlight}
                 />
               ))}
             </div>
           )}
 
-          {/* Static Testimonials as Fallback/Supplement */}
-          <div className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto">
-            {testimonials.map((testimonial, index) => (
-              <div 
-                key={testimonial.name}
-                className="glass-card p-8 cinematic-border relative"
-              >
-                <Quote className="absolute top-6 right-6 w-10 h-10 text-gold/20" />
-                <p className="text-lg mb-6 italic text-foreground/90 leading-relaxed">
-                  "{testimonial.quote}"
+          <div className="grid md:grid-cols-2 gap-px bg-white/10 border border-white/10 max-w-5xl mx-auto">
+            {testimonials.map((t) => (
+              <div key={t.name} className="bg-black p-10 relative">
+                <Quote className="absolute top-6 right-6 w-8 h-8 text-white/10" />
+                <p className="text-lg mb-6 italic text-white/90 leading-relaxed font-light">
+                  "{t.quote}"
                 </p>
-                <div className="border-t border-border/50 pt-4">
-                  <p className="font-display text-gold">{testimonial.name}</p>
-                  <p className="text-sm text-muted-foreground">{testimonial.title}</p>
-                  <p className="text-sm text-gold/70 mt-2 font-medium">
-                    ✦ {testimonial.result}
+                <div className="border-t border-white/10 pt-4 space-y-2">
+                  <p className="font-display text-white">{t.name}</p>
+                  <p className="text-sm text-white/50">{t.title}</p>
+                  <p className="text-[11px] uppercase tracking-[0.2em] text-[hsl(0_72%_51%)] flex items-center gap-2 pt-1">
+                    <RecDot />
+                    {t.result}
                   </p>
                 </div>
               </div>
@@ -630,168 +536,141 @@ export const LandingPage = ({ onLogin }: LandingPageProps) => {
         </div>
       </section>
 
-      {/* Pricing Section */}
-      <section className="py-24 relative" id="pricing">
+      {/* 7. METRICS BAND */}
+      <section className="py-20 bg-black border-t border-white/5">
+        <div className="container mx-auto px-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-px bg-white/10 border border-white/10">
+            {[
+              { n: "2,500+", l: "Directors on set" },
+              { n: "15,000+", l: "Mind Movies in the vault" },
+              { n: "180,000+", l: "Screenings logged" },
+              { n: "97%", l: "Report a real identity shift" },
+            ].map((m) => (
+              <div key={m.l} className="bg-black p-8 text-center">
+                <div className="text-4xl md:text-5xl font-display text-gold-gradient mb-3 tracking-tight">
+                  {m.n}
+                </div>
+                <p className="text-[11px] uppercase tracking-[0.2em] text-white/60">{m.l}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* 8. PRICING */}
+      <section className="py-24 bg-black border-t border-white/5" id="pricing">
         <div className="container mx-auto px-4">
           <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-display tracking-wide mb-4">
-              Invest in Your <span className="text-gold-gradient">Transformation</span>
+            <div className="inline-flex items-center gap-3 text-[11px] uppercase tracking-[0.3em] text-white/60 mb-6">
+              <RecDot />
+              <span>Two Paths</span>
+            </div>
+            <h2 className="text-4xl md:text-5xl font-display tracking-tight text-white">
+              Sit in the chair. <span className="text-gold-gradient">Or let us bring the crew.</span>
             </h2>
-            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-              Choose your path: DIY with our powerful tools, or let us create your complete Mind Movie for you.
-            </p>
           </div>
-          
-          <div className="grid lg:grid-cols-2 gap-8 max-w-5xl mx-auto">
-            {/* DIY Plan */}
-            <div className="glass-card p-8 cinematic-border border-border/50 relative overflow-hidden">
-              {/* Popular Badge */}
-              <div className="absolute top-4 right-4">
-                <div className="px-3 py-1 rounded-full bg-gold text-black text-sm font-bold flex items-center gap-1">
-                  <Zap className="w-4 h-4" />
-                  Most Popular
-                </div>
+
+          <div className="grid lg:grid-cols-2 gap-px bg-white/10 border border-white/10 max-w-5xl mx-auto">
+            {/* Director's OS */}
+            <div className="bg-black p-10 relative">
+              <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.25em] text-[hsl(0_72%_51%)] mb-4">
+                <RecDot />
+                <span>Director's OS</span>
               </div>
-              
-              <div className="mb-6">
-                <h3 className="text-2xl font-display mb-2">Director's OS</h3>
-                <p className="text-muted-foreground">Build your own Mind Movie with AI tools</p>
+              <div className="mb-2 flex items-baseline gap-2">
+                <span className="text-6xl font-display text-white">$29</span>
+                <span className="text-white/50 text-sm">/ month</span>
               </div>
-              
-              <div className="mb-8">
-                <div className="flex items-baseline gap-2">
-                  <span className="text-5xl font-display text-gold">$29</span>
-                  <span className="text-muted-foreground">/month</span>
-                </div>
-                <p className="text-sm text-muted-foreground mt-1">Cancel anytime</p>
-              </div>
-              
-              <ul className="space-y-3 mb-8">
-                {pricingFeatures.map((feature) => (
-                  <li key={feature} className="flex items-center gap-3">
-                    <div className="w-5 h-5 rounded-full bg-gold/20 flex items-center justify-center flex-shrink-0">
-                      <Check className="w-3 h-3 text-gold" />
-                    </div>
-                    <span className="text-sm">{feature}</span>
+              <p className="text-white/60 italic mb-8">The studio is yours. You direct.</p>
+
+              <ul className="space-y-3 mb-10">
+                {osFeatures.map((f) => (
+                  <li key={f} className="flex items-start gap-3 text-sm text-white/80">
+                    <Check className="w-4 h-4 text-[hsl(43_74%_49%)] flex-shrink-0 mt-0.5" />
+                    <span>{f}</span>
                   </li>
                 ))}
               </ul>
-              
-              <Button variant="gold" size="lg" className="w-full text-lg" onClick={handleGetStarted}>
-                <Play className="w-5 h-5 mr-2" />
-                Get Started Now
-              </Button>
-              
-              <p className="text-xs text-muted-foreground text-center mt-4">
-                Secure checkout. Cancel anytime.
-              </p>
+
+              <DirectorCTA onClick={handleSitInChair} className="w-full justify-center">
+                Sit in the Chair
+              </DirectorCTA>
             </div>
 
-            {/* Done For You Plan */}
-            <div className="glass-card p-8 cinematic-border border-gold/50 relative overflow-hidden">
-              {/* Premium Badge */}
-              <div className="absolute top-4 right-4">
-                <div className="px-3 py-1 rounded-full bg-gradient-to-r from-gold to-amber-soft text-black text-sm font-bold flex items-center gap-1">
-                  <Sparkles className="w-4 h-4" />
-                  Done For You
-                </div>
+            {/* Studio Package */}
+            <div className="bg-black p-10 relative">
+              <div className="text-[11px] uppercase tracking-[0.25em] text-white/60 mb-4">
+                The Studio Package
               </div>
-              
-              <div className="mb-6">
-                <h3 className="text-2xl font-display mb-2">Complete Mind Movie Package</h3>
-                <p className="text-muted-foreground">We create your entire Mind Movie for you</p>
+              <div className="mb-2 flex items-baseline gap-3">
+                <span className="text-6xl font-display text-white">$497</span>
+                <span className="text-white/40 line-through text-sm">$997</span>
               </div>
-              
-              <div className="mb-8">
-                <div className="flex items-baseline gap-2">
-                  <span className="text-sm text-muted-foreground line-through mr-1">$997</span>
-                  <span className="text-5xl font-display text-gold">$497</span>
-                </div>
-                <p className="text-sm text-muted-foreground mt-1">One-time + 1 month free software</p>
-              </div>
-              
-              <ul className="space-y-3 mb-8">
-                <li className="flex items-center gap-3">
-                  <div className="w-5 h-5 rounded-full bg-gold/20 flex items-center justify-center flex-shrink-0">
-                    <Check className="w-3 h-3 text-gold" />
-                  </div>
-                  <span className="text-sm">3-Minute Professional Mind Movie</span>
-                </li>
-                <li className="flex items-center gap-3">
-                  <div className="w-5 h-5 rounded-full bg-gold/20 flex items-center justify-center flex-shrink-0">
-                    <Check className="w-3 h-3 text-gold" />
-                  </div>
-                  <span className="text-sm">Custom AI-Generated Soundtrack</span>
-                </li>
-                <li className="flex items-center gap-3">
-                  <div className="w-5 h-5 rounded-full bg-gold/20 flex items-center justify-center flex-shrink-0">
-                    <Check className="w-3 h-3 text-gold" />
-                  </div>
-                  <span className="text-sm">Definite Chief Aim Coaching Session</span>
-                </li>
-                <li className="flex items-center gap-3">
-                  <div className="w-5 h-5 rounded-full bg-gold/20 flex items-center justify-center flex-shrink-0">
-                    <Check className="w-3 h-3 text-gold" />
-                  </div>
-                  <span className="text-sm">Professional Script Writing</span>
-                </li>
-                <li className="flex items-center gap-3">
-                  <div className="w-5 h-5 rounded-full bg-gold/20 flex items-center justify-center flex-shrink-0">
-                    <Check className="w-3 h-3 text-gold" />
-                  </div>
-                  <span className="text-sm">12+ AI-Generated Scenes (with YOUR face)</span>
-                </li>
-                <li className="flex items-center gap-3">
-                  <div className="w-5 h-5 rounded-full bg-gold/20 flex items-center justify-center flex-shrink-0">
-                    <Check className="w-3 h-3 text-gold" />
-                  </div>
-                  <span className="text-sm">1 Month Free Director's OS Access ($29 value)</span>
-                </li>
-                <li className="flex items-center gap-3">
-                  <div className="w-5 h-5 rounded-full bg-gold/20 flex items-center justify-center flex-shrink-0">
-                    <Check className="w-3 h-3 text-gold" />
-                  </div>
-                  <span className="text-sm">Unlimited Revisions Until Perfect</span>
-                </li>
+              <p className="text-white/60 italic mb-8">We bring the crew. You sit in the chair.</p>
+
+              <ul className="space-y-3 mb-10">
+                {studioPackageFeatures.map((f) => (
+                  <li key={f} className="flex items-start gap-3 text-sm text-white/80">
+                    <Check className="w-4 h-4 text-[hsl(43_74%_49%)] flex-shrink-0 mt-0.5" />
+                    <span>{f}</span>
+                  </li>
+                ))}
               </ul>
-              
-              <Button variant="gold" size="lg" className="w-full text-lg" onClick={() => navigate("/done-for-you")}>
-                <Sparkles className="w-5 h-5 mr-2" />
-                Get Your Mind Movie Created
-              </Button>
-              
-              <p className="text-xs text-muted-foreground text-center mt-4">
-                Delivered in 7-10 days. 30-day money-back guarantee.
-              </p>
+
+              <DirectorCTA onClick={handleStudioPackage} className="w-full justify-center">
+                Book the Studio
+              </DirectorCTA>
             </div>
           </div>
         </div>
       </section>
 
-      {/* FAQ Section */}
-      <section className="py-24 bg-card/30 relative">
+      {/* 9. FILM SCHOOL HOOK */}
+      <section className="py-28 bg-black border-t border-white/5">
+        <div className="container mx-auto px-4">
+          <div className="max-w-3xl mx-auto text-center space-y-8">
+            <Film className="w-12 h-12 text-white/60 mx-auto" strokeWidth={1} />
+            <h2 className="text-4xl md:text-5xl font-display tracking-tight text-white leading-tight">
+              Before you sit in the chair, <br />
+              <span className="text-gold-gradient italic">sit in the seats.</span>
+            </h2>
+            <p className="text-lg text-white/70 leading-relaxed font-light italic">
+              The Director's Film School. Six short films, free. The neuroscience the self-help
+              books never quite explain — the Servo-Mechanism, the Snapback, what Spielberg actually
+              does before he shoots, why most affirmations fail by week three.
+            </p>
+            <div className="pt-4">
+              <DirectorCTA onClick={handleSitInChair}>Watch the Film School</DirectorCTA>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 10. FAQ */}
+      <section className="py-24 bg-black border-t border-white/5">
         <div className="container mx-auto px-4">
           <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-display tracking-wide mb-4">
-              Frequently Asked <span className="text-gold-gradient">Questions</span>
+            <div className="inline-flex items-center gap-3 text-[11px] uppercase tracking-[0.3em] text-white/60 mb-6">
+              <RecDot />
+              <span>FAQ</span>
+            </div>
+            <h2 className="text-4xl md:text-5xl font-display tracking-tight text-white">
+              Notes from the Director
             </h2>
-            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-              Everything you need to know before stepping into the director's chair.
-            </p>
           </div>
-          
+
           <div className="max-w-3xl mx-auto">
-            <Accordion type="single" collapsible className="space-y-4">
+            <Accordion type="single" collapsible className="space-y-px bg-white/10 border border-white/10">
               {faqs.map((faq, index) => (
-                <AccordionItem 
-                  key={index} 
+                <AccordionItem
+                  key={index}
                   value={`item-${index}`}
-                  className="glass-card cinematic-border px-6 border-border/50 data-[state=open]:border-gold/30"
+                  className="bg-black border-0 px-6"
                 >
-                  <AccordionTrigger className="text-left text-lg font-medium hover:text-gold transition-colors py-6">
+                  <AccordionTrigger className="text-left text-lg font-display hover:text-[hsl(43_74%_49%)] transition-colors py-6 text-white">
                     {faq.question}
                   </AccordionTrigger>
-                  <AccordionContent className="text-muted-foreground pb-6 leading-relaxed">
+                  <AccordionContent className="text-white/70 pb-6 leading-relaxed text-base font-light">
                     {faq.answer}
                   </AccordionContent>
                 </AccordionItem>
@@ -801,58 +680,83 @@ export const LandingPage = ({ onLogin }: LandingPageProps) => {
         </div>
       </section>
 
-      {/* CTA Section */}
-      <section className="py-24 relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-gold/10 to-transparent" />
-        <div className="absolute inset-0 spotlight opacity-30" />
+      {/* 11. FINAL CTA */}
+      <section className="py-32 bg-black border-t border-white/5 relative overflow-hidden">
+        <div className="absolute inset-0 film-grain opacity-20" />
         <div className="container mx-auto px-4 relative z-10">
-          <div className="max-w-3xl mx-auto text-center">
-            <h2 className="text-4xl md:text-5xl font-display tracking-wide mb-6">
-              Your Transformation <span className="text-gold-gradient">Starts Today</span>
-            </h2>
-            <p className="text-xl text-muted-foreground mb-4">
-              Stop watching life happen. Start directing it.
-            </p>
-            <p className="text-lg text-muted-foreground mb-8">
-              Join the directors who are using AI, visualization, and daily accountability to become who they were meant to be. The studio is ready. The cameras are rolling. The only thing missing is you.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button variant="gold" size="lg" onClick={handleGetStarted} className="text-lg px-8">
-                <Film className="w-5 h-5 mr-2" />
-                Start Your 3-Day Free Trial
-              </Button>
-              <Button variant="outline" size="lg" onClick={handleLogin} className="text-lg px-8">
-                Already a Director? Login
-              </Button>
+          <div className="max-w-3xl mx-auto text-center space-y-10">
+            <div className="inline-flex items-center gap-3 text-[11px] uppercase tracking-[0.3em] text-[hsl(0_72%_51%)]">
+              <RecDot />
+              <span>Call Sheet — Today</span>
             </div>
-            <p className="text-sm text-muted-foreground mt-6">
-              No credit card required • Cancel anytime • Full access to all features
+            <h2 className="text-5xl md:text-7xl font-display tracking-tight text-white leading-[1.05]">
+              The Chair <br />
+              <span className="text-gold-gradient italic">Is Empty.</span>
+            </h2>
+            <p className="text-xl text-white/70 italic font-light">
+              Stop being an extra in your own life.
             </p>
+            <div className="flex flex-col sm:flex-row gap-4 items-center justify-center">
+              <DirectorCTA onClick={handleSitInChair}>Sit in the Chair</DirectorCTA>
+              <p className="text-xs uppercase tracking-[0.2em] text-white/50">
+                3-day trial · No card · No notes from anyone but you
+              </p>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="py-12 border-t border-border/50">
+      {/* 12. FOOTER */}
+      <footer className="py-16 bg-black border-t border-white/10">
         <div className="container mx-auto px-4">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-            <div className="flex items-center gap-3">
-              <img 
-                src={psychoCinematicsLogo} 
-                alt="Psycho-Cinematics" 
-                className="h-10 w-auto"
-              />
+          <div className="grid md:grid-cols-4 gap-10 mb-12">
+            <div className="space-y-4">
+              <img src={psychoCinematicsLogo} alt="Psycho-Cinematics" className="h-10 w-auto" />
+              <p className="text-sm text-white/50 italic font-light leading-relaxed">
+                The first film studio for your own identity.
+              </p>
             </div>
-            <p className="text-sm text-muted-foreground">
-              © 2026 Psycho-Cinematics™. All rights reserved.
+            <div className="space-y-3">
+              <p className="text-[11px] uppercase tracking-[0.25em] text-white font-semibold">
+                The Studio
+              </p>
+              <ul className="space-y-2 text-sm text-white/60">
+                <li><button onClick={handleSitInChair} className="hover:text-white">Director's OS</button></li>
+                <li><button onClick={handleStudioPackage} className="hover:text-white">The Studio Package</button></li>
+                <li><a href="#pricing" className="hover:text-white">Pricing</a></li>
+              </ul>
+            </div>
+            <div className="space-y-3">
+              <p className="text-[11px] uppercase tracking-[0.25em] text-white font-semibold">
+                The Method
+              </p>
+              <ul className="space-y-2 text-sm text-white/60">
+                <li>The 7-Phase Framework</li>
+                <li>Film School</li>
+                <li>The K-U-T Technique</li>
+              </ul>
+            </div>
+            <div className="space-y-3">
+              <p className="text-[11px] uppercase tracking-[0.25em] text-white font-semibold">
+                The Crew
+              </p>
+              <ul className="space-y-2 text-sm text-white/60">
+                <li>Director's Corner</li>
+                <li>Annual Awards</li>
+                <li><button onClick={handleLogin} className="hover:text-white">Login</button></li>
+              </ul>
+            </div>
+          </div>
+          <div className="pt-8 border-t border-white/10 text-center">
+            <p className="text-[11px] uppercase tracking-[0.3em] text-white/40">
+              © 2026 Psycho-Cinematics™ · Take Final Cut.
             </p>
           </div>
         </div>
       </footer>
 
-      {/* Auth Modal - For Login Only */}
-      <AuthModal 
-        isOpen={showAuthModal} 
+      <AuthModal
+        isOpen={showAuthModal}
         onClose={() => setShowAuthModal(false)}
         initialMode="signin"
       />
