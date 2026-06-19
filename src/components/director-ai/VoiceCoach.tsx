@@ -237,7 +237,45 @@ export default function VoiceCoach({ thinkingLevel, onStatusChange, openingPromp
         if (error) return { error: error.message };
         return { success: true };
       }
+      if (name === "getActivityStreak") {
+        const { data, error } = await supabase.rpc("calculate_activity_streak", { p_user_id: user.id });
+        if (error) return { error: error.message };
+        const row = Array.isArray(data) ? data[0] : data;
+        if (!row) return { error: "No streak data" };
+        const days_inactive = row.days_inactive ?? 0;
+        const is_cold = days_inactive >= 2 || (row.current_streak ?? 0) === 0;
+        return { ...row, is_cold_streak: is_cold };
+      }
+      if (name === "addTaskToToday") {
+        const task_text = String(args.task_text ?? "").trim();
+        if (!task_text) return { error: "Task text required" };
+        const priority = typeof args.priority === "number" ? args.priority : 99;
+        const { data, error } = await supabase
+          .from("daily_tasks")
+          .insert({ user_id: user.id, task_text, task_date: today, priority })
+          .select("id, task_text, priority")
+          .single();
+        if (error) return { error: error.message };
+        return { success: true, task: data };
+      }
+      if (name === "updateTask") {
+        const task_id = String(args.task_id ?? "");
+        if (!task_id) return { error: "task_id required" };
+        const patch: Record<string, unknown> = {};
+        if (typeof args.task_text === "string") patch.task_text = args.task_text;
+        if (typeof args.is_completed === "boolean") patch.is_completed = args.is_completed;
+        if (typeof args.priority === "number") patch.priority = args.priority;
+        if (Object.keys(patch).length === 0) return { error: "Nothing to update" };
+        const { error } = await supabase
+          .from("daily_tasks")
+          .update(patch)
+          .eq("id", task_id)
+          .eq("user_id", user.id);
+        if (error) return { error: error.message };
+        return { success: true };
+      }
       return { error: `Unknown tool: ${name}` };
+
     } catch (e) {
       return { error: e instanceof Error ? e.message : "Tool failed" };
     }
