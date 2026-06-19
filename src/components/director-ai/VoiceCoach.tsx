@@ -615,6 +615,37 @@ OPENING: Greet ${name} by name in one or two sentences, drop a fast read on thei
                     required: ["note"],
                   },
                 },
+                {
+                  name: "getActivityStreak",
+                  description: "Get current streak, best streak, last activity date, and days_inactive. Use to detect cold streaks at session start.",
+                  parameters: { type: "OBJECT" as any, properties: {} },
+                },
+                {
+                  name: "addTaskToToday",
+                  description: "Add a new action item to the user's daily action list for today. Call this whenever the user commits to doing something.",
+                  parameters: {
+                    type: "OBJECT" as any,
+                    properties: {
+                      task_text: { type: "STRING" as any, description: "Concise action statement, e.g. 'Call back the prospect from Tuesday'." },
+                      priority: { type: "NUMBER" as any, description: "Optional priority order; lower = higher priority. Defaults to 99." },
+                    },
+                    required: ["task_text"],
+                  },
+                },
+                {
+                  name: "updateTask",
+                  description: "Modify or complete an existing daily task by id. Use getTodaysTasks first to retrieve task ids.",
+                  parameters: {
+                    type: "OBJECT" as any,
+                    properties: {
+                      task_id: { type: "STRING" as any, description: "The task id to update." },
+                      task_text: { type: "STRING" as any, description: "Optional new task text." },
+                      is_completed: { type: "BOOLEAN" as any, description: "Optional: mark complete/incomplete." },
+                      priority: { type: "NUMBER" as any, description: "Optional new priority." },
+                    },
+                    required: ["task_id"],
+                  },
+                },
               ],
             },
         ],
