@@ -185,7 +185,7 @@ export default function VoiceCoach({ thinkingLevel, onStatusChange, openingPromp
       if (name === "getTodaysTasks") {
         const { data } = await supabase
           .from("daily_tasks")
-          .select("task_text, is_completed, incomplete_reason, priority")
+          .select("id, task_text, is_completed, incomplete_reason, priority")
           .eq("user_id", user.id)
           .eq("task_date", today)
           .order("priority", { ascending: true });
