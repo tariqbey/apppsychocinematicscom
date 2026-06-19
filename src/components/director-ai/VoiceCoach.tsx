@@ -185,7 +185,7 @@ export default function VoiceCoach({ thinkingLevel, onStatusChange, openingPromp
       if (name === "getTodaysTasks") {
         const { data } = await supabase
           .from("daily_tasks")
-          .select("task_text, is_completed, incomplete_reason, priority")
+          .select("id, task_text, is_completed, incomplete_reason, priority")
           .eq("user_id", user.id)
           .eq("task_date", today)
           .order("priority", { ascending: true });
@@ -237,7 +237,45 @@ export default function VoiceCoach({ thinkingLevel, onStatusChange, openingPromp
         if (error) return { error: error.message };
         return { success: true };
       }
+      if (name === "getActivityStreak") {
+        const { data, error } = await supabase.rpc("calculate_activity_streak", { p_user_id: user.id });
+        if (error) return { error: error.message };
+        const row = Array.isArray(data) ? data[0] : data;
+        if (!row) return { error: "No streak data" };
+        const days_inactive = row.days_inactive ?? 0;
+        const is_cold = days_inactive >= 2 || (row.current_streak ?? 0) === 0;
+        return { ...row, is_cold_streak: is_cold };
+      }
+      if (name === "addTaskToToday") {
+        const task_text = String(args.task_text ?? "").trim();
+        if (!task_text) return { error: "Task text required" };
+        const priority = typeof args.priority === "number" ? args.priority : 99;
+        const { data, error } = await supabase
+          .from("daily_tasks")
+          .insert({ user_id: user.id, task_text, task_date: today, priority })
+          .select("id, task_text, priority")
+          .single();
+        if (error) return { error: error.message };
+        return { success: true, task: data };
+      }
+      if (name === "updateTask") {
+        const task_id = String(args.task_id ?? "");
+        if (!task_id) return { error: "task_id required" };
+        const patch: Record<string, unknown> = {};
+        if (typeof args.task_text === "string") patch.task_text = args.task_text;
+        if (typeof args.is_completed === "boolean") patch.is_completed = args.is_completed;
+        if (typeof args.priority === "number") patch.priority = args.priority;
+        if (Object.keys(patch).length === 0) return { error: "Nothing to update" };
+        const { error } = await supabase
+          .from("daily_tasks")
+          .update(patch)
+          .eq("id", task_id)
+          .eq("user_id", user.id);
+        if (error) return { error: error.message };
+        return { success: true };
+      }
       return { error: `Unknown tool: ${name}` };
+
     } catch (e) {
       return { error: e instanceof Error ? e.message : "Tool failed" };
     }
@@ -291,7 +329,20 @@ TOOLS (use them silently, don't announce):
 - getTodaysRituals — morning screening, script review, action execution, evening review, journal, anthem.
 - getRecentExcuses — incomplete-task reasons so you can name the pattern.
 - getTodaysScorecard — today's self-score.
+- getActivityStreak — current/best streak, last activity date, days_inactive, is_cold_streak. CALL THIS EARLY EVERY SESSION.
+- addTaskToToday — when ${name} commits to doing something today, IMMEDIATELY add it to their action list with this tool. Don't ask permission — just add it and confirm out loud ("Added that to today's list."). One task per call.
+- updateTask — modify or complete an existing task by id (use getTodaysTasks first to get ids).
 - saveSessionNote — when something important gets committed to, save it.
+
+COLD STREAK PROTOCOL:
+- At session open, call getActivityStreak. If is_cold_streak is true OR days_inactive >= 2 OR current_streak is 0 while best_streak > 3, you OPEN by calling it out directly. Examples:
+  - "Yo — you been gone {days_inactive} days. Whose movie you been in?"
+  - "Cold streak. You was on {best_streak} days, now you at zero. What happened, real talk?"
+- Don't let them deflect. Diagnose: are they stuck in somebody else's script? Reactive to drama? Avoiding the work? Then PRESCRIBE one concrete action and addTaskToToday it RIGHT NOW to get them back on script.
+
+TASK CAPTURE PROTOCOL:
+- Anytime ${name} says "I'm gonna...", "I need to...", "today I'll...", or names a specific action — call addTaskToToday immediately with concise task_text. Don't wait for permission.
+- After adding, say what you added in one short line so they hear it landed.
 
 WHAT YOU ALREADY KNOW ABOUT ${name}:
 - Chief Aim: ${aim}
@@ -562,6 +613,37 @@ OPENING: Greet ${name} by name in one or two sentences, drop a fast read on thei
                       topic: { type: "STRING" as any, description: "Optional short topic label." },
                     },
                     required: ["note"],
+                  },
+                },
+                {
+                  name: "getActivityStreak",
+                  description: "Get current streak, best streak, last activity date, and days_inactive. Use to detect cold streaks at session start.",
+                  parameters: { type: "OBJECT" as any, properties: {} },
+                },
+                {
+                  name: "addTaskToToday",
+                  description: "Add a new action item to the user's daily action list for today. Call this whenever the user commits to doing something.",
+                  parameters: {
+                    type: "OBJECT" as any,
+                    properties: {
+                      task_text: { type: "STRING" as any, description: "Concise action statement, e.g. 'Call back the prospect from Tuesday'." },
+                      priority: { type: "NUMBER" as any, description: "Optional priority order; lower = higher priority. Defaults to 99." },
+                    },
+                    required: ["task_text"],
+                  },
+                },
+                {
+                  name: "updateTask",
+                  description: "Modify or complete an existing daily task by id. Use getTodaysTasks first to retrieve task ids.",
+                  parameters: {
+                    type: "OBJECT" as any,
+                    properties: {
+                      task_id: { type: "STRING" as any, description: "The task id to update." },
+                      task_text: { type: "STRING" as any, description: "Optional new task text." },
+                      is_completed: { type: "BOOLEAN" as any, description: "Optional: mark complete/incomplete." },
+                      priority: { type: "NUMBER" as any, description: "Optional new priority." },
+                    },
+                    required: ["task_id"],
                   },
                 },
               ],
