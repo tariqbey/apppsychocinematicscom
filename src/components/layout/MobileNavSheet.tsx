@@ -14,6 +14,7 @@ import {
   Trophy,
   MessageSquare,
   Music,
+  Bot,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -67,6 +68,13 @@ export function MobileNavSheet({
       icon: <Clapperboard className="h-5 w-5" />,
       authOnly: true,
       description: "Daily 3 things"
+    },
+    {
+      to: "/director-ai",
+      label: "Director AI",
+      icon: <Bot className="h-5 w-5" />,
+      authOnly: true,
+      description: "Full-screen voice coaching"
     },
     {
       to: "/character",
