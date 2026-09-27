@@ -221,6 +221,39 @@ export type Database = {
           },
         ]
       }
+      ava_memories: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          importance: number
+          kind: string
+          source: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          importance?: number
+          kind?: string
+          source?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          importance?: number
+          kind?: string
+          source?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       blueprints: {
         Row: {
           chief_aim_snapshot: Json | null
@@ -1257,6 +1290,81 @@ export type Database = {
           relevant_laws?: Json | null
           tags?: string[] | null
           title?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      kg_edges: {
+        Row: {
+          created_at: string
+          id: string
+          note: string | null
+          relation: string
+          source_id: string
+          target_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          note?: string | null
+          relation: string
+          source_id: string
+          target_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          note?: string | null
+          relation?: string
+          source_id?: string
+          target_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kg_edges_source_id_fkey"
+            columns: ["source_id"]
+            isOneToOne: false
+            referencedRelation: "kg_nodes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kg_edges_target_id_fkey"
+            columns: ["target_id"]
+            isOneToOne: false
+            referencedRelation: "kg_nodes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      kg_nodes: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          label: string
+          type: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          label: string
+          type?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          label?: string
+          type?: string
           updated_at?: string
           user_id?: string
         }
