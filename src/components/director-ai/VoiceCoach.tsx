@@ -8,6 +8,7 @@ import { Mic, MicOff, Loader2, Brain, Power } from "lucide-react";
 import { JarvisOrb } from "@/components/director-ai/JarvisOrb";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { claimVoice, releaseVoice } from "@/lib/voiceSessionLock";
 
 type Status = "idle" | "connecting" | "connected" | "listening" | "speaking" | "thinking" | "reconnecting" | "error";
 
@@ -502,9 +503,13 @@ OPENING: Greet ${name} by name in one or two sentences, drop a fast read on thei
     logDebug("Microphone stream active");
   }, [assertMicAvailable, logDebug]);
 
+  const voiceIdRef = useRef(Symbol("gemini-live"));
+
   // ===== Connect to Gemini Live =====
   const connect = useCallback(async (isReconnect = false) => {
     if (!isReconnect && ["connecting", "connected", "listening", "speaking", "thinking", "reconnecting"].includes(status)) return;
+    // Stop any other voice in the app (e.g. Ava) before this one starts.
+    if (!isReconnect) claimVoice(voiceIdRef.current, () => disconnectRef.current());
     manualDisconnectRef.current = false;
     shouldStayConnectedRef.current = true;
     setMicError(null);
@@ -733,7 +738,10 @@ OPENING: Greet ${name} by name in one or two sentences, drop a fast read on thei
     reconnectAttemptsRef.current = 0;
     audioChunksSentRef.current = 0;
     updateStatus("idle");
+    releaseVoice(voiceIdRef.current);
   }, [clearTimers, logDebug, stopMic, updateStatus]);
+  const disconnectRef = useRef(disconnect);
+  disconnectRef.current = disconnect;
 
   useEffect(() => {
     connectRef.current = connect;

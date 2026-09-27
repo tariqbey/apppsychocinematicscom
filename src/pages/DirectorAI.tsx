@@ -102,7 +102,7 @@ export default function DirectorAI() {
               </TabsTrigger>
             </TabsList>
           </Tabs>
-          {engine === "gpt-live" && (
+          {engine === "gpt-live" && !avatarOn && (
             <Select
               value={voice}
               onValueChange={(v) => {
@@ -152,7 +152,15 @@ export default function DirectorAI() {
         {/* Voice coach */}
         <div className="flex-1 flex flex-col items-center justify-center">
           {engine === "gpt-live" ? (
-            <GptLiveCoach key={`${voice}-${avatarOn}`} thinkingLevel={thinkingLevel} openingPrompt={openingPrompt} autoStart={autoStart} voice={voice} avatar={avatarOn} />
+            <GptLiveCoach
+              key={`${voice}-${avatarOn}`}
+              thinkingLevel={thinkingLevel}
+              openingPrompt={openingPrompt}
+              autoStart={autoStart}
+              // The avatar is Ava, so she always speaks in Ava's voice.
+              voice={avatarOn ? "marin" : voice}
+              avatar={avatarOn}
+            />
           ) : (
             <VoiceCoach thinkingLevel={thinkingLevel} openingPrompt={openingPrompt} autoStart={autoStart} />
           )}

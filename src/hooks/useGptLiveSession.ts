@@ -4,6 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useCoachingContext } from "@/hooks/useCoachingContext";
 import { runCoachTool } from "@/lib/coachTools";
 import { AnamAvatarBridge } from "@/lib/anamAvatarBridge";
+import { claimVoice, releaseVoice } from "@/lib/voiceSessionLock";
 
 /**
  * A GPT-Live (gpt-live-1) voice session over WebRTC, optionally with the Anam
@@ -65,6 +66,11 @@ export function useGptLiveSession(options: GptLiveSessionOptions) {
   const handledCallsRef = useRef<Set<string>>(new Set());
   const avatarRef = useRef<AnamAvatarBridge | null>(null);
   const speakingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const voiceIdRef = useRef(Symbol("gpt-live"));
+  /** True from the moment start() is called, so a double tap can't open two sessions. */
+  const startingRef = useRef(false);
+  /** Bumped on every stop, so a start that's still awaiting can tell it was cancelled. */
+  const runRef = useRef(0);
 
   /** gpt-live-1 has no explicit "done speaking" event we rely on: fall back to listening after a quiet gap. */
   const markSpeaking = useCallback(() => {
@@ -107,6 +113,10 @@ export function useGptLiveSession(options: GptLiveSessionOptions) {
     pendingToolsRef.current = 0;
     handledCallsRef.current.clear();
     setMicLevel(0);
+    startingRef.current = false;
+    runRef.current += 1;
+    releaseVoice(voiceIdRef.current);
+    if (audioElRef.current) audioElRef.current.srcObject = null;
     const bridge = avatarRef.current;
     avatarRef.current = null;
     setAvatarLive(false);
@@ -218,7 +228,12 @@ export function useGptLiveSession(options: GptLiveSessionOptions) {
   }, []);
 
   const start = useCallback(async () => {
-    if (!user || pcRef.current) return;
+    if (!user || pcRef.current || startingRef.current) return;
+    startingRef.current = true;
+    const run = runRef.current;
+    const cancelled = () => runRef.current !== run;
+    // Stop any other voice in the app (Ava or a coach) before this one starts.
+    claimVoice(voiceIdRef.current, () => stopRef.current());
     const opts = optionsRef.current;
     setError(null);
     setTranscript([]);
@@ -227,6 +242,10 @@ export function useGptLiveSession(options: GptLiveSessionOptions) {
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
       });
+      if (cancelled()) {
+        stream.getTracks().forEach((t) => t.stop());
+        return;
+      }
       streamRef.current = stream;
       startLevelMeter(stream);
 
@@ -236,6 +255,10 @@ export function useGptLiveSession(options: GptLiveSessionOptions) {
         try {
           bridge = new AnamAvatarBridge();
           await bridge.start(opts.avatarVideoId);
+          if (cancelled()) {
+            void bridge.stop();
+            return;
+          }
           avatarRef.current = bridge;
           setAvatarLive(true);
         } catch (avatarError) {
@@ -247,18 +270,23 @@ export function useGptLiveSession(options: GptLiveSessionOptions) {
           );
           bridge = null;
         }
+        if (cancelled()) return;
       }
 
       const pc = new RTCPeerConnection();
       pcRef.current = pc;
       pc.ontrack = (e) => {
         const remote = e.streams[0];
-        if (audioElRef.current) {
-          audioElRef.current.srcObject = remote;
-          // With the avatar on, Anam plays the voice in sync with her lips. The element
-          // stays attached (muted) because Chrome only feeds remote WebRTC audio to
-          // Web Audio while it's attached to a media element.
-          audioElRef.current.muted = Boolean(bridge);
+        const el = audioElRef.current;
+        if (el) {
+          // With the avatar on, only Ava's video plays the voice (in sync with her lips).
+          // The element stays attached but silent, because Chrome only feeds remote
+          // WebRTC audio to Web Audio while it's attached to a media element.
+          const silent = Boolean(bridge);
+          el.muted = silent;
+          el.defaultMuted = silent;
+          el.volume = silent ? 0 : 1;
+          el.srcObject = remote;
         }
         bridge?.attachVoice(remote);
       };
@@ -307,8 +335,11 @@ export function useGptLiveSession(options: GptLiveSessionOptions) {
         }
         throw new Error(detail || fnError?.message || "Couldn't start GPT-Live.");
       }
+      if (cancelled()) return;
       await pc.setRemoteDescription({ type: "answer", sdp: data.sdp });
+      startingRef.current = false;
     } catch (e) {
+      if (cancelled()) return;
       console.error("[GPT-Live] start failed", e);
       const message =
         e instanceof DOMException && e.name === "NotAllowedError"
@@ -327,6 +358,8 @@ export function useGptLiveSession(options: GptLiveSessionOptions) {
     cleanup();
     setStatus("idle");
   }, [cleanup, send]);
+  const stopRef = useRef(stop);
+  stopRef.current = stop;
 
   const toggleMute = useCallback(() => {
     setMuted((prev) => {
