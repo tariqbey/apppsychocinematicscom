@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.1"
+    PostgrestVersion: "14.5"
   }
   public: {
     Tables: {
@@ -1342,6 +1342,63 @@ export type Database = {
         }
         Relationships: []
       }
+      law_of_success_analyses: {
+        Row: {
+          answers: Json
+          blind_spots: string[]
+          chief_aim_grade: number
+          created_at: string
+          danger_points: string[]
+          dominant_fear: string | null
+          fear_scores: Json
+          general_average: number
+          id: string
+          is_baseline: boolean
+          law_scores: Json
+          maat_alignment: number
+          maat_scores: Json
+          reflection: string | null
+          self_grades: Json
+          user_id: string
+        }
+        Insert: {
+          answers?: Json
+          blind_spots?: string[]
+          chief_aim_grade?: number
+          created_at?: string
+          danger_points?: string[]
+          dominant_fear?: string | null
+          fear_scores?: Json
+          general_average?: number
+          id?: string
+          is_baseline?: boolean
+          law_scores?: Json
+          maat_alignment?: number
+          maat_scores?: Json
+          reflection?: string | null
+          self_grades?: Json
+          user_id: string
+        }
+        Update: {
+          answers?: Json
+          blind_spots?: string[]
+          chief_aim_grade?: number
+          created_at?: string
+          danger_points?: string[]
+          dominant_fear?: string | null
+          fear_scores?: Json
+          general_average?: number
+          id?: string
+          is_baseline?: boolean
+          law_scores?: Json
+          maat_alignment?: number
+          maat_scores?: Json
+          reflection?: string | null
+          self_grades?: Json
+          user_id?: string
+        }
+        Relationships: []
+      }
       law_of_success_chunks: {
         Row: {
           chunk_index: number
@@ -1880,63 +1937,6 @@ export type Database = {
           status?: string
           submitted_at?: string
           track_title?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
-      law_of_success_analyses: {
-        Row: {
-          answers: Json
-          blind_spots: string[]
-          chief_aim_grade: number
-          created_at: string
-          danger_points: string[]
-          dominant_fear: string | null
-          fear_scores: Json
-          general_average: number
-          id: string
-          is_baseline: boolean
-          law_scores: Json
-          maat_alignment: number
-          maat_scores: Json
-          reflection: string | null
-          self_grades: Json
-          user_id: string
-        }
-        Insert: {
-          answers?: Json
-          blind_spots?: string[]
-          chief_aim_grade?: number
-          created_at?: string
-          danger_points?: string[]
-          dominant_fear?: string | null
-          fear_scores?: Json
-          general_average?: number
-          id?: string
-          is_baseline?: boolean
-          law_scores?: Json
-          maat_alignment?: number
-          maat_scores?: Json
-          reflection?: string | null
-          self_grades?: Json
-          user_id: string
-        }
-        Update: {
-          answers?: Json
-          blind_spots?: string[]
-          chief_aim_grade?: number
-          created_at?: string
-          danger_points?: string[]
-          dominant_fear?: string | null
-          fear_scores?: Json
-          general_average?: number
-          id?: string
-          is_baseline?: boolean
-          law_scores?: Json
-          maat_alignment?: number
-          maat_scores?: Json
-          reflection?: string | null
-          self_grades?: Json
           user_id?: string
         }
         Relationships: []
@@ -2702,12 +2702,12 @@ export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -2731,11 +2731,11 @@ export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -2756,11 +2756,11 @@ export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -2781,11 +2781,11 @@ export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -2798,11 +2798,11 @@ export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
+    : never) = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
