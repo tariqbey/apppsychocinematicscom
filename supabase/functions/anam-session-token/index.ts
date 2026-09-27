@@ -3,7 +3,7 @@
 // In passthrough mode Anam doesn't run its own brain or voice: the browser feeds it
 // the GPT-Live voice audio and Anam renders the avatar's face and lip-sync.
 //
-// Secrets: ANAM_API_KEY (required), ANAM_AVATAR_ID (required; the default avatar).
+// Secrets: ANAM_API_KEY (required), ANAM_AVATAR_ID (optional; defaults to Ava / Elena).
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.89.0";
 
@@ -35,9 +35,10 @@ serve(async (req) => {
     if (claimsError || !claimsData?.claims?.sub) return json({ error: "Invalid token" }, 401);
 
     const apiKey = Deno.env.get("ANAM_API_KEY");
-    const avatarId = Deno.env.get("ANAM_AVATAR_ID");
-    if (!apiKey || !avatarId) {
-      return json({ error: "The avatar isn't set up yet: add the ANAM_API_KEY and ANAM_AVATAR_ID secrets." }, 503);
+    // Default: Ava's face (Anam "Elena" avatar). Not a secret; ANAM_AVATAR_ID overrides it.
+    const avatarId = Deno.env.get("ANAM_AVATAR_ID") || "edf47a8e-2f18-46fa-9d43-36fb13559d3b";
+    if (!apiKey) {
+      return json({ error: "The avatar isn't set up yet: add the ANAM_API_KEY secret." }, 503);
     }
 
     const resp = await fetch("https://api.anam.ai/v1/auth/session-token", {
