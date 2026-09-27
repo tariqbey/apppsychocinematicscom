@@ -14,6 +14,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.89.0";
 import { PSYCHO_CINEMATICS_KNOWLEDGE } from "../_shared/psycho-cinematics-kb.ts";
 import { COACH_FUNCTION_TOOLS } from "../_shared/coach-tools-schema.ts";
+import { AVA_UI_TOOLS, AVA_DESTINATIONS_GUIDE } from "../_shared/ava-ui-tools-schema.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -22,6 +23,8 @@ const corsHeaders = {
 
 const DEFAULT_BACKEND_MODEL = "gpt-5.6-terra";
 const DEFAULT_VOICE = "cedar";
+/** Ava is a woman; default her to a female GPT-Live voice. */
+const DEFAULT_AVA_VOICE = "marin";
 const ALLOWED_VOICES = new Set([
   "alloy", "ash", "ballad", "beacon", "bossa", "cedar", "cinder", "coral", "delta", "echo", "gleam",
   "marin", "meridian", "quartz", "ripple", "sage", "shimmer", "stone", "tempo", "verse", "vesper", "willow",
@@ -36,6 +39,7 @@ interface CoachContext {
   tasksTotal?: number;
   watchedMindMovie?: boolean;
   timeOfDay?: string;
+  currentPage?: string;
 }
 
 function json(body: unknown, status = 200) {
@@ -67,6 +71,19 @@ Say numbers as words. Never repeat the same question twice; change the angle ins
 OPENING: When the session starts, greet ${name} by name in one or two sentences and ask one direct question that moves them forward. Don't introduce yourself.`;
 }
 
+/** Frontend (voice) prompt for Ava, the in-app assistant who can drive the app. */
+function buildAvaVoiceInstructions(name: string): string {
+  return `You are Ava, ${name}'s personal AI assistant and coach inside Directors OS, the Psycho-Cinematics app. You appear on screen as a live video avatar.
+
+HOW YOU SOUND: Warm, sharp and real, like a trusted chief of staff who's also a coach. Relaxed, confident, a little playful. Short sentences, natural back-and-forth; acknowledge, react, let ${name} finish. You can be direct ("Whose movie you in right now?") when they're slipping. No corporate fluff, no "as an AI".
+
+YOU CAN DO THINGS: move around the app, open websites, put visuals on screen, and manage their tasks, notes and coaching data. When ${name} asks for anything like that, or anything that needs their data, current information, or real thought, delegate it to your backend. Keep the conversation flowing while it works; one short line like "pulling it up" is enough.
+
+NEVER make up their data or pretend you did something you didn't. Say numbers as words. Don't repeat the same question twice.
+
+OPENING: When the session starts, greet ${name} by name in one short sentence and ask what they want to get done.`;
+}
+
 /** Backend (thinking) prompt: the coaching brain, knowledge base and tool rules. */
 function buildBackendInstructions(name: string, ctx: CoachContext): string {
   return `You are the thinking backend for the Director AI voice coach. Your replies are spoken aloud by the voice model, so keep them short (one to three sentences), conversational, and in the coach's voice. Spell numbers as words.
@@ -92,6 +109,18 @@ WHAT YOU ALREADY KNOW ABOUT ${name}:
 - Time of day: ${ctx.timeOfDay || "unknown"}
 
 ${PSYCHO_CINEMATICS_KNOWLEDGE}`;
+}
+
+function buildAvaBackendExtra(ctx: CoachContext): string {
+  return `
+YOU ARE AVA, THE IN-APP ASSISTANT. Beyond coaching, you operate the app for the user:
+- navigate_to: take them to a page. Destinations:${AVA_DESTINATIONS_GUIDE}
+- get_current_page: check where they are.
+- open_url: open a website in a new tab (after web search, or when they name a site).
+- show_visual / close_visual: put a card on screen for lists, plans, steps, numbers or quotes. Prefer showing over reading long lists aloud.
+- Coaching and task tools as described above.
+Act when asked; don't ask permission for navigation or showing visuals. Confirm what you did in one short line.
+The user is currently on: ${ctx.currentPage || "unknown page"}.`;
 }
 
 serve(async (req) => {
@@ -125,27 +154,31 @@ serve(async (req) => {
       tasksTotal: Number(body?.context?.tasksTotal) || 0,
       watchedMindMovie: Boolean(body?.context?.watchedMindMovie),
       timeOfDay: clip(body?.context?.timeOfDay, 20),
+      currentPage: clip(body?.context?.currentPage, 120),
     };
+    const isAva = body?.persona === "ava";
     const name = ctx.displayName || "Director";
     const requestedVoice = clip(body?.voice, 20);
     const voice = ALLOWED_VOICES.has(requestedVoice)
       ? requestedVoice
-      : (Deno.env.get("GPT_LIVE_VOICE") || DEFAULT_VOICE);
+      : body?.persona === "ava"
+        ? (Deno.env.get("AVA_VOICE") || DEFAULT_AVA_VOICE)
+        : (Deno.env.get("GPT_LIVE_VOICE") || DEFAULT_VOICE);
     const effort = body?.thinkingLevel === "medium" ? "medium" : "low";
 
     const session: Record<string, unknown> = {
       model: "gpt-live-1",
-      instructions: buildVoiceInstructions(name),
+      instructions: isAva ? buildAvaVoiceInstructions(name) : buildVoiceInstructions(name),
       audio: { output: { voice } },
       delegation: {
         type: "responses",
         responses: {
           model: Deno.env.get("GPT_LIVE_BACKEND_MODEL") || DEFAULT_BACKEND_MODEL,
-          instructions: buildBackendInstructions(name, ctx),
+          instructions: buildBackendInstructions(name, ctx) + (isAva ? buildAvaBackendExtra(ctx) : ""),
           reasoning: { effort },
           text: { verbosity: "low" },
           parallel_tool_calls: true,
-          tools: [...COACH_FUNCTION_TOOLS, { type: "web_search" }],
+          tools: [...COACH_FUNCTION_TOOLS, ...(isAva ? AVA_UI_TOOLS : []), { type: "web_search" }],
         },
       },
     };

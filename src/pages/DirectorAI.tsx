@@ -35,6 +35,7 @@ export default function DirectorAI() {
   const [thinkingLevel, setThinkingLevel] = useState<"low" | "medium">("low");
   const [engine, setEngine] = useState<VoiceEngine>(() => (readPref("director-ai-engine", "gpt-live") === "gemini" ? "gemini" : "gpt-live"));
   const [voice, setVoice] = useState<string>(() => readPref("director-ai-gpt-live-voice", "cedar"));
+  const [avatarOn, setAvatarOn] = useState<boolean>(() => readPref("director-ai-avatar", "on") === "on");
   const [searchParams] = useSearchParams();
 
   const context = searchParams.get("context"); // e.g. "post-screening"
@@ -121,6 +122,21 @@ export default function DirectorAI() {
               </SelectContent>
             </Select>
           )}
+          {engine === "gpt-live" && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                const next = !avatarOn;
+                setAvatarOn(next);
+                writePref("director-ai-avatar", next ? "on" : "off");
+              }}
+              className={`h-9 text-xs border-gold/20 ${avatarOn ? "bg-gold text-black hover:bg-gold/90" : "bg-card/40"}`}
+              aria-pressed={avatarOn}
+            >
+              {avatarOn ? "Avatar on" : "Avatar off"}
+            </Button>
+          )}
           <Tabs value={thinkingLevel} onValueChange={(v) => setThinkingLevel(v as "low" | "medium")}>
             <TabsList className="bg-card/40 border border-gold/20">
               <TabsTrigger value="low" className="text-xs data-[state=active]:bg-gold data-[state=active]:text-black">
@@ -136,7 +152,7 @@ export default function DirectorAI() {
         {/* Voice coach */}
         <div className="flex-1 flex flex-col items-center justify-center">
           {engine === "gpt-live" ? (
-            <GptLiveCoach key={voice} thinkingLevel={thinkingLevel} openingPrompt={openingPrompt} autoStart={autoStart} voice={voice} />
+            <GptLiveCoach key={`${voice}-${avatarOn}`} thinkingLevel={thinkingLevel} openingPrompt={openingPrompt} autoStart={autoStart} voice={voice} avatar={avatarOn} />
           ) : (
             <VoiceCoach thinkingLevel={thinkingLevel} openingPrompt={openingPrompt} autoStart={autoStart} />
           )}

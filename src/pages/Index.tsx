@@ -282,6 +282,14 @@ const Index = () => {
     openWizardFromCharacter();
   }, [searchParams, user, authLoading, setSearchParams, createNewMovie]);
 
+  // Check for openTheater URL parameter (used by Ava, the in-app assistant)
+  useEffect(() => {
+    if (searchParams.get("openTheater") !== "true") return;
+    if (authLoading || !user) return;
+    setSearchParams({});
+    setShowTheater(true);
+  }, [searchParams, user, authLoading, setSearchParams]);
+
   // Check for openJournal URL parameter (from Challenges page)
   useEffect(() => {
     if (searchParams.get("openJournal") !== "true") return;
