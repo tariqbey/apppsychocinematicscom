@@ -26,6 +26,8 @@ import { CreditCostEstimate } from "./CreditCostEstimate";
 import { LyricsEditor } from "./LyricsEditor";
 import { SoundtrackPlayer } from "./SoundtrackPlayer";
 import { VisionQuestionnaire, buildDescriptionFromAnswers, DEFAULT_VISION_ANSWERS, type VisionAnswers } from "./VisionQuestionnaire";
+import { SuccessMechanismPanel } from "./SuccessMechanismPanel";
+import { EMPTY_PSYCHO_CYBERNETICS, cleanPsychoCyberneticsInputs, type PsychoCyberneticsInputs } from "@/lib/psychoCybernetics";
 import { CinematographyStyleSelector, CINEMATOGRAPHY_STYLES } from "./CinematographyStyleSelector";
 import { VisualsStep } from "./VisualsStep";
 import { useMindMovieScript, type Scene } from "@/hooks/useMindMovieScript";
@@ -154,6 +156,7 @@ export function MindMovieScriptWizard({
   const [cinematographyStyle, setCinematographyStyle] = useState("dramatic");
   const [userDescription, setUserDescription] = useState("");
   const [visionAnswers, setVisionAnswers] = useState<VisionAnswers>(DEFAULT_VISION_ANSWERS);
+  const [psychoCybernetics, setPsychoCybernetics] = useState<PsychoCyberneticsInputs>(EMPTY_PSYCHO_CYBERNETICS);
   const [generatedTitle, setGeneratedTitle] = useState("");
   const [generatedScenes, setGeneratedScenes] = useState<Scene[]>([]);
   const [isAddingScenes, setIsAddingScenes] = useState(false);
@@ -313,7 +316,8 @@ export function MindMovieScriptWizard({
         objective: episode.objective,
         deadline: episode.deadline,
         alignment_score: episode.alignment_score,
-      } : undefined
+      } : undefined,
+      cleanPsychoCyberneticsInputs(psychoCybernetics)
     );
     if (result) {
       if (addScenes && generatedScenes.length > 0) {
@@ -917,6 +921,9 @@ export function MindMovieScriptWizard({
                   value={cinematographyStyle}
                   onChange={setCinematographyStyle}
                 />
+
+                {/* Psycho-Cybernetics: success mechanism inputs */}
+                <SuccessMechanismPanel value={psychoCybernetics} onChange={setPsychoCybernetics} />
 
                 {/* Vision Questionnaire */}
                 <div className="space-y-3">

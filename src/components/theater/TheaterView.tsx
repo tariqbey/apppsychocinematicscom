@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import { TheaterOfMindPrelude, TheaterOfMindAfterglow } from "./TheaterOfMindProtocol";
 import { useNavigate } from "react-router-dom";
 import {
   Flame,
@@ -45,6 +46,9 @@ export const TheaterView = ({ onClose }: TheaterViewProps) => {
   const [showUploader, setShowUploader] = useState(false);
   const [showMediaStudio, setShowMediaStudio] = useState(false);
   const [hasRecordedViewing, setHasRecordedViewing] = useState(false);
+  // Theater of the Mind protocol (Psycho-Cybernetics): relax before, hold the feeling after
+  const [preludeDone, setPreludeDone] = useState(false);
+  const [showAfterglow, setShowAfterglow] = useState(false);
   const [showThreeThings, setShowThreeThings] = useState(false);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [newTaskText, setNewTaskText] = useState("");
@@ -162,6 +166,7 @@ export const TheaterView = ({ onClose }: TheaterViewProps) => {
   // Reset completion state when video URL changes
   useEffect(() => {
     setHasRecordedViewing(false);
+    setPreludeDone(false);
   }, [videoUrl]);
 
   // Video completed → record viewing + show tasks + queue Director AI handoff
@@ -174,12 +179,18 @@ export const TheaterView = ({ onClose }: TheaterViewProps) => {
         title: "Mind Movie completed",
         description: "Director AI is coming to plan with you...",
       });
-      setShowThreeThings(true);
       loadTodaysTasks();
-      setCoachCountdown(8); // 8s grace period before auto-launch
+      // Hold the Winning Feeling first; the planning panel and coach follow.
+      setShowAfterglow(true);
     },
     [hasRecordedViewing, recordViewing, toast, loadTodaysTasks]
   );
+
+  const finishAfterglow = useCallback(() => {
+    setShowAfterglow(false);
+    setShowThreeThings(true);
+    setCoachCountdown(8); // 8s grace period before auto-launch
+  }, []);
 
   const handleVideoError = useCallback(
     (message: string) => {
@@ -418,7 +429,9 @@ export const TheaterView = ({ onClose }: TheaterViewProps) => {
           <div
             className="theater-player w-full h-full sm:h-auto sm:max-w-5xl sm:aspect-video bg-card border border-border relative"
           >
-            {playbackSrc ? (
+            {playbackSrc && !preludeDone && !hasRecordedViewing ? (
+              <TheaterOfMindPrelude onDone={() => setPreludeDone(true)} />
+            ) : playbackSrc ? (
               <>
                 <MindMoviePlayer
                   ref={playerRef}
@@ -480,6 +493,9 @@ export const TheaterView = ({ onClose }: TheaterViewProps) => {
             )}
           </div>
         </div>
+
+        {/* Theater of the Mind: hold the winning feeling */}
+        {showAfterglow && <TheaterOfMindAfterglow streak={streak} onDone={finishAfterglow} />}
 
         {/* Three Things Panel */}
         {showThreeThings && (

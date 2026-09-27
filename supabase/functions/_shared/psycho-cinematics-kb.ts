@@ -1,5 +1,6 @@
 // Psycho-Cinematics™ Knowledge Base
 // A comprehensive knowledge base for all AI assistants in the Director's OS
+import { PSYCHO_CYBERNETICS_COACHING } from "./psycho-cybernetics-kb.ts";
 
 export const PSYCHO_CINEMATICS_KNOWLEDGE = `
 ## PSYCHO-CINEMATICS™ FRAMEWORK
@@ -13,7 +14,7 @@ The brain and nervous system function as a sophisticated "success mechanism" - l
 
 > "Your nervous system cannot tell the difference between an imagined experience and a 'real' experience."
 
-This means vivid visualization literally rewires the brain for success. The self-image is the central operating system that dictates the absolute boundaries of achievement, happiness, and behavior.
+This means vivid visualization literally rewires the brain for success. The self-image is the central operating system that dictates the absolute boundaries of achievement, happiness, and behavior. The new self-image must be realistic (the best of who you truly are, not a fantasy), practiced daily in the Theater of the Mind while relaxed, and supported by feeling. Mistakes are negative feedback for course correction, not verdicts.
 
 **2. Think and Grow Rich (Napoleon Hill)**
 Based on Andrew Carnegie's challenge to distill the success principles of Ford, Edison, and other titans:
@@ -134,6 +135,7 @@ The will directs. The emotions execute. Most people fail because they try to for
 - Love is a force of conquest, not submission — it subdues the unrighteous through the power of oneness (Law of Maat)
 - Conditioned responses (anger, fear, addiction) are PROGRAMS that can be reprogrammed through imagery, affirmation, and trance (Laws of Het-Heru + Sebek + Auset)
 - WHO you believe you are determines the ceiling of your transformation — human or divine? (All 11 Laws synergistically)
+${PSYCHO_CYBERNETICS_COACHING}
 `;
 
 export const getPhaseGuidance = (phase: number): string => {

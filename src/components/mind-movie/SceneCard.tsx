@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import type { Scene } from "@/hooks/useMindMovieScript";
+import { MIND_MOVIE_TECHNIQUES } from "@/lib/psychoCybernetics";
 
 interface SceneCardProps {
   scene: Scene;
@@ -112,6 +113,15 @@ export function SceneCard({
               <Badge variant="outline" className="text-xs capitalize">
                 {scene.emotionalTone}
               </Badge>
+              {scene.technique && MIND_MOVIE_TECHNIQUES[scene.technique] && (
+                <Badge
+                  variant="outline"
+                  className={`text-xs ${MIND_MOVIE_TECHNIQUES[scene.technique].className}`}
+                  title={MIND_MOVIE_TECHNIQUES[scene.technique].purpose}
+                >
+                  {MIND_MOVIE_TECHNIQUES[scene.technique].name}
+                </Badge>
+              )}
             </div>
           </div>
 
@@ -164,6 +174,9 @@ export function SceneCard({
             />
           ) : (
             <p className="text-sm text-foreground/80">{scene.narrative}</p>
+          )}
+          {!isEditMode && scene.sensoryCue && (
+            <p className="text-xs italic text-sky-200/80 mt-2 border-l-2 border-sky-500/40 pl-2">{scene.sensoryCue}</p>
           )}
         </div>
 
