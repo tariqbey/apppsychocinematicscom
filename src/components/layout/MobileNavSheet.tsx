@@ -15,6 +15,7 @@ import {
   MessageSquare,
   Music,
   Bot,
+  Network,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -75,6 +76,13 @@ export function MobileNavSheet({
       icon: <Bot className="h-5 w-5" />,
       authOnly: true,
       description: "Full-screen voice coaching"
+    },
+    {
+      to: "/knowledge-graph",
+      label: "Knowledge Graph",
+      icon: <Network className="h-5 w-5" />,
+      authOnly: true,
+      description: "Your world + Ava's memory"
     },
     {
       to: "/character",

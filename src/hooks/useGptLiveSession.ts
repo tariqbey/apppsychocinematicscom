@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useCoachingContext } from "@/hooks/useCoachingContext";
 import { runCoachTool } from "@/lib/coachTools";
+import { MEMORY_TOOL_NAMES, runMemoryTool } from "@/lib/ava/memoryTools";
 import { AnamAvatarBridge } from "@/lib/anamAvatarBridge";
 import { claimVoice, releaseVoice } from "@/lib/voiceSessionLock";
 
@@ -46,6 +47,8 @@ export interface GptLiveSessionOptions {
 export function useGptLiveSession(options: GptLiveSessionOptions) {
   const { user } = useAuth();
   const { context: coachingContext } = useCoachingContext();
+  const coachingContextRef = useRef(coachingContext);
+  coachingContextRef.current = coachingContext;
   const [status, setStatus] = useState<LiveStatus>("idle");
   const [error, setError] = useState<string | null>(null);
   const [muted, setMuted] = useState(false);
@@ -71,6 +74,12 @@ export function useGptLiveSession(options: GptLiveSessionOptions) {
   const startingRef = useRef(false);
   /** Bumped on every stop, so a start that's still awaiting can tell it was cancelled. */
   const runRef = useRef(0);
+  const transcriptRef = useRef<TranscriptLine[]>([]);
+  transcriptRef.current = transcript;
+  /** Server-provided nudge so the assistant always speaks first. */
+  const openerRef = useRef<string | null>(null);
+  const spokeRef = useRef(false);
+  const memorySavedRef = useRef(true);
 
   /** gpt-live-1 has no explicit "done speaking" event we rely on: fall back to listening after a quiet gap. */
   const markSpeaking = useCallback(() => {
@@ -125,6 +134,20 @@ export function useGptLiveSession(options: GptLiveSessionOptions) {
 
   useEffect(() => cleanup, [cleanup]);
 
+  /** Turn the finished conversation into long-term memory + knowledge graph (fire and forget). */
+  const saveToMemory = useCallback(() => {
+    if (memorySavedRef.current) return;
+    memorySavedRef.current = true;
+    const lines = transcriptRef.current;
+    if (!lines.some((l) => l.role === "user" && l.text.trim().split(/\s+/).length >= 3)) return;
+    void supabase.functions
+      .invoke("ava-session-summary", {
+        body: { transcript: lines.slice(-120), name: coachingContextRef.current?.displayName || coachingContextRef.current?.directorCharacterName },
+      })
+      .then(() => window.dispatchEvent(new CustomEvent("ava:memory-changed")))
+      .catch((e) => console.warn("[GPT-Live] couldn't save session memory", e));
+  }, []);
+
   const handleFunctionCall = useCallback(
     async (item: { call_id?: string; name?: string; arguments?: string }) => {
       if (!user || !item.call_id || !item.name) return;
@@ -144,7 +167,11 @@ export function useGptLiveSession(options: GptLiveSessionOptions) {
       } catch (e) {
         output = { error: e instanceof Error ? e.message : "Tool failed" };
       }
-      if (output === undefined) output = await runCoachTool(user.id, item.name, args);
+      if (output === undefined) {
+        output = MEMORY_TOOL_NAMES.has(item.name)
+          ? await runMemoryTool(user.id, item.name, args)
+          : await runCoachTool(user.id, item.name, args);
+      }
       send({
         type: "response.item.create",
         item: { type: "function_call_output", call_id: item.call_id, output: JSON.stringify(output) },
@@ -161,6 +188,13 @@ export function useGptLiveSession(options: GptLiveSessionOptions) {
       switch (event.type) {
         case "session.started":
           setStatus("listening");
+          // If the assistant hasn't opened within a moment, nudge it to speak first.
+          if (openerRef.current) {
+            const opener = openerRef.current;
+            setTimeout(() => {
+              if (!spokeRef.current) send({ type: "session.commentary.append", content: opener, delegation_id: null });
+            }, 1800);
+          }
           break;
         case "session.input_transcript.delta": {
           const delta = String(event.delta ?? "");
@@ -170,6 +204,7 @@ export function useGptLiveSession(options: GptLiveSessionOptions) {
           break;
         }
         case "session.output_transcript.delta":
+          spokeRef.current = true;
           markSpeaking();
           appendTranscript("assistant", String(event.delta ?? ""));
           break;
@@ -187,6 +222,7 @@ export function useGptLiveSession(options: GptLiveSessionOptions) {
           break;
         }
         case "session.closed":
+          saveToMemory();
           setStatus("idle");
           cleanup();
           break;
@@ -200,7 +236,7 @@ export function useGptLiveSession(options: GptLiveSessionOptions) {
           break;
       }
     },
-    [appendTranscript, cleanup, handleFunctionCall, markSpeaking],
+    [appendTranscript, cleanup, handleFunctionCall, markSpeaking, saveToMemory, send],
   );
 
   const startLevelMeter = useCallback((stream: MediaStream) => {
@@ -235,6 +271,9 @@ export function useGptLiveSession(options: GptLiveSessionOptions) {
     // Stop any other voice in the app (Ava or a coach) before this one starts.
     claimVoice(voiceIdRef.current, () => stopRef.current());
     const opts = optionsRef.current;
+    openerRef.current = null;
+    spokeRef.current = false;
+    memorySavedRef.current = false;
     setError(null);
     setTranscript([]);
     setStatus("connecting");
@@ -336,6 +375,7 @@ export function useGptLiveSession(options: GptLiveSessionOptions) {
         throw new Error(detail || fnError?.message || "Couldn't start GPT-Live.");
       }
       if (cancelled()) return;
+      openerRef.current = typeof data.opener === "string" ? data.opener : null;
       await pc.setRemoteDescription({ type: "answer", sdp: data.sdp });
       startingRef.current = false;
     } catch (e) {
@@ -354,10 +394,11 @@ export function useGptLiveSession(options: GptLiveSessionOptions) {
   }, [cleanup, coachingContext, handleEvent, startLevelMeter, user]);
 
   const stop = useCallback(() => {
+    saveToMemory();
     send({ type: "session.close" });
     cleanup();
     setStatus("idle");
-  }, [cleanup, send]);
+  }, [cleanup, saveToMemory, send]);
   const stopRef = useRef(stop);
   stopRef.current = stop;
 

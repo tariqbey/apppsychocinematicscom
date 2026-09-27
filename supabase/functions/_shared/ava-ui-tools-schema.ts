@@ -3,7 +3,7 @@
 
 export const AVA_DESTINATION_KEYS = [
   "home", "theater", "mind_movie_builder", "journal", "character", "actions", "episodes", "score",
-  "challenges", "blueprint", "director_ai", "soundtrack", "music", "radio", "community", "awards",
+  "challenges", "knowledge_graph", "blueprint", "director_ai", "soundtrack", "music", "radio", "community", "awards",
   "guide", "credits", "done_for_you", "settings",
 ];
 
@@ -17,6 +17,7 @@ actions: today's tasks
 episodes: sprints toward the Chief Aim
 score: Daily Director Scorecard and stats
 challenges: adversity challenges
+knowledge_graph: the user's knowledge graph and everything Ava remembers about them
 blueprint: personal success blueprint
 director_ai: full-screen voice coaching
 soundtrack / music / radio: the user's music
@@ -69,6 +70,34 @@ export const AVA_UI_TOOLS = [
         link_label: { type: "string" },
       },
       required: ["title"],
+      additionalProperties: false,
+    },
+  },
+  {
+    type: "function",
+    name: "scroll_page",
+    description: "Scroll the screen the user is looking at (or the open pop-up).",
+    parameters: {
+      type: "object",
+      properties: { direction: { type: "string", enum: ["down", "up", "top", "bottom"] } },
+      required: ["direction"],
+      additionalProperties: false,
+    },
+  },
+  {
+    type: "function",
+    name: "read_screen",
+    description: "See what's on the user's screen right now: headings, tappable buttons/links/tabs, and visible text. Use before tapping, or when they ask about what they're looking at.",
+    parameters: { type: "object", properties: {}, additionalProperties: false },
+  },
+  {
+    type: "function",
+    name: "tap",
+    description: "Tap a button, tab, link or checkbox on screen by its visible label (from read_screen). Anything that deletes, pays or signs out is refused; ask the user to tap those.",
+    parameters: {
+      type: "object",
+      properties: { label: { type: "string" } },
+      required: ["label"],
       additionalProperties: false,
     },
   },

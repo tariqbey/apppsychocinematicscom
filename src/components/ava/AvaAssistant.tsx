@@ -139,6 +139,7 @@ export function AvaAssistant() {
       {/* Launcher */}
       {!open && (
         <button
+          data-ava-panel
           onClick={openAndStart}
           className="fixed bottom-24 right-4 sm:bottom-6 sm:right-6 z-[60] flex items-center gap-2 rounded-full bg-gradient-to-r from-gold to-amber-500 pl-3 pr-4 py-2.5 text-black shadow-lg shadow-gold/30 hover:scale-105 transition-transform"
           aria-label="Talk to Ava"
@@ -151,6 +152,7 @@ export function AvaAssistant() {
       {/* Panel (kept mounted while open so the session and video survive navigation) */}
       {open && (
         <div
+          data-ava-panel
           className={
             minimized
               ? "fixed bottom-24 right-4 sm:bottom-6 sm:right-6 z-[60]"

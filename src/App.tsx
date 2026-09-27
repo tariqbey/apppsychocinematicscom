@@ -38,6 +38,7 @@ const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 const DirectorProfile = lazy(() => import("./pages/DirectorProfile"));
 const DirectorAI = lazy(() => import("./pages/DirectorAI"));
 const Blueprint = lazy(() => import("./pages/Blueprint"));
+const KnowledgeGraph = lazy(() => import("./pages/KnowledgeGraph"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 // Ava, the in-app assistant (live avatar + GPT-Live voice). Lazy so the avatar SDK stays out of the main bundle.
 const AvaAssistant = lazy(() => import("./components/ava/AvaAssistant").then((m) => ({ default: m.AvaAssistant })));
@@ -84,6 +85,7 @@ const App = () => (
                 <Route path="/director/:userId" element={<DirectorProfile />} />
                 <Route path="/director-ai" element={<DirectorAI />} />
                 <Route path="/blueprint" element={<Blueprint />} />
+                <Route path="/knowledge-graph" element={<KnowledgeGraph />} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
               </Routes>

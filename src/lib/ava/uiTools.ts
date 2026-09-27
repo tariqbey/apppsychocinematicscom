@@ -22,6 +22,7 @@ export const AVA_DESTINATIONS: AvaDestination[] = [
   { key: "episodes", path: "/episodes", label: "Episodes", description: "Sprints and episode movies toward the Chief Aim" },
   { key: "score", path: "/score", label: "Score", description: "Daily Director Scorecard and stats" },
   { key: "challenges", path: "/challenges", label: "Challenges", description: "Adversity challenges" },
+  { key: "knowledge_graph", path: "/knowledge-graph", label: "Knowledge Graph", description: "The user's knowledge graph and everything Ava remembers" },
   { key: "blueprint", path: "/blueprint", label: "Blueprint", description: "The personal success blueprint" },
   { key: "director_ai", path: "/director-ai", label: "Director AI", description: "Full-screen voice coaching" },
   { key: "soundtrack", path: "/soundtrack", label: "Soundtrack", description: "Chief Aim anthem and soundtrack" },
@@ -59,6 +60,42 @@ function safeHttpUrl(raw: unknown): string | null {
     return null;
   }
 }
+
+/** Ava's own panel is never scrolled, read or tapped by her tools. */
+const inAvaPanel = (el: Element) => Boolean(el.closest("[data-ava-panel]"));
+
+function isVisible(el: Element): boolean {
+  const r = (el as HTMLElement).getBoundingClientRect();
+  return r.width > 0 && r.height > 0 && r.bottom > 0 && r.top < window.innerHeight && r.right > 0 && r.left < window.innerWidth;
+}
+
+/** The thing that actually scrolls on this page: an open dialog, the window, or the biggest scroll area. */
+function scrollTarget(): { el: HTMLElement | null; useWindow: boolean } {
+  const dialog = Array.from(document.querySelectorAll<HTMLElement>('[role="dialog"]')).filter((d) => !inAvaPanel(d)).pop();
+  const scope: ParentNode = dialog ?? document;
+  const candidates = Array.from(scope.querySelectorAll<HTMLElement>("*")).filter((el) => {
+    if (inAvaPanel(el) || el.scrollHeight <= el.clientHeight + 40) return false;
+    const oy = getComputedStyle(el).overflowY;
+    return (oy === "auto" || oy === "scroll") && isVisible(el);
+  });
+  const biggest = candidates.sort((a, b) => b.clientHeight * b.clientWidth - a.clientHeight * a.clientWidth)[0] ?? null;
+  const doc = document.scrollingElement as HTMLElement | null;
+  const windowScrolls = !dialog && doc && doc.scrollHeight > window.innerHeight + 40;
+  if (windowScrolls && (!biggest || biggest.clientHeight < window.innerHeight * 0.6)) return { el: null, useWindow: true };
+  return { el: biggest, useWindow: !biggest && Boolean(windowScrolls) };
+}
+
+const BLOCKED_TAP = /\b(delete|remove|erase|destroy|cancel (my )?(plan|subscription)|unsubscribe|sign ?out|log ?out|pay|purchase|buy|checkout|subscribe)\b/i;
+
+function tapTargets(): HTMLElement[] {
+  const selector = 'button, a[href], [role="button"], [role="tab"], [role="menuitem"], [role="link"], input[type="checkbox"], [role="checkbox"], [role="switch"]';
+  return Array.from(document.querySelectorAll<HTMLElement>(selector)).filter(
+    (el) => !inAvaPanel(el) && isVisible(el) && !(el as HTMLButtonElement).disabled,
+  );
+}
+
+const labelOf = (el: HTMLElement) =>
+  (el.getAttribute("aria-label") || el.innerText || el.getAttribute("title") || "").replace(/\s+/g, " ").trim().slice(0, 80);
 
 /** Runs Ava's UI tools. Returns undefined for tools it doesn't own. */
 export function runAvaUiTool(name: string, args: Json, ui: AvaUiActions): Json | undefined {
@@ -101,6 +138,55 @@ export function runAvaUiTool(name: string, args: Json, ui: AvaUiActions): Json |
     case "close_visual":
       ui.showVisual(null);
       return { success: true };
+    case "scroll_page": {
+      const direction = String(args.direction ?? "down");
+      const { el, useWindow } = scrollTarget();
+      if (!el && !useWindow) return { error: "Nothing on this screen scrolls." };
+      const height = useWindow ? window.innerHeight : el!.clientHeight;
+      const max = useWindow ? (document.scrollingElement?.scrollHeight ?? 0) : el!.scrollHeight;
+      const opts: ScrollToOptions = { behavior: "smooth" };
+      if (direction === "top") opts.top = 0;
+      else if (direction === "bottom") opts.top = max;
+      else {
+        const current = useWindow ? window.scrollY : el!.scrollTop;
+        opts.top = current + (direction === "up" ? -1 : 1) * height * 0.8;
+      }
+      if (useWindow) window.scrollTo(opts);
+      else el!.scrollTo(opts);
+      return { success: true, scrolled: direction };
+    }
+    case "read_screen": {
+      const scope = Array.from(document.querySelectorAll<HTMLElement>('[role="dialog"]')).filter((d) => !inAvaPanel(d)).pop() ?? document.body;
+      const headings = Array.from(scope.querySelectorAll<HTMLElement>("h1, h2, h3, h4"))
+        .filter((h) => !inAvaPanel(h) && isVisible(h))
+        .map((h) => h.innerText.trim())
+        .filter(Boolean)
+        .slice(0, 15);
+      const buttons = tapTargets().map(labelOf).filter(Boolean);
+      const text = Array.from(scope.querySelectorAll<HTMLElement>("p, li, label, td, span"))
+        .filter((e) => !inAvaPanel(e) && isVisible(e) && e.children.length === 0)
+        .map((e) => e.innerText.trim())
+        .filter((t) => t.length > 2)
+        .join(" · ")
+        .slice(0, 1500);
+      return { page: ui.currentPath(), headings, tappable: Array.from(new Set(buttons)).slice(0, 40), visible_text: text };
+    }
+    case "tap": {
+      const wanted = String(args.label ?? "").trim().toLowerCase();
+      if (!wanted) return { error: "label required" };
+      const targets = tapTargets();
+      const match =
+        targets.find((el) => labelOf(el).toLowerCase() === wanted) ??
+        targets.find((el) => labelOf(el).toLowerCase().includes(wanted));
+      if (!match) return { error: `No button or link called "${args.label}" on screen. Use read_screen to see what's tappable.` };
+      const label = labelOf(match);
+      if (BLOCKED_TAP.test(label)) {
+        return { error: `"${label}" deletes, pays or signs out. Ask the user to tap it themselves.` };
+      }
+      match.scrollIntoView({ block: "center", behavior: "smooth" });
+      match.click();
+      return { success: true, tapped: label };
+    }
     default:
       return undefined;
   }
