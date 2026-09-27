@@ -16,6 +16,8 @@ import { ArchetypesGuide } from "@/components/character/ArchetypesGuide";
 import { ArchetypeResult } from "@/components/character/ArchetypeResult";
 import { SelfAnalysisReminder } from "@/components/character/SelfAnalysisReminder";
 import { CharacterSurvey } from "@/components/character/CharacterSurvey";
+import { LawOfSuccessAnalysis } from "@/components/character/LawOfSuccessAnalysis";
+import { LawOfSuccessChart } from "@/components/character/LawOfSuccessChart";
 import { useAuth } from "@/hooks/useAuth";
 import { useCycleTracking } from "@/hooks/useCycleTracking";
 import { Loader2, ArrowLeft, User2, Target, TrendingUp, Brain, Calendar, GitBranch, RotateCcw, UserPlus, Sparkles, BarChart3, BookOpen, ClipboardList } from "lucide-react";
@@ -34,6 +36,8 @@ const Character = () => {
   const { toast } = useToast();
   const [showCycleReview, setShowCycleReview] = useState(false);
   const [showSurvey, setShowSurvey] = useState(false);
+  const [showLawAnalysis, setShowLawAnalysis] = useState(false);
+  const [lawAnalysisVersion, setLawAnalysisVersion] = useState(0);
   const [showResult, setShowResult] = useState(false);
   const [resultArchetype, setResultArchetype] = useState<Archetype | null>(null);
   const [resultScores, setResultScores] = useState<Record<string, number>>({});
@@ -182,6 +186,11 @@ const Character = () => {
             </TabsContent>
 
             <TabsContent value="self-analysis" className="space-y-6">
+              <LawOfSuccessChart
+                refreshKey={lawAnalysisVersion}
+                onStart={() => setShowLawAnalysis(true)}
+              />
+
               <div className="glass-card p-6 space-y-4">
                 <div className="flex items-center gap-3 mb-4">
                   <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-gold/20 to-amber-500/20 flex items-center justify-center">
@@ -286,6 +295,17 @@ const Character = () => {
         <CharacterSurvey
           onComplete={handleSurveyComplete}
           onClose={() => setShowSurvey(false)}
+        />
+      )}
+
+      {/* Law of Success Personal Analysis Modal */}
+      {showLawAnalysis && (
+        <LawOfSuccessAnalysis
+          onClose={() => setShowLawAnalysis(false)}
+          onComplete={() => {
+            setShowLawAnalysis(false);
+            setLawAnalysisVersion((v) => v + 1);
+          }}
         />
       )}
 
