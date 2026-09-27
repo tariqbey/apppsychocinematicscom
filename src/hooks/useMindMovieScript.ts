@@ -10,6 +10,10 @@ export interface Scene {
   prompt: string;
   duration: number;
   emotionalTone: string;
+  /** Psycho-Cybernetics technique key (see src/lib/psychoCybernetics.ts). */
+  technique?: string;
+  /** First-person, present-tense sensory line for Theater of the Mind replay. */
+  sensoryCue?: string;
   generatedImageUrl?: string | null;
   generatedVideoUrl?: string | null;
 }
@@ -144,7 +148,8 @@ export function useMindMovieScript() {
       objective: string;
       deadline: string;
       alignment_score?: number | null;
-    }
+    },
+    psychoCybernetics?: Record<string, unknown>
   ) => {
     if (!user) {
       toast.error("Please sign in to generate a storyboard");
@@ -164,6 +169,7 @@ export function useMindMovieScript() {
           transformationAnalysis: transformationAnalysis || undefined,
           episodeMode: episodeMode || false,
           episodeData: episodeData || undefined,
+          psychoCybernetics: psychoCybernetics && Object.keys(psychoCybernetics).length ? psychoCybernetics : undefined,
         },
       });
 

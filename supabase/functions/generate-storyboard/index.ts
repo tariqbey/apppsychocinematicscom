@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.89.0";
 import { CINEMATOGRAPHY_TECHNIQUES, NLP_AFFIRMATION_PATTERNS, COMPOSITION_TECHNIQUES, CAMERA_SPECIFICATIONS } from "../_shared/cinematography-nlp-kb.ts";
+import { buildPsychoCyberneticsDirection, MIND_MOVIE_TECHNIQUES, type PsychoCyberneticsInputs } from "../_shared/psycho-cybernetics-kb.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -165,7 +166,7 @@ serve(async (req) => {
       );
     }
 
-    const { chiefAim, visualStyle, userDescription, existingScenes, addMoreScenes, transformationAnalysis, episodeMode, episodeData, targetDuration = 120 } = await req.json();
+    const { chiefAim, visualStyle, userDescription, existingScenes, addMoreScenes, transformationAnalysis, episodeMode, episodeData, targetDuration = 120, psychoCybernetics } = await req.json();
     
     // Calculate scene count based on target duration (default 2 minutes = 120 seconds)
     // Each scene is 10 seconds
@@ -323,7 +324,15 @@ EVERY scene prompt MUST include:
 - Protagonist's expression and body language
 - Cinematic 16:9, photorealistic, volumetric lighting, shallow depth of field`;
     
-    const systemPrompt = isEpisodeMode ? episodeSystemPrompt : fullMindMoviePrompt;
+    // Psycho-Cybernetics layer: every full mind movie is built as a target for the success mechanism.
+    // Episode movies (3-5 scenes) get the scene rules and technique tags but not the full required-scene list.
+    const pcInputs = (psychoCybernetics ?? {}) as PsychoCyberneticsInputs;
+    const psychoCyberneticsDirection = isEpisodeMode
+      ? buildPsychoCyberneticsDirection({ rehearsalSituation: pcInputs.rehearsalSituation }, 5)
+      : buildPsychoCyberneticsDirection(pcInputs, addMoreScenes ? 3 : sceneCount);
+    const systemPrompt = `${isEpisodeMode ? episodeSystemPrompt : fullMindMoviePrompt}
+
+${psychoCyberneticsDirection}`;
 
     // Build the user prompt with transformation context if available
     let userPrompt: string;
@@ -492,8 +501,17 @@ Each scene should be 10 seconds, building emotional momentum toward the triumpha
                           type: "string",
                           description: "The emotional feeling of this scene (e.g., hopeful, triumphant, peaceful)",
                         },
+                        technique: {
+                          type: "string",
+                          enum: Object.keys(MIND_MOVIE_TECHNIQUES),
+                          description: "The Psycho-Cybernetics technique this scene uses",
+                        },
+                        sensoryCue: {
+                          type: "string",
+                          description: "One line of what the viewer sees, hears and feels in this scene, first person, present tense, for Theater of the Mind replay",
+                        },
                       },
-                      required: ["order", "title", "narrative", "prompt", "duration", "emotionalTone"],
+                      required: ["order", "title", "narrative", "prompt", "duration", "emotionalTone", "technique"],
                     },
                   },
                 },
@@ -545,6 +563,14 @@ Each scene should be 10 seconds, building emotional momentum toward the triumpha
     } catch (parseError) {
       console.error("[generate-storyboard] Failed to parse arguments:", toolCall.function.arguments);
       throw new Error("Failed to parse AI response. Please try again.");
+    }
+
+    // Keep technique tags valid even if the model drifts.
+    if (Array.isArray(storyboard?.scenes)) {
+      storyboard.scenes = storyboard.scenes.map((scene: Record<string, unknown>) => ({
+        ...scene,
+        technique: typeof scene.technique === "string" && scene.technique in MIND_MOVIE_TECHNIQUES ? scene.technique : "self_image",
+      }));
     }
 
     return new Response(JSON.stringify(storyboard), {
