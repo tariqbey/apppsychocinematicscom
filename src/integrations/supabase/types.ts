@@ -1884,6 +1884,63 @@ export type Database = {
         }
         Relationships: []
       }
+      law_of_success_analyses: {
+        Row: {
+          answers: Json
+          blind_spots: string[]
+          chief_aim_grade: number
+          created_at: string
+          danger_points: string[]
+          dominant_fear: string | null
+          fear_scores: Json
+          general_average: number
+          id: string
+          is_baseline: boolean
+          law_scores: Json
+          maat_alignment: number
+          maat_scores: Json
+          reflection: string | null
+          self_grades: Json
+          user_id: string
+        }
+        Insert: {
+          answers?: Json
+          blind_spots?: string[]
+          chief_aim_grade?: number
+          created_at?: string
+          danger_points?: string[]
+          dominant_fear?: string | null
+          fear_scores?: Json
+          general_average?: number
+          id?: string
+          is_baseline?: boolean
+          law_scores?: Json
+          maat_alignment?: number
+          maat_scores?: Json
+          reflection?: string | null
+          self_grades?: Json
+          user_id: string
+        }
+        Update: {
+          answers?: Json
+          blind_spots?: string[]
+          chief_aim_grade?: number
+          created_at?: string
+          danger_points?: string[]
+          dominant_fear?: string | null
+          fear_scores?: Json
+          general_average?: number
+          id?: string
+          is_baseline?: boolean
+          law_scores?: Json
+          maat_alignment?: number
+          maat_scores?: Json
+          reflection?: string | null
+          self_grades?: Json
+          user_id?: string
+        }
+        Relationships: []
+      }
       saved_character_analyses: {
         Row: {
           analysis: Json

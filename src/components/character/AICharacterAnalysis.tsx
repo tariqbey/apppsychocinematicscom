@@ -48,6 +48,9 @@ interface CharacterAnalysis {
   directorsNote: string;
   nextScene: string;
   overallScore: number;
+  personalAnalysisReading?: string;
+  fearDiagnosis?: string;
+  maatCheck?: string;
 }
 
 interface AnalysisData {
@@ -70,6 +73,16 @@ interface AnalysisData {
     plan: string;
   };
   generatedAt: string;
+  personalAnalysis?: {
+    takenAt: string;
+    generalAverage: number;
+    baselineAverage: number | null;
+    chiefAimGrade: number;
+    dangerPoints: string[];
+    blindSpots: string[];
+    dominantFear: string | null;
+    maatAlignment: number;
+  } | null;
   archetype?: {
     id: string;
     name: string;
@@ -667,6 +680,63 @@ export function AICharacterAnalysis() {
                   </div>
                 </CardContent>
               </Card>
+
+              {/* Law of Success Personal Analysis reading */}
+              {(data.analysis.personalAnalysisReading || data.analysis.fearDiagnosis || data.analysis.maatCheck) && (
+                <Card className="bg-gradient-to-br from-gold/10 via-background to-red-500/5 border-gold/30">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="flex items-center gap-2 text-base">
+                      <BookOpen className="w-5 h-5 text-gold" />
+                      Law of Success Reading
+                      {data.personalAnalysis && (
+                        <Badge className="ml-2 bg-gold/20 text-gold border-gold/30">
+                          Avg {data.personalAnalysis.generalAverage}%
+                          {data.personalAnalysis.baselineAverage !== null &&
+                            ` (was ${data.personalAnalysis.baselineAverage}%)`}
+                        </Badge>
+                      )}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    {data.personalAnalysis && data.personalAnalysis.dangerPoints.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5">
+                        {data.personalAnalysis.dangerPoints.map((d) => (
+                          <Badge key={d} variant="outline" className="border-red-500/40 text-red-300">
+                            <AlertTriangle className="w-3 h-3 mr-1" />
+                            {d}
+                          </Badge>
+                        ))}
+                        {data.personalAnalysis.blindSpots.map((b) => (
+                          <Badge key={b} variant="outline" className="border-amber-500/40 text-amber-300">
+                            <Eye className="w-3 h-3 mr-1" />
+                            {b}
+                          </Badge>
+                        ))}
+                      </div>
+                    )}
+                    {data.analysis.personalAnalysisReading && (
+                      <div className="p-3 rounded-lg bg-card/50 border border-border">
+                        <h5 className="text-sm font-semibold text-gold mb-1">Your Personal Analysis Chart</h5>
+                        <p className="text-sm text-muted-foreground">{data.analysis.personalAnalysisReading}</p>
+                      </div>
+                    )}
+                    {data.analysis.fearDiagnosis && (
+                      <div className="p-3 rounded-lg bg-red-500/5 border border-red-500/20">
+                        <h5 className="text-sm font-semibold text-red-300 mb-1">
+                          Fear Diagnosis{data.personalAnalysis?.dominantFear ? `: ${data.personalAnalysis.dominantFear}` : ""}
+                        </h5>
+                        <p className="text-sm text-muted-foreground">{data.analysis.fearDiagnosis}</p>
+                      </div>
+                    )}
+                    {data.analysis.maatCheck && (
+                      <div className="p-3 rounded-lg bg-purple-500/5 border border-purple-500/20">
+                        <h5 className="text-sm font-semibold text-purple-300 mb-1">Maat Check</h5>
+                        <p className="text-sm text-muted-foreground">{data.analysis.maatCheck}</p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
 
               {/* Archetype Alignment - Metu Neter Section */}
               {(data.archetype || data.analysis.archetypeAlignment) && (
