@@ -41,7 +41,7 @@ function layout(nodes: KgNode[], edges: KgEdge[], width: number, height: number)
     pos.set(node.id, { x: width / 2 + Math.cos(a) * r, y: height / 2 + Math.sin(a) * r, vx: 0, vy: 0 });
   });
   const links = edges.filter((e) => pos.has(e.source_id) && pos.has(e.target_id));
-  const ideal = Math.max(70, Math.min(140, Math.sqrt((width * height) / Math.max(1, n)) * 0.8));
+  const ideal = Math.max(width < 640 ? 60 : 70, Math.min(140, Math.sqrt((width * height) / Math.max(1, n)) * 0.8));
   const iterations = n > 200 ? 160 : 300;
 
   for (let it = 0; it < iterations; it++) {
@@ -88,7 +88,36 @@ function layout(nodes: KgNode[], edges: KgEdge[], width: number, height: number)
       p.vy *= 0.6;
     }
   }
-  return new Map(Array.from(pos.entries()).map(([id, p]) => [id, { x: p.x, y: p.y }]));
+  // Fit the whole layout inside the canvas with a margin (labels sit below the dots).
+  const pts = Array.from(pos.values());
+  if (!pts.length) return new Map();
+  const minX = Math.min(...pts.map((p) => p.x));
+  const maxX = Math.max(...pts.map((p) => p.x));
+  const minY = Math.min(...pts.map((p) => p.y));
+  const maxY = Math.max(...pts.map((p) => p.y));
+  const narrow = width < 640;
+  const mx = narrow ? 44 : 90;
+  const my = 40;
+  const fit = Math.min((width - mx * 2) / Math.max(1, maxX - minX), (height - my * 2 - 20) / Math.max(1, maxY - minY), 2.4);
+  // On phones, don't squash a big graph into a clump: keep it readable and let the user pan.
+  const scale = narrow ? Math.max(fit, 0.7) : fit;
+  let offX = (width - (maxX - minX) * scale) / 2;
+  let offY = (height - 20 - (maxY - minY) * scale) / 2;
+  if (scale > fit) {
+    // Zoomed past "fit" on a phone: start centered on the most-connected node.
+    const deg = new Map<string, number>();
+    links.forEach((e) => {
+      deg.set(e.source_id, (deg.get(e.source_id) ?? 0) + 1);
+      deg.set(e.target_id, (deg.get(e.target_id) ?? 0) + 1);
+    });
+    const hubId = Array.from(pos.keys()).sort((a, b) => (deg.get(b) ?? 0) - (deg.get(a) ?? 0))[0];
+    const hub = pos.get(hubId)!;
+    offX = width / 2 - (hub.x - minX) * scale;
+    offY = (height - 20) / 2 - (hub.y - minY) * scale;
+  }
+  return new Map(
+    Array.from(pos.entries()).map(([id, p]) => [id, { x: offX + (p.x - minX) * scale, y: offY + (p.y - minY) * scale }]),
+  );
 }
 
 type Memory = Awaited<ReturnType<typeof loadMemories>>[number];
@@ -106,18 +135,36 @@ export default function KnowledgeGraph() {
   const [query, setQuery] = useState("");
   const [view, setView] = useState({ x: 0, y: 0, k: 1 });
 
-  const W = 1000;
-  const H = 700;
+  // The canvas uses real screen pixels, so labels stay readable on phones.
+  const canvasRef = useRef<HTMLDivElement>(null);
+  const [size, setSize] = useState({ w: 1000, h: 640 });
+  useEffect(() => {
+    const el = canvasRef.current;
+    if (!el) return;
+    const measure = () => {
+      const w = Math.round(el.clientWidth);
+      const h = Math.round(el.clientHeight);
+      if (w > 0 && h > 0) setSize((s) => (Math.abs(s.w - w) > 8 || Math.abs(s.h - h) > 8 ? { w, h } : s));
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  const W = size.w;
+  const H = size.h;
+  const graphRef = useRef<{ nodes: KgNode[]; edges: KgEdge[] }>({ nodes: [], edges: [] });
 
+  const userId = user?.id;
   const refresh = useCallback(async () => {
-    if (!user) return;
-    const [graph, mems] = await Promise.all([loadGraph(user.id), loadMemories(user.id)]);
+    if (!userId) return;
+    const [graph, mems] = await Promise.all([loadGraph(userId), loadMemories(userId)]);
+    graphRef.current = graph;
     setNodes(graph.nodes);
     setEdges(graph.edges);
     setMemories(mems);
-    setPositions(layout(graph.nodes, graph.edges, W, H));
     setLoading(false);
-  }, [user]);
+  }, [userId]);
 
   useEffect(() => {
     void refresh();
@@ -129,6 +176,11 @@ export default function KnowledgeGraph() {
       window.removeEventListener("ava:memory-changed", onChange);
     };
   }, [refresh]);
+
+  useEffect(() => {
+    setPositions(layout(nodes, edges, W, H));
+    setView({ x: 0, y: 0, k: 1 });
+  }, [nodes, edges, W, H]);
 
   const degree = useMemo(() => {
     const d = new Map<string, number>();
@@ -184,7 +236,11 @@ export default function KnowledgeGraph() {
 
   const onPointerDown = (e: React.PointerEvent, id?: string) => {
     e.stopPropagation();
-    (e.target as Element).setPointerCapture?.(e.pointerId);
+    try {
+      svgRef.current?.setPointerCapture(e.pointerId);
+    } catch {
+      // Synthetic or already-released pointers can't be captured; dragging still works inside the canvas.
+    }
     drag.current = id
       ? { kind: "node", id, startX: e.clientX, startY: e.clientY, orig: positions.get(id) ?? { x: 0, y: 0 }, moved: false }
       : { kind: "pan", startX: e.clientX, startY: e.clientY, orig: { x: view.x, y: view.y }, moved: false };
@@ -243,16 +299,14 @@ export default function KnowledgeGraph() {
                 Knowledge Graph
               </h1>
               <p className="text-xs sm:text-sm text-muted-foreground">
-                Your world as Ava sees it: {nodes.length} things, {edges.length} connections, {facts.length} memories.
+                Your world as Ava sees it: {nodes.length} {nodes.length === 1 ? "thing" : "things"}, {edges.length} {edges.length === 1 ? "connection" : "connections"}, {facts.length} {facts.length === 1 ? "memory" : "memories"}.
               </p>
             </div>
           </div>
-          <Button variant="outline" size="icon" onClick={() => void refresh()} aria-label="Refresh">
-            <RefreshCw className="w-4 h-4" />
-          </Button>
         </div>
 
         <Tabs defaultValue="graph">
+          <div className="flex items-center justify-between gap-2">
           <TabsList className="bg-card/40 border border-gold/20">
             <TabsTrigger value="graph" className="gap-1.5 data-[state=active]:bg-gold data-[state=active]:text-black">
               <Network className="w-4 h-4" /> Graph
@@ -261,10 +315,14 @@ export default function KnowledgeGraph() {
               <Brain className="w-4 h-4" /> Memories
             </TabsTrigger>
           </TabsList>
+          <Button variant="outline" size="icon" onClick={() => void refresh()} aria-label="Refresh">
+            <RefreshCw className="w-4 h-4" />
+          </Button>
+          </div>
 
           <TabsContent value="graph" className="space-y-3">
-            <div className="flex flex-wrap items-center gap-2">
-              <div className="relative flex-1 min-w-[180px]">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+              <div className="relative flex-1 min-w-0 sm:min-w-[180px]">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <input
                   value={query}
@@ -273,6 +331,7 @@ export default function KnowledgeGraph() {
                   className="w-full h-9 rounded-md border border-gold/20 bg-card/40 pl-9 pr-3 text-sm outline-none focus:border-gold/50"
                 />
               </div>
+              <div className="-mx-4 px-4 sm:mx-0 sm:px-0 flex !flex-nowrap gap-2 overflow-x-auto [scrollbar-width:none]">
               {TYPE_GROUPS.map((g) => {
                 const off = hidden.has(g.key);
                 return (
@@ -286,7 +345,7 @@ export default function KnowledgeGraph() {
                         return next;
                       })
                     }
-                    className={`flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs transition-opacity ${off ? "opacity-40 border-border" : "border-gold/25"}`}
+                    className={`flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs whitespace-nowrap transition-opacity ${off ? "opacity-40 border-border" : "border-gold/25"}`}
                     aria-pressed={!off}
                   >
                     <span className="h-2.5 w-2.5 rounded-full" style={{ background: g.color }} />
@@ -294,15 +353,16 @@ export default function KnowledgeGraph() {
                   </button>
                 );
               })}
+              </div>
             </div>
 
-            <div className="relative overflow-hidden rounded-2xl border border-gold/20 bg-gradient-to-b from-card/60 to-black/60">
+            <div ref={canvasRef} className="relative h-[62vh] min-h-[380px] overflow-hidden rounded-2xl border border-gold/20 bg-gradient-to-b from-card/60 to-black/60">
               {loading ? (
-                <div className="flex h-[60vh] items-center justify-center">
+                <div className="flex h-full items-center justify-center">
                   <Loader2 className="w-6 h-6 animate-spin text-gold" />
                 </div>
               ) : nodes.length === 0 ? (
-                <div className="flex h-[60vh] flex-col items-center justify-center gap-3 px-6 text-center">
+                <div className="flex h-full flex-col items-center justify-center gap-3 px-6 text-center">
                   <Sparkles className="w-8 h-8 text-gold" />
                   <p className="font-display text-lg">Your graph is empty, for now.</p>
                   <p className="max-w-md text-sm text-muted-foreground">
@@ -313,7 +373,7 @@ export default function KnowledgeGraph() {
                 <svg
                   ref={svgRef}
                   viewBox={`0 0 ${W} ${H}`}
-                  className="h-[62vh] w-full touch-none select-none cursor-grab active:cursor-grabbing"
+                  className="h-full w-full touch-none select-none cursor-grab active:cursor-grabbing"
                   onPointerDown={(e) => onPointerDown(e)}
                   onPointerMove={onPointerMove}
                   onPointerUp={onPointerUp}
