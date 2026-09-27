@@ -64,6 +64,18 @@ export function useGptLiveSession(options: GptLiveSessionOptions) {
   const pendingToolsRef = useRef(0);
   const handledCallsRef = useRef<Set<string>>(new Set());
   const avatarRef = useRef<AnamAvatarBridge | null>(null);
+  const speakingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  /** gpt-live-1 has no explicit "done speaking" event we rely on: fall back to listening after a quiet gap. */
+  const markSpeaking = useCallback(() => {
+    setStatus("speaking");
+    if (speakingTimerRef.current) clearTimeout(speakingTimerRef.current);
+    speakingTimerRef.current = setTimeout(() => {
+      speakingTimerRef.current = null;
+      if (pendingToolsRef.current > 0) return;
+      setStatus((s) => (s === "speaking" ? "listening" : s));
+    }, 1200);
+  }, []);
 
   const appendTranscript = useCallback((role: TranscriptLine["role"], delta: string) => {
     if (!delta) return;
@@ -82,6 +94,8 @@ export function useGptLiveSession(options: GptLiveSessionOptions) {
   const cleanup = useCallback(() => {
     if (levelRafRef.current) cancelAnimationFrame(levelRafRef.current);
     levelRafRef.current = null;
+    if (speakingTimerRef.current) clearTimeout(speakingTimerRef.current);
+    speakingTimerRef.current = null;
     dcRef.current?.close();
     pcRef.current?.close();
     streamRef.current?.getTracks().forEach((t) => t.stop());
@@ -146,7 +160,7 @@ export function useGptLiveSession(options: GptLiveSessionOptions) {
           break;
         }
         case "session.output_transcript.delta":
-          setStatus("speaking");
+          markSpeaking();
           appendTranscript("assistant", String(event.delta ?? ""));
           break;
         case "session.delegation.created":
@@ -176,7 +190,7 @@ export function useGptLiveSession(options: GptLiveSessionOptions) {
           break;
       }
     },
-    [appendTranscript, cleanup, handleFunctionCall],
+    [appendTranscript, cleanup, handleFunctionCall, markSpeaking],
   );
 
   const startLevelMeter = useCallback((stream: MediaStream) => {
