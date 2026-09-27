@@ -39,6 +39,8 @@ const DirectorProfile = lazy(() => import("./pages/DirectorProfile"));
 const DirectorAI = lazy(() => import("./pages/DirectorAI"));
 const Blueprint = lazy(() => import("./pages/Blueprint"));
 const NotFound = lazy(() => import("./pages/NotFound"));
+// Ava, the in-app assistant (live avatar + GPT-Live voice). Lazy so the avatar SDK stays out of the main bundle.
+const AvaAssistant = lazy(() => import("./components/ava/AvaAssistant").then((m) => ({ default: m.AvaAssistant })));
 
 const queryClient = new QueryClient();
 
@@ -85,6 +87,10 @@ const App = () => (
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
               </Routes>
+            </Suspense>
+            {/* Own Suspense boundary so page loads never hide or pause Ava mid-conversation. */}
+            <Suspense fallback={null}>
+              <AvaAssistant />
             </Suspense>
             <PWAInstallPrompt />
             <PWAUpdatePrompt />

@@ -114,3 +114,9 @@ verify_jwt = false
 
 
 
+
+[functions.gpt-live-session]
+verify_jwt = false
+
+[functions.anam-session-token]
+verify_jwt = false
