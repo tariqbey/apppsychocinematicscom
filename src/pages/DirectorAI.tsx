@@ -5,6 +5,27 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 import VoiceCoach from "@/components/director-ai/VoiceCoach";
+import GptLiveCoach from "@/components/director-ai/GptLiveCoach";
+import { GPT_LIVE_VOICES } from "@/lib/gptLive";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
+type VoiceEngine = "gpt-live" | "gemini";
+
+function readPref(key: string, fallback: string): string {
+  try {
+    return localStorage.getItem(key) ?? fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function writePref(key: string, value: string) {
+  try {
+    localStorage.setItem(key, value);
+  } catch {
+    // Preferences are a convenience only.
+  }
+}
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function DirectorAI() {
@@ -12,6 +33,8 @@ export default function DirectorAI() {
   const navigate = useNavigate();
   const { user, loading } = useAuth();
   const [thinkingLevel, setThinkingLevel] = useState<"low" | "medium">("low");
+  const [engine, setEngine] = useState<VoiceEngine>(() => (readPref("director-ai-engine", "gpt-live") === "gemini" ? "gemini" : "gpt-live"));
+  const [voice, setVoice] = useState<string>(() => readPref("director-ai-gpt-live-voice", "cedar"));
   const [searchParams] = useSearchParams();
 
   const context = searchParams.get("context"); // e.g. "post-screening"
@@ -54,14 +77,50 @@ export default function DirectorAI() {
           <div className="text-center">
             <h1 className="text-xl font-bold text-gold tracking-wide">DIRECTOR AI</h1>
             <p className="text-[10px] uppercase tracking-[0.3em] text-muted-foreground">
-              Live Voice Coach · Gemini 3.1
+              Live Voice Coach · {engine === "gpt-live" ? "GPT-Live" : "Gemini Live"}
             </p>
           </div>
           <div className="w-16" />
         </div>
 
-        {/* Thinking level toggle */}
-        <div className="flex justify-center mb-8">
+        {/* Engine, voice and thinking level */}
+        <div className="flex flex-wrap items-center justify-center gap-3 mb-8">
+          <Tabs
+            value={engine}
+            onValueChange={(v) => {
+              setEngine(v as VoiceEngine);
+              writePref("director-ai-engine", v);
+            }}
+          >
+            <TabsList className="bg-card/40 border border-gold/20">
+              <TabsTrigger value="gpt-live" className="text-xs data-[state=active]:bg-gold data-[state=active]:text-black">
+                GPT-Live
+              </TabsTrigger>
+              <TabsTrigger value="gemini" className="text-xs data-[state=active]:bg-gold data-[state=active]:text-black">
+                Gemini
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+          {engine === "gpt-live" && (
+            <Select
+              value={voice}
+              onValueChange={(v) => {
+                setVoice(v);
+                writePref("director-ai-gpt-live-voice", v);
+              }}
+            >
+              <SelectTrigger className="h-9 w-32 text-xs bg-card/40 border-gold/20" aria-label="Voice">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {GPT_LIVE_VOICES.map((v) => (
+                  <SelectItem key={v} value={v} className="text-xs capitalize">
+                    {v}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
           <Tabs value={thinkingLevel} onValueChange={(v) => setThinkingLevel(v as "low" | "medium")}>
             <TabsList className="bg-card/40 border border-gold/20">
               <TabsTrigger value="low" className="text-xs data-[state=active]:bg-gold data-[state=active]:text-black">
@@ -76,7 +135,11 @@ export default function DirectorAI() {
 
         {/* Voice coach */}
         <div className="flex-1 flex flex-col items-center justify-center">
-          <VoiceCoach thinkingLevel={thinkingLevel} openingPrompt={openingPrompt} autoStart={autoStart} />
+          {engine === "gpt-live" ? (
+            <GptLiveCoach key={voice} thinkingLevel={thinkingLevel} openingPrompt={openingPrompt} autoStart={autoStart} voice={voice} />
+          ) : (
+            <VoiceCoach thinkingLevel={thinkingLevel} openingPrompt={openingPrompt} autoStart={autoStart} />
+          )}
         </div>
 
         <p className="text-center text-[10px] uppercase tracking-widest text-muted-foreground/60 mt-6">
